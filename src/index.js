@@ -1,72 +1,54 @@
-// Servidor Express principal con ESM y arquitectura preparada para escalabilidad
-import express from 'express';
-import helmet from 'helmet';
-import cors from 'cors';
-import compression from 'compression';
+// Punto de entrada principal - Inicialización del servidor HTTP
+import createApp from './app.js';
 import { config, validateConfig } from './config/env.js';
-import { errorHandler, notFoundHandler } from './common/middleware/errorHandler.js';
-import healthRouter from './modules/health/router.js';
-
-// Validar configuración al inicio
-validateConfig();
-
-// Crear aplicación Express
-const app = express();
-
-// ========================================
-// MIDDLEWARES DE SEGURIDAD
-// ========================================
-
-// Helmet: protección de headers HTTP
-app.use(helmet());
-
-// CORS: por ahora configuración básica (Fase 2 será dinámico desde BD)
-const corsOptions = {
-    origin: config.env === 'development' ? '*' : config.allowedOriginsFallback.split(','),
-    credentials: true,
-    optionsSuccessStatus: 200,
-};
-app.use(cors(corsOptions));
-
-// ========================================
-// MIDDLEWARES DE PARSING Y COMPRESIÓN
-// ========================================
-
-// Body parser para JSON
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-
-// Compresión de respuestas (brotli/gzip)
-app.use(compression());
-
-// ========================================
-// RUTAS DE LA API
-// ========================================
-
-// Health check endpoint
-app.use('/api/v1/health', healthRouter);
-
-// ========================================
-// MANEJO DE ERRORES
-// ========================================
-
-// Middleware 404 para rutas no encontradas (debe ir antes del errorHandler)
-app.use(notFoundHandler);
-
-// Middleware global de manejo de errores
-app.use(errorHandler);
-
-// ========================================
-// INICIALIZACIÓN DEL SERVIDOR
-// ========================================
+import { initializeDatabase, closeDatabase } from './db/sql/sequelize.js';
+import { initializeRedis, closeRedis } from './db/redis/client.js';
+import { setupSwagger } from './docs/openapi.js';
+import { metricsHandler } from './metrics/prometheus.js';
 
 /**
- * Inicia el servidor HTTP en el puerto configurado
- * Preparado para inyectar Socket.io en el futuro
+ * Inicializa todos los servicios (DB, Redis, etc.)
  */
-const startServer = () => {
-    const server = app.listen(config.port, '0.0.0.0', () => {
-        console.log(`
+const initializeServices = async () => {
+    try {
+        // Validar configuración
+        validateConfig();
+
+        // Inicializar PostgreSQL
+        await initializeDatabase();
+
+        // Inicializar Redis (opcional en desarrollo)
+        await initializeRedis();
+
+        console.log('✅ All services initialized successfully');
+    } catch (error) {
+        console.error('❌ Service initialization failed:', error);
+        process.exit(1);
+    }
+};
+
+/**
+ * Inicia el servidor HTTP
+ */
+const startServer = async () => {
+    try {
+        // Inicializar servicios externos
+        await initializeServices();
+
+        // Crear aplicación Express
+        const app = createApp();
+
+        // Setup Swagger docs (solo en desarrollo)
+        setupSwagger(app);
+
+        // Endpoint de métricas Prometheus (solo en desarrollo)
+        if (config.env === 'development') {
+            app.get('/metrics', metricsHandler);
+        }
+
+        // Iniciar servidor HTTP en 0.0.0.0:5000 (preparado para Socket.io)
+        const server = app.listen(config.port, '0.0.0.0', () => {
+            console.log(`
 ╔════════════════════════════════════════════════════════════╗
 ║  🚀 API EC ESM - Enterprise API Server                    ║
 ║                                                            ║
@@ -75,29 +57,45 @@ const startServer = () => {
 ║  URL:          ${config.apiUrl.padEnd(43)} ║
 ║                                                            ║
 ║  Health:       ${`${config.apiUrl}/api/v1/health`.padEnd(43)} ║
+║  Docs:         ${config.env === 'development' ? `${config.apiUrl}/docs`.padEnd(43) : 'N/A (production)'.padEnd(43)} ║
+║  Metrics:      ${config.env === 'development' ? `${config.apiUrl}/metrics`.padEnd(43) : 'N/A (production)'.padEnd(43)} ║
 ║                                                            ║
 ║  Status:       ✅ Server running successfully             ║
 ╚════════════════════════════════════════════════════════════╝
-    `);
-    });
-
-    // Manejo de señales para graceful shutdown
-    const gracefulShutdown = signal => {
-        console.log(`\n${signal} received. Starting graceful shutdown...`);
-        server.close(() => {
-            console.log('✅ HTTP server closed');
-            process.exit(0);
+            `);
         });
-    };
 
-    process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
-    process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+        // Manejo de señales para graceful shutdown
+        const gracefulShutdown = async signal => {
+            console.log(`\n${signal} received. Starting graceful shutdown...`);
+            
+            server.close(async () => {
+                console.log('✅ HTTP server closed');
+                
+                // Cerrar conexiones a servicios externos
+                await closeDatabase();
+                await closeRedis();
+                
+                console.log('✅ Graceful shutdown completed');
+                process.exit(0);
+            });
 
-    return server;
+            // Forzar cierre después de 10 segundos si no se completa
+            setTimeout(() => {
+                console.error('❌ Forced shutdown after timeout');
+                process.exit(1);
+            }, 10000);
+        };
+
+        process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+        process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
+        return server;
+    } catch (error) {
+        console.error('❌ Server startup failed:', error);
+        process.exit(1);
+    }
 };
 
 // Iniciar servidor
 startServer();
-
-// Exportar app para testing
-export default app;

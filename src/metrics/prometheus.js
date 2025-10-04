@@ -1,5 +1,5 @@
 // Métricas Prometheus para monitoreo de la API
-import promClient from 'prom-client';
+import * as promClient from 'prom-client';
 import { config } from '../config/env.js';
 
 /**
@@ -8,7 +8,7 @@ import { config } from '../config/env.js';
  */
 
 // Crear registro de métricas
-const register = new promClient.Register();
+const register = new promClient.Registry();
 
 // Habilitar métricas por defecto (CPU, memoria, event loop, etc.)
 promClient.collectDefaultMetrics({ register });

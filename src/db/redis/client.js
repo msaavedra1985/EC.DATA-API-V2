@@ -18,20 +18,27 @@ export const initializeRedis = async () => {
     try {
         // Crear cliente con URL o credenciales individuales
         const clientConfig = config.redis.url
-            ? { url: config.redis.url }
+            ? { 
+                url: config.redis.url,
+                socket: {
+                    reconnectStrategy: false, // No reintentar automáticamente
+                    connectTimeout: 5000, // Timeout de 5 segundos
+                }
+            }
             : {
                 socket: {
                     host: config.redis.host,
                     port: config.redis.port,
+                    reconnectStrategy: false, // No reintentar automáticamente
+                    connectTimeout: 5000, // Timeout de 5 segundos
                 },
                 ...(config.redis.password && { password: config.redis.password }),
             };
 
         redisClient = createClient(clientConfig);
 
-        // Manejo de errores
-        redisClient.on('error', err => {
-            console.error('❌ Redis connection error:', err);
+        // Manejo de errores silencioso (ya manejado en catch)
+        redisClient.on('error', () => {
             isRedisAvailable = false;
         });
 
@@ -44,14 +51,16 @@ export const initializeRedis = async () => {
             console.log('✅ Redis client ready');
         });
 
-        // Conectar
+        // Conectar con timeout
         await redisClient.connect();
     } catch (error) {
-        console.error('❌ Redis initialization failed:', error.message);
+        // En desarrollo, Redis es opcional
         if (config.env === 'development') {
-            console.warn('⚠️  Running without Redis (in-memory fallback)');
+            console.warn('⚠️  Redis not available - Running with in-memory fallback');
             isRedisAvailable = false;
+            redisClient = null; // Limpiar cliente fallido
         } else {
+            console.error('❌ Redis initialization failed:', error.message);
             throw error; // En producción, Redis es obligatorio
         }
     }
