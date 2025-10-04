@@ -102,23 +102,7 @@ const User = sequelize.define(
                 fields: ['is_active'],
                 name: 'users_is_active_idx'
             }
-        ],
-        // Hook para asegurar que password_hash nunca se serialice en JSON
-        hooks: {
-            afterFind: (instances) => {
-                // Si es un array de instancias
-                if (Array.isArray(instances)) {
-                    instances.forEach((instance) => {
-                        if (instance) {
-                            delete instance.dataValues.password_hash;
-                        }
-                    });
-                } else if (instances) {
-                    // Si es una sola instancia
-                    delete instances.dataValues.password_hash;
-                }
-            }
-        }
+        ]
     }
 );
 

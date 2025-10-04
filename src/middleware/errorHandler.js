@@ -38,11 +38,13 @@ export const errorHandler = (err, req, res, next) => {
               }
             : null;
 
-    // Generar respuesta envelope
-    const response = errorResponse(message, code, status, details);
-
-    // Enviar respuesta
-    res.status(status).json(response);
+    // Enviar respuesta envelope
+    return errorResponse(res, {
+        message,
+        code,
+        status,
+        details
+    });
 };
 
 /**

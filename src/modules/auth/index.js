@@ -4,6 +4,7 @@
 import express from 'express';
 import * as authServices from './services.js';
 import { validate } from '../../middleware/validate.js';
+import { authenticate } from '../../middleware/auth.js';
 import { 
     registerSchema, 
     loginSchema, 
@@ -11,6 +12,7 @@ import {
     changePasswordSchema 
 } from './dtos/index.js';
 import { successResponse, errorResponse } from '../../utils/response.js';
+import * as authRepository from './repository.js';
 
 const router = express.Router();
 
@@ -114,20 +116,9 @@ router.post('/refresh', validate(refreshTokenSchema), async (req, res, next) => 
  * Response:
  * - message: string
  */
-router.post('/change-password', validate(changePasswordSchema), async (req, res, next) => {
+router.post('/change-password', authenticate, validate(changePasswordSchema), async (req, res, next) => {
     try {
-        // TODO: Agregar middleware de autenticación antes de este endpoint
-        // Por ahora, asumimos que req.user viene del middleware JWT
-        const userId = req.user?.userId;
-
-        if (!userId) {
-            return errorResponse(res, {
-                message: 'Usuario no autenticado',
-                status: 401,
-                code: 'UNAUTHORIZED'
-            });
-        }
-
+        const userId = req.user.userId;
         const { current_password, new_password } = req.body;
 
         await authServices.changePassword(userId, current_password, new_password);
@@ -146,25 +137,24 @@ router.post('/change-password', validate(changePasswordSchema), async (req, res,
  * Requiere autenticación (JWT middleware)
  * 
  * Response:
- * - user: Object (información del usuario)
+ * - user: Object (información completa del usuario desde DB)
  */
-router.get('/me', async (req, res, next) => {
+router.get('/me', authenticate, async (req, res, next) => {
     try {
-        // TODO: Agregar middleware de autenticación antes de este endpoint
-        const userId = req.user?.userId;
+        const userId = req.user.userId;
 
-        if (!userId) {
+        // Obtener datos completos del usuario desde la DB
+        const user = await authRepository.findUserById(userId);
+
+        if (!user) {
             return errorResponse(res, {
-                message: 'Usuario no autenticado',
-                status: 401,
-                code: 'UNAUTHORIZED'
+                message: 'Usuario no encontrado',
+                status: 404,
+                code: 'USER_NOT_FOUND'
             });
         }
 
-        // El usuario ya viene del middleware JWT, solo lo devolvemos
-        return successResponse(res, {
-            user: req.user
-        });
+        return successResponse(res, { user });
     } catch (error) {
         next(error);
     }

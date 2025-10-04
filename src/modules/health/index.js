@@ -10,15 +10,15 @@ const router = express.Router();
  * @returns {Object} { ok: true, data: { status: 'healthy', ... }, meta: { timestamp } }
  */
 router.get('/', (req, res) => {
-  const healthData = {
-    status: 'healthy',
-    service: 'API EC ESM',
-    version: '1.0.0',
-    uptime: process.uptime(),
-    timestamp: new Date().toISOString(),
-  };
+    const healthData = {
+        status: 'healthy',
+        service: 'API EC ESM',
+        version: '1.0.0',
+        uptime: process.uptime(),
+        timestamp: new Date().toISOString(),
+    };
 
-  res.json(successResponse(healthData));
+    return successResponse(res, healthData);
 });
 
 export default router;

@@ -3,42 +3,52 @@
 // Error: { ok: false, error: { message, code, status, details? }, meta }
 
 /**
- * Genera una respuesta exitosa con formato envelope
+ * Envía una respuesta exitosa con formato envelope
+ * @param {Object} res - Objeto response de Express
  * @param {Object} data - Datos de la respuesta
+ * @param {number} status - Código HTTP de estado (default: 200)
  * @param {Object} meta - Metadatos adicionales (paginación, timestamps, etc.)
- * @returns {Object} Respuesta formateada
+ * @returns {Object} Response de Express
  */
-export const successResponse = (data, meta = {}) => ({
-    ok: true,
-    data,
-    meta: {
-        timestamp: new Date().toISOString(),
-        ...meta,
-    },
-});
+export const successResponse = (res, data, status = 200, meta = {}) => {
+    return res.status(status).json({
+        ok: true,
+        data,
+        meta: {
+            timestamp: new Date().toISOString(),
+            ...meta,
+        },
+    });
+};
 
 /**
- * Genera una respuesta de error con formato envelope
- * @param {string} message - Mensaje de error
- * @param {string} code - Código de error (ej: 'VALIDATION_ERROR', 'UNAUTHORIZED')
- * @param {number} status - Código HTTP de estado
- * @param {Object} details - Detalles adicionales del error (opcional)
+ * Envía una respuesta de error con formato envelope
+ * @param {Object} res - Objeto response de Express
+ * @param {Object} errorData - Datos del error
+ * @param {string} errorData.message - Mensaje de error
+ * @param {string} errorData.code - Código de error
+ * @param {number} errorData.status - Código HTTP de estado
+ * @param {Object} errorData.details - Detalles adicionales (opcional)
  * @param {Object} meta - Metadatos adicionales
- * @returns {Object} Respuesta de error formateada
+ * @returns {Object} Response de Express
  */
-export const errorResponse = (message, code, status = 500, details = null, meta = {}) => ({
-    ok: false,
-    error: {
-        message,
-        code,
-        status,
-        ...(details && { details }),
-    },
-    meta: {
-        timestamp: new Date().toISOString(),
-        ...meta,
-    },
-});
+export const errorResponse = (res, errorData, meta = {}) => {
+    const { message, code, status = 500, details = null } = errorData;
+    
+    return res.status(status).json({
+        ok: false,
+        error: {
+            message,
+            code,
+            status,
+            ...(details && { details }),
+        },
+        meta: {
+            timestamp: new Date().toISOString(),
+            ...meta,
+        },
+    });
+};
 
 /**
  * Códigos de error estándar de la aplicación
