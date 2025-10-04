@@ -21,11 +21,11 @@ const JWT_REFRESH_EXPIRES_IN = process.env.JWT_REFRESH_EXPIRES_IN || '7d';
  * @param {string} userData.password - Password en texto plano (será hasheado)
  * @param {string} userData.first_name - Nombre
  * @param {string} userData.last_name - Apellido
- * @param {string} [userData.tenant_id] - ID del tenant
+ * @param {string} [userData.organization_id] - ID de la organización
  * @returns {Promise<Object>} - Usuario creado y token JWT
  */
 export const register = async (userData) => {
-    const { email, password, first_name, last_name, tenant_id } = userData;
+    const { email, password, first_name, last_name, organization_id } = userData;
 
     // Verificar si el email ya existe
     const existingUser = await authRepository.findUserByEmail(email);
@@ -45,7 +45,7 @@ export const register = async (userData) => {
         password_hash,
         first_name,
         last_name,
-        tenant_id,
+        organization_id,
         role: 'user' // Por defecto todos son 'user'
     });
 
@@ -261,7 +261,7 @@ const generateTokens = (user) => {
         userId: user.id,
         email: user.email,
         role: user.role,
-        tenant_id: user.tenant_id
+        organization_id: user.organization_id
     };
 
     // Access token (corta duración)
