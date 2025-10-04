@@ -1,0 +1,122 @@
+PROMPT PARA REPLIT API EC (ESM + Arrow Functions)
+Objetivo
+Crear una API Node.js/Express lista para desarrollo con estándares claros: ESM, arrow functions,
+rutas por feature, JWT, Zod, CORS dinámico desde SQL con cache en Redis, logging y auditoría,
+métricas Prometheus, compresión, rate-limit en modo observe, OpenAPI en /docs, testing (Vitest +
+Supertest), ESLint (single quotes), versionado /api/v1 y paginación.
+Reglas globales
+- Todo ESM ("type": "module").
+- Arrow functions only.
+- JSON camelCase; SQL snake_case.
+- Envelope de respuesta: OK -> { ok: true, data, meta }; Error -> { ok: false, error:{ message,
+code, status, details? }, meta }.
+- Base path: /api/v1.
+- Capas: endpoints -> services -> repos -> db (sin saltos).
+- Paginación: limit (default 50, máx 200) y offset (default 0).
+1) Instalar dependencias
+npm i express cors helmet express-rate-limit compression cookie-parser jsonwebtoken zod pino pinohttp prom-client ioredis sequelize umzug swagger-ui-express
+npm i -D nodemon vitest supertest eslint prettier eslint-config-prettier eslint-plugin-import
+2) package.json
+- "type": "module"
+- "engines": { "node": ">=20" }
+- scripts:
+ "dev": "nodemon --legacy-watch src/index.js"
+ "start": "node src/index.js"
+ "test": "vitest run"
+3) Estructura de carpetas (crear vacías)
+src/
+ index.js
+ app.js
+ routes/index.js
+ config/ { env.js, corsOrigins.js, logger.js }
+ middleware/ { auth.js, validate.js, errorHandler.js, requestLogger.js, rateLimitObserve.js,
+corsDynamic.js }
+ utils/ { jwt.js, http.js, cache.js, crypto.js, etag.js }
+ db/sql/ { sequelize.js, models.js }
+ db/redis/ { client.js }
+ metrics/ { prometheus.js }
+ docs/ { openapi.js }
+ modules/
+ health/ { index.js }
+ auth/ { index.js, dtos/login.dto.js }
+ tenants/ { index.js, dtos/tenant.dto.js, models/Tenant.js }
+ sites/ { index.js, dtos/site.dto.js, models/Site.js }
+ bills/ { index.js, dtos/bill.dto.js, models/Bill.js }
+4) Contenidos mínimos (instrucciones)
+src/index.js
+- Leer PORT y arrancar server.
+- Graceful shutdown: cerrar Redis/Sequelize en SIGINT/SIGTERM.
+src/app.js
+- express.json({ limit: '25mb' }) + compression() + helmet().
+- pino-http con requestId.
+- corsDynamic() montado antes de rutas.
+- Montar /api/v1 con routes.
+- Montar /metrics (Prometheus) y /docs (swagger-ui) en dev.
+- 404 y errorHandler al final.
+routes/index.js
+- Montar routers: /health, /auth, /tenants, /sites, /bills.
+- Salvo /auth y /health, el resto usa auth.required.
+middleware/auth.js
+- required: lee Authorization: Bearer <token>, verifica, setea req.user.
+- requireScopes('feature:read','feature:write').
+utils/jwt.js
+- sign(payload), verify(token), decode(token). Env: JWT_SECRET, JWT_EXPIRES_IN.
+middleware/validate.js
+- Middleware Zod para body/query/params/headers. En error -> status 400 y details.
+middleware/errorHandler.js
+- Respuesta uniforme de error { ok:false, error:{ message, code, status, details? } }.
+config/logger.js y middleware/requestLogger.js
+- pino + pino-http con requestId; log de inicio/fin con latencyMs, status, userId.
+metrics/prometheus.js
+- prom-client con:
+ Counters: http_requests_total{route,method,status}, redis_hits_total{hit},
+db_queries_total{model,op}
+ Histograms: http_duration_seconds{route,method,status}, db_query_duration_seconds{model,op},
+cache_fetch_duration_seconds{kind}
+- GET /metrics (dev/internal).
+db/redis/client.js y utils/cache.js
+- ioredis singleton (getRedis).
+- Helpers getJson/setJson/del.
+- Convenciones keys: ec:{feature}:{id}:v{n} (detalles), ec:{feature}:list:{hash} (listas).
+config/corsOrigins.js + middleware/corsDynamic.js
+- Tabla SQL allowed_origins(origin, enabled, updated_at) (fuente de verdad).
+- loadAllowedOrigins(): lee Redis; si miss, consulta SQL y cachea TTL=600s.
+- corsDynamic valida Origin contra el set cacheado (credentials: true).
+db/sql/sequelize.js + db/sql/models.js
+- Singleton Sequelize sin sync.
+- models.js importa y registra modelos por feature y aplica asociaciones.
+Modelos Sequelize (1 archivo por modelo)
+- snake_case, tableName plural, underscored: true, timestamps: true, FKs con field: 'snake_case'.
+modules/*/index.js (router por feature)
+- GET / (lista paginada) -> ok(res, data, meta).
+- GET /:id -> ok o 404.
+- POST / -> created(res, data).
+- PATCH /:id -> ok.
+- DELETE /:id -> noContent(res).
+Utils http y etag
+- ok(res,data,meta), created, noContent, httpError(status,message,code?,details?).
+- etagFor(payload) y maybeNotModified(req,res,body) -> 304 si matchea.
+Rate limiting (observe)
+- express-rate-limit configurado para contar, emitir X-RateLimit-* y loguear, pero no bloquear aún.
+OpenAPI /docs
+- swagger-ui-express con definición base:
+ - /auth/login (POST), /tenants (GET/POST), /health (GET).
+- Usar ejemplos de request/response con envelope.
+Testing
+- Vitest + Supertest: smoke para /health y /auth/login.
+- Unit: un service simple sin HTTP.
+ESLint/Prettier
+- eslint: recommended + plugin:import + config-prettier; import/no-cycle: error; single quotes.
+- prettier: singleQuote true.
+Env esperadas
+- PORT, JWT_SECRET, JWT_EXPIRES_IN
+- SQL_CONN_STRING (placeholder)
+- REDIS_URL (placeholder)
+- ALLOWED_ORIGINS_TTL=600
+Checklist al terminar
+- npm run dev arranca sin errores.
+- GET /api/v1/health -> { ok:true }.
+- POST /api/v1/auth/login -> { token }.
+- /metrics y /docs responden en dev.
+- Listados con paginación y envelope uniforme.
+- CORS dinámico permitiendo sólo origins de SQL (cache Redis).
