@@ -4,8 +4,8 @@ import helmet from 'helmet';
 import cors from 'cors';
 import compression from 'compression';
 import { config, validateConfig } from './config/env.js';
-import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
-import healthRouter from './routes/health.js';
+import { errorHandler, notFoundHandler } from './common/middleware/errorHandler.js';
+import healthRouter from './modules/health/router.js';
 
 // Validar configuración al inicio
 validateConfig();

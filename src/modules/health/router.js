@@ -1,6 +1,6 @@
 // Endpoint de health check para monitoreo del servicio
 import express from 'express';
-import { successResponse } from '../utils/response.js';
+import { successResponse } from '../../common/utils/response.js';
 
 const router = express.Router();
 
