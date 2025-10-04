@@ -581,13 +581,17 @@ export const seedCountries = async () => {
     try {
         console.log('🌍 Iniciando seeder de países...');
 
-        // Eliminar traducciones existentes primero (por FK constraint)
-        await CountryTranslation.destroy({ where: {}, truncate: true });
-        console.log('✅ Traducciones anteriores eliminadas');
-
-        // Eliminar países existentes
-        await Country.destroy({ where: {}, truncate: true });
-        console.log('✅ Países anteriores eliminados');
+        // Verificar si ya existen países
+        const existingCount = await Country.count();
+        if (existingCount > 0) {
+            console.log(`ℹ️  Ya existen ${existingCount} países. Saltando seeder.`);
+            return {
+                success: true,
+                countriesCreated: 0,
+                translationsCreated: 0,
+                skipped: true
+            };
+        }
 
         // Contador de países creados
         let countriesCreated = 0;

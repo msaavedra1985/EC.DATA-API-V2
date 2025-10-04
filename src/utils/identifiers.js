@@ -109,31 +109,45 @@ export const validateLuhnChecksum = (input) => {
 };
 
 /**
- * Genera public_code opaco para una entidad
+ * Genera public_code opaco para una entidad usando UUID v7
  * Formato: PREFIX-ENCODED-CHECKSUM
  * Ejemplo: EC-7K9D2-X o ORG-A5B3C-7
  * 
+ * IMPORTANTE: Ahora usa UUID v7 en lugar de human_id para garantizar unicidad global
+ * El UUID v7 se convierte a número usando los últimos 48 bits (12 caracteres hex)
+ * 
  * @param {string} prefix - Prefijo (ej: 'EC' para users, 'ORG' para organizations)
- * @param {number} humanId - human_id numérico
+ * @param {string} uuidV7 - UUID v7 completo (garantiza unicidad global)
  * @returns {string} - public_code opaco
  */
-export const generatePublicCode = (prefix, humanId) => {
-    // Encode human_id usando Hashids
-    const encoded = hashids.encode(humanId);
+export const generatePublicCode = (prefix, uuidV7) => {
+    // Remover guiones del UUID y tomar últimos 12 caracteres hexadecimales (48 bits)
+    const uuidHex = uuidV7.replace(/-/g, '');
+    const last12Chars = uuidHex.slice(-12);
     
-    // Calcular checksum sobre el human_id
-    const checksum = calculateLuhnChecksum(humanId.toString());
+    // Convertir hex a número decimal (dividir en 2 partes para evitar overflow de Number)
+    const part1 = parseInt(last12Chars.slice(0, 6), 16);
+    const part2 = parseInt(last12Chars.slice(6, 12), 16);
+    
+    // Encode ambas partes usando Hashids
+    const encoded = hashids.encode(part1, part2);
+    
+    // Calcular checksum sobre la combinación de ambas partes
+    const checksumInput = part1.toString() + part2.toString();
+    const checksum = calculateLuhnChecksum(checksumInput);
     
     // Formato: PREFIX-ENCODED-CHECKSUM
     return `${prefix}-${encoded}-${checksum}`;
 };
 
 /**
- * Decodifica public_code a human_id
+ * Decodifica public_code generado con UUID v7
+ * NOTA: Esta función valida el formato y checksum, pero NO devuelve el UUID original
+ * (el UUID no es reversible desde el public_code por diseño de seguridad)
  * 
  * @param {string} publicCode - public_code (ej: 'EC-7K9D2-X')
  * @param {string} expectedPrefix - Prefijo esperado (opcional, para validación)
- * @returns {Object} - { humanId, prefix, isValid }
+ * @returns {Object} - { prefix, isValid, error? }
  */
 export const decodePublicCode = (publicCode, expectedPrefix = null) => {
     try {
@@ -141,36 +155,37 @@ export const decodePublicCode = (publicCode, expectedPrefix = null) => {
         const parts = publicCode.split('-');
         
         if (parts.length !== 3) {
-            return { humanId: null, prefix: null, isValid: false, error: 'Formato inválido' };
+            return { prefix: null, isValid: false, error: 'Formato inválido' };
         }
 
         const [prefix, encoded, checksumStr] = parts;
 
         // Validar prefijo si se proporciona
         if (expectedPrefix && prefix !== expectedPrefix) {
-            return { humanId: null, prefix, isValid: false, error: 'Prefijo inválido' };
+            return { prefix, isValid: false, error: 'Prefijo inválido' };
         }
 
-        // Decodificar usando Hashids
+        // Decodificar usando Hashids (debería devolver 2 partes)
         const decoded = hashids.decode(encoded);
         
-        if (decoded.length === 0) {
-            return { humanId: null, prefix, isValid: false, error: 'Código inválido' };
+        if (decoded.length !== 2) {
+            return { prefix, isValid: false, error: 'Código inválido' };
         }
 
-        const humanId = Number(decoded[0]);
+        const [part1, part2] = decoded.map(Number);
 
         // Validar checksum
-        const calculatedChecksum = calculateLuhnChecksum(humanId.toString());
+        const checksumInput = part1.toString() + part2.toString();
+        const calculatedChecksum = calculateLuhnChecksum(checksumInput);
         const providedChecksum = parseInt(checksumStr, 10);
 
         if (calculatedChecksum !== providedChecksum) {
-            return { humanId, prefix, isValid: false, error: 'Checksum inválido' };
+            return { prefix, isValid: false, error: 'Checksum inválido' };
         }
 
-        return { humanId, prefix, isValid: true };
+        return { prefix, isValid: true };
     } catch (error) {
-        return { humanId: null, prefix: null, isValid: false, error: error.message };
+        return { prefix: null, isValid: false, error: error.message };
     }
 };
 

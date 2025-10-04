@@ -247,3 +247,47 @@ Proper cleanup on SIGINT/SIGTERM signals:
 - `successResponse` and `errorResponse` now send HTTP responses directly
 - Consistent envelope pattern across all endpoints
 - Simplified endpoint code (no manual `res.json()` calls)
+
+### October 4, 2025 - UUID v7 + human_id + public_code System Implemented
+
+**Identifier System Architecture:**
+- Successfully implemented selective UUID v7 identifier system for user-specified "visible" entities
+- All SQL table names now in English (per new directive)
+- Comprehensive identifier utilities in `src/utils/identifiers.js`
+
+**Three-Tier Identifier Pattern:**
+1. **UUID v7** - Primary key (time-ordered, globally unique)
+2. **human_id** - Incremental ID (scoped by organization_id for users, global for organizations)
+3. **public_code** - Opaque public identifier (format: PREFIX-XXXXX-Y with Hashids + Luhn checksum)
+
+**Database Schema:**
+- **countries** - Reference table with ISO 3166-1 codes (id: serial - no UUID v7)
+- **country_translations** - Multi-language support (Spanish/English)
+- **organizations** - UUID v7 + human_id (global) + public_code (ORG- prefix)
+- **users** - UUID v7 + human_id (scoped by organization_id) + public_code (EC- prefix)
+
+**Identifier Implementation Details:**
+- UUID v7 generator using `uuid` package v7() function
+- human_id generator with optional scope support (global or organization-scoped)
+- public_code now uses UUID v7 as source (not human_id) to ensure global uniqueness
+- Hashids encoding with configurable salt (HASHIDS_SALT environment variable)
+- Luhn checksum validation for typo detection in public codes
+
+**Data Seeding:**
+- Countries seeder successfully populated 55 countries with 110 translations (es/en)
+- Seeder includes idempotency check to prevent duplicate insertions
+- Proper dependency order: countries → organizations → users
+
+**Testing Results:**
+- ✅ Created global user (no organization): UUID v7, human_id=1, public_code="EC-jmQng-9"
+- ✅ Created organization "Acme Corp": UUID v7, human_id=1, public_code="ORG-jmQng-9"
+- ✅ Created organization user: UUID v7, human_id=1 (scoped), public_code="EC-z6VKDMIn9Wx-3" (unique)
+- ✅ Verified no collisions in public_code between users with same human_id in different scopes
+
+**Key Files Modified:**
+- `src/utils/identifiers.js` - Complete identifier utility functions
+- `src/modules/organizations/models/Organization.js` - Organization model with UUID v7
+- `src/modules/auth/models/User.js` - User model with scoped human_id
+- `src/modules/auth/repository.js` - Updated to use UUID v7 for public_code generation
+- `src/db/models.js` - Model imports in correct dependency order
+- `src/db/seeders/countries.seeder.js` - Countries and translations seeder

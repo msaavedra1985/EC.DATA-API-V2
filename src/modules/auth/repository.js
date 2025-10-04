@@ -29,8 +29,8 @@ export const createUser = async (userData) => {
             userData.organization_id || null
         );
         
-        // Generar public_code con prefijo EC-
-        const publicCode = generatePublicCode('EC', humanId);
+        // Generar public_code con prefijo EC- usando UUID v7 para garantizar unicidad global
+        const publicCode = generatePublicCode('EC', id);
         
         // Crear usuario con identificadores
         const user = await User.create({

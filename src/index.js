@@ -6,6 +6,9 @@ import { initializeRedis, closeRedis } from './db/redis/client.js';
 import { setupSwagger } from './docs/openapi.js';
 import { metricsHandler } from './metrics/prometheus.js';
 
+// Importar todos los modelos en orden de dependencias (necesario para Sequelize.sync())
+import './db/models.js';
+
 /**
  * Inicializa todos los servicios (DB, Redis, etc.)
  */
