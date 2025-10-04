@@ -10,39 +10,39 @@ import { errorResponse, ERROR_CODES } from '../utils/response.js';
  * @param {Function} next - Next middleware
  */
 export const errorHandler = (err, req, res, next) => {
-  // Log del error para debugging (luego se reemplazará con pino)
-  console.error('Error capturado:', err);
+    // Log del error para debugging (luego se reemplazará con pino)
+    console.error('Error capturado:', err);
 
-  // Determinar el código de estado HTTP
-  const status = err.status || err.statusCode || 500;
+    // Determinar el código de estado HTTP
+    const status = err.status || err.statusCode || 500;
 
-  // Determinar el código de error de la aplicación
-  let code = err.code || ERROR_CODES.INTERNAL_ERROR;
+    // Determinar el código de error de la aplicación
+    let code = err.code || ERROR_CODES.INTERNAL_ERROR;
 
-  // Mapear códigos HTTP comunes a códigos de aplicación
-  if (status === 400 && !err.code) code = ERROR_CODES.BAD_REQUEST;
-  if (status === 401 && !err.code) code = ERROR_CODES.UNAUTHORIZED;
-  if (status === 403 && !err.code) code = ERROR_CODES.FORBIDDEN;
-  if (status === 404 && !err.code) code = ERROR_CODES.NOT_FOUND;
-  if (status === 409 && !err.code) code = ERROR_CODES.CONFLICT;
+    // Mapear códigos HTTP comunes a códigos de aplicación
+    if (status === 400 && !err.code) code = ERROR_CODES.BAD_REQUEST;
+    if (status === 401 && !err.code) code = ERROR_CODES.UNAUTHORIZED;
+    if (status === 403 && !err.code) code = ERROR_CODES.FORBIDDEN;
+    if (status === 404 && !err.code) code = ERROR_CODES.NOT_FOUND;
+    if (status === 409 && !err.code) code = ERROR_CODES.CONFLICT;
 
-  // Mensaje de error (en producción no exponer detalles internos)
-  const message = err.message || 'Internal server error';
+    // Mensaje de error (en producción no exponer detalles internos)
+    const message = err.message || 'Internal server error';
 
-  // Detalles adicionales (solo en desarrollo)
-  const details =
-    process.env.NODE_ENV === 'development'
-      ? {
-          stack: err.stack,
-          ...(err.details && { details: err.details }),
-        }
-      : null;
+    // Detalles adicionales (solo en desarrollo)
+    const details =
+        process.env.NODE_ENV === 'development'
+            ? {
+                  stack: err.stack,
+                  ...(err.details && { details: err.details }),
+              }
+            : null;
 
-  // Generar respuesta envelope
-  const response = errorResponse(message, code, status, details);
+    // Generar respuesta envelope
+    const response = errorResponse(message, code, status, details);
 
-  // Enviar respuesta
-  res.status(status).json(response);
+    // Enviar respuesta
+    res.status(status).json(response);
 };
 
 /**
@@ -50,8 +50,8 @@ export const errorHandler = (err, req, res, next) => {
  * Debe colocarse después de todas las rutas válidas
  */
 export const notFoundHandler = (req, res, next) => {
-  const error = new Error(`Route not found: ${req.method} ${req.path}`);
-  error.status = 404;
-  error.code = ERROR_CODES.NOT_FOUND;
-  next(error);
+    const error = new Error(`Route not found: ${req.method} ${req.path}`);
+    error.status = 404;
+    error.code = ERROR_CODES.NOT_FOUND;
+    next(error);
 };

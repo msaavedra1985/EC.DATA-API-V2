@@ -9,12 +9,12 @@
  * @returns {Object} Respuesta formateada
  */
 export const successResponse = (data, meta = {}) => ({
-  ok: true,
-  data,
-  meta: {
-    timestamp: new Date().toISOString(),
-    ...meta,
-  },
+    ok: true,
+    data,
+    meta: {
+        timestamp: new Date().toISOString(),
+        ...meta,
+    },
 });
 
 /**
@@ -27,29 +27,29 @@ export const successResponse = (data, meta = {}) => ({
  * @returns {Object} Respuesta de error formateada
  */
 export const errorResponse = (message, code, status = 500, details = null, meta = {}) => ({
-  ok: false,
-  error: {
-    message,
-    code,
-    status,
-    ...(details && { details }),
-  },
-  meta: {
-    timestamp: new Date().toISOString(),
-    ...meta,
-  },
+    ok: false,
+    error: {
+        message,
+        code,
+        status,
+        ...(details && { details }),
+    },
+    meta: {
+        timestamp: new Date().toISOString(),
+        ...meta,
+    },
 });
 
 /**
  * Códigos de error estándar de la aplicación
  */
 export const ERROR_CODES = {
-  VALIDATION_ERROR: 'VALIDATION_ERROR',
-  UNAUTHORIZED: 'UNAUTHORIZED',
-  FORBIDDEN: 'FORBIDDEN',
-  NOT_FOUND: 'NOT_FOUND',
-  CONFLICT: 'CONFLICT',
-  RATE_LIMIT_EXCEEDED: 'RATE_LIMIT_EXCEEDED',
-  INTERNAL_ERROR: 'INTERNAL_ERROR',
-  BAD_REQUEST: 'BAD_REQUEST',
+    VALIDATION_ERROR: 'VALIDATION_ERROR',
+    UNAUTHORIZED: 'UNAUTHORIZED',
+    FORBIDDEN: 'FORBIDDEN',
+    NOT_FOUND: 'NOT_FOUND',
+    CONFLICT: 'CONFLICT',
+    RATE_LIMIT_EXCEEDED: 'RATE_LIMIT_EXCEEDED',
+    INTERNAL_ERROR: 'INTERNAL_ERROR',
+    BAD_REQUEST: 'BAD_REQUEST',
 };

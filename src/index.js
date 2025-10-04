@@ -22,9 +22,9 @@ app.use(helmet());
 
 // CORS: por ahora configuración básica (Fase 2 será dinámico desde BD)
 const corsOptions = {
-  origin: config.env === 'development' ? '*' : config.allowedOriginsFallback.split(','),
-  credentials: true,
-  optionsSuccessStatus: 200,
+    origin: config.env === 'development' ? '*' : config.allowedOriginsFallback.split(','),
+    credentials: true,
+    optionsSuccessStatus: 200,
 };
 app.use(cors(corsOptions));
 
@@ -65,8 +65,8 @@ app.use(errorHandler);
  * Preparado para inyectar Socket.io en el futuro
  */
 const startServer = () => {
-  const server = app.listen(config.port, '0.0.0.0', () => {
-    console.log(`
+    const server = app.listen(config.port, '0.0.0.0', () => {
+        console.log(`
 ╔════════════════════════════════════════════════════════════╗
 ║  🚀 API EC ESM - Enterprise API Server                    ║
 ║                                                            ║
@@ -79,21 +79,21 @@ const startServer = () => {
 ║  Status:       ✅ Server running successfully             ║
 ╚════════════════════════════════════════════════════════════╝
     `);
-  });
-
-  // Manejo de señales para graceful shutdown
-  const gracefulShutdown = signal => {
-    console.log(`\n${signal} received. Starting graceful shutdown...`);
-    server.close(() => {
-      console.log('✅ HTTP server closed');
-      process.exit(0);
     });
-  };
 
-  process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
-  process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+    // Manejo de señales para graceful shutdown
+    const gracefulShutdown = signal => {
+        console.log(`\n${signal} received. Starting graceful shutdown...`);
+        server.close(() => {
+            console.log('✅ HTTP server closed');
+            process.exit(0);
+        });
+    };
 
-  return server;
+    process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+    process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
+    return server;
 };
 
 // Iniciar servidor
