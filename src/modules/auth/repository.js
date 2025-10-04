@@ -2,7 +2,6 @@
 // Repositorio de Auth - Capa de acceso a datos con Sequelize
 
 import User from './models/User.js';
-import { logger } from '../../config/env.js';
 
 /**
  * Crear un nuevo usuario en la base de datos
@@ -18,7 +17,6 @@ import { logger } from '../../config/env.js';
 export const createUser = async (userData) => {
     try {
         const user = await User.create(userData);
-        logger.info(`User created: ${user.email}`);
         
         // El hook afterFind ya elimina password_hash, pero lo hacemos explícito
         const userJson = user.toJSON();
@@ -26,7 +24,7 @@ export const createUser = async (userData) => {
         
         return userJson;
     } catch (error) {
-        logger.error('Error creating user:', error);
+        console.error('Error creating user:', error);
         throw error;
     }
 };
@@ -49,7 +47,7 @@ export const findUserByEmail = async (email, includePassword = false) => {
         
         return user ? user.toJSON() : null;
     } catch (error) {
-        logger.error('Error finding user by email:', error);
+        console.error('Error finding user by email:', error);
         throw error;
     }
 };
@@ -67,7 +65,7 @@ export const findUserById = async (userId) => {
         
         return user ? user.toJSON() : null;
     } catch (error) {
-        logger.error('Error finding user by ID:', error);
+        console.error('Error finding user by ID:', error);
         throw error;
     }
 };
@@ -86,7 +84,7 @@ export const updateLastLogin = async (userId) => {
         
         return affectedRows > 0;
     } catch (error) {
-        logger.error('Error updating last login:', error);
+        console.error('Error updating last login:', error);
         throw error;
     }
 };
@@ -104,10 +102,9 @@ export const updatePassword = async (userId, newPasswordHash) => {
             { where: { id: userId } }
         );
         
-        logger.info(`Password updated for user ID: ${userId}`);
         return affectedRows > 0;
     } catch (error) {
-        logger.error('Error updating password:', error);
+        console.error('Error updating password:', error);
         throw error;
     }
 };
@@ -124,10 +121,9 @@ export const verifyEmail = async (userId) => {
             { where: { id: userId } }
         );
         
-        logger.info(`Email verified for user ID: ${userId}`);
         return affectedRows > 0;
     } catch (error) {
-        logger.error('Error verifying email:', error);
+        console.error('Error verifying email:', error);
         throw error;
     }
 };
@@ -145,10 +141,9 @@ export const setUserActiveStatus = async (userId, isActive) => {
             { where: { id: userId } }
         );
         
-        logger.info(`User ${userId} set to ${isActive ? 'active' : 'inactive'}`);
         return affectedRows > 0;
     } catch (error) {
-        logger.error('Error setting user active status:', error);
+        console.error('Error setting user active status:', error);
         throw error;
     }
 };
@@ -192,7 +187,7 @@ export const listUsers = async (options = {}) => {
             total: count
         };
     } catch (error) {
-        logger.error('Error listing users:', error);
+        console.error('Error listing users:', error);
         throw error;
     }
 };
@@ -208,13 +203,9 @@ export const deleteUser = async (userId) => {
             where: { id: userId }
         });
         
-        if (affectedRows > 0) {
-            logger.info(`User ${userId} soft deleted`);
-        }
-        
         return affectedRows > 0;
     } catch (error) {
-        logger.error('Error deleting user:', error);
+        console.error('Error deleting user:', error);
         throw error;
     }
 };

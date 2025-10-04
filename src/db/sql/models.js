@@ -11,11 +11,11 @@ import sequelize from './sequelize.js';
  * Las asociaciones se definen aquí para evitar dependencias circulares
  */
 
-// Importar modelos (se agregarán en Fase 2)
-// import User from '../modules/auth/models/User.js';
-// import Tenant from '../modules/tenants/models/Tenant.js';
-// import Site from '../modules/sites/models/Site.js';
-// import Bill from '../modules/bills/models/Bill.js';
+// Importar modelos
+import User from '../../modules/auth/models/User.js';
+// import Tenant from '../../modules/tenants/models/Tenant.js';
+// import Site from '../../modules/sites/models/Site.js';
+// import Bill from '../../modules/bills/models/Bill.js';
 
 /**
  * Definir asociaciones entre modelos
@@ -42,7 +42,7 @@ export const defineAssociations = () => {
  */
 export const models = {
     sequelize,
-    // User,
+    User,
     // Tenant,
     // Site,
     // Bill,

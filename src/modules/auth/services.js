@@ -3,16 +3,16 @@
 
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import { env, logger } from '../../config/env.js';
+import { config } from '../../config/env.js';
 import * as authRepository from './repository.js';
 
 // Configuración de bcrypt
 const SALT_ROUNDS = 10;
 
 // Configuración de JWT
-const JWT_SECRET = env.JWT_SECRET || 'your-super-secret-key-change-in-production';
-const JWT_EXPIRES_IN = env.JWT_EXPIRES_IN || '24h';
-const JWT_REFRESH_EXPIRES_IN = env.JWT_REFRESH_EXPIRES_IN || '7d';
+const JWT_SECRET = config.jwt.secret;
+const JWT_EXPIRES_IN = config.jwt.expiresIn;
+const JWT_REFRESH_EXPIRES_IN = process.env.JWT_REFRESH_EXPIRES_IN || '7d';
 
 /**
  * Registrar un nuevo usuario
@@ -51,8 +51,6 @@ export const register = async (userData) => {
 
     // Generar tokens JWT
     const tokens = generateTokens(newUser);
-
-    logger.info(`User registered successfully: ${email}`);
 
     return {
         user: newUser,
@@ -103,8 +101,6 @@ export const login = async (email, password) => {
 
     // Generar tokens JWT
     const tokens = generateTokens(user);
-
-    logger.info(`User logged in successfully: ${email}`);
 
     return {
         user,
@@ -201,8 +197,6 @@ export const refreshAccessToken = async (refreshToken) => {
         // Generar nuevos tokens
         const tokens = generateTokens(user);
 
-        logger.info(`Token refreshed for user: ${user.email}`);
-
         return tokens;
     } catch (error) {
         if (error.name === 'JsonWebTokenError' || error.name === 'TokenExpiredError') {
@@ -252,8 +246,6 @@ export const changePassword = async (userId, currentPassword, newPassword) => {
 
     // Actualizar en la base de datos
     const updated = await authRepository.updatePassword(userId, newPasswordHash);
-
-    logger.info(`Password changed for user ID: ${userId}`);
 
     return updated;
 };

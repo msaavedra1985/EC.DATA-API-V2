@@ -2,7 +2,7 @@
 // Modelo de Usuario con Sequelize - Autenticación y autorización
 
 import { DataTypes } from 'sequelize';
-import { sequelize } from '../../../db/sql/sequelize.js';
+import sequelize from '../../../db/sql/sequelize.js';
 
 /**
  * Modelo User - Usuarios del sistema con autenticación JWT
