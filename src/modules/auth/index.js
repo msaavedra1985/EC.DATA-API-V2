@@ -25,10 +25,10 @@ const router = express.Router();
  * - password: string (required, min 8 chars, must contain uppercase, lowercase, number)
  * - first_name: string (required)
  * - last_name: string (required)
- * - tenant_id: string (optional, UUID)
+ * - organization_id: string (optional, UUID)
  * 
  * Response:
- * - user: Object (sin password_hash)
+ * - user: Object (con public_code, sin password_hash ni human_id)
  * - access_token: string
  * - refresh_token: string
  * - expires_in: string
@@ -36,14 +36,14 @@ const router = express.Router();
  */
 router.post('/register', validate(registerSchema), async (req, res, next) => {
     try {
-        const { email, password, first_name, last_name, tenant_id } = req.body;
+        const { email, password, first_name, last_name, organization_id } = req.body;
 
         const result = await authServices.register({
             email,
             password,
             first_name,
             last_name,
-            tenant_id
+            organization_id
         });
 
         return successResponse(res, result, 201);

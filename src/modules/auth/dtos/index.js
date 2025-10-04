@@ -41,9 +41,9 @@ export const registerSchema = z.object({
             .min(2, 'Apellido debe tener al menos 2 caracteres')
             .max(100, 'Apellido no puede exceder 100 caracteres')
             .trim(),
-        tenant_id: z
+        organization_id: z
             .string()
-            .uuid('tenant_id debe ser un UUID válido')
+            .uuid('organization_id debe ser un UUID válido')
             .optional()
             .nullable()
     })
