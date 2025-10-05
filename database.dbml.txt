@@ -1,4 +1,4 @@
-// Database Schema - Generated on 2025-10-05T01:37:47.072Z
+// Database Schema - Generated on 2025-10-05T01:39:57.827Z
 // Project: API EC ESM - Enterprise REST API
 // Use this file at https://dbdiagram.io to visualize the schema
 
@@ -16,7 +16,10 @@ Table countries {
   Indexes {
     (is_active) [name: 'countries_is_active']
     (iso_alpha2) [name: 'countries_iso_alpha2']
+    (iso_alpha2) [name: 'countries_iso_alpha2_key', unique]
     (iso_alpha3) [name: 'countries_iso_alpha3']
+    (iso_alpha3) [name: 'countries_iso_alpha3_key', unique]
+    (iso_numeric) [name: 'countries_iso_numeric_key', unique]
   }
 }
 
@@ -32,6 +35,7 @@ Table country_translations {
 
   Indexes {
     (lang) [name: 'country_translations_lang']
+    (country_id, lang) [name: 'unique_country_lang', unique]
   }
 }
 
@@ -57,9 +61,12 @@ Table organizations {
     (country_id) [name: 'organizations_country_id']
     (email) [name: 'organizations_email']
     (human_id) [name: 'organizations_human_id']
+    (human_id) [name: 'organizations_human_id_key', unique]
     (is_active) [name: 'organizations_is_active']
     (public_code) [name: 'organizations_public_code']
+    (public_code) [name: 'organizations_public_code_key', unique]
     (slug) [name: 'organizations_slug']
+    (slug) [name: 'organizations_slug_key', unique]
   }
 }
 
@@ -82,8 +89,13 @@ Table users {
   deleted_at timestamptz
 
   Indexes {
+    (email) [name: 'users_email_key', unique]
+    (email) [name: 'users_email_unique', unique]
     (is_active) [name: 'users_is_active_idx']
+    (human_id, organization_id) [name: 'users_org_human_id_unique', unique]
     (organization_id) [name: 'users_organization_id_idx']
+    (public_code) [name: 'users_public_code_key', unique]
+    (public_code) [name: 'users_public_code_unique', unique]
     (role) [name: 'users_role_idx']
   }
 }

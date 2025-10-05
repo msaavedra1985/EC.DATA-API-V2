@@ -100,13 +100,13 @@ const getConstraints = async (tableName) => {
 };
 
 /**
- * Obtener índices de una tabla
+ * Obtener índices de una tabla (incluyendo únicos compuestos)
  */
 const getIndexes = async (tableName) => {
     const [indexes] = await sequelize.query(`
         SELECT
             i.relname as index_name,
-            a.attname as column_name,
+            array_agg(a.attname ORDER BY a.attnum) as columns,
             ix.indisunique as is_unique,
             ix.indisprimary as is_primary
         FROM pg_class t
@@ -116,7 +116,8 @@ const getIndexes = async (tableName) => {
         WHERE t.relname = :tableName
         AND t.relkind = 'r'
         AND NOT ix.indisprimary
-        ORDER BY i.relname, a.attnum;
+        GROUP BY i.relname, ix.indisunique, ix.indisprimary
+        ORDER BY i.relname;
     `, {
         replacements: { tableName }
     });
@@ -194,21 +195,23 @@ const generateTableDbml = async (tableName) => {
         dbml += `  ${col.column_name} ${type}${settingsStr}${commentStr}\n`;
     }
     
-    // Índices (solo los que no son PK ni UNIQUE constraints)
-    const customIndexes = indexes.filter(idx => !idx.is_unique && !idx.is_primary);
-    if (customIndexes.length > 0) {
+    // Índices (incluir tanto regulares como únicos compuestos)
+    if (indexes.length > 0) {
         dbml += '\n  Indexes {\n';
-        const indexGroups = {};
-        customIndexes.forEach(idx => {
-            if (!indexGroups[idx.index_name]) {
-                indexGroups[idx.index_name] = [];
+        
+        indexes.forEach(idx => {
+            // Convertir array PostgreSQL "{col1,col2}" a array JavaScript
+            const cols = idx.columns.replace(/[{}]/g, '').split(',');
+            const settings = [];
+            
+            if (idx.is_unique) {
+                settings.push('unique');
             }
-            indexGroups[idx.index_name].push(idx.column_name);
+            
+            const settingsStr = settings.length > 0 ? `, ${settings.join(', ')}` : '';
+            dbml += `    (${cols.join(', ')}) [name: '${idx.index_name}'${settingsStr}]\n`;
         });
         
-        Object.entries(indexGroups).forEach(([name, cols]) => {
-            dbml += `    (${cols.join(', ')}) [name: '${name}']\n`;
-        });
         dbml += '  }\n';
     }
     

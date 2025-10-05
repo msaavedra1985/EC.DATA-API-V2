@@ -243,6 +243,13 @@ Proper cleanup on SIGINT/SIGTERM signals:
 - MongoDB configuration file created (`db/mongodb/client.js`) - awaiting credentials
 - Both databases ready for connection once credentials are provided
 
+**Database Schema Visualization:**
+- DBML (Database Markup Language) file generation: `npm run db:dbml`
+- Generates `database.dbml.txt` with complete PostgreSQL schema
+- Visualize at https://dbdiagram.io by pasting the DBML content
+- Automatically includes: tables, columns, types, constraints, indexes, and foreign keys
+- Keep updated after schema changes by re-running the command
+
 **Response Helpers Update:**
 - `successResponse` and `errorResponse` now send HTTP responses directly
 - Consistent envelope pattern across all endpoints
