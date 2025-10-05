@@ -3,7 +3,9 @@ import express from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
 import compression from 'compression';
+import pinoHttp from 'pino-http';
 import { config } from './config/env.js';
+import { httpLogger } from './utils/logger.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import { setupSwagger } from './docs/openapi.js';
 import { metricsHandler } from './metrics/prometheus.js';
@@ -30,6 +32,56 @@ const createApp = () => {
         optionsSuccessStatus: 200,
     };
     app.use(cors(corsOptions));
+
+    // ========================================
+    // LOGGING ESTRUCTURADO CON PINO
+    // ========================================
+
+    // Configuración de pino-http para logging automático de requests/responses
+    const pinoMiddleware = pinoHttp({
+        logger: httpLogger,
+        
+        // Personalizar el mensaje de log
+        customLogLevel: (req, res, err) => {
+            if (res.statusCode >= 400 && res.statusCode < 500) {
+                return 'warn';
+            } else if (res.statusCode >= 500 || err) {
+                return 'error';
+            }
+            return 'info';
+        },
+        
+        // Agregar ID único a cada request
+        genReqId: (req, res) => {
+            const existingId = req.id || req.headers['x-request-id'];
+            if (existingId) return existingId;
+            return `req-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        },
+        
+        // Personalizar la serialización del request
+        customReceivedMessage: (req) => {
+            return `${req.method} ${req.url}`;
+        },
+        
+        // Personalizar la serialización del response
+        customSuccessMessage: (req, res) => {
+            const responseTime = res[pinoHttp.startTime] ? 
+                Date.now() - res[pinoHttp.startTime] : 0;
+            return `${req.method} ${req.url} completed with ${res.statusCode} in ${responseTime}ms`;
+        },
+        
+        // No loggear rutas de health check y métricas en producción
+        autoLogging: {
+            ignore: (req) => {
+                if (config.env === 'production') {
+                    return req.url === '/api/v1/health' || req.url === '/metrics';
+                }
+                return false;
+            }
+        }
+    });
+    
+    app.use(pinoMiddleware);
 
     // ========================================
     // MIDDLEWARES DE PARSING Y COMPRESIÓN
