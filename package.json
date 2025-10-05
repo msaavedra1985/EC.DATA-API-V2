@@ -10,7 +10,8 @@
     "test": "vitest",
     "test:watch": "vitest --watch",
     "lint": "eslint src/**/*.js tests/**/*.js",
-    "lint:fix": "eslint src/**/*.js tests/**/*.js --fix"
+    "lint:fix": "eslint src/**/*.js tests/**/*.js --fix",
+    "db:dbml": "node src/db/utils/generateDbml.js"
   },
   "keywords": [
     "api",
