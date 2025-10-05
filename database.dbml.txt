@@ -1,0 +1,95 @@
+// Database Schema - Generated on 2025-10-05T01:37:47.072Z
+// Project: API EC ESM - Enterprise REST API
+// Use this file at https://dbdiagram.io to visualize the schema
+
+// Tabla de referencia de países con códigos ISO 3166-1
+Table countries {
+  id integer [pk, not null, increment] // ID incremental - tabla de referencia
+  iso_alpha2 varchar(2) [unique, not null] // Código ISO 3166-1 alpha-2 (ej: AR, US, ES)
+  iso_alpha3 varchar(3) [unique, not null] // Código ISO 3166-1 alpha-3 (ej: ARG, USA, ESP)
+  iso_numeric varchar(3) [unique, not null] // Código ISO 3166-1 numérico (ej: 032, 840, 724)
+  phone_code varchar(10) // Código telefónico internacional (ej: +54, +1, +34)
+  is_active boolean [not null, default: true] // Indica si el país está activo en el sistema
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+
+  Indexes {
+    (is_active) [name: 'countries_is_active']
+    (iso_alpha2) [name: 'countries_iso_alpha2']
+    (iso_alpha3) [name: 'countries_iso_alpha3']
+  }
+}
+
+// Traducciones de nombres de países en múltiples idiomas
+Table country_translations {
+  id integer [pk, not null, increment]
+  country_id integer [not null] // FK a tabla countries
+  lang varchar(5) [not null] // Código de idioma (es, en, pt, etc.)
+  name varchar(100) [not null] // Nombre del país en el idioma especificado
+  official_name varchar(200) // Nombre oficial completo del país
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+
+  Indexes {
+    (lang) [name: 'country_translations_lang']
+  }
+}
+
+// Organizaciones/tenants del sistema con identificadores UUID v7
+Table organizations {
+  id uuid [pk, not null] // UUID v7 - clave primaria time-ordered
+  human_id integer [unique, not null] // ID incremental global para uso interno/soporte
+  public_code varchar(50) [unique, not null] // ID público opaco (ej: ORG-7K9D2-X) - previene enumeración
+  slug varchar(100) [unique, not null] // Slug único de la organización (ej: acme, techcorp)
+  name varchar(200) [not null] // Nombre de la organización
+  country_id integer [not null] // FK a tabla countries - país de la organización
+  tax_id varchar(50) // Identificación fiscal (CUIT, RFC, EIN, etc.)
+  email varchar(255) // Email de contacto de la organización
+  phone varchar(50) // Teléfono de contacto
+  address text // Dirección física de la organización
+  settings jsonb // Configuración JSON de la organización
+  is_active boolean [not null, default: true] // Indica si la organización está activa
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+  deleted_at timestamptz
+
+  Indexes {
+    (country_id) [name: 'organizations_country_id']
+    (email) [name: 'organizations_email']
+    (human_id) [name: 'organizations_human_id']
+    (is_active) [name: 'organizations_is_active']
+    (public_code) [name: 'organizations_public_code']
+    (slug) [name: 'organizations_slug']
+  }
+}
+
+// Usuarios del sistema con autenticación JWT
+Table users {
+  id uuid [pk, not null] // UUID v7 - clave primaria time-ordered
+  human_id integer [not null] // ID incremental scoped por organization_id (solo uso interno/soporte)
+  public_code varchar(50) [unique, not null] // ID público opaco (ej: EC-7K9D2-X) - previene enumeración
+  email varchar(255) [unique, not null] // Email único para login
+  password_hash varchar(255) [not null] // Hash bcrypt de la contraseña (nunca devolver al cliente)
+  first_name varchar(100) [not null] // Nombre del usuario
+  last_name varchar(100) [not null] // Apellido del usuario
+  role enum_users_role [not null] // Rol para control de acceso basado en roles (RBAC)
+  organization_id uuid // FK a organizations para multi-tenancy (null = usuario global)
+  is_active boolean [not null, default: true] // Usuario activo/inactivo (soft disable)
+  last_login_at timestamptz // Última fecha de login exitoso
+  email_verified_at timestamptz // Fecha de verificación de email (null = no verificado)
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+  deleted_at timestamptz
+
+  Indexes {
+    (is_active) [name: 'users_is_active_idx']
+    (organization_id) [name: 'users_organization_id_idx']
+    (role) [name: 'users_role_idx']
+  }
+}
+
+
+// Foreign Key References
+Ref: country_translations.country_id > countries.id [update: cascade, delete: cascade]
+Ref: organizations.country_id > countries.id [update: cascade, delete: restrict]
+Ref: users.organization_id > organizations.id [update: cascade, delete: restrict]
