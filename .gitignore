@@ -131,3 +131,6 @@ dist
 
 # Replit debugger
 .breakpoints
+
+# Attached assets folder
+attached_assets/
