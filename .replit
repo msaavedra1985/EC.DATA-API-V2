@@ -7,6 +7,7 @@ requiredFiles = [".replit", "replit.nix", "package.json", "package-lock.json"]
 
 [nix]
 channel = "stable-24_11"
+packages = ["jq"]
 
 [deployment]
 run = ["node", "index.js"]
@@ -43,3 +44,7 @@ outputType = "webview"
 [[ports]]
 localPort = 5000
 externalPort = 80
+
+[[ports]]
+localPort = 46585
+externalPort = 3000
