@@ -19,7 +19,7 @@ export const authenticate = async (req, res, next) => {
 
         if (!authHeader) {
             return errorResponse(res, {
-                message: 'Token de autenticación no proporcionado',
+                message: 'auth.token.missing',
                 status: 401,
                 code: 'NO_TOKEN'
             });
@@ -30,7 +30,7 @@ export const authenticate = async (req, res, next) => {
 
         if (parts.length !== 2 || parts[0] !== 'Bearer') {
             return errorResponse(res, {
-                message: 'Formato de token inválido. Use: Bearer <token>',
+                message: 'auth.token.malformed',
                 status: 401,
                 code: 'INVALID_TOKEN_FORMAT'
             });
@@ -72,7 +72,7 @@ export const authorize = (allowedRoles = []) => {
         // Verificar que el usuario esté autenticado
         if (!req.user) {
             return errorResponse(res, {
-                message: 'Usuario no autenticado',
+                message: 'auth.token.missing',
                 status: 401,
                 code: 'UNAUTHORIZED'
             });
@@ -83,7 +83,7 @@ export const authorize = (allowedRoles = []) => {
             logger.warn(`User ${req.user.email} attempted to access protected route without permission`);
             
             return errorResponse(res, {
-                message: 'No tienes permisos para acceder a este recurso',
+                message: 'auth.permission.denied',
                 status: 403,
                 code: 'FORBIDDEN'
             });

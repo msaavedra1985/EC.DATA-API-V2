@@ -33,7 +33,7 @@ export const register = async (userData, sessionData = {}) => {
     // Verificar si el email ya existe
     const existingUser = await authRepository.findUserByEmail(email);
     if (existingUser) {
-        const error = new Error('El email ya está registrado');
+        const error = new Error('auth.register.email_exists');
         error.status = 409; // Conflict
         error.code = 'EMAIL_ALREADY_EXISTS';
         throw error;
@@ -73,7 +73,7 @@ export const login = async (email, password, sessionData = {}) => {
     const user = await authRepository.findUserByEmail(email, true);
 
     if (!user) {
-        const error = new Error('Credenciales inválidas');
+        const error = new Error('auth.login.invalid_credentials');
         error.status = 401; // Unauthorized
         error.code = 'INVALID_CREDENTIALS';
         throw error;
@@ -81,7 +81,7 @@ export const login = async (email, password, sessionData = {}) => {
 
     // Verificar que el usuario esté activo
     if (!user.is_active) {
-        const error = new Error('Usuario desactivado');
+        const error = new Error('auth.login.account_disabled');
         error.status = 403; // Forbidden
         error.code = 'USER_INACTIVE';
         throw error;
@@ -91,7 +91,7 @@ export const login = async (email, password, sessionData = {}) => {
     const isPasswordValid = await bcrypt.compare(password, user.password_hash);
 
     if (!isPasswordValid) {
-        const error = new Error('Credenciales inválidas');
+        const error = new Error('auth.login.invalid_credentials');
         error.status = 401;
         error.code = 'INVALID_CREDENTIALS';
         throw error;
@@ -124,7 +124,7 @@ export const verifyToken = async (token) => {
 
         // Verificar que sea un access token
         if (decoded.type !== 'access') {
-            const error = new Error('Token inválido');
+            const error = new Error('auth.token.invalid');
             error.status = 401;
             error.code = 'INVALID_TOKEN_TYPE';
             throw error;
@@ -134,14 +134,14 @@ export const verifyToken = async (token) => {
         const user = await authRepository.findUserById(decoded.userId);
 
         if (!user) {
-            const error = new Error('Usuario no encontrado');
+            const error = new Error('auth.profile.not_found');
             error.status = 401;
             error.code = 'USER_NOT_FOUND';
             throw error;
         }
 
         if (!user.is_active) {
-            const error = new Error('Usuario desactivado');
+            const error = new Error('auth.login.account_disabled');
             error.status = 403;
             error.code = 'USER_INACTIVE';
             throw error;
@@ -155,14 +155,14 @@ export const verifyToken = async (token) => {
         };
     } catch (error) {
         if (error.name === 'JsonWebTokenError') {
-            const authError = new Error('Token inválido');
+            const authError = new Error('auth.token.invalid');
             authError.status = 401;
             authError.code = 'INVALID_TOKEN';
             throw authError;
         }
 
         if (error.name === 'TokenExpiredError') {
-            const authError = new Error('Token expirado');
+            const authError = new Error('auth.token.expired');
             authError.status = 401;
             authError.code = 'TOKEN_EXPIRED';
             throw authError;
@@ -189,7 +189,7 @@ export const refreshAccessToken = async (refreshToken, sessionData = {}) => {
         const decoded = jwt.verify(refreshToken, JWT_REFRESH_SECRET);
 
         if (decoded.type !== 'refresh') {
-            const error = new Error('Token inválido');
+            const error = new Error('auth.token.invalid');
             error.status = 401;
             error.code = 'INVALID_TOKEN_TYPE';
             throw error;
@@ -199,7 +199,7 @@ export const refreshAccessToken = async (refreshToken, sessionData = {}) => {
         const storedToken = await refreshTokenRepository.findByTokenHash(refreshToken, true);
 
         if (!storedToken) {
-            const error = new Error('Refresh token no encontrado');
+            const error = new Error('auth.refresh.token_invalid');
             error.status = 401;
             error.code = 'INVALID_REFRESH_TOKEN';
             throw error;
@@ -210,7 +210,7 @@ export const refreshAccessToken = async (refreshToken, sessionData = {}) => {
             // Revocar TODOS los tokens del usuario (posible robo)
             await refreshTokenRepository.revokeAllUserTokens(decoded.userId, 'suspicious_activity');
             
-            const error = new Error('Token revocado - todas las sesiones han sido cerradas por seguridad');
+            const error = new Error('auth.refresh.token_theft_detected');
             error.status = 401;
             error.code = 'TOKEN_REUSE_DETECTED';
             throw error;
@@ -219,7 +219,7 @@ export const refreshAccessToken = async (refreshToken, sessionData = {}) => {
         // Verificar expiración absoluta
         if (new Date(storedToken.expires_at) < new Date()) {
             await refreshTokenRepository.revokeToken(refreshToken, 'expired');
-            const error = new Error('Refresh token expirado');
+            const error = new Error('auth.refresh.token_expired');
             error.status = 401;
             error.code = 'REFRESH_TOKEN_EXPIRED';
             throw error;
@@ -228,7 +228,7 @@ export const refreshAccessToken = async (refreshToken, sessionData = {}) => {
         // Verificar idle timeout (no usado en 7 días)
         if (refreshTokenRepository.isIdleTimeout(storedToken)) {
             await refreshTokenRepository.revokeToken(refreshToken, 'idle_timeout');
-            const error = new Error('Sesión expirada por inactividad');
+            const error = new Error('auth.refresh.token_expired');
             error.status = 401;
             error.code = 'IDLE_TIMEOUT';
             throw error;
@@ -238,14 +238,14 @@ export const refreshAccessToken = async (refreshToken, sessionData = {}) => {
         const user = await authRepository.findUserById(decoded.userId);
 
         if (!user) {
-            const error = new Error('Usuario no encontrado');
+            const error = new Error('auth.profile.not_found');
             error.status = 401;
             error.code = 'USER_NOT_FOUND';
             throw error;
         }
 
         if (!user.is_active) {
-            const error = new Error('Usuario desactivado');
+            const error = new Error('auth.login.account_disabled');
             error.status = 403;
             error.code = 'USER_INACTIVE';
             throw error;
@@ -260,7 +260,7 @@ export const refreshAccessToken = async (refreshToken, sessionData = {}) => {
         return tokens;
     } catch (error) {
         if (error.name === 'JsonWebTokenError') {
-            const authError = new Error('Refresh token inválido');
+            const authError = new Error('auth.refresh.token_invalid');
             authError.status = 401;
             authError.code = 'INVALID_REFRESH_TOKEN';
             throw authError;
@@ -304,7 +304,7 @@ export const changePassword = async (userId, currentPassword, newPassword) => {
     const isPasswordValid = await bcrypt.compare(currentPassword, userWithPassword.password_hash);
 
     if (!isPasswordValid) {
-        const error = new Error('Password actual incorrecto');
+        const error = new Error('auth.password.current_incorrect');
         error.status = 401;
         error.code = 'INVALID_CURRENT_PASSWORD';
         throw error;
@@ -393,7 +393,7 @@ export const logout = async (refreshToken) => {
     const revoked = await refreshTokenRepository.revokeToken(refreshToken, 'logout');
     
     if (!revoked) {
-        const error = new Error('Token no encontrado o ya revocado');
+        const error = new Error('auth.refresh.token_invalid');
         error.status = 404;
         error.code = 'TOKEN_NOT_FOUND';
         throw error;
@@ -432,7 +432,7 @@ export const revokeSession = async (sessionId, userId) => {
     const revoked = await refreshTokenRepository.revokeSessionById(sessionId, userId, 'logout');
     
     if (!revoked) {
-        const error = new Error('Sesión no encontrada');
+        const error = new Error('auth.logout.session_not_found');
         error.status = 404;
         error.code = 'SESSION_NOT_FOUND';
         throw error;

@@ -140,5 +140,6 @@
         "next": "Next",
         "previous": "Previous",
         "finish": "Finish"
-    }
+    },
+    "errors.route_not_found": "errors.route_not_found"
 }

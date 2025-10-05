@@ -53,8 +53,9 @@ export const errorHandler = (err, req, res, next) => {
  * Debe colocarse después de todas las rutas válidas
  */
 export const notFoundHandler = (req, res, next) => {
-    const error = new Error(`Route not found: ${req.method} ${req.path}`);
+    const error = new Error('errors.route_not_found');
     error.status = 404;
     error.code = ERROR_CODES.NOT_FOUND;
+    error.params = { method: req.method, path: req.path };
     next(error);
 };

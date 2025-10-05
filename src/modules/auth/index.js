@@ -123,7 +123,7 @@ router.post('/register', validate(registerSchema), async (req, res, next) => {
             organization_id
         }, sessionData);
 
-        return successResponse(res, result, 201);
+        return successResponse(res, { ...result, message: 'auth.register.success' }, 201);
     } catch (error) {
         next(error);
     }
@@ -205,7 +205,7 @@ router.post('/login', validate(loginSchema), async (req, res, next) => {
 
         const result = await authServices.login(email, password, sessionData);
 
-        return successResponse(res, result);
+        return successResponse(res, { ...result, message: 'auth.login.success' });
     } catch (error) {
         next(error);
     }
@@ -297,7 +297,7 @@ router.post('/refresh', validate(refreshTokenSchema), async (req, res, next) => 
 
         const tokens = await authServices.refreshAccessToken(refresh_token, sessionData);
 
-        return successResponse(res, tokens);
+        return successResponse(res, { ...tokens, message: 'auth.refresh.success' });
     } catch (error) {
         next(error);
     }
@@ -368,7 +368,7 @@ router.post('/change-password', authenticate, validate(changePasswordSchema), as
         await authServices.changePassword(userId, current_password, new_password);
 
         return successResponse(res, {
-            message: 'Password cambiado exitosamente'
+            message: 'auth.password.changed'
         });
     } catch (error) {
         next(error);
@@ -428,7 +428,7 @@ router.get('/me', authenticate, async (req, res, next) => {
             });
         }
 
-        return successResponse(res, { user });
+        return successResponse(res, { user, message: 'auth.profile.retrieved' });
     } catch (error) {
         next(error);
     }
@@ -522,7 +522,7 @@ router.post('/logout', validate(logoutSchema), async (req, res, next) => {
         await authServices.logout(refresh_token);
 
         return successResponse(res, {
-            message: 'Sesión cerrada exitosamente'
+            message: 'auth.logout.success'
         });
     } catch (error) {
         next(error);
@@ -573,7 +573,7 @@ router.post('/logout-all', authenticate, async (req, res, next) => {
         const sessionsRevoked = await authServices.logoutAll(userId);
 
         return successResponse(res, {
-            message: 'Todas las sesiones han sido cerradas',
+            message: 'auth.logout.all_success',
             sessions_closed: sessionsRevoked
         });
     } catch (error) {
@@ -621,7 +621,7 @@ router.get('/sessions', authenticate, async (req, res, next) => {
 
         const sessions = await authServices.getUserSessions(userId);
 
-        return successResponse(res, { sessions });
+        return successResponse(res, { sessions, message: 'auth.sessions.retrieved' });
     } catch (error) {
         next(error);
     }
@@ -688,7 +688,7 @@ router.post('/sessions/:sessionId/revoke', authenticate, validate(revokeSessionS
         await authServices.revokeSession(sessionId, userId);
 
         return successResponse(res, {
-            message: 'Sesión revocada exitosamente'
+            message: 'auth.logout.session_revoked'
         });
     } catch (error) {
         next(error);

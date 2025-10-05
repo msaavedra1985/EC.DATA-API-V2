@@ -6,6 +6,7 @@ import compression from 'compression';
 import pinoHttp from 'pino-http';
 import { config } from './config/env.js';
 import { httpLogger } from './utils/logger.js';
+import { i18nMiddleware } from './middleware/i18n.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import { setupSwagger } from './docs/openapi.js';
 import { metricsHandler } from './metrics/prometheus.js';
@@ -93,6 +94,14 @@ const createApp = () => {
 
     // Compresión de respuestas (brotli/gzip)
     app.use(compression());
+
+    // ========================================
+    // INTERNACIONALIZACIÓN (i18n)
+    // ========================================
+
+    // Middleware de i18n para manejo de múltiples idiomas
+    // Detecta idioma desde: query param (?lang=), header X-Language, o Accept-Language
+    app.use(i18nMiddleware);
 
     // ========================================
     // RUTAS DE LA API
