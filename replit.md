@@ -93,6 +93,13 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+### October 5, 2025 - Performance: Logger with Worker Threads
+- **Pino Logger Optimization:** Implemented worker thread-based logging to avoid blocking the event loop
+- **Configuration:** Both development and production now use `pino.transport()` with `worker: { autoEnd: true }`
+- **Development:** Uses `pino-pretty` in worker thread for formatted output
+- **Production:** Uses `pino/file` in worker thread for JSON output to stdout
+- **Performance Standards:** Added mandatory policy to use worker threads for I/O-intensive operations
+
 ### October 5, 2025 - Complete EC.DATA Rebranding
 - **Company Branding:** Updated all references from "API EC ESM" to "EC.DATA API - Enterprise REST API"
 - **Swagger/OpenAPI:** Title, description, contact email (api-support@ecdata.com), and site title all updated
