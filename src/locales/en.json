@@ -1,5 +1,5 @@
 {
-    "api.name": "API EC ESM - Enterprise API",
+    "api.name": "EC.DATA API - Enterprise REST API",
     "api.description": "Enterprise REST API with ESM, Express, Sequelize, Redis, and comprehensive observability",
     "auth.register.success": "User successfully registered",
     "auth.register.email_exists": "Email is already registered",
