@@ -36,10 +36,18 @@ export const config = {
         url: process.env.REDIS_URL || null,
     },
 
-    // JWT
+    // JWT - Secrets separados para access y refresh tokens
     jwt: {
-        secret: process.env.JWT_SECRET || 'dev-secret-change-in-production',
-        expiresIn: process.env.JWT_EXPIRES_IN || '24h',
+        // Access token (corta duración - 15 minutos)
+        accessSecret: process.env.JWT_ACCESS_SECRET || 'dev-access-secret-change-in-production',
+        accessExpiresIn: process.env.JWT_ACCESS_EXPIRES_IN || '15m',
+        
+        // Refresh token (larga duración - 14 días)
+        refreshSecret: process.env.JWT_REFRESH_SECRET || 'dev-refresh-secret-change-in-production',
+        refreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '14d',
+        
+        // Idle timeout (revocación por inactividad - 7 días)
+        refreshIdleDays: parseInt(process.env.JWT_REFRESH_IDLE_DAYS || '7', 10),
     },
 
     // Rate limiting (observational mode)
@@ -63,8 +71,11 @@ export const validateConfig = () => {
 
     // En producción, validar secretos críticos
     if (config.env === 'production') {
-        if (config.jwt.secret === 'dev-secret-change-in-production') {
-            required.push('JWT_SECRET');
+        if (config.jwt.accessSecret === 'dev-access-secret-change-in-production') {
+            required.push('JWT_ACCESS_SECRET');
+        }
+        if (config.jwt.refreshSecret === 'dev-refresh-secret-change-in-production') {
+            required.push('JWT_REFRESH_SECRET');
         }
     }
 

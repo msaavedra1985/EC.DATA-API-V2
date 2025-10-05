@@ -147,3 +147,31 @@ export const resetPasswordSchema = z.object({
             )
     })
 });
+
+/**
+ * Schema para logout
+ * POST /auth/logout
+ * refresh_token puede venir en body o en header Authorization
+ */
+export const logoutSchema = z.object({
+    body: z.object({
+        refresh_token: z
+            .string()
+            .min(1, 'Refresh token no puede estar vacío')
+            .optional()
+    })
+});
+
+/**
+ * Schema para revocar sesión específica
+ * POST /auth/sessions/:sessionId/revoke
+ */
+export const revokeSessionSchema = z.object({
+    params: z.object({
+        sessionId: z
+            .string({
+                required_error: 'Session ID es requerido'
+            })
+            .uuid('Session ID debe ser un UUID válido')
+    })
+});

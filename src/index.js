@@ -5,9 +5,13 @@ import { initializeDatabase, closeDatabase } from './db/sql/sequelize.js';
 import { initializeRedis, closeRedis } from './db/redis/client.js';
 import { setupSwagger } from './docs/openapi.js';
 import { metricsHandler } from './metrics/prometheus.js';
+import { startTokenCleanupScheduler } from './utils/cleanupTokens.js';
 
 // Importar todos los modelos en orden de dependencias (necesario para Sequelize.sync())
 import './db/models.js';
+
+// Variable global para el cleanup scheduler
+let stopTokenCleanup = null;
 
 /**
  * Inicializa todos los servicios (DB, Redis, etc.)
@@ -37,6 +41,9 @@ const startServer = async () => {
     try {
         // Inicializar servicios externos
         await initializeServices();
+
+        // Iniciar scheduler de limpieza de tokens (cada 6 horas)
+        stopTokenCleanup = startTokenCleanupScheduler(6);
 
         // Crear aplicación Express
         const app = createApp();
@@ -74,6 +81,11 @@ const startServer = async () => {
             
             server.close(async () => {
                 console.log('✅ HTTP server closed');
+                
+                // Detener scheduler de limpieza de tokens
+                if (stopTokenCleanup) {
+                    stopTokenCleanup();
+                }
                 
                 // Cerrar conexiones a servicios externos
                 await closeDatabase();
