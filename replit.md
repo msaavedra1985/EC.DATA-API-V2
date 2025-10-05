@@ -24,6 +24,11 @@ Preferred communication style: Simple, everyday language.
 - Ensure proper testing coverage for new features
 - Follow the established directory structure and layer separation
 
+**Performance Standards:**
+- **Worker Threads:** Always use worker threads for I/O-intensive operations (logging, file processing, etc.) to avoid blocking the event loop
+- **Non-blocking Operations:** Prefer asynchronous patterns over synchronous operations
+- **Logging:** Pino must run in a separate worker thread using `pino.transport()` with `worker: { autoEnd: true }`
+
 **Documentation Standards (MANDATORY):**
 - **Swagger/OpenAPI**: Every new endpoint MUST include formal `@swagger` JSDoc annotations before being considered complete
 - **Database Schema**: After ANY database schema change, MUST run `npm run db:dbml` to update `database.dbml.txt` for visualization

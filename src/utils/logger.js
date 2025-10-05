@@ -1,5 +1,6 @@
 // utils/logger.js
 // Logger centralizado con Pino para logging estructurado JSON
+// IMPORTANTE: Usa worker threads para evitar bloquear el event loop principal
 
 import pino from 'pino';
 import { config } from '../config/env.js';
@@ -8,6 +9,7 @@ import { config } from '../config/env.js';
  * Configuración base del logger Pino
  * - En desarrollo: pretty printing con colores y formato legible
  * - En producción: JSON estructurado para procesamiento automático
+ * - Ambos entornos: worker threads para no bloquear el event loop
  */
 const pinoConfig = {
     // Nivel de log según el entorno
@@ -73,27 +75,39 @@ const pinoConfig = {
 };
 
 /**
- * Configuración de transporte (pretty printing) para desarrollo
+ * Configuración de transporte con worker threads
+ * Usa un worker thread dedicado para evitar bloquear el event loop
+ * - Desarrollo: pino-pretty para formato legible
+ * - Producción: pino/file para JSON a stdout
  */
-const transport = config.env === 'development'
-    ? {
-        target: 'pino-pretty',
-        options: {
-            colorize: true,
-            translateTime: 'HH:MM:ss.l',
-            ignore: 'pid,hostname',
-            singleLine: false,
-            messageFormat: '{levelLabel} - {msg}'
+const transport = pino.transport({
+    targets: [
+        {
+            target: config.env === 'development' ? 'pino-pretty' : 'pino/file',
+            level: config.env === 'development' ? 'debug' : 'info',
+            options: config.env === 'development'
+                ? {
+                    colorize: true,
+                    translateTime: 'HH:MM:ss.l',
+                    ignore: 'pid,hostname',
+                    singleLine: false,
+                    messageFormat: '{levelLabel} - {msg}'
+                }
+                : {
+                    destination: 1 // stdout
+                }
         }
+    ],
+    // Worker thread dedicado para no bloquear el event loop
+    worker: {
+        autoEnd: true // Terminar automáticamente el worker al cerrar
     }
-    : undefined;
+});
 
 /**
- * Crear instancia del logger
+ * Crear instancia del logger con worker threads
  */
-const logger = transport
-    ? pino(pinoConfig, pino.transport(transport))
-    : pino(pinoConfig);
+const logger = pino(pinoConfig, transport);
 
 /**
  * Child loggers para módulos específicos
