@@ -13,12 +13,12 @@ const swaggerOptions = {
     definition: {
         openapi: '3.0.0',
         info: {
-            title: 'API EC ESM - Enterprise API',
+            title: 'EC.DATA API - Enterprise REST API',
             version: '1.0.0',
             description: 'Enterprise REST API with ESM, Express, Sequelize, Redis, and comprehensive observability',
             contact: {
-                name: 'API Support',
-                email: 'support@api-ec.com',
+                name: 'EC.DATA API Support',
+                email: 'api-support@ecdata.com',
             },
         },
         servers: [
