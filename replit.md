@@ -83,5 +83,17 @@ Preferred communication style: Simple, everyday language.
 
 ### Monitoring & Observability
 - **Metrics (Prometheus):** HTTP request duration, counts, active connections, custom metrics.
-- **Logging:** Structured JSON logs via Pino, request/response logging, database audit trail.
+- **Logging:** Structured JSON logs via Pino (service: `ecdata-api`), request/response logging, database audit trail.
 - **Health Checks:** Basic endpoint at `/api/v1/health` for service status.
+
+## Recent Changes
+
+### October 5, 2025 - Complete EC.DATA Rebranding
+- **Company Branding:** Updated all references from "API EC ESM" to "EC.DATA API - Enterprise REST API"
+- **Swagger/OpenAPI:** Title, description, contact email (api-support@ecdata.com), and site title all updated
+- **Server Banner:** Startup banner displays "EC.DATA API - Enterprise REST API Server"
+- **Health Endpoint:** Returns `"service": "EC.DATA API"` in response
+- **Translations:** Both Spanish and English files updated with new branding
+- **Logger Metadata:** Pino logger service identifier changed to `ecdata-api`
+- **Database Schema:** `database.dbml.txt` regenerated with new project branding
+- **Documentation:** All project documentation updated to reflect EC.DATA company identity
