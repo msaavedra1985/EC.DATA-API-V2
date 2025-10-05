@@ -1,0 +1,144 @@
+{
+    "api": {
+        "name": "API EC ESM - Enterprise API",
+        "description": "Enterprise REST API with ESM, Express, Sequelize, Redis, and comprehensive observability"
+    },
+    "auth": {
+        "register": {
+            "success": "User successfully registered",
+            "email_exists": "Email is already registered",
+            "invalid_password": "Password must be at least 8 characters long",
+            "invalid_email": "Invalid email format",
+            "organization_not_found": "Specified organization does not exist"
+        },
+        "login": {
+            "success": "Login successful",
+            "invalid_credentials": "Invalid email or password",
+            "account_disabled": "Account is disabled",
+            "too_many_attempts": "Too many login attempts. Please wait before trying again"
+        },
+        "logout": {
+            "success": "Successfully logged out",
+            "all_success": "All sessions successfully terminated",
+            "session_not_found": "Session not found",
+            "session_revoked": "Session successfully revoked"
+        },
+        "refresh": {
+            "success": "Token successfully refreshed",
+            "token_expired": "Refresh token has expired",
+            "token_invalid": "Invalid refresh token",
+            "token_revoked": "Token revoked for security reasons",
+            "token_theft_detected": "Possible token theft detected. All sessions have been revoked for security"
+        },
+        "password": {
+            "changed": "Password successfully changed",
+            "reset_requested": "A password reset link has been sent to your email",
+            "reset_success": "Password successfully reset",
+            "current_incorrect": "Current password is incorrect",
+            "same_as_current": "New password must be different from current password",
+            "weak_password": "Password does not meet security requirements"
+        },
+        "profile": {
+            "retrieved": "Profile successfully retrieved",
+            "updated": "Profile successfully updated",
+            "not_found": "User not found"
+        },
+        "sessions": {
+            "retrieved": "Sessions successfully retrieved",
+            "no_active": "No active sessions"
+        },
+        "token": {
+            "missing": "Authorization token not provided",
+            "invalid": "Invalid authorization token",
+            "expired": "Authorization token expired",
+            "malformed": "Invalid token format"
+        },
+        "permission": {
+            "denied": "You don't have permission to access this resource",
+            "role_required": "Role {{role}} required for this action"
+        }
+    },
+    "validation": {
+        "required": "Field {{field}} is required",
+        "invalid_type": "Field {{field}} has an invalid data type",
+        "min_length": "Field {{field}} must be at least {{min}} characters",
+        "max_length": "Field {{field}} must not exceed {{max}} characters",
+        "email": "Invalid email format",
+        "uuid": "ID must be a valid UUID",
+        "enum": "Value must be one of: {{values}}",
+        "number": "Field {{field}} must be a number",
+        "integer": "Field {{field}} must be an integer",
+        "date": "Field {{field}} must be a valid date",
+        "boolean": "Field {{field}} must be true or false",
+        "pattern": "Field {{field}} does not match the expected format",
+        "custom": "Validation error in field {{field}}"
+    },
+    "errors": {
+        "internal": "Internal server error",
+        "not_found": "Resource not found",
+        "route_not_found": "Route not found: {{method}} {{path}}",
+        "bad_request": "Bad request",
+        "unauthorized": "Unauthorized",
+        "forbidden": "Access forbidden",
+        "conflict": "Conflict with current resource state",
+        "validation_error": "Validation error",
+        "rate_limit": "Too many requests. Please try again later",
+        "database": "Database error",
+        "connection": "Connection error",
+        "timeout": "Operation timeout exceeded",
+        "service_unavailable": "Service temporarily unavailable",
+        "method_not_allowed": "HTTP method not allowed",
+        "unsupported_media": "Unsupported content type",
+        "payload_too_large": "Request too large",
+        "unprocessable_entity": "Cannot process entity"
+    },
+    "success": {
+        "created": "Resource successfully created",
+        "updated": "Resource successfully updated",
+        "deleted": "Resource successfully deleted",
+        "operation": "Operation completed successfully"
+    },
+    "pagination": {
+        "page": "Page {{current}} of {{total}}",
+        "results": "Showing {{from}}-{{to}} of {{total}} results",
+        "no_results": "No results found"
+    },
+    "health": {
+        "status": {
+            "healthy": "All services running correctly",
+            "degraded": "Some services experiencing issues",
+            "unhealthy": "Service unavailable"
+        },
+        "database": {
+            "connected": "Database connected",
+            "disconnected": "Database disconnected"
+        },
+        "redis": {
+            "connected": "Redis connected",
+            "disconnected": "Redis disconnected"
+        }
+    },
+    "common": {
+        "welcome": "Welcome",
+        "goodbye": "Goodbye",
+        "yes": "Yes",
+        "no": "No",
+        "loading": "Loading...",
+        "processing": "Processing...",
+        "please_wait": "Please wait",
+        "confirm": "Confirm",
+        "cancel": "Cancel",
+        "save": "Save",
+        "delete": "Delete",
+        "edit": "Edit",
+        "create": "Create",
+        "update": "Update",
+        "search": "Search",
+        "filter": "Filter",
+        "sort": "Sort",
+        "back": "Back",
+        "next": "Next",
+        "previous": "Previous",
+        "finish": "Finish"
+    }
+}

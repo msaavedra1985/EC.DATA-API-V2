@@ -1,0 +1,144 @@
+{
+    "api": {
+        "name": "API EC ESM - Enterprise API",
+        "description": "API REST empresarial con ESM, Express, Sequelize, Redis y observabilidad completa"
+    },
+    "auth": {
+        "register": {
+            "success": "Usuario registrado exitosamente",
+            "email_exists": "El email ya está registrado",
+            "invalid_password": "La contraseña debe tener al menos 8 caracteres",
+            "invalid_email": "El formato del email no es válido",
+            "organization_not_found": "La organización especificada no existe"
+        },
+        "login": {
+            "success": "Inicio de sesión exitoso",
+            "invalid_credentials": "Email o contraseña incorrectos",
+            "account_disabled": "La cuenta está deshabilitada",
+            "too_many_attempts": "Demasiados intentos de inicio de sesión. Por favor, espere antes de intentar nuevamente"
+        },
+        "logout": {
+            "success": "Sesión cerrada exitosamente",
+            "all_success": "Todas las sesiones cerradas exitosamente",
+            "session_not_found": "Sesión no encontrada",
+            "session_revoked": "Sesión revocada exitosamente"
+        },
+        "refresh": {
+            "success": "Token renovado exitosamente",
+            "token_expired": "El token de actualización ha expirado",
+            "token_invalid": "Token de actualización inválido",
+            "token_revoked": "Token revocado por razones de seguridad",
+            "token_theft_detected": "Se detectó posible robo de token. Todas las sesiones han sido revocadas por seguridad"
+        },
+        "password": {
+            "changed": "Contraseña cambiada exitosamente",
+            "reset_requested": "Se ha enviado un enlace de restablecimiento a tu email",
+            "reset_success": "Contraseña restablecida exitosamente",
+            "current_incorrect": "La contraseña actual es incorrecta",
+            "same_as_current": "La nueva contraseña debe ser diferente a la actual",
+            "weak_password": "La contraseña no cumple con los requisitos de seguridad"
+        },
+        "profile": {
+            "retrieved": "Perfil obtenido exitosamente",
+            "updated": "Perfil actualizado exitosamente",
+            "not_found": "Usuario no encontrado"
+        },
+        "sessions": {
+            "retrieved": "Sesiones obtenidas exitosamente",
+            "no_active": "No hay sesiones activas"
+        },
+        "token": {
+            "missing": "Token de autorización no proporcionado",
+            "invalid": "Token de autorización inválido",
+            "expired": "Token de autorización expirado",
+            "malformed": "Formato de token inválido"
+        },
+        "permission": {
+            "denied": "No tienes permisos para acceder a este recurso",
+            "role_required": "Se requiere rol {{role}} para esta acción"
+        }
+    },
+    "validation": {
+        "required": "El campo {{field}} es requerido",
+        "invalid_type": "El campo {{field}} tiene un tipo de dato inválido",
+        "min_length": "El campo {{field}} debe tener al menos {{min}} caracteres",
+        "max_length": "El campo {{field}} no debe exceder {{max}} caracteres",
+        "email": "El email no tiene un formato válido",
+        "uuid": "El ID debe ser un UUID válido",
+        "enum": "El valor debe ser uno de: {{values}}",
+        "number": "El campo {{field}} debe ser un número",
+        "integer": "El campo {{field}} debe ser un número entero",
+        "date": "El campo {{field}} debe ser una fecha válida",
+        "boolean": "El campo {{field}} debe ser verdadero o falso",
+        "pattern": "El campo {{field}} no cumple con el formato esperado",
+        "custom": "Error de validación en el campo {{field}}"
+    },
+    "errors": {
+        "internal": "Error interno del servidor",
+        "not_found": "Recurso no encontrado",
+        "route_not_found": "Ruta no encontrada: {{method}} {{path}}",
+        "bad_request": "Solicitud incorrecta",
+        "unauthorized": "No autorizado",
+        "forbidden": "Acceso prohibido",
+        "conflict": "Conflicto con el estado actual del recurso",
+        "validation_error": "Error de validación",
+        "rate_limit": "Demasiadas solicitudes. Por favor, intente más tarde",
+        "database": "Error de base de datos",
+        "connection": "Error de conexión",
+        "timeout": "La operación ha excedido el tiempo límite",
+        "service_unavailable": "Servicio no disponible temporalmente",
+        "method_not_allowed": "Método HTTP no permitido",
+        "unsupported_media": "Tipo de contenido no soportado",
+        "payload_too_large": "La solicitud es demasiado grande",
+        "unprocessable_entity": "No se puede procesar la entidad"
+    },
+    "success": {
+        "created": "Recurso creado exitosamente",
+        "updated": "Recurso actualizado exitosamente",
+        "deleted": "Recurso eliminado exitosamente",
+        "operation": "Operación completada exitosamente"
+    },
+    "pagination": {
+        "page": "Página {{current}} de {{total}}",
+        "results": "Mostrando {{from}}-{{to}} de {{total}} resultados",
+        "no_results": "No se encontraron resultados"
+    },
+    "health": {
+        "status": {
+            "healthy": "Todos los servicios funcionando correctamente",
+            "degraded": "Algunos servicios presentan problemas",
+            "unhealthy": "El servicio no está disponible"
+        },
+        "database": {
+            "connected": "Base de datos conectada",
+            "disconnected": "Base de datos desconectada"
+        },
+        "redis": {
+            "connected": "Redis conectado",
+            "disconnected": "Redis desconectado"
+        }
+    },
+    "common": {
+        "welcome": "Bienvenido",
+        "goodbye": "Hasta pronto",
+        "yes": "Sí",
+        "no": "No",
+        "loading": "Cargando...",
+        "processing": "Procesando...",
+        "please_wait": "Por favor espere",
+        "confirm": "Confirmar",
+        "cancel": "Cancelar",
+        "save": "Guardar",
+        "delete": "Eliminar",
+        "edit": "Editar",
+        "create": "Crear",
+        "update": "Actualizar",
+        "search": "Buscar",
+        "filter": "Filtrar",
+        "sort": "Ordenar",
+        "back": "Volver",
+        "next": "Siguiente",
+        "previous": "Anterior",
+        "finish": "Finalizar"
+    }
+}
