@@ -20,6 +20,12 @@ Preferred communication style: Simple, everyday language.
 - Ensure proper testing coverage for new features
 - Follow the established directory structure and layer separation
 
+**Documentation Standards (MANDATORY):**
+- **Swagger/OpenAPI**: Every new endpoint MUST include formal `@swagger` JSDoc annotations before being considered complete
+- **Database Schema**: After ANY database schema change, MUST run `npm run db:dbml` to update `database.dbml.txt` for visualization
+- **JSDoc Format**: Use OpenAPI 3.0 specification format in comments (schemas, responses, security, examples)
+- **Schema Sync**: The `database.dbml.txt` file must always reflect the current production schema state
+
 **Communication:**
 - Explain architectural decisions and tradeoffs clearly
 - Propose the simplest, most practical solutions for connecting with the Next.js frontend

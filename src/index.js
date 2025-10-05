@@ -3,8 +3,6 @@ import createApp from './app.js';
 import { config, validateConfig } from './config/env.js';
 import { initializeDatabase, closeDatabase } from './db/sql/sequelize.js';
 import { initializeRedis, closeRedis } from './db/redis/client.js';
-import { setupSwagger } from './docs/openapi.js';
-import { metricsHandler } from './metrics/prometheus.js';
 import { startTokenCleanupScheduler } from './utils/cleanupTokens.js';
 
 // Importar todos los modelos en orden de dependencias (necesario para Sequelize.sync())
@@ -45,16 +43,8 @@ const startServer = async () => {
         // Iniciar scheduler de limpieza de tokens (cada 6 horas)
         stopTokenCleanup = startTokenCleanupScheduler(6);
 
-        // Crear aplicación Express
+        // Crear aplicación Express (incluye Swagger y métricas)
         const app = createApp();
-
-        // Setup Swagger docs (solo en desarrollo)
-        setupSwagger(app);
-
-        // Endpoint de métricas Prometheus (solo en desarrollo)
-        if (config.env === 'development') {
-            app.get('/metrics', metricsHandler);
-        }
 
         // Iniciar servidor HTTP en 0.0.0.0:5000 (preparado para Socket.io)
         const server = app.listen(config.port, '0.0.0.0', () => {

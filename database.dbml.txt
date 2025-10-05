@@ -1,4 +1,4 @@
-// Database Schema - Generated on 2025-10-05T01:39:57.827Z
+// Database Schema - Generated on 2025-10-05T03:28:32.022Z
 // Project: API EC ESM - Enterprise REST API
 // Use this file at https://dbdiagram.io to visualize the schema
 
@@ -70,6 +70,32 @@ Table organizations {
   }
 }
 
+// Refresh tokens para rotación y gestión de sesiones JWT
+Table refresh_tokens {
+  id uuid [pk, not null] // UUID v7 - clave primaria time-ordered
+  user_id uuid [not null] // FK a users - dueño de la sesión
+  token_hash varchar(64) [unique, not null] // SHA-256 hash del refresh token (nunca almacenar en claro)
+  expires_at timestamptz [not null] // Fecha de expiración absoluta del token (14 días desde creación)
+  last_used_at timestamptz [not null] // Última vez que se usó para refresh (para idle timeout de 7 días)
+  is_revoked boolean [not null, default: false] // Token revocado manualmente (logout, password change, detección de robo)
+  revoked_at timestamptz // Timestamp de revocación (null si no revocado)
+  revoked_reason enum_refresh_tokens_revoked_reason // Motivo de revocación para auditoría
+  user_agent text // User agent del navegador (solo para auditoría, no validación)
+  ip_address varchar(45) // IP del cliente en formato IPv4 o IPv6 (solo para auditoría, no validación)
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+  deleted_at timestamptz
+
+  Indexes {
+    (expires_at, is_revoked) [name: 'idx_refresh_tokens_cleanup']
+    (expires_at) [name: 'idx_refresh_tokens_expires_at']
+    (is_revoked) [name: 'idx_refresh_tokens_is_revoked']
+    (token_hash) [name: 'idx_refresh_tokens_token_hash', unique]
+    (user_id) [name: 'idx_refresh_tokens_user_id']
+    (token_hash) [name: 'refresh_tokens_token_hash_key', unique]
+  }
+}
+
 // Usuarios del sistema con autenticación JWT
 Table users {
   id uuid [pk, not null] // UUID v7 - clave primaria time-ordered
@@ -104,4 +130,5 @@ Table users {
 // Foreign Key References
 Ref: country_translations.country_id > countries.id [update: cascade, delete: cascade]
 Ref: organizations.country_id > countries.id [update: cascade, delete: restrict]
+Ref: refresh_tokens.user_id > users.id [update: cascade, delete: cascade]
 Ref: users.organization_id > organizations.id [update: cascade, delete: restrict]

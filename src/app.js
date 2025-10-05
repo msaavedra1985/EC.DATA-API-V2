@@ -5,6 +5,8 @@ import cors from 'cors';
 import compression from 'compression';
 import { config } from './config/env.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
+import { setupSwagger } from './docs/openapi.js';
+import { metricsHandler } from './metrics/prometheus.js';
 import routes from './routes/index.js';
 
 /**
@@ -46,6 +48,18 @@ const createApp = () => {
 
     // Centralizar todas las rutas desde routes/index.js
     app.use('/api/v1', routes);
+
+    // ========================================
+    // DOCUMENTACIÓN Y MÉTRICAS (solo desarrollo)
+    // ========================================
+
+    // Setup Swagger docs
+    setupSwagger(app);
+
+    // Endpoint de métricas Prometheus
+    if (config.env === 'development') {
+        app.get('/metrics', metricsHandler);
+    }
 
     // ========================================
     // MANEJO DE ERRORES

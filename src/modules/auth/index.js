@@ -19,22 +19,91 @@ import * as authRepository from './repository.js';
 const router = express.Router();
 
 /**
- * POST /auth/register
- * Registrar un nuevo usuario
- * 
- * Body:
- * - email: string (required)
- * - password: string (required, min 8 chars, must contain uppercase, lowercase, number)
- * - first_name: string (required)
- * - last_name: string (required)
- * - organization_id: string (optional, UUID)
- * 
- * Response:
- * - user: Object (con public_code, sin password_hash ni human_id)
- * - access_token: string
- * - refresh_token: string
- * - expires_in: string
- * - token_type: string
+ * @swagger
+ * /auth/register:
+ *   post:
+ *     summary: Registrar un nuevo usuario
+ *     description: Crea un nuevo usuario en el sistema y devuelve tokens de autenticación
+ *     tags: [Auth]
+ *     security: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - password
+ *               - first_name
+ *               - last_name
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 example: user@example.com
+ *               password:
+ *                 type: string
+ *                 minLength: 8
+ *                 description: Debe contener al menos una mayúscula, una minúscula y un número
+ *                 example: SecurePass123!
+ *               first_name:
+ *                 type: string
+ *                 minLength: 2
+ *                 example: Juan
+ *               last_name:
+ *                 type: string
+ *                 minLength: 2
+ *                 example: Pérez
+ *               organization_id:
+ *                 type: string
+ *                 format: uuid
+ *                 nullable: true
+ *                 description: UUID de la organización (opcional)
+ *     responses:
+ *       201:
+ *         description: Usuario registrado exitosamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     user:
+ *                       $ref: '#/components/schemas/User'
+ *                     access_token:
+ *                       type: string
+ *                     refresh_token:
+ *                       type: string
+ *                     expires_in:
+ *                       type: string
+ *                       example: 15m
+ *                     token_type:
+ *                       type: string
+ *                       example: Bearer
+ *                 meta:
+ *                   type: object
+ *                   properties:
+ *                     timestamp:
+ *                       type: string
+ *                       format: date-time
+ *       400:
+ *         description: Datos de entrada inválidos
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       409:
+ *         description: El email ya está registrado
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 router.post('/register', validate(registerSchema), async (req, res, next) => {
     try {
@@ -61,19 +130,68 @@ router.post('/register', validate(registerSchema), async (req, res, next) => {
 });
 
 /**
- * POST /auth/login
- * Login de usuario existente
- * 
- * Body:
- * - email: string (required)
- * - password: string (required)
- * 
- * Response:
- * - user: Object (sin password_hash)
- * - access_token: string
- * - refresh_token: string
- * - expires_in: string
- * - token_type: string
+ * @swagger
+ * /auth/login:
+ *   post:
+ *     summary: Iniciar sesión
+ *     description: Autentica un usuario y devuelve tokens JWT (access + refresh)
+ *     tags: [Auth]
+ *     security: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - password
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 example: user@example.com
+ *               password:
+ *                 type: string
+ *                 example: SecurePass123!
+ *     responses:
+ *       200:
+ *         description: Login exitoso
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     user:
+ *                       $ref: '#/components/schemas/User'
+ *                     access_token:
+ *                       type: string
+ *                     refresh_token:
+ *                       type: string
+ *                     expires_in:
+ *                       type: string
+ *                       example: 15m
+ *                     token_type:
+ *                       type: string
+ *                       example: Bearer
+ *       400:
+ *         description: Datos de entrada inválidos
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       401:
+ *         description: Credenciales incorrectas o usuario inactivo
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 router.post('/login', validate(loginSchema), async (req, res, next) => {
     try {
@@ -94,17 +212,78 @@ router.post('/login', validate(loginSchema), async (req, res, next) => {
 });
 
 /**
- * POST /auth/refresh
- * Refresh de access token usando refresh token
- * 
- * Body:
- * - refresh_token: string (required)
- * 
- * Response:
- * - access_token: string
- * - refresh_token: string
- * - expires_in: string
- * - token_type: string
+ * @swagger
+ * /auth/refresh:
+ *   post:
+ *     summary: Renovar access token
+ *     description: Renueva el access token usando un refresh token válido. Implementa rotación automática (el refresh token viejo se invalida y se genera uno nuevo)
+ *     tags: [Auth]
+ *     security: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - refresh_token
+ *             properties:
+ *               refresh_token:
+ *                 type: string
+ *                 description: Refresh token JWT obtenido en login o refresh anterior
+ *     responses:
+ *       200:
+ *         description: Tokens renovados exitosamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     access_token:
+ *                       type: string
+ *                       description: Nuevo access token (15 min validez)
+ *                     refresh_token:
+ *                       type: string
+ *                       description: Nuevo refresh token (14 días validez)
+ *                     expires_in:
+ *                       type: string
+ *                       example: 15m
+ *                     token_type:
+ *                       type: string
+ *                       example: Bearer
+ *       400:
+ *         description: Refresh token inválido o mal formado
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       401:
+ *         description: Refresh token expirado, revocado, o detección de robo (todas las sesiones cerradas)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *             examples:
+ *               expired:
+ *                 value:
+ *                   ok: false
+ *                   error:
+ *                     message: Refresh token expirado
+ *                     code: REFRESH_TOKEN_EXPIRED
+ *                     status: 401
+ *               theft_detected:
+ *                 value:
+ *                   ok: false
+ *                   error:
+ *                     message: Token revocado - todas las sesiones han sido cerradas por seguridad
+ *                     code: TOKEN_REUSE_DETECTED
+ *                     status: 401
  */
 router.post('/refresh', validate(refreshTokenSchema), async (req, res, next) => {
     try {
@@ -125,16 +304,61 @@ router.post('/refresh', validate(refreshTokenSchema), async (req, res, next) => 
 });
 
 /**
- * POST /auth/change-password
- * Cambiar password del usuario autenticado
- * Requiere autenticación (JWT middleware)
- * 
- * Body:
- * - current_password: string (required)
- * - new_password: string (required, min 8 chars, must contain uppercase, lowercase, number)
- * 
- * Response:
- * - message: string
+ * @swagger
+ * /auth/change-password:
+ *   post:
+ *     summary: Cambiar contraseña
+ *     description: Cambia la contraseña del usuario autenticado. Auto-revoca TODOS los refresh tokens (cierra sesiones en todos los dispositivos por seguridad)
+ *     tags: [Auth]
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - current_password
+ *               - new_password
+ *             properties:
+ *               current_password:
+ *                 type: string
+ *                 description: Contraseña actual del usuario
+ *               new_password:
+ *                 type: string
+ *                 minLength: 8
+ *                 description: Nueva contraseña (debe contener mayúscula, minúscula y número)
+ *                 example: NewSecure123!
+ *     responses:
+ *       200:
+ *         description: Contraseña cambiada exitosamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     message:
+ *                       type: string
+ *                       example: Password cambiado exitosamente
+ *       400:
+ *         description: Datos de entrada inválidos
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       401:
+ *         description: No autenticado o contraseña actual incorrecta
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 router.post('/change-password', authenticate, validate(changePasswordSchema), async (req, res, next) => {
     try {
@@ -152,12 +376,42 @@ router.post('/change-password', authenticate, validate(changePasswordSchema), as
 });
 
 /**
- * GET /auth/me
- * Obtener información del usuario autenticado
- * Requiere autenticación (JWT middleware)
- * 
- * Response:
- * - user: Object (información completa del usuario desde DB)
+ * @swagger
+ * /auth/me:
+ *   get:
+ *     summary: Obtener perfil del usuario autenticado
+ *     description: Devuelve la información completa del usuario actual
+ *     tags: [Auth]
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Información del usuario obtenida exitosamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     user:
+ *                       $ref: '#/components/schemas/User'
+ *       401:
+ *         description: No autenticado o token inválido
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       404:
+ *         description: Usuario no encontrado
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 router.get('/me', authenticate, async (req, res, next) => {
     try {
@@ -181,17 +435,59 @@ router.get('/me', authenticate, async (req, res, next) => {
 });
 
 /**
- * POST /auth/logout
- * Cerrar sesión actual (revocar refresh token)
- * 
- * Body (opcional):
- * - refresh_token: string
- * 
- * Header (alternativa):
- * - Authorization: Bearer <refresh_token>
- * 
- * Response:
- * - message: string
+ * @swagger
+ * /auth/logout:
+ *   post:
+ *     summary: Cerrar sesión actual
+ *     description: Revoca el refresh token actual. El token puede enviarse en el body o en el header Authorization
+ *     tags: [Auth]
+ *     security: []
+ *     requestBody:
+ *       required: false
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               refresh_token:
+ *                 type: string
+ *                 description: Refresh token a revocar (opcional si se envía en header)
+ *     parameters:
+ *       - in: header
+ *         name: Authorization
+ *         schema:
+ *           type: string
+ *         description: Bearer <refresh_token> (alternativa al body)
+ *         example: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+ *     responses:
+ *       200:
+ *         description: Sesión cerrada exitosamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     message:
+ *                       type: string
+ *                       example: Sesión cerrada exitosamente
+ *       400:
+ *         description: Refresh token no proporcionado o vacío
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       401:
+ *         description: Refresh token inválido o expirado
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 router.post('/logout', validate(logoutSchema), async (req, res, next) => {
     try {
@@ -234,13 +530,41 @@ router.post('/logout', validate(logoutSchema), async (req, res, next) => {
 });
 
 /**
- * POST /auth/logout-all
- * Cerrar todas las sesiones del usuario autenticado
- * Requiere autenticación (JWT middleware)
- * 
- * Response:
- * - message: string
- * - sessions_closed: number
+ * @swagger
+ * /auth/logout-all:
+ *   post:
+ *     summary: Cerrar todas las sesiones
+ *     description: Revoca TODOS los refresh tokens del usuario autenticado (cierra sesión en todos los dispositivos)
+ *     tags: [Auth]
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Todas las sesiones cerradas exitosamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     message:
+ *                       type: string
+ *                       example: Todas las sesiones han sido cerradas
+ *                     sessions_closed:
+ *                       type: integer
+ *                       description: Número de sesiones que fueron revocadas
+ *                       example: 3
+ *       401:
+ *         description: No autenticado o token inválido
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 router.post('/logout-all', authenticate, async (req, res, next) => {
     try {
@@ -258,12 +582,38 @@ router.post('/logout-all', authenticate, async (req, res, next) => {
 });
 
 /**
- * GET /auth/sessions
- * Listar sesiones activas del usuario autenticado
- * Requiere autenticación (JWT middleware)
- * 
- * Response:
- * - sessions: Array (lista de sesiones con metadata)
+ * @swagger
+ * /auth/sessions:
+ *   get:
+ *     summary: Listar sesiones activas
+ *     description: Devuelve todas las sesiones activas del usuario autenticado con metadata (created_at, last_used_at, user_agent, IP)
+ *     tags: [Auth]
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Lista de sesiones obtenida exitosamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     sessions:
+ *                       type: array
+ *                       items:
+ *                         $ref: '#/components/schemas/Session'
+ *       401:
+ *         description: No autenticado o token inválido
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 router.get('/sessions', authenticate, async (req, res, next) => {
     try {
@@ -278,15 +628,57 @@ router.get('/sessions', authenticate, async (req, res, next) => {
 });
 
 /**
- * POST /auth/sessions/:sessionId/revoke
- * Revocar una sesión específica por ID
- * Requiere autenticación (JWT middleware)
- * 
- * Params:
- * - sessionId: UUID de la sesión (refresh token ID)
- * 
- * Response:
- * - message: string
+ * @swagger
+ * /auth/sessions/{sessionId}/revoke:
+ *   post:
+ *     summary: Revocar una sesión específica
+ *     description: Revoca una sesión específica por su ID (útil para cerrar sesión en un dispositivo específico)
+ *     tags: [Auth]
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: sessionId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: UUID de la sesión a revocar (refresh token ID)
+ *     responses:
+ *       200:
+ *         description: Sesión revocada exitosamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     message:
+ *                       type: string
+ *                       example: Sesión revocada exitosamente
+ *       400:
+ *         description: Session ID inválido
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       401:
+ *         description: No autenticado o token inválido
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       404:
+ *         description: Sesión no encontrada o no pertenece al usuario
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 router.post('/sessions/:sessionId/revoke', authenticate, validate(revokeSessionSchema), async (req, res, next) => {
     try {

@@ -35,6 +35,168 @@ const swaggerOptions = {
                     description: 'JWT token obtenido en /auth/login',
                 },
             },
+            schemas: {
+                User: {
+                    type: 'object',
+                    properties: {
+                        id: {
+                            type: 'string',
+                            format: 'uuid',
+                            description: 'UUID v7 del usuario',
+                        },
+                        human_id: {
+                            type: 'integer',
+                            description: 'ID incremental legible (scoped por organización)',
+                        },
+                        public_code: {
+                            type: 'string',
+                            description: 'Código público opaco (ej: EC-xxxxx-x)',
+                            example: 'EC-jmQng-9',
+                        },
+                        email: {
+                            type: 'string',
+                            format: 'email',
+                        },
+                        first_name: {
+                            type: 'string',
+                        },
+                        last_name: {
+                            type: 'string',
+                        },
+                        role: {
+                            type: 'string',
+                            enum: ['admin', 'manager', 'user'],
+                        },
+                        organization_id: {
+                            type: 'string',
+                            format: 'uuid',
+                            nullable: true,
+                        },
+                        is_active: {
+                            type: 'boolean',
+                        },
+                        last_login_at: {
+                            type: 'string',
+                            format: 'date-time',
+                            nullable: true,
+                        },
+                        email_verified_at: {
+                            type: 'string',
+                            format: 'date-time',
+                            nullable: true,
+                        },
+                        created_at: {
+                            type: 'string',
+                            format: 'date-time',
+                        },
+                        updated_at: {
+                            type: 'string',
+                            format: 'date-time',
+                        },
+                    },
+                },
+                TokenResponse: {
+                    type: 'object',
+                    properties: {
+                        access_token: {
+                            type: 'string',
+                            description: 'JWT access token (15 minutos de validez)',
+                        },
+                        refresh_token: {
+                            type: 'string',
+                            description: 'JWT refresh token (14 días de validez)',
+                        },
+                        expires_in: {
+                            type: 'string',
+                            description: 'Tiempo de expiración en formato legible',
+                            example: '15m',
+                        },
+                        token_type: {
+                            type: 'string',
+                            example: 'Bearer',
+                        },
+                    },
+                },
+                Session: {
+                    type: 'object',
+                    properties: {
+                        id: {
+                            type: 'string',
+                            format: 'uuid',
+                            description: 'ID de la sesión (refresh token ID)',
+                        },
+                        created_at: {
+                            type: 'string',
+                            format: 'date-time',
+                        },
+                        last_used_at: {
+                            type: 'string',
+                            format: 'date-time',
+                        },
+                        user_agent: {
+                            type: 'string',
+                            nullable: true,
+                        },
+                        ip_address: {
+                            type: 'string',
+                            nullable: true,
+                        },
+                    },
+                },
+                Error: {
+                    type: 'object',
+                    properties: {
+                        ok: {
+                            type: 'boolean',
+                            example: false,
+                        },
+                        error: {
+                            type: 'object',
+                            properties: {
+                                message: {
+                                    type: 'string',
+                                },
+                                code: {
+                                    type: 'string',
+                                },
+                                status: {
+                                    type: 'integer',
+                                },
+                            },
+                        },
+                        meta: {
+                            type: 'object',
+                            properties: {
+                                timestamp: {
+                                    type: 'string',
+                                    format: 'date-time',
+                                },
+                            },
+                        },
+                    },
+                },
+                SuccessResponse: {
+                    type: 'object',
+                    properties: {
+                        ok: {
+                            type: 'boolean',
+                            example: true,
+                        },
+                        data: {
+                            type: 'object',
+                        },
+                        meta: {
+                            type: 'object',
+                            properties: {
+                                timestamp: {
+                                    type: 'string',
+                                    format: 'date-time',
+                                },
+                            },
+                        },
+                    },
+                },
+            },
         },
         security: [
             {
