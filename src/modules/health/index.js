@@ -12,7 +12,7 @@ const router = express.Router();
 router.get('/', (req, res) => {
     const healthData = {
         status: 'healthy',
-        service: 'API EC ESM',
+        service: 'EC.DATA API',
         version: '1.0.0',
         uptime: process.uptime(),
         timestamp: new Date().toISOString(),
