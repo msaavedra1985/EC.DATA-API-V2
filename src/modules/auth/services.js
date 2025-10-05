@@ -195,8 +195,8 @@ export const refreshAccessToken = async (refreshToken, sessionData = {}) => {
             throw error;
         }
 
-        // Buscar el refresh token en la base de datos
-        const storedToken = await refreshTokenRepository.findByTokenHash(refreshToken);
+        // Buscar el refresh token en la base de datos (incluyendo soft-deleted para detectar robo)
+        const storedToken = await refreshTokenRepository.findByTokenHash(refreshToken, true);
 
         if (!storedToken) {
             const error = new Error('Refresh token no encontrado');
@@ -349,8 +349,13 @@ const generateTokens = async (user, sessionData = {}) => {
     );
 
     // Refresh token (larga duración - 14 días)
+    // Agregar jti (JWT ID) único para evitar colisiones de hash
     const refresh_token = jwt.sign(
-        { ...payload, type: 'refresh' },
+        { 
+            ...payload, 
+            type: 'refresh',
+            jti: crypto.randomUUID() // Garantiza unicidad del token
+        },
         JWT_REFRESH_SECRET,
         { expiresIn: JWT_REFRESH_EXPIRES_IN }
     );

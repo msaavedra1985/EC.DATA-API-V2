@@ -51,14 +51,16 @@ export const createRefreshToken = async ({ userId, token, expiresAt, userAgent =
 /**
  * Buscar refresh token por hash
  * @param {string} token - Token en texto plano
+ * @param {boolean} includeDeleted - Si debe incluir tokens soft-deleted (para detección de robo)
  * @returns {Promise<Object|null>} - Refresh token encontrado o null
  */
-export const findByTokenHash = async (token) => {
+export const findByTokenHash = async (token, includeDeleted = false) => {
     try {
         const tokenHash = hashToken(token);
         
         const refreshToken = await RefreshToken.findOne({
-            where: { token_hash: tokenHash }
+            where: { token_hash: tokenHash },
+            paranoid: !includeDeleted // paranoid: false permite buscar tokens soft-deleted
         });
 
         return refreshToken ? refreshToken.toJSON() : null;
@@ -78,7 +80,8 @@ export const revokeToken = async (token, reason = 'logout') => {
     try {
         const tokenHash = hashToken(token);
         
-        const [affectedRows] = await RefreshToken.update(
+        // Primero actualizar el motivo de revocación
+        await RefreshToken.update(
             {
                 is_revoked: true,
                 revoked_at: new Date(),
@@ -91,6 +94,13 @@ export const revokeToken = async (token, reason = 'logout') => {
                 }
             }
         );
+
+        // Luego hacer soft delete (paranoid: true) para liberar el constraint unique
+        const affectedRows = await RefreshToken.destroy({
+            where: {
+                token_hash: tokenHash
+            }
+        });
 
         return affectedRows > 0;
     } catch (error) {
@@ -107,7 +117,8 @@ export const revokeToken = async (token, reason = 'logout') => {
  */
 export const revokeAllUserTokens = async (userId, reason = 'logout_all') => {
     try {
-        const [affectedRows] = await RefreshToken.update(
+        // Primero actualizar el motivo de revocación
+        await RefreshToken.update(
             {
                 is_revoked: true,
                 revoked_at: new Date(),
@@ -120,6 +131,13 @@ export const revokeAllUserTokens = async (userId, reason = 'logout_all') => {
                 }
             }
         );
+
+        // Luego hacer soft delete (paranoid: true) para liberar el constraint unique
+        const affectedRows = await RefreshToken.destroy({
+            where: {
+                user_id: userId
+            }
+        });
 
         return affectedRows;
     } catch (error) {

@@ -74,7 +74,7 @@ const RefreshToken = sequelize.define(
             comment: 'Timestamp de revocación (null si no revocado)'
         },
         revoked_reason: {
-            type: DataTypes.ENUM('logout', 'logout_all', 'password_change', 'suspicious_activity', 'expired', 'idle_timeout'),
+            type: DataTypes.ENUM('logout', 'logout_all', 'password_change', 'suspicious_activity', 'expired', 'idle_timeout', 'rotated'),
             allowNull: true,
             comment: 'Motivo de revocación para auditoría'
         },
@@ -94,6 +94,7 @@ const RefreshToken = sequelize.define(
         comment: 'Refresh tokens para rotación y gestión de sesiones JWT',
         timestamps: true,
         underscored: true,
+        paranoid: true,
         indexes: [
             {
                 fields: ['user_id'],
