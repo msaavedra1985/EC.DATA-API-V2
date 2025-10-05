@@ -51,7 +51,7 @@ const startServer = async () => {
         const server = app.listen(config.port, '0.0.0.0', () => {
             logger.info(`
 ╔════════════════════════════════════════════════════════════╗
-║  🚀 API EC ESM - Enterprise API Server                    ║
+║  🚀 EC.DATA API - Enterprise REST API Server              ║
 ║                                                            ║
 ║  Environment:  ${config.env.padEnd(43)} ║
 ║  Port:         ${config.port.toString().padEnd(43)} ║
