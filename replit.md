@@ -1,7 +1,11 @@
-# API EC ESM - Enterprise API Project
+# EC.DATA API - Enterprise REST API
 
 ## Overview
-This project is an enterprise-grade REST API built with Node.js and Express, utilizing modern ESM syntax and a feature-based architecture. It's designed to support a multi-tenant e-commerce platform with robust observability, security, and scalability. The API integrates with a separate Next.js BFF (Backend for Frontend) project, providing services for both public-facing and administrative interfaces. The core business vision is to deliver a highly reliable, secure, and scalable backend solution capable of handling complex e-commerce operations across multiple tenants, with ambitions to expand into diverse market sectors.
+**EC.DATA** is a technology company specializing in enterprise data solutions and scalable backend infrastructure. This repository contains our flagship REST API, built with Node.js and Express using modern ESM syntax and a feature-based architecture.
+
+The EC.DATA API is designed to support multi-tenant e-commerce platforms with robust observability, security, and scalability. It integrates seamlessly with Next.js frontends via a BFF (Backend for Frontend) pattern, providing services for both public-facing customer interfaces and administrative dashboards.
+
+Our mission at EC.DATA is to deliver highly reliable, secure, and scalable backend solutions capable of handling complex business operations across multiple tenants, with the flexibility to expand into diverse market sectors and use cases.
 
 ## User Preferences
 
