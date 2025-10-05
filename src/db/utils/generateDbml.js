@@ -270,7 +270,7 @@ export const generateDbmlFile = async () => {
         dbLogger.info(`✅ Encontradas ${tables.length} tablas`);
         
         let dbmlContent = `// Database Schema - Generated on ${new Date().toISOString()}\n`;
-        dbmlContent += `// Project: API EC ESM - Enterprise REST API\n`;
+        dbmlContent += `// Project: EC.DATA API - Enterprise REST API\n`;
         dbmlContent += `// Use this file at https://dbdiagram.io to visualize the schema\n\n`;
         
         // Generar definición de cada tabla

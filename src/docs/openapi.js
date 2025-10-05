@@ -249,7 +249,7 @@ export const setupSwagger = app => {
         // Servir interfaz Swagger UI
         app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
             customCss: '.swagger-ui .topbar { display: none }',
-            customSiteTitle: 'API EC ESM Docs',
+            customSiteTitle: 'EC.DATA API - Enterprise REST API',
         }));
 
         logger.info(`📚 Swagger docs available at: ${config.apiUrl}/docs`);

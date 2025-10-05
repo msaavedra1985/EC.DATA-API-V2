@@ -18,7 +18,7 @@ const pinoConfig = {
         pid: process.pid,
         hostname: process.env.HOSTNAME || 'localhost',
         env: config.env,
-        service: 'api-ec-esm'
+        service: 'ecdata-api'
     },
 
     // Formato de timestamp

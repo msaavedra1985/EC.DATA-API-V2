@@ -1,5 +1,5 @@
-// Database Schema - Generated on 2025-10-05T03:28:32.022Z
-// Project: API EC ESM - Enterprise REST API
+// Database Schema - Generated on 2025-10-05T05:59:01.844Z
+// Project: EC.DATA API - Enterprise REST API
 // Use this file at https://dbdiagram.io to visualize the schema
 
 // Tabla de referencia de países con códigos ISO 3166-1
