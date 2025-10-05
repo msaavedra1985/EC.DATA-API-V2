@@ -1,5 +1,6 @@
 import Country from '../../modules/countries/models/Country.js';
 import CountryTranslation from '../../modules/countries/models/CountryTranslation.js';
+import { dbLogger } from '../../utils/logger.js';
 
 /**
  * Datos de países con códigos ISO 3166-1 y traducciones
@@ -579,12 +580,12 @@ const countriesData = [
  */
 export const seedCountries = async () => {
     try {
-        console.log('🌍 Iniciando seeder de países...');
+        dbLogger.info('🌍 Iniciando seeder de países...');
 
         // Verificar si ya existen países
         const existingCount = await Country.count();
         if (existingCount > 0) {
-            console.log(`ℹ️  Ya existen ${existingCount} países. Saltando seeder.`);
+            dbLogger.info(`ℹ️  Ya existen ${existingCount} países. Saltando seeder.`);
             return {
                 success: true,
                 countriesCreated: 0,
@@ -621,10 +622,10 @@ export const seedCountries = async () => {
             }
         }
 
-        console.log(`✅ Seeder completado exitosamente:`);
-        console.log(`   - ${countriesCreated} países creados`);
-        console.log(`   - ${translationsCreated} traducciones creadas`);
-        console.log(`   - Idiomas soportados: español (es), inglés (en)`);
+        dbLogger.info(`✅ Seeder completado exitosamente:`);
+        dbLogger.info(`   - ${countriesCreated} países creados`);
+        dbLogger.info(`   - ${translationsCreated} traducciones creadas`);
+        dbLogger.info(`   - Idiomas soportados: español (es), inglés (en)`);
 
         return {
             success: true,
@@ -632,7 +633,7 @@ export const seedCountries = async () => {
             translationsCreated
         };
     } catch (error) {
-        console.error('❌ Error en seeder de países:', error);
+        dbLogger.error(error, '❌ Error en seeder de países');
         throw error;
     }
 };

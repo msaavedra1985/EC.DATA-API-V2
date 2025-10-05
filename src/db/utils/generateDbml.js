@@ -5,6 +5,7 @@
 import sequelize from '../sql/sequelize.js';
 import fs from 'fs/promises';
 import path from 'path';
+import { dbLogger } from '../../utils/logger.js';
 
 /**
  * Mapeo de tipos PostgreSQL a tipos DBML
@@ -260,13 +261,13 @@ const generateReferences = async () => {
  */
 export const generateDbmlFile = async () => {
     try {
-        console.log('📊 Generando esquema DBML desde PostgreSQL...\n');
+        dbLogger.info('📊 Generando esquema DBML desde PostgreSQL...');
         
         // Conectar a la base de datos
         await sequelize.authenticate();
         
         const tables = await getTables();
-        console.log(`✅ Encontradas ${tables.length} tablas\n`);
+        dbLogger.info(`✅ Encontradas ${tables.length} tablas`);
         
         let dbmlContent = `// Database Schema - Generated on ${new Date().toISOString()}\n`;
         dbmlContent += `// Project: API EC ESM - Enterprise REST API\n`;
@@ -274,7 +275,7 @@ export const generateDbmlFile = async () => {
         
         // Generar definición de cada tabla
         for (const table of tables) {
-            console.log(`  📋 Procesando tabla: ${table.table_name}`);
+            dbLogger.info(`  📋 Procesando tabla: ${table.table_name}`);
             if (table.table_comment) {
                 dbmlContent += `// ${table.table_comment}\n`;
             }
@@ -289,17 +290,17 @@ export const generateDbmlFile = async () => {
         const outputPath = path.join(process.cwd(), 'database.dbml.txt');
         await fs.writeFile(outputPath, dbmlContent, 'utf-8');
         
-        console.log(`\n✅ Archivo DBML generado exitosamente: database.dbml.txt`);
-        console.log(`📍 Ubicación: ${outputPath}`);
-        console.log('\n💡 Para visualizar:');
-        console.log('   1. Visita https://dbdiagram.io');
-        console.log('   2. Copia el contenido de database.dbml.txt');
-        console.log('   3. Pégalo en el editor para ver el diagrama\n');
+        dbLogger.info(`✅ Archivo DBML generado exitosamente: database.dbml.txt`);
+        dbLogger.info(`📍 Ubicación: ${outputPath}`);
+        dbLogger.info('💡 Para visualizar:');
+        dbLogger.info('   1. Visita https://dbdiagram.io');
+        dbLogger.info('   2. Copia el contenido de database.dbml.txt');
+        dbLogger.info('   3. Pégalo en el editor para ver el diagrama');
         
         await sequelize.close();
         return outputPath;
     } catch (error) {
-        console.error('❌ Error generando DBML:', error);
+        dbLogger.error(error, '❌ Error generando DBML');
         throw error;
     }
 };

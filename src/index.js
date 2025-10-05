@@ -4,6 +4,7 @@ import { config, validateConfig } from './config/env.js';
 import { initializeDatabase, closeDatabase } from './db/sql/sequelize.js';
 import { initializeRedis, closeRedis } from './db/redis/client.js';
 import { startTokenCleanupScheduler } from './utils/cleanupTokens.js';
+import logger from './utils/logger.js';
 
 // Importar todos los modelos en orden de dependencias (necesario para Sequelize.sync())
 import './db/models.js';
@@ -25,9 +26,9 @@ const initializeServices = async () => {
         // Inicializar Redis (opcional en desarrollo)
         await initializeRedis();
 
-        console.log('✅ All services initialized successfully');
+        logger.info('✅ All services initialized successfully');
     } catch (error) {
-        console.error('❌ Service initialization failed:', error);
+        logger.error(error, '❌ Service initialization failed');
         process.exit(1);
     }
 };
@@ -48,7 +49,7 @@ const startServer = async () => {
 
         // Iniciar servidor HTTP en 0.0.0.0:5000 (preparado para Socket.io)
         const server = app.listen(config.port, '0.0.0.0', () => {
-            console.log(`
+            logger.info(`
 ╔════════════════════════════════════════════════════════════╗
 ║  🚀 API EC ESM - Enterprise API Server                    ║
 ║                                                            ║
@@ -67,10 +68,10 @@ const startServer = async () => {
 
         // Manejo de señales para graceful shutdown
         const gracefulShutdown = async signal => {
-            console.log(`\n${signal} received. Starting graceful shutdown...`);
+            logger.info(`${signal} received. Starting graceful shutdown...`);
             
             server.close(async () => {
-                console.log('✅ HTTP server closed');
+                logger.info('✅ HTTP server closed');
                 
                 // Detener scheduler de limpieza de tokens
                 if (stopTokenCleanup) {
@@ -81,13 +82,13 @@ const startServer = async () => {
                 await closeDatabase();
                 await closeRedis();
                 
-                console.log('✅ Graceful shutdown completed');
+                logger.info('✅ Graceful shutdown completed');
                 process.exit(0);
             });
 
             // Forzar cierre después de 10 segundos si no se completa
             setTimeout(() => {
-                console.error('❌ Forced shutdown after timeout');
+                logger.error('❌ Forced shutdown after timeout');
                 process.exit(1);
             }, 10000);
         };
@@ -97,7 +98,7 @@ const startServer = async () => {
 
         return server;
     } catch (error) {
-        console.error('❌ Server startup failed:', error);
+        logger.error(error, '❌ Server startup failed');
         process.exit(1);
     }
 };

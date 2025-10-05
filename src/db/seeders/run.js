@@ -4,28 +4,29 @@
 import sequelize from '../sql/sequelize.js';
 import '../models.js'; // Importar modelos
 import { seedCountries } from './countries.seeder.js';
+import { dbLogger } from '../../utils/logger.js';
 
 const runSeeders = async () => {
     try {
-        console.log('🌱 Iniciando seeders...\n');
+        dbLogger.info('🌱 Iniciando seeders...');
 
         // Conectar a la base de datos
         await sequelize.authenticate();
-        console.log('✅ Conectado a PostgreSQL\n');
+        dbLogger.info('✅ Conectado a PostgreSQL');
 
         // Ejecutar seeder de countries
-        console.log('📍 Ejecutando seeder de countries...');
+        dbLogger.info('📍 Ejecutando seeder de countries...');
         const result = await seedCountries();
-        console.log(`✅ ${result.countriesCreated} países creados`);
-        console.log(`✅ ${result.translationsCreated} traducciones creadas\n`);
+        dbLogger.info(`✅ ${result.countriesCreated} países creados`);
+        dbLogger.info(`✅ ${result.translationsCreated} traducciones creadas`);
 
-        console.log('🎉 Seeders completados exitosamente');
+        dbLogger.info('🎉 Seeders completados exitosamente');
         
         // Cerrar conexión
         await sequelize.close();
         process.exit(0);
     } catch (error) {
-        console.error('❌ Error ejecutando seeders:', error);
+        dbLogger.error(error, '❌ Error ejecutando seeders');
         process.exit(1);
     }
 };

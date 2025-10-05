@@ -1,5 +1,6 @@
 // Middleware global para manejo de errores con formato envelope
 import { errorResponse, ERROR_CODES } from '../utils/response.js';
+import logger from '../utils/logger.js';
 
 /**
  * Middleware global de manejo de errores
@@ -10,8 +11,8 @@ import { errorResponse, ERROR_CODES } from '../utils/response.js';
  * @param {Function} next - Next middleware
  */
 export const errorHandler = (err, req, res, next) => {
-    // Log del error para debugging (luego se reemplazará con pino)
-    console.error('Error capturado:', err);
+    // Log del error para debugging
+    logger.error(err, 'Error capturado');
 
     // Determinar el código de estado HTTP
     const status = err.status || err.statusCode || 500;

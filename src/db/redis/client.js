@@ -1,6 +1,7 @@
 // Cliente Redis para cache y sesiones
 import { createClient } from 'redis';
 import { config } from '../../config/env.js';
+import { dbLogger } from '../../utils/logger.js';
 
 /**
  * Cliente Redis para cache de CORS origins, rate limiting, sesiones, etc.
@@ -43,12 +44,12 @@ export const initializeRedis = async () => {
         });
 
         redisClient.on('connect', () => {
-            console.log('✅ Redis connected successfully');
+            dbLogger.info('✅ Redis connected successfully');
             isRedisAvailable = true;
         });
 
         redisClient.on('ready', () => {
-            console.log('✅ Redis client ready');
+            dbLogger.info('✅ Redis client ready');
         });
 
         // Conectar con timeout
@@ -56,11 +57,11 @@ export const initializeRedis = async () => {
     } catch (error) {
         // En desarrollo, Redis es opcional
         if (config.env === 'development') {
-            console.warn('⚠️  Redis not available - Running with in-memory fallback');
+            dbLogger.warn('⚠️  Redis not available - Running with in-memory fallback');
             isRedisAvailable = false;
             redisClient = null; // Limpiar cliente fallido
         } else {
-            console.error('❌ Redis initialization failed:', error.message);
+            dbLogger.error({ error: error.message }, '❌ Redis initialization failed');
             throw error; // En producción, Redis es obligatorio
         }
     }
@@ -74,9 +75,9 @@ export const closeRedis = async () => {
     if (redisClient && isRedisAvailable) {
         try {
             await redisClient.quit();
-            console.log('✅ Redis connection closed');
+            dbLogger.info('✅ Redis connection closed');
         } catch (error) {
-            console.error('❌ Error closing Redis:', error);
+            dbLogger.error(error, '❌ Error closing Redis');
         }
     }
 };
@@ -91,7 +92,7 @@ export const getCache = async key => {
     try {
         return await redisClient.get(key);
     } catch (error) {
-        console.error('Redis GET error:', error);
+        dbLogger.error(error, 'Redis GET error');
         return null;
     }
 };
@@ -113,7 +114,7 @@ export const setCache = async (key, value, ttl = null) => {
         }
         return true;
     } catch (error) {
-        console.error('Redis SET error:', error);
+        dbLogger.error(error, 'Redis SET error');
         return false;
     }
 };
@@ -129,7 +130,7 @@ export const deleteCache = async key => {
         await redisClient.del(key);
         return true;
     } catch (error) {
-        console.error('Redis DEL error:', error);
+        dbLogger.error(error, 'Redis DEL error');
         return false;
     }
 };

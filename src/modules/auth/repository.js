@@ -3,6 +3,7 @@
 
 import User from './models/User.js';
 import { generateUuidV7, generateHumanId, generatePublicCode } from '../../utils/identifiers.js';
+import { authLogger } from '../../utils/logger.js';
 
 /**
  * Crear un nuevo usuario en la base de datos
@@ -46,7 +47,7 @@ export const createUser = async (userData) => {
         
         return userJson;
     } catch (error) {
-        console.error('Error creating user:', error);
+        authLogger.error(error, 'Error creating user');
         throw error;
     }
 };
@@ -69,7 +70,7 @@ export const findUserByEmail = async (email, includePassword = false) => {
         
         return user ? user.toJSON() : null;
     } catch (error) {
-        console.error('Error finding user by email:', error);
+        authLogger.error(error, 'Error finding user by email');
         throw error;
     }
 };
@@ -87,7 +88,7 @@ export const findUserById = async (userId) => {
         
         return user ? user.toJSON() : null;
     } catch (error) {
-        console.error('Error finding user by ID:', error);
+        authLogger.error(error, 'Error finding user by ID');
         throw error;
     }
 };
@@ -106,7 +107,7 @@ export const updateLastLogin = async (userId) => {
         
         return affectedRows > 0;
     } catch (error) {
-        console.error('Error updating last login:', error);
+        authLogger.error(error, 'Error updating last login');
         throw error;
     }
 };
@@ -126,7 +127,7 @@ export const updatePassword = async (userId, newPasswordHash) => {
         
         return affectedRows > 0;
     } catch (error) {
-        console.error('Error updating password:', error);
+        authLogger.error(error, 'Error updating password');
         throw error;
     }
 };
@@ -145,7 +146,7 @@ export const verifyEmail = async (userId) => {
         
         return affectedRows > 0;
     } catch (error) {
-        console.error('Error verifying email:', error);
+        authLogger.error(error, 'Error verifying email');
         throw error;
     }
 };
@@ -165,7 +166,7 @@ export const setUserActiveStatus = async (userId, isActive) => {
         
         return affectedRows > 0;
     } catch (error) {
-        console.error('Error setting user active status:', error);
+        authLogger.error(error, 'Error setting user active status');
         throw error;
     }
 };
@@ -184,7 +185,7 @@ export const findUserByPublicCode = async (publicCode) => {
         
         return user ? user.toJSON() : null;
     } catch (error) {
-        console.error('Error finding user by public code:', error);
+        authLogger.error(error, 'Error finding user by public code');
         throw error;
     }
 };
@@ -207,7 +208,7 @@ export const findUserByHumanId = async (humanId, organizationId) => {
         
         return user ? user.toJSON() : null;
     } catch (error) {
-        console.error('Error finding user by human ID:', error);
+        authLogger.error(error, 'Error finding user by human ID');
         throw error;
     }
 };
@@ -251,7 +252,7 @@ export const listUsers = async (options = {}) => {
             total: count
         };
     } catch (error) {
-        console.error('Error listing users:', error);
+        authLogger.error(error, 'Error listing users');
         throw error;
     }
 };
@@ -269,7 +270,7 @@ export const deleteUser = async (userId) => {
         
         return affectedRows > 0;
     } catch (error) {
-        console.error('Error deleting user:', error);
+        authLogger.error(error, 'Error deleting user');
         throw error;
     }
 };

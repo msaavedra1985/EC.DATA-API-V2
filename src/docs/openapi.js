@@ -2,6 +2,7 @@
 import swaggerJsdoc from 'swagger-jsdoc';
 import swaggerUi from 'swagger-ui-express';
 import { config } from '../config/env.js';
+import logger from '../utils/logger.js';
 
 /**
  * Configuración de Swagger OpenAPI
@@ -251,7 +252,7 @@ export const setupSwagger = app => {
             customSiteTitle: 'API EC ESM Docs',
         }));
 
-        console.log(`📚 Swagger docs available at: ${config.apiUrl}/docs`);
+        logger.info(`📚 Swagger docs available at: ${config.apiUrl}/docs`);
     }
 };
 

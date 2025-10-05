@@ -1,6 +1,7 @@
 // Configuración de Sequelize con PostgreSQL
 import { Sequelize } from 'sequelize';
 import { config } from '../../config/env.js';
+import { dbLogger } from '../../utils/logger.js';
 
 /**
  * Configuración global de Sequelize
@@ -11,7 +12,7 @@ import { config } from '../../config/env.js';
  */
 const sequelizeConfig = {
     dialect: 'postgres',
-    logging: config.env === 'development' ? console.log : false,
+    logging: config.env === 'development' ? (msg) => dbLogger.debug(msg) : false,
     
     // Pool de conexiones para producción
     pool: {
@@ -60,15 +61,15 @@ const sequelize = config.database.url
 export const initializeDatabase = async () => {
     try {
         await sequelize.authenticate();
-        console.log('✅ PostgreSQL connected successfully');
+        dbLogger.info('✅ PostgreSQL connected successfully');
 
         // En desarrollo, sincronizar esquema (en producción usar migraciones Umzug)
         if (config.env === 'development') {
             await sequelize.sync({ alter: false }); // alter: false para mantener datos
-            console.log('✅ Database schema synchronized');
+            dbLogger.info('✅ Database schema synchronized');
         }
     } catch (error) {
-        console.error('❌ Unable to connect to database:', error);
+        dbLogger.error(error, '❌ Unable to connect to database');
         throw error;
     }
 };
@@ -80,9 +81,9 @@ export const initializeDatabase = async () => {
 export const closeDatabase = async () => {
     try {
         await sequelize.close();
-        console.log('✅ Database connection closed');
+        dbLogger.info('✅ Database connection closed');
     } catch (error) {
-        console.error('❌ Error closing database:', error);
+        dbLogger.error(error, '❌ Error closing database');
     }
 };
 

@@ -3,6 +3,7 @@
 
 import * as authServices from '../modules/auth/services.js';
 import { errorResponse } from '../utils/response.js';
+import logger from '../utils/logger.js';
 
 /**
  * Middleware para verificar token JWT en headers
@@ -79,7 +80,7 @@ export const authorize = (allowedRoles = []) => {
 
         // Verificar que el usuario tenga un rol permitido
         if (!allowedRoles.includes(req.user.role)) {
-            console.warn(`User ${req.user.email} attempted to access protected route without permission`);
+            logger.warn(`User ${req.user.email} attempted to access protected route without permission`);
             
             return errorResponse(res, {
                 message: 'No tienes permisos para acceder a este recurso',

@@ -83,13 +83,7 @@ const transport = config.env === 'development'
             translateTime: 'HH:MM:ss.l',
             ignore: 'pid,hostname',
             singleLine: false,
-            messageFormat: '{levelLabel} - {msg}',
-            customPrettifiers: {
-                // Formato personalizado para el timestamp
-                time: timestamp => `[${timestamp}]`,
-                // Resaltar el nivel del log
-                level: level => level
-            }
+            messageFormat: '{levelLabel} - {msg}'
         }
     }
     : undefined;

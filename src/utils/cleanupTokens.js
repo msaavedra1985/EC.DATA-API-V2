@@ -2,6 +2,7 @@
 // Utilidad para limpiar refresh tokens expirados o inactivos
 
 import { cleanupExpiredTokens } from '../modules/auth/refreshTokenRepository.js';
+import { schedulerLogger } from './logger.js';
 
 /**
  * Ejecutar limpieza de refresh tokens
@@ -12,10 +13,10 @@ import { cleanupExpiredTokens } from '../modules/auth/refreshTokenRepository.js'
 export const runTokenCleanup = async () => {
     try {
         const deletedCount = await cleanupExpiredTokens();
-        console.log(`🧹 Token cleanup: ${deletedCount} tokens eliminados`);
+        schedulerLogger.info(`🧹 Token cleanup: ${deletedCount} tokens eliminados`);
         return deletedCount;
     } catch (error) {
-        console.error('❌ Error en cleanup de tokens:', error);
+        schedulerLogger.error(error, '❌ Error en cleanup de tokens');
         throw error;
     }
 };
@@ -29,18 +30,18 @@ export const startTokenCleanupScheduler = (intervalHours = 6) => {
     const intervalMs = intervalHours * 60 * 60 * 1000;
     
     // Ejecutar inmediatamente al iniciar
-    runTokenCleanup().catch(console.error);
+    runTokenCleanup().catch((error) => schedulerLogger.error(error, 'Error in token cleanup'));
     
     // Programar ejecuciones periódicas
     const interval = setInterval(() => {
-        runTokenCleanup().catch(console.error);
+        runTokenCleanup().catch((error) => schedulerLogger.error(error, 'Error in token cleanup'));
     }, intervalMs);
     
-    console.log(`⏰ Token cleanup scheduler iniciado (cada ${intervalHours} horas)`);
+    schedulerLogger.info(`⏰ Token cleanup scheduler iniciado (cada ${intervalHours} horas)`);
     
     // Retornar función para detener el scheduler
     return () => {
         clearInterval(interval);
-        console.log('🛑 Token cleanup scheduler detenido');
+        schedulerLogger.info('🛑 Token cleanup scheduler detenido');
     };
 };

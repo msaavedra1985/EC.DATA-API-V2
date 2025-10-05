@@ -2,6 +2,7 @@
 // Middleware de validación con Zod
 
 import { errorResponse } from '../utils/response.js';
+import logger from '../utils/logger.js';
 
 /**
  * Middleware genérico para validar request con schemas de Zod
@@ -44,7 +45,7 @@ export const validate = (schema) => {
                     code: err.code
                 }));
 
-                console.warn('Validation failed:', validationErrors);
+                logger.warn({ validationErrors }, 'Validation failed');
 
                 return errorResponse(res, {
                     message: 'Error de validación',

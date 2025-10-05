@@ -6,6 +6,7 @@ import crypto from 'crypto';
 import RefreshToken from './models/RefreshToken.js';
 import { generateUuidV7 } from '../../utils/identifiers.js';
 import { config } from '../../config/env.js';
+import { authLogger } from '../../utils/logger.js';
 
 /**
  * Hashear un refresh token con SHA-256
@@ -43,7 +44,7 @@ export const createRefreshToken = async ({ userId, token, expiresAt, userAgent =
 
         return refreshToken.toJSON();
     } catch (error) {
-        console.error('Error creating refresh token:', error);
+        authLogger.error(error, 'Error creating refresh token');
         throw error;
     }
 };
@@ -65,7 +66,7 @@ export const findByTokenHash = async (token, includeDeleted = false) => {
 
         return refreshToken ? refreshToken.toJSON() : null;
     } catch (error) {
-        console.error('Error finding refresh token:', error);
+        authLogger.error(error, 'Error finding refresh token');
         throw error;
     }
 };
@@ -104,7 +105,7 @@ export const revokeToken = async (token, reason = 'logout') => {
 
         return affectedRows > 0;
     } catch (error) {
-        console.error('Error revoking refresh token:', error);
+        authLogger.error(error, 'Error revoking refresh token');
         throw error;
     }
 };
@@ -141,7 +142,7 @@ export const revokeAllUserTokens = async (userId, reason = 'logout_all') => {
 
         return affectedRows;
     } catch (error) {
-        console.error('Error revoking all user tokens:', error);
+        authLogger.error(error, 'Error revoking all user tokens');
         throw error;
     }
 };
@@ -167,7 +168,7 @@ export const updateLastUsed = async (token) => {
 
         return affectedRows > 0;
     } catch (error) {
-        console.error('Error updating last_used_at:', error);
+        authLogger.error(error, 'Error updating last_used_at');
         throw error;
     }
 };
@@ -225,7 +226,7 @@ export const cleanupExpiredTokens = async () => {
 
         return deletedCount;
     } catch (error) {
-        console.error('Error cleaning up expired tokens:', error);
+        authLogger.error(error, 'Error cleaning up expired tokens');
         throw error;
     }
 };
@@ -251,7 +252,7 @@ export const getUserActiveSessions = async (userId) => {
 
         return sessions.map(s => s.toJSON());
     } catch (error) {
-        console.error('Error getting user active sessions:', error);
+        authLogger.error(error, 'Error getting user active sessions');
         throw error;
     }
 };
@@ -282,7 +283,7 @@ export const revokeSessionById = async (sessionId, userId, reason = 'logout') =>
 
         return affectedRows > 0;
     } catch (error) {
-        console.error('Error revoking session by ID:', error);
+        authLogger.error(error, 'Error revoking session by ID');
         throw error;
     }
 };
