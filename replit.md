@@ -29,6 +29,12 @@ Preferred communication style: Simple, everyday language.
 - **Non-blocking Operations:** Prefer asynchronous patterns over synchronous operations
 - **Logging:** Pino must run in a separate worker thread using `pino.transport()` with `worker: { autoEnd: true }`
 
+**UX Standards (Frontend Integration):**
+- **Skeleton Loaders:** Every section with data loading MUST implement skeleton loaders that mimic the final UI structure
+- **Purpose:** Show users the interface layout before content loads, providing a modern, responsive feel
+- **Implementation:** Skeleton should match the shape, size, and position of actual content (cards, lists, forms, etc.)
+- **Applies to:** All data-fetching scenarios (API calls, async operations, initial page loads)
+
 **Documentation Standards (MANDATORY):**
 - **Swagger/OpenAPI**: Every new endpoint MUST include formal `@swagger` JSDoc annotations before being considered complete
 - **Database Schema**: After ANY database schema change, MUST run `npm run db:dbml` to update `database.dbml.txt` for visualization
@@ -64,11 +70,33 @@ Preferred communication style: Simple, everyday language.
 ### Internationalization
 - **Multi-language Design:** Support for multiple languages using separate translation tables and selection based on user language.
 
+### Role-Based Access Control (RBAC)
+- **Hierarchical Role System:** Seven predefined roles with explicit scope and capabilities:
+  - `system-admin`: Global control across all organizations (audits, plans/quotas, feature flags, create/suspend/delete orgs)
+  - `org-admin`: Administrator of their organization (user/role management, org settings, can create other org-admins). **Rule:** Every organization MUST have at least one org-admin
+  - `org-manager`: Operational management within org (teams, workflows, reports, dashboards) without global config access (no billing, branding, SSO)
+  - `user`: Standard internal user with access to assigned sections, can create/view own content and team content
+  - `viewer`: Read-only access for dashboards and reports, can download files/reports if enabled
+  - `guest`: Temporary/limited access via token with expiration, read-only on specific resources for sharing with external parties
+  - `demo`: Demo environment user, always read-only with isolated mock data, cannot modify anything
+- **Database Structure:** 
+  - `roles` table: Master data with slug, name, description, scope (global/organization), hierarchy_rank, capabilities (JSONB), is_assignable
+  - `user_roles` join table: Many-to-many relationship between users and roles with optional organization_id for scoped assignments
+- **Authorization Model:**
+  - Capability-based permissions: Fine-grained control via JSON capabilities (e.g., `users.create`, `billing.view`, `reports.export`)
+  - Hierarchical verification: Higher rank roles inherit lower rank capabilities
+  - Organizational scope: Roles can be global (system-admin) or organization-scoped (org-admin, org-manager, etc.)
+  - Multi-role support: Users can have different roles in different organizations
+- **Business Rules:**
+  - Minimum org-admin enforcement: Prevents deletion/demotion of last org-admin in an organization
+  - Demo user isolation: Automatic data segregation to mock dataset with statistical coherence
+  - Guest token management: Time-limited access with automatic revocation on expiry
+
 ### Extensibility & Robustness
 - **WebSocket Preparation:** HTTP server initialization isolated for easy Socket.io integration.
 - **Graceful Shutdown:** Proper cleanup on SIGINT/SIGTERM for Redis, Sequelize, and in-flight requests.
 - **Identifier System:** UUID v7, human_id (scoped incremental ID), and public_code (opaque, Hashids + Luhn checksum) for entities.
-- **Authentication:** Comprehensive JWT-based system with access/refresh tokens, token rotation, theft detection, and role-based access control (RBAC). Refresh tokens are database-persisted and SHA-256 hashed.
+- **Authentication:** Comprehensive JWT-based system with access/refresh tokens, token rotation, theft detection. Refresh tokens are database-persisted and SHA-256 hashed.
 
 ## External Dependencies
 
