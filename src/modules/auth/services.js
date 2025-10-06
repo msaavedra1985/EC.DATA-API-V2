@@ -8,6 +8,7 @@ import { config } from '../../config/env.js';
 import * as authRepository from './repository.js';
 import * as refreshTokenRepository from './refreshTokenRepository.js';
 import * as authCache from './cache.js';
+import Role from './models/Role.js';
 
 // Configuración de bcrypt
 const SALT_ROUNDS = 10;
@@ -28,11 +29,12 @@ const JWT_AUDIENCE = config.jwt.audience;
  * @param {string} userData.first_name - Nombre
  * @param {string} userData.last_name - Apellido
  * @param {string} [userData.organization_id] - ID de la organización
+ * @param {string} [userData.role_id] - ID del rol (si no se provee, usa 'user' por defecto)
  * @param {Object} [sessionData] - Datos de la sesión (userAgent, ipAddress)
  * @returns {Promise<Object>} - Usuario creado y token JWT
  */
 export const register = async (userData, sessionData = {}) => {
-    const { email, password, first_name, last_name, organization_id } = userData;
+    const { email, password, first_name, last_name, organization_id, role_id } = userData;
 
     // Verificar si el email ya existe
     const existingUser = await authRepository.findUserByEmail(email);
@@ -41,6 +43,19 @@ export const register = async (userData, sessionData = {}) => {
         error.status = 409; // Conflict
         error.code = 'EMAIL_ALREADY_EXISTS';
         throw error;
+    }
+
+    // Si no se provee role_id, buscar el rol 'user' por defecto
+    let finalRoleId = role_id;
+    if (!finalRoleId) {
+        const defaultRole = await Role.findOne({ where: { name: 'user' } });
+        if (!defaultRole) {
+            const error = new Error('auth.register.default_role_not_found');
+            error.status = 500;
+            error.code = 'DEFAULT_ROLE_NOT_FOUND';
+            throw error;
+        }
+        finalRoleId = defaultRole.id;
     }
 
     // Hashear password con bcrypt
@@ -53,7 +68,7 @@ export const register = async (userData, sessionData = {}) => {
         first_name,
         last_name,
         organization_id,
-        role: 'user' // Por defecto todos son 'user'
+        role_id: finalRoleId
     });
 
     // Generar tokens JWT y guardar refresh token en BD
@@ -170,7 +185,7 @@ export const verifyToken = async (token) => {
         return {
             userId: user.id,
             email: user.email,
-            role: user.role,
+            role: user.role, // Ahora es un objeto con {id, name, description, is_active}
             organization_id: user.organization_id,
             first_name: user.first_name,
             last_name: user.last_name
