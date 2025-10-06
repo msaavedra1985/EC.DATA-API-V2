@@ -2,6 +2,7 @@
 // Repositorio de Auth - Capa de acceso a datos con Sequelize
 
 import User from './models/User.js';
+import Role from './models/Role.js';
 import { generateUuidV7, generateHumanId, generatePublicCode } from '../../utils/identifiers.js';
 import { authLogger } from '../../utils/logger.js';
 
@@ -65,7 +66,14 @@ export const findUserByEmail = async (email, includePassword = false) => {
             // Si includePassword es true, necesitamos el campo para verificar login
             attributes: includePassword 
                 ? undefined // Incluir todos los campos
-                : { exclude: ['password_hash'] }
+                : { exclude: ['password_hash'] },
+            include: [
+                {
+                    model: Role,
+                    as: 'role',
+                    attributes: ['id', 'name', 'description', 'is_active']
+                }
+            ]
         });
         
         return user ? user.toJSON() : null;
@@ -83,7 +91,14 @@ export const findUserByEmail = async (email, includePassword = false) => {
 export const findUserById = async (userId) => {
     try {
         const user = await User.findByPk(userId, {
-            attributes: { exclude: ['password_hash'] }
+            attributes: { exclude: ['password_hash'] },
+            include: [
+                {
+                    model: Role,
+                    as: 'role',
+                    attributes: ['id', 'name', 'description', 'is_active']
+                }
+            ]
         });
         
         return user ? user.toJSON() : null;
@@ -180,7 +195,14 @@ export const findUserByPublicCode = async (publicCode) => {
     try {
         const user = await User.findOne({
             where: { public_code: publicCode },
-            attributes: { exclude: ['password_hash'] }
+            attributes: { exclude: ['password_hash'] },
+            include: [
+                {
+                    model: Role,
+                    as: 'role',
+                    attributes: ['id', 'name', 'description', 'is_active']
+                }
+            ]
         });
         
         return user ? user.toJSON() : null;
@@ -203,7 +225,14 @@ export const findUserByHumanId = async (humanId, organizationId) => {
                 human_id: humanId,
                 organization_id: organizationId
             },
-            attributes: { exclude: ['password_hash'] }
+            attributes: { exclude: ['password_hash'] },
+            include: [
+                {
+                    model: Role,
+                    as: 'role',
+                    attributes: ['id', 'name', 'description', 'is_active']
+                }
+            ]
         });
         
         return user ? user.toJSON() : null;
@@ -244,6 +273,13 @@ export const listUsers = async (options = {}) => {
             limit,
             offset,
             attributes: { exclude: ['password_hash'] },
+            include: [
+                {
+                    model: Role,
+                    as: 'role',
+                    attributes: ['id', 'name', 'description', 'is_active']
+                }
+            ],
             order: [['created_at', 'DESC']]
         });
 
