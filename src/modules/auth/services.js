@@ -3,9 +3,11 @@
 
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 import { config } from '../../config/env.js';
 import * as authRepository from './repository.js';
 import * as refreshTokenRepository from './refreshTokenRepository.js';
+import * as authCache from './cache.js';
 
 // Configuración de bcrypt
 const SALT_ROUNDS = 10;
@@ -15,6 +17,8 @@ const JWT_ACCESS_SECRET = config.jwt.accessSecret;
 const JWT_ACCESS_EXPIRES_IN = config.jwt.accessExpiresIn;
 const JWT_REFRESH_SECRET = config.jwt.refreshSecret;
 const JWT_REFRESH_EXPIRES_IN = config.jwt.refreshExpiresIn;
+const JWT_ISSUER = config.jwt.issuer;
+const JWT_AUDIENCE = config.jwt.audience;
 
 /**
  * Registrar un nuevo usuario
@@ -119,25 +123,33 @@ export const login = async (email, password, sessionData = {}) => {
  */
 export const verifyToken = async (token) => {
     try {
-        // Verificar y decodificar el access token con su secret
-        const decoded = jwt.verify(token, JWT_ACCESS_SECRET);
+        const decoded = jwt.verify(token, JWT_ACCESS_SECRET, {
+            issuer: JWT_ISSUER,
+            audience: JWT_AUDIENCE
+        });
 
-        // Verificar que sea un access token
-        if (decoded.type !== 'access') {
+        if (decoded.tokenType !== 'access') {
             const error = new Error('auth.token.invalid');
             error.status = 401;
             error.code = 'INVALID_TOKEN_TYPE';
             throw error;
         }
 
-        // Verificar que el usuario aún existe y está activo
-        const user = await authRepository.findUserById(decoded.userId);
+        const userId = decoded.sub;
+
+        let user = await authCache.getUserFromCache(userId);
 
         if (!user) {
-            const error = new Error('auth.profile.not_found');
-            error.status = 401;
-            error.code = 'USER_NOT_FOUND';
-            throw error;
+            user = await authRepository.findUserById(userId);
+
+            if (!user) {
+                const error = new Error('auth.profile.not_found');
+                error.status = 401;
+                error.code = 'USER_NOT_FOUND';
+                throw error;
+            }
+
+            await authCache.setUserCache(userId, user);
         }
 
         if (!user.is_active) {
@@ -147,11 +159,21 @@ export const verifyToken = async (token) => {
             throw error;
         }
 
+        const currentSessionVersion = await authCache.getSessionVersion(userId);
+        if (decoded.sessionVersion !== currentSessionVersion) {
+            const error = new Error('auth.token.session_revoked');
+            error.status = 401;
+            error.code = 'SESSION_REVOKED';
+            throw error;
+        }
+
         return {
-            userId: decoded.userId,
-            email: decoded.email,
-            role: decoded.role,
-            organization_id: decoded.organization_id
+            userId: user.id,
+            email: user.email,
+            role: user.role,
+            organization_id: user.organization_id,
+            first_name: user.first_name,
+            last_name: user.last_name
         };
     } catch (error) {
         if (error.name === 'JsonWebTokenError') {
@@ -185,17 +207,20 @@ export const verifyToken = async (token) => {
  */
 export const refreshAccessToken = async (refreshToken, sessionData = {}) => {
     try {
-        // Verificar refresh token JWT con su secret
-        const decoded = jwt.verify(refreshToken, JWT_REFRESH_SECRET);
+        const decoded = jwt.verify(refreshToken, JWT_REFRESH_SECRET, {
+            issuer: JWT_ISSUER,
+            audience: JWT_AUDIENCE
+        });
 
-        if (decoded.type !== 'refresh') {
+        if (decoded.tokenType !== 'refresh') {
             const error = new Error('auth.token.invalid');
             error.status = 401;
             error.code = 'INVALID_TOKEN_TYPE';
             throw error;
         }
 
-        // Buscar el refresh token en la base de datos (incluyendo soft-deleted para detectar robo)
+        const userId = decoded.sub;
+
         const storedToken = await refreshTokenRepository.findByTokenHash(refreshToken, true);
 
         if (!storedToken) {
@@ -205,10 +230,9 @@ export const refreshAccessToken = async (refreshToken, sessionData = {}) => {
             throw error;
         }
 
-        // DETECCIÓN DE ROBO: Si el token ya fue revocado, alguien está intentando reusarlo
         if (storedToken.is_revoked) {
-            // Revocar TODOS los tokens del usuario (posible robo)
-            await refreshTokenRepository.revokeAllUserTokens(decoded.userId, 'suspicious_activity');
+            await refreshTokenRepository.revokeAllUserTokens(userId, 'suspicious_activity');
+            await authCache.incrementSessionVersion(userId);
             
             const error = new Error('auth.refresh.token_theft_detected');
             error.status = 401;
@@ -216,7 +240,6 @@ export const refreshAccessToken = async (refreshToken, sessionData = {}) => {
             throw error;
         }
 
-        // Verificar expiración absoluta
         if (new Date(storedToken.expires_at) < new Date()) {
             await refreshTokenRepository.revokeToken(refreshToken, 'expired');
             const error = new Error('auth.refresh.token_expired');
@@ -225,7 +248,6 @@ export const refreshAccessToken = async (refreshToken, sessionData = {}) => {
             throw error;
         }
 
-        // Verificar idle timeout (no usado en 7 días)
         if (refreshTokenRepository.isIdleTimeout(storedToken)) {
             await refreshTokenRepository.revokeToken(refreshToken, 'idle_timeout');
             const error = new Error('auth.refresh.token_expired');
@@ -234,8 +256,15 @@ export const refreshAccessToken = async (refreshToken, sessionData = {}) => {
             throw error;
         }
 
-        // Verificar que el usuario aún existe y está activo
-        const user = await authRepository.findUserById(decoded.userId);
+        const currentSessionVersion = await authCache.getSessionVersion(userId);
+        if (decoded.sessionVersion !== currentSessionVersion) {
+            const error = new Error('auth.token.session_revoked');
+            error.status = 401;
+            error.code = 'SESSION_REVOKED';
+            throw error;
+        }
+
+        const user = await authRepository.findUserById(userId);
 
         if (!user) {
             const error = new Error('auth.profile.not_found');
@@ -251,10 +280,8 @@ export const refreshAccessToken = async (refreshToken, sessionData = {}) => {
             throw error;
         }
 
-        // ROTACIÓN: Revocar el refresh token viejo ANTES de generar uno nuevo
         await refreshTokenRepository.revokeToken(refreshToken, 'rotated');
 
-        // Generar nuevos tokens (esto creará un nuevo refresh token en BD)
         const tokens = await generateTokens(user, sessionData);
 
         return tokens;
@@ -319,6 +346,9 @@ export const changePassword = async (userId, currentPassword, newPassword) => {
     // SEGURIDAD: Revocar TODOS los refresh tokens al cambiar password
     // Esto cierra todas las sesiones y obliga a re-login
     await refreshTokenRepository.revokeAllUserTokens(userId, 'password_change');
+    
+    // Invalidar sesión (incrementar sessionVersion y limpiar caché)
+    await authCache.invalidateUserSession(userId);
 
     return updated;
 };
@@ -333,41 +363,42 @@ export const changePassword = async (userId, currentPassword, newPassword) => {
  * @returns {Promise<Object>} - { access_token, refresh_token, expires_in }
  */
 const generateTokens = async (user, sessionData = {}) => {
-    // Payload del token
-    const payload = {
-        userId: user.id,
-        email: user.email,
-        role: user.role,
-        organization_id: user.organization_id
+    const sessionVersion = await authCache.getSessionVersion(user.id);
+
+    const basePayload = {
+        iss: JWT_ISSUER,
+        aud: JWT_AUDIENCE,
+        sub: user.id,
+        orgId: user.organization_id,
+        sessionVersion
     };
 
-    // Access token (corta duración - 15 minutos)
     const access_token = jwt.sign(
-        { ...payload, type: 'access' },
+        {
+            ...basePayload,
+            tokenType: 'access',
+            jti: crypto.randomUUID()
+        },
         JWT_ACCESS_SECRET,
         { expiresIn: JWT_ACCESS_EXPIRES_IN }
     );
 
-    // Refresh token (larga duración - 14 días)
-    // Agregar jti (JWT ID) único para evitar colisiones de hash
     const refresh_token = jwt.sign(
-        { 
-            ...payload, 
-            type: 'refresh',
-            jti: crypto.randomUUID() // Garantiza unicidad del token
+        {
+            ...basePayload,
+            tokenType: 'refresh',
+            jti: crypto.randomUUID()
         },
         JWT_REFRESH_SECRET,
         { expiresIn: JWT_REFRESH_EXPIRES_IN }
     );
 
-    // Calcular fecha de expiración del refresh token
     const expiresAt = new Date();
     const daysMatch = JWT_REFRESH_EXPIRES_IN.match(/(\d+)d/);
     if (daysMatch) {
         expiresAt.setDate(expiresAt.getDate() + parseInt(daysMatch[1], 10));
     }
 
-    // Guardar refresh token hasheado en la base de datos
     await refreshTokenRepository.createRefreshToken({
         userId: user.id,
         token: refresh_token,
@@ -409,6 +440,7 @@ export const logout = async (refreshToken) => {
  */
 export const logoutAll = async (userId) => {
     const revokedCount = await refreshTokenRepository.revokeAllUserTokens(userId, 'logout_all');
+    await authCache.invalidateUserSession(userId);
     return revokedCount;
 };
 
