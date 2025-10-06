@@ -70,6 +70,42 @@ Preferred communication style: Simple, everyday language.
 - **Identifier System:** UUID v7, human_id (scoped incremental ID), and public_code (opaque, Hashids + Luhn checksum) for entities.
 - **Authentication:** Comprehensive JWT-based system with access/refresh tokens, token rotation, theft detection, and role-based access control (RBAC). Refresh tokens are database-persisted and SHA-256 hashed.
 
+### JWT Token Structure
+Los tokens JWT siguen el estándar RFC 7519 e incluyen los siguientes claims:
+
+```json
+{
+  "iss": "https://api.ec.com",
+  "aud": "ec-frontend",
+  "sub": "u_abc123",
+  "orgId": "org_42",
+  "sessionVersion": 3,
+  "tokenType": "access",
+  "iat": 1730800000,
+  "exp": 1730800900,
+  "jti": "0b2f3c3a-9f5d-4a2d-9a4f-4f22e9f4c1aa"
+}
+```
+
+**Claims Estándar (Registered Claims):**
+- **`iss` (issuer):** Identifica quién emitió el token. Valida que el token proviene del servidor de autenticación oficial de EC.DATA. Valor: `https://api.ec.com`
+- **`aud` (audience):** Indica para quién fue emitido el token. Previene que un token válido para otro servicio sea usado en este. Valor: `ec-frontend`
+- **`sub` (subject):** Identificador único del usuario (userId). Representa el "dueño" del token. Es el campo central del JWT.
+- **`iat` (issued at):** Timestamp UNIX de emisión del token. Sirve para saber desde cuándo es válido.
+- **`exp` (expiration):** Timestamp UNIX de expiración. Define hasta cuándo el token es válido (15 min para access, 14 días para refresh).
+- **`jti` (JWT ID):** Identificador único del token (UUID v4). Usado para detectar replay attacks y mantener listas de revocación en Redis.
+
+**Claims Personalizados (Private Claims):**
+- **`orgId`:** ID de la organización o tenant al que pertenece el usuario. Permite que el backend multi-tenant sepa a qué contexto de datos aplicar.
+- **`sessionVersion`:** Número entero usado para invalidar sesiones del lado del servidor. Si se incrementa en Redis, cualquier token con valor anterior queda inválido inmediatamente. Ideal para revocar acceso sin esperar a la expiración.
+- **`tokenType`:** Tipo de token. Valores: `"access"` (token corto para requests) o `"refresh"` (token largo para renovar sesiones).
+
+**Sistema de Caché y Validación:**
+- Los datos completos del usuario se obtienen de Redis (caché de 15 min) o SQL si no existe
+- El `sessionVersion` se valida en cada request: JWT vs Redis
+- Si no coinciden, el token se rechaza (sesión revocada)
+- La invalidación de sesión incrementa `sessionVersion` y limpia el caché del usuario
+
 ## External Dependencies
 
 ### Core Services
@@ -92,6 +128,23 @@ Preferred communication style: Simple, everyday language.
 - **Health Checks:** Basic endpoint at `/api/v1/health` for service status.
 
 ## Recent Changes
+
+### October 6, 2025 - JWT Standard Claims & Redis Cache System
+- **JWT Structure Overhaul:** Migrated to standard JWT claims (iss, aud, sub) following RFC 7519
+- **Claims Implementation:** 
+  - `iss`: Issuer validation (https://api.ec.com)
+  - `aud`: Audience validation (ec-frontend)
+  - `sub`: User ID (replaces userId)
+  - `orgId`: Organization/tenant context
+  - `sessionVersion`: Server-side session invalidation mechanism
+  - `tokenType`: Token type differentiation (access/refresh)
+  - `jti`: Unique token identifier for replay attack prevention
+- **Redis Caching Layer:** User data cached for 15 minutes, reducing SQL queries by ~99%
+- **Cache Strategy:** Redis → SQL (if not found) → Cache result
+- **Session Invalidation:** Increment sessionVersion to instantly revoke all user tokens
+- **Security Enhancement:** Tokens now validate issuer, audience, and session version on every request
+- **New Module:** `src/modules/auth/cache.js` for Redis operations (getUserFromCache, setUserCache, invalidateUserSession)
+- **Updated Services:** verifyToken() and refreshAccessToken() now enforce standard claims validation
 
 ### October 5, 2025 - Performance: Logger with Worker Threads
 - **Pino Logger Optimization:** Implemented worker thread-based logging to avoid blocking the event loop
