@@ -232,7 +232,7 @@ export const refreshAccessToken = async (refreshToken, sessionData = {}) => {
 
         if (storedToken.is_revoked) {
             await refreshTokenRepository.revokeAllUserTokens(userId, 'suspicious_activity');
-            await authCache.incrementSessionVersion(userId);
+            await authCache.invalidateUserSession(userId);
             
             const error = new Error('auth.refresh.token_theft_detected');
             error.status = 401;
