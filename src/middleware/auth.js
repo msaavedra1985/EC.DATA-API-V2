@@ -64,7 +64,7 @@ export const authenticate = async (req, res, next) => {
  * Middleware para verificar roles específicos
  * Debe usarse DESPUÉS de authenticate
  * 
- * @param {string[]} allowedRoles - Array de roles permitidos ['admin', 'manager']
+ * @param {string[]} allowedRoles - Array de roles permitidos por nombre ['system-admin', 'org-admin', 'user']
  * @returns {Function} - Middleware de Express
  */
 export const authorize = (allowedRoles = []) => {
@@ -78,9 +78,10 @@ export const authorize = (allowedRoles = []) => {
             });
         }
 
-        // Verificar que el usuario tenga un rol permitido
-        if (!allowedRoles.includes(req.user.role)) {
-            logger.warn(`User ${req.user.email} attempted to access protected route without permission`);
+        // Verificar que el usuario tenga un rol permitido (role es un objeto con {id, name, description, is_active})
+        const userRoleName = req.user.role?.name;
+        if (!userRoleName || !allowedRoles.includes(userRoleName)) {
+            logger.warn(`User ${req.user.email} with role ${userRoleName} attempted to access protected route without permission`);
             
             return errorResponse(res, {
                 message: 'auth.permission.denied',
