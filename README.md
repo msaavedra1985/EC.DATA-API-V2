@@ -68,18 +68,20 @@ El sistema implementa autenticación JWT dual con:
 
 ### Endpoints de Autenticación
 
-#### Registrar Usuario
-```bash
-POST /api/v1/auth/register
-Content-Type: application/json
+Todos los ejemplos asumen que el servidor está corriendo en `http://localhost:5000`.
 
-{
-  "email": "usuario@example.com",
-  "password": "SecurePass123!",
-  "first_name": "Juan",
-  "last_name": "Pérez",
-  "organization_id": "uuid-opcional"
-}
+#### Registrar Usuario
+
+```bash
+# Ejemplo ejecutable con curl
+curl -X POST http://localhost:5000/api/v1/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "usuario@example.com",
+    "password": "SecurePass123!",
+    "first_name": "Juan",
+    "last_name": "Pérez"
+  }'
 ```
 
 **Respuesta:**
@@ -87,9 +89,19 @@ Content-Type: application/json
 {
   "ok": true,
   "data": {
-    "user": { /* datos del usuario */ },
-    "access_token": "eyJhbGc...",
-    "refresh_token": "eyJhbGc...",
+    "user": {
+      "id": "0199baa7-ff28-743c-9673-6bed636d0f33",
+      "email": "usuario@example.com",
+      "first_name": "Juan",
+      "last_name": "Pérez",
+      "role": {
+        "id": "0199ba9c-0c65-742d-80cc-5584d87678a6",
+        "name": "user",
+        "description": "Usuario estándar"
+      }
+    },
+    "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
     "expires_in": "15m",
     "token_type": "Bearer"
   }
@@ -97,47 +109,215 @@ Content-Type: application/json
 ```
 
 #### Iniciar Sesión
-```bash
-POST /api/v1/auth/login
-Content-Type: application/json
 
+```bash
+# Login y guardar tokens en variables de entorno
+curl -X POST http://localhost:5000/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "usuario@example.com",
+    "password": "SecurePass123!"
+  }' | jq -r '.data | "export ACCESS_TOKEN=\(.access_token)\nexport REFRESH_TOKEN=\(.refresh_token)"'
+
+# Ejemplo simple
+curl -X POST http://localhost:5000/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "usuario@example.com",
+    "password": "SecurePass123!"
+  }'
+```
+
+**Respuesta:**
+```json
 {
-  "email": "usuario@example.com",
-  "password": "SecurePass123!"
+  "ok": true,
+  "data": {
+    "user": {
+      "id": "0199baa7-ff28-743c-9673-6bed636d0f33",
+      "email": "usuario@example.com",
+      "first_name": "Juan",
+      "last_name": "Pérez",
+      "role": {
+        "name": "user",
+        "description": "Usuario estándar"
+      }
+    },
+    "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL2FwaS5lYy5jb20iLCJhdWQiOiJlYy1mcm9udGVuZCIsInN1YiI6IjAxOTliYWE3LWZmMjgtNzQzYy05NjczLTZiZWQ2MzZkMGYzMyIsIm9yZ0lkIjpudWxsLCJzZXNzaW9uVmVyc2lvbiI6MSwicm9sZSI6eyJpZCI6IjAxOTliYTljLTBjNjUtNzQyZC04MGNjLTU1ODRkODc2NzhhNiIsIm5hbWUiOiJ1c2VyIn0sInRva2VuVHlwZSI6ImFjY2VzcyIsImp0aSI6IjEyMzQ1Njc4LTEyMzQtMTIzNC0xMjM0LTEyMzQ1Njc4OTBhYiIsImlhdCI6MTcwMDAwMDAwMCwiZXhwIjoxNzAwMDAwOTAwfQ...",
+    "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL2FwaS5lYy5jb20iLCJhdWQiOiJlYy1mcm9udGVuZCIsInN1YiI6IjAxOTliYWE3LWZmMjgtNzQzYy05NjczLTZiZWQ2MzZkMGYzMyIsInRva2VuVHlwZSI6InJlZnJlc2giLCJqdGkiOiI5ODc2NTQzMi0xMjM0LTEyMzQtMTIzNC0wOTg3NjU0MzIxYWIiLCJpYXQiOjE3MDAwMDAwMDAsImV4cCI6MTcwMTIwOTYwMH0...",
+    "expires_in": "15m",
+    "token_type": "Bearer"
+  },
+  "meta": {
+    "timestamp": "2025-10-06T17:00:00.000Z"
+  }
 }
 ```
 
 #### Refrescar Token
-```bash
-POST /api/v1/auth/refresh
-Content-Type: application/json
 
+```bash
+# Usar refresh token para obtener nuevo access token
+curl -X POST http://localhost:5000/api/v1/auth/refresh \
+  -H "Content-Type: application/json" \
+  -d '{
+    "refresh_token": "'"$REFRESH_TOKEN"'"
+  }'
+
+# Con token literal
+curl -X POST http://localhost:5000/api/v1/auth/refresh \
+  -H "Content-Type: application/json" \
+  -d '{
+    "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+  }'
+```
+
+**Respuesta:**
+```json
 {
-  "refresh_token": "eyJhbGc..."
+  "ok": true,
+  "data": {
+    "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL2FwaS5lYy5jb20iLCJhdWQiOiJlYy1mcm9udGVuZCIsInN1YiI6IjAxOTliYWE3LWZmMjgtNzQzYy05NjczLTZiZWQ2MzZkMGYzMyIsIm9yZ0lkIjpudWxsLCJzZXNzaW9uVmVyc2lvbiI6MSwicm9sZSI6eyJpZCI6IjAxOTliYTljLTBjNjUtNzQyZC04MGNjLTU1ODRkODc2NzhhNiIsIm5hbWUiOiJ1c2VyIn0sInRva2VuVHlwZSI6ImFjY2VzcyIsImp0aSI6ImFiY2RlZjEyLTEyMzQtMTIzNC0xMjM0LTEyMzQ1Njc4OTBhYiIsImlhdCI6MTcwMDAwMTAwMCwiZXhwIjoxNzAwMDAxOTAwfQ...",
+    "expires_in": "15m",
+    "token_type": "Bearer"
+  },
+  "meta": {
+    "timestamp": "2025-10-06T17:01:00.000Z"
+  }
 }
 ```
 
 #### Obtener Usuario Actual
+
 ```bash
-GET /api/v1/auth/me
-Authorization: Bearer {access_token}
+# Usando variable de entorno
+curl -X GET http://localhost:5000/api/v1/auth/me \
+  -H "Authorization: Bearer $ACCESS_TOKEN"
+
+# Con token literal
+curl -X GET http://localhost:5000/api/v1/auth/me \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+```
+
+**Respuesta:**
+```json
+{
+  "ok": true,
+  "data": {
+    "id": "0199baa7-ff28-743c-9673-6bed636d0f33",
+    "human_id": 1,
+    "public_code": "EC-001-U-8",
+    "email": "usuario@example.com",
+    "first_name": "Juan",
+    "last_name": "Pérez",
+    "is_active": true,
+    "last_login_at": "2025-10-06T17:00:00.000Z",
+    "role": {
+      "id": "0199ba9c-0c65-742d-80cc-5584d87678a6",
+      "name": "user",
+      "description": "Usuario estándar"
+    },
+    "organization_id": null
+  },
+  "meta": {
+    "timestamp": "2025-10-06T17:02:00.000Z"
+  }
+}
 ```
 
 #### Cerrar Sesión
-```bash
-POST /api/v1/auth/logout
-Authorization: Bearer {access_token}
-Content-Type: application/json
 
+```bash
+# Cerrar sesión actual (invalida el refresh token específico)
+curl -X POST http://localhost:5000/api/v1/auth/logout \
+  -H "Authorization: Bearer $ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "refresh_token": "'"$REFRESH_TOKEN"'"
+  }'
+
+# Con tokens literales
+curl -X POST http://localhost:5000/api/v1/auth/logout \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+  }'
+```
+
+**Respuesta:**
+```json
 {
-  "refresh_token": "eyJhbGc..."
+  "ok": true,
+  "data": {
+    "message": "Sesión cerrada exitosamente"
+  },
+  "meta": {
+    "timestamp": "2025-10-06T17:03:00.000Z"
+  }
 }
 ```
 
 #### Cerrar Todas las Sesiones
+
 ```bash
-POST /api/v1/auth/logout-all
-Authorization: Bearer {access_token}
+# Invalida todos los refresh tokens del usuario (con variable)
+curl -X POST http://localhost:5000/api/v1/auth/logout-all \
+  -H "Authorization: Bearer $ACCESS_TOKEN"
+
+# Con token literal
+curl -X POST http://localhost:5000/api/v1/auth/logout-all \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+```
+
+**Respuesta:**
+```json
+{
+  "ok": true,
+  "data": {
+    "message": "Todas las sesiones han sido cerradas",
+    "sessions_revoked": 3
+  },
+  "meta": {
+    "timestamp": "2025-10-06T17:04:00.000Z"
+  }
+}
+```
+
+#### Cambiar Contraseña
+
+```bash
+# Cambiar contraseña (invalida todas las sesiones excepto la actual)
+curl -X POST http://localhost:5000/api/v1/auth/change-password \
+  -H "Authorization: Bearer $ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "current_password": "SecurePass123!",
+    "new_password": "NewSecurePass456!"
+  }'
+
+# Con token literal
+curl -X POST http://localhost:5000/api/v1/auth/change-password \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "current_password": "SecurePass123!",
+    "new_password": "NewSecurePass456!"
+  }'
+```
+
+**Respuesta:**
+```json
+{
+  "ok": true,
+  "data": {
+    "message": "Contraseña actualizada exitosamente",
+    "sessions_revoked": 2
+  },
+  "meta": {
+    "timestamp": "2025-10-06T17:05:00.000Z"
+  }
+}
 ```
 
 ## 👥 Sistema RBAC (Role-Based Access Control)
