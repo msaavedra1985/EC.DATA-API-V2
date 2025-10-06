@@ -385,7 +385,13 @@ const generateTokens = async (user, sessionData = {}) => {
         aud: JWT_AUDIENCE,
         sub: user.id,
         orgId: user.organization_id,
-        sessionVersion
+        sessionVersion,
+        role: user.role ? {
+            id: user.role.id,
+            name: user.role.name,
+            description: user.role.description,
+            is_active: user.role.is_active
+        } : null
     };
 
     const access_token = jwt.sign(

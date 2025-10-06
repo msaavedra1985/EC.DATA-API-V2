@@ -4,7 +4,7 @@
 import express from 'express';
 import * as authServices from './services.js';
 import { validate } from '../../middleware/validate.js';
-import { authenticate } from '../../middleware/auth.js';
+import { authenticate, requireRole } from '../../middleware/auth.js';
 import { 
     registerSchema, 
     loginSchema, 
@@ -689,6 +689,52 @@ router.post('/sessions/:sessionId/revoke', authenticate, validate(revokeSessionS
 
         return successResponse(res, {
             message: 'auth.logout.session_revoked'
+        });
+    } catch (error) {
+        next(error);
+    }
+});
+
+/**
+ * @swagger
+ * /auth/admin-test:
+ *   get:
+ *     summary: Endpoint de prueba solo para administradores
+ *     description: Endpoint protegido con requireRole() - solo accesible para system-admin y org-admin
+ *     tags: [Auth]
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Acceso autorizado
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     message:
+ *                       type: string
+ *                       example: Acceso autorizado - Eres un administrador
+ *                     user_role:
+ *                       type: string
+ *                       example: system-admin
+ *       401:
+ *         description: No autenticado
+ *       403:
+ *         description: No autorizado - rol insuficiente
+ */
+router.get('/admin-test', authenticate, requireRole(['system-admin', 'org-admin']), async (req, res, next) => {
+    try {
+        return successResponse(res, {
+            message: 'Acceso autorizado - Eres un administrador',
+            user_role: req.user.role.name,
+            user_id: req.user.userId
         });
     } catch (error) {
         next(error);
