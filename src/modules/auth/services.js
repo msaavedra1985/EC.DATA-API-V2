@@ -472,3 +472,43 @@ export const revokeSession = async (sessionId, userId) => {
     
     return true;
 };
+
+/**
+ * Verificar email y limpiar caché del usuario
+ * @param {string} userId - ID del usuario
+ * @returns {Promise<boolean>} - true si se verificó correctamente
+ */
+export const verifyUserEmail = async (userId) => {
+    const updated = await authRepository.verifyEmail(userId);
+    if (updated) {
+        await authCache.deleteUserCache(userId);
+    }
+    return updated;
+};
+
+/**
+ * Activar/Desactivar usuario e invalidar su sesión
+ * @param {string} userId - ID del usuario
+ * @param {boolean} isActive - Estado activo/inactivo
+ * @returns {Promise<boolean>} - true si se actualizó correctamente
+ */
+export const setUserActiveStatus = async (userId, isActive) => {
+    const updated = await authRepository.setUserActiveStatus(userId, isActive);
+    if (updated && !isActive) {
+        await refreshTokenRepository.revokeAllUserTokens(userId, 'account_disabled');
+        await authCache.invalidateUserSession(userId);
+    } else if (updated) {
+        await authCache.deleteUserCache(userId);
+    }
+    return updated;
+};
+
+/**
+ * Invalidar sesión de un usuario (útil para forzar re-login)
+ * Exportada para uso externo cuando se actualice información crítica del usuario
+ * @param {string} userId - ID del usuario
+ * @returns {Promise<boolean>} - true si se invalidó correctamente
+ */
+export const invalidateUserSession = async (userId) => {
+    return await authCache.invalidateUserSession(userId);
+};
