@@ -3,6 +3,7 @@
 
 import { DataTypes } from 'sequelize';
 import sequelize from '../../../db/sql/sequelize.js';
+import Role from './Role.js';
 
 /**
  * Modelo User - Usuarios del sistema con autenticación JWT
@@ -15,7 +16,7 @@ import sequelize from '../../../db/sql/sequelize.js';
  * - email: Único, usado para login
  * - password_hash: bcrypt hash (nunca devolver al cliente)
  * - first_name, last_name: Nombre completo
- * - role: admin | manager | user (para autorización basada en roles)
+ * - role_id: FK a roles table (RBAC system)
  * - organization_id: FK a organizations (multi-tenancy)
  * - is_active: Habilitar/deshabilitar usuarios sin eliminar
  * - last_login_at: Tracking de actividad
@@ -66,11 +67,16 @@ const User = sequelize.define(
             allowNull: false,
             comment: 'Apellido del usuario'
         },
-        role: {
-            type: DataTypes.ENUM('admin', 'manager', 'user'),
-            defaultValue: 'user',
+        role_id: {
+            type: DataTypes.UUID,
             allowNull: false,
-            comment: 'Rol para control de acceso basado en roles (RBAC)'
+            references: {
+                model: 'roles',
+                key: 'id'
+            },
+            onUpdate: 'CASCADE',
+            onDelete: 'RESTRICT',
+            comment: 'FK a roles table para RBAC'
         },
         organization_id: {
             type: DataTypes.UUID,
@@ -125,8 +131,8 @@ const User = sequelize.define(
                 name: 'users_organization_id_idx'
             },
             {
-                fields: ['role'],
-                name: 'users_role_idx'
+                fields: ['role_id'],
+                name: 'users_role_id_idx'
             },
             {
                 fields: ['is_active'],
@@ -136,20 +142,35 @@ const User = sequelize.define(
     }
 );
 
+// Relación con Role
+User.belongsTo(Role, {
+    foreignKey: 'role_id',
+    as: 'role'
+});
+
 /**
- * Método de instancia para verificar si el usuario es admin
+ * Método de instancia para verificar si el usuario tiene un rol específico
+ * @param {string} roleName - Nombre del rol a verificar
  * @returns {boolean}
  */
-User.prototype.isAdmin = function () {
-    return this.role === 'admin';
+User.prototype.hasRole = function (roleName) {
+    return this.role && this.role.name === roleName;
 };
 
 /**
- * Método de instancia para verificar si el usuario es manager
+ * Método de instancia para verificar si el usuario es system-admin
  * @returns {boolean}
  */
-User.prototype.isManager = function () {
-    return this.role === 'manager' || this.role === 'admin';
+User.prototype.isSystemAdmin = function () {
+    return this.hasRole('system-admin');
+};
+
+/**
+ * Método de instancia para verificar si el usuario es org-admin
+ * @returns {boolean}
+ */
+User.prototype.isOrgAdmin = function () {
+    return this.hasRole('org-admin');
 };
 
 /**
