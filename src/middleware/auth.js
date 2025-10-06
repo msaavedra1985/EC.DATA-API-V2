@@ -95,6 +95,22 @@ export const authorize = (allowedRoles = []) => {
 };
 
 /**
+ * Middleware universal para requerir roles específicos
+ * Alias más intuitivo de authorize() para protección de endpoints
+ * 
+ * Ejemplos de uso:
+ * - requireRole(['system-admin']) // Solo system-admin
+ * - requireRole(['org-admin', 'org-manager']) // Admin o manager
+ * - requireRole(['system-admin', 'org-admin', 'org-manager', 'user']) // Cualquier usuario autenticado excepto viewer/guest/demo
+ * 
+ * @param {string[]} roleNames - Array de nombres de roles permitidos
+ * @returns {Function} - Middleware de Express
+ */
+export const requireRole = (roleNames = []) => {
+    return authorize(roleNames);
+};
+
+/**
  * Middleware opcional de autenticación
  * Intenta autenticar pero NO bloquea si falla
  * Útil para endpoints públicos que pueden tener comportamiento diferente si el usuario está autenticado
