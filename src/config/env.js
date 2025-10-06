@@ -48,6 +48,10 @@ export const config = {
         
         // Idle timeout (revocación por inactividad - 7 días)
         refreshIdleDays: parseInt(process.env.JWT_REFRESH_IDLE_DAYS || '7', 10),
+        
+        // Claims estándar JWT
+        issuer: process.env.JWT_ISSUER || 'https://api.ec.com',
+        audience: process.env.JWT_AUDIENCE || 'ec-frontend',
     },
 
     // Rate limiting (observational mode)
