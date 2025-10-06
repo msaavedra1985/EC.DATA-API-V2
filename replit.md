@@ -72,39 +72,30 @@ Preferred communication style: Simple, everyday language.
 
 ### JWT Token Structure
 Los tokens JWT siguen el estándar RFC 7519 e incluyen los siguientes claims:
+- `iss` (issuer): `https://api.ec.com`
+- `aud` (audience): `ec-frontend`
+- `sub`: Unique user identifier (userId).
+- `iat`: UNIX timestamp of token issuance.
+- `exp`: UNIX timestamp of expiration (15 min for access, 14 days for refresh).
+- `jti`: Unique token ID (UUID v4) for replay attack prevention.
+- `orgId`: ID of the organization/tenant.
+- `sessionVersion`: Integer for server-side session invalidation.
+- `tokenType`: Type of token (`"access"` or `"refresh"`).
 
-```json
-{
-  "iss": "https://api.ec.com",
-  "aud": "ec-frontend",
-  "sub": "u_abc123",
-  "orgId": "org_42",
-  "sessionVersion": 3,
-  "tokenType": "access",
-  "iat": 1730800000,
-  "exp": 1730800900,
-  "jti": "0b2f3c3a-9f5d-4a2d-9a4f-4f22e9f4c1aa"
-}
-```
+**System Cache and Validation:**
+- User data retrieved from Redis cache (15 min TTL) or SQL if not found.
+- `sessionVersion` validated on each request; mismatch invalidates token.
+- Session invalidation increments `sessionVersion` and clears user cache.
 
-**Claims Estándar (Registered Claims):**
-- **`iss` (issuer):** Identifica quién emitió el token. Valida que el token proviene del servidor de autenticación oficial de EC.DATA. Valor: `https://api.ec.com`
-- **`aud` (audience):** Indica para quién fue emitido el token. Previene que un token válido para otro servicio sea usado en este. Valor: `ec-frontend`
-- **`sub` (subject):** Identificador único del usuario (userId). Representa el "dueño" del token. Es el campo central del JWT.
-- **`iat` (issued at):** Timestamp UNIX de emisión del token. Sirve para saber desde cuándo es válido.
-- **`exp` (expiration):** Timestamp UNIX de expiración. Define hasta cuándo el token es válido (15 min para access, 14 días para refresh).
-- **`jti` (JWT ID):** Identificador único del token (UUID v4). Usado para detectar replay attacks y mantener listas de revocación en Redis.
+### Role-Based Access Control (RBAC)
+The system implements a flexible RBAC model based on a `roles` table with 7 predefined roles (`system-admin`, `org-admin`, `org-manager`, `user`, `viewer`, `guest`, `demo`). Users are associated with roles via `users.role_id`.
 
-**Claims Personalizados (Private Claims):**
-- **`orgId`:** ID de la organización o tenant al que pertenece el usuario. Permite que el backend multi-tenant sepa a qué contexto de datos aplicar.
-- **`sessionVersion`:** Número entero usado para invalidar sesiones del lado del servidor. Si se incrementa en Redis, cualquier token con valor anterior queda inválido inmediatamente. Ideal para revocar acceso sin esperar a la expiración.
-- **`tokenType`:** Tipo de token. Valores: `"access"` (token corto para requests) o `"refresh"` (token largo para renovar sesiones).
-
-**Sistema de Caché y Validación:**
-- Los datos completos del usuario se obtienen de Redis (caché de 15 min) o SQL si no existe
-- El `sessionVersion` se valida en cada request: JWT vs Redis
-- Si no coinciden, el token se rechaza (sesión revocada)
-- La invalidación de sesión incrementa `sessionVersion` y limpia el caché del usuario
+**Technical Implementation:**
+- `User.belongsTo(Role)` relationship.
+- `User.prototype.hasRole(roleName)` and `User.prototype.isSystemAdmin()` methods.
+- Middleware for authorization: `authenticate`, `requireRole(['role1', 'role2'])`.
+- JWT contains `sub`, `role` (id, name, description, is_active), and `orgId`.
+- Roles are cached with user data in Redis (15 min TTL).
 
 ## External Dependencies
 
@@ -117,17 +108,25 @@ Los tokens JWT siguen el estándar RFC 7519 e incluyen los siguientes claims:
 - **Production:** `express`, `sequelize`, `pg`, `redis`, `jsonwebtoken`, `bcrypt`, `zod`, `cors`, `helmet`, `compression`, `pino` (and related), `prom-client`, `swagger-jsdoc`, `swagger-ui-express`, `dotenv`.
 - **Development:** `eslint`, `vitest`, `supertest`, `nodemon`.
 
-### Testing Strategy
-- **Unit Tests:** Vitest for services and utilities.
-- **Integration Tests:** Supertest for HTTP endpoints.
-- Test files colocated or in `tests/` directory with mock data.
-
 ### Monitoring & Observability
 - **Metrics (Prometheus):** HTTP request duration, counts, active connections, custom metrics.
 - **Logging:** Structured JSON logs via Pino (service: `ecdata-api`), request/response logging, database audit trail.
 - **Health Checks:** Basic endpoint at `/api/v1/health` for service status.
-
 ## Recent Changes
+
+### October 6, 2025 - Role-Based Access Control (RBAC) System
+- **RBAC Implementation:** Migrated from ENUM-based roles to flexible database-driven RBAC system
+- **7 Roles Created:** system-admin, org-admin, org-manager, user, viewer, guest, demo
+- **Database Migration:** Created `roles` table, migrated users.role (ENUM) to users.role_id (UUID FK)
+- **Data Migration:** Automated mapping of admin→system-admin, manager→org-manager, user→user
+- **Role Models:** Created Role model with Sequelize, established User-Role relationship via belongsTo
+- **Repository Updates:** All auth repository functions now JOIN roles table and return complete role object
+- **Middleware Enhancement:** Updated authorize() to validate by role.name, created requireRole() alias for intuitive usage
+- **Cache Integration:** Role data cached with user in Redis (15-min TTL), included in JWT payload
+- **User Methods:** Added hasRole(), isSystemAdmin(), isOrgAdmin() instance methods to User model
+- **Migration Script:** Created `src/db/migrations/migrate-roles.js` for automated schema migration
+- **Role Seeders:** Implemented seeder with UUID v7 generation for 7 system roles
+- **Documentation:** Complete RBAC documentation added to replit.md with examples and usage patterns
 
 ### October 6, 2025 - JWT Standard Claims & Redis Cache System
 - **JWT Structure Overhaul:** Migrated to standard JWT claims (iss, aud, sub) following RFC 7519
