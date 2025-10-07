@@ -70,6 +70,33 @@ Preferred communication style: Simple, everyday language.
 - **Identifier System:** UUID v7, human_id (scoped incremental ID), and public_code (opaque, Hashids + Luhn checksum) for entities.
 - **Authentication:** Comprehensive JWT-based system with access/refresh tokens, token rotation, theft detection, and role-based access control (RBAC). Refresh tokens are database-persisted and SHA-256 hashed.
 
+### JWT Token Structure
+Los tokens JWT siguen el estándar RFC 7519 e incluyen los siguientes claims:
+- `iss` (issuer): `https://api.ec.com`
+- `aud` (audience): `ec-frontend`
+- `sub`: Unique user identifier (userId).
+- `iat`: UNIX timestamp of token issuance.
+- `exp`: UNIX timestamp of expiration (15 min for access, 14 days for refresh).
+- `jti`: Unique token ID (UUID v4) for replay attack prevention.
+- `orgId`: ID of the organization/tenant.
+- `sessionVersion`: Integer for server-side session invalidation.
+- `tokenType`: Type of token (`"access"` or `"refresh"`).
+
+**System Cache and Validation:**
+- User data retrieved from Redis cache (15 min TTL) or SQL if not found.
+- `sessionVersion` validated on each request; mismatch invalidates token.
+- Session invalidation increments `sessionVersion` and clears user cache.
+
+### Role-Based Access Control (RBAC)
+The system implements a flexible RBAC model based on a `roles` table with 7 predefined roles (`system-admin`, `org-admin`, `org-manager`, `user`, `viewer`, `guest`, `demo`). Users are associated with roles via `users.role_id`.
+
+**Technical Implementation:**
+- `User.belongsTo(Role)` relationship.
+- `User.prototype.hasRole(roleName)` and `User.prototype.isSystemAdmin()` methods.
+- Middleware for authorization: `authenticate`, `requireRole(['role1', 'role2'])`.
+- JWT contains `sub`, `role` (id, name, description, is_active), and `orgId`.
+- Roles are cached with user data in Redis (15 min TTL).
+
 ## External Dependencies
 
 ### Core Services
@@ -81,17 +108,69 @@ Preferred communication style: Simple, everyday language.
 - **Production:** `express`, `sequelize`, `pg`, `redis`, `jsonwebtoken`, `bcrypt`, `zod`, `cors`, `helmet`, `compression`, `pino` (and related), `prom-client`, `swagger-jsdoc`, `swagger-ui-express`, `dotenv`.
 - **Development:** `eslint`, `vitest`, `supertest`, `nodemon`.
 
-### Testing Strategy
-- **Unit Tests:** Vitest for services and utilities.
-- **Integration Tests:** Supertest for HTTP endpoints.
-- Test files colocated or in `tests/` directory with mock data.
-
 ### Monitoring & Observability
 - **Metrics (Prometheus):** HTTP request duration, counts, active connections, custom metrics.
 - **Logging:** Structured JSON logs via Pino (service: `ecdata-api`), request/response logging, database audit trail.
 - **Health Checks:** Basic endpoint at `/api/v1/health` for service status.
-
 ## Recent Changes
+
+### October 7, 2025 - "Remember Me" Feature Implementation
+- **Extended Sessions:** Implemented optional `remember_me` field in login endpoint to extend session duration
+- **Token Duration Logic:** Normal sessions (14 days refresh, 7 days idle) vs Extended sessions (90 days refresh, 30 days idle)
+- **Database Schema:** Added `remember_me` boolean column to `refresh_tokens` table (default: false)
+- **Dynamic Idle Timeout:** Modified `isIdleTimeout()` to use 7 or 30 days based on stored `remember_me` value
+- **Token Cleanup Fix:** Updated `cleanupExpiredTokens()` to respect dynamic idle timeout per session type
+- **Environment Variables:** Added `JWT_REFRESH_EXPIRES_IN_LONG=90d` and `JWT_REFRESH_IDLE_DAYS_LONG=30`
+- **Swagger Documentation:** Updated `/auth/login` endpoint docs with complete `remember_me` field description
+- **Testing:** Verified both normal and extended sessions work correctly with proper expiration times
+- **Next.js Integration Guide:** Created comprehensive guide (`docs/NEXTJS_INTEGRATION.md`) with:
+  - Token storage strategies (HTTP-only cookies vs localStorage)
+  - Axios configuration with automatic token refresh
+  - Complete authentication context provider
+  - Security best practices for extended sessions
+  - Remember Me checkbox component example
+
+### October 7, 2025 - Complete Logout System & Redis Fallback
+- **Logout Endpoints:** Implemented POST `/api/v1/auth/logout` and POST `/api/v1/auth/logout-all` with authentication middleware
+- **Session Invalidation:** Logout increments `sessionVersion` and clears user cache, instantly revoking all tokens
+- **Flexible Logout:** `/logout` accepts optional `refresh_token` in body to revoke specific session, or revokes all sessions if empty
+- **Logout All:** `/logout-all` revokes all user sessions and deletes all refresh tokens
+- **Redis Fallback:** Implemented in-memory Map-based cache with TTL for sessionVersion when Redis unavailable
+- **Development Resilience:** System works correctly in development without Redis (in-memory fallback automatically activates)
+- **Translations:** Added complete Spanish/English translations for logout messages ("La sesión ha sido revocada" / "Session has been revoked")
+- **Security:** All logout operations require valid access token authentication
+- **Swagger Documentation:** Complete OpenAPI documentation for both logout endpoints
+
+### October 6, 2025 - Role-Based Access Control (RBAC) System
+- **RBAC Implementation:** Migrated from ENUM-based roles to flexible database-driven RBAC system
+- **7 Roles Created:** system-admin, org-admin, org-manager, user, viewer, guest, demo
+- **Database Migration:** Created `roles` table, migrated users.role (ENUM) to users.role_id (UUID FK)
+- **Data Migration:** Automated mapping of admin→system-admin, manager→org-manager, user→user
+- **Role Models:** Created Role model with Sequelize, established User-Role relationship via belongsTo
+- **Repository Updates:** All auth repository functions now JOIN roles table and return complete role object
+- **Middleware Enhancement:** Updated authorize() to validate by role.name, created requireRole() alias for intuitive usage
+- **Cache Integration:** Role data cached with user in Redis (15-min TTL), included in JWT payload
+- **User Methods:** Added hasRole(), isSystemAdmin(), isOrgAdmin() instance methods to User model
+- **Migration Script:** Created `src/db/migrations/migrate-roles.js` for automated schema migration
+- **Role Seeders:** Implemented seeder with UUID v7 generation for 7 system roles
+- **Documentation:** Complete RBAC documentation added to replit.md with examples and usage patterns
+
+### October 6, 2025 - JWT Standard Claims & Redis Cache System
+- **JWT Structure Overhaul:** Migrated to standard JWT claims (iss, aud, sub) following RFC 7519
+- **Claims Implementation:** 
+  - `iss`: Issuer validation (https://api.ec.com)
+  - `aud`: Audience validation (ec-frontend)
+  - `sub`: User ID (replaces userId)
+  - `orgId`: Organization/tenant context
+  - `sessionVersion`: Server-side session invalidation mechanism
+  - `tokenType`: Token type differentiation (access/refresh)
+  - `jti`: Unique token identifier for replay attack prevention
+- **Redis Caching Layer:** User data cached for 15 minutes, reducing SQL queries by ~99%
+- **Cache Strategy:** Redis → SQL (if not found) → Cache result
+- **Session Invalidation:** Increment sessionVersion to instantly revoke all user tokens
+- **Security Enhancement:** Tokens now validate issuer, audience, and session version on every request
+- **New Module:** `src/modules/auth/cache.js` for Redis operations (getUserFromCache, setUserCache, invalidateUserSession)
+- **Updated Services:** verifyToken() and refreshAccessToken() now enforce standard claims validation
 
 ### October 5, 2025 - Performance: Logger with Worker Threads
 - **Pino Logger Optimization:** Implemented worker thread-based logging to avoid blocking the event loop

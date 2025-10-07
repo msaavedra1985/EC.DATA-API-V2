@@ -46,8 +46,18 @@ export const config = {
         refreshSecret: process.env.JWT_REFRESH_SECRET || 'dev-refresh-secret-change-in-production',
         refreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '14d',
         
+        // Refresh token extendido con "remember me" (90 días)
+        refreshExpiresInLong: process.env.JWT_REFRESH_EXPIRES_IN_LONG || '90d',
+        
         // Idle timeout (revocación por inactividad - 7 días)
         refreshIdleDays: parseInt(process.env.JWT_REFRESH_IDLE_DAYS || '7', 10),
+        
+        // Idle timeout extendido con "remember me" (30 días)
+        refreshIdleDaysLong: parseInt(process.env.JWT_REFRESH_IDLE_DAYS_LONG || '30', 10),
+        
+        // Claims estándar JWT
+        issuer: process.env.JWT_ISSUER || 'https://api.ec.com',
+        audience: process.env.JWT_AUDIENCE || 'ec-frontend',
     },
 
     // Rate limiting (observational mode)

@@ -4,7 +4,7 @@
 import express from 'express';
 import * as authServices from './services.js';
 import { validate } from '../../middleware/validate.js';
-import { authenticate } from '../../middleware/auth.js';
+import { authenticate, requireRole } from '../../middleware/auth.js';
 import { 
     registerSchema, 
     loginSchema, 
@@ -134,7 +134,7 @@ router.post('/register', validate(registerSchema), async (req, res, next) => {
  * /auth/login:
  *   post:
  *     summary: Iniciar sesión
- *     description: Autentica un usuario y devuelve tokens JWT (access + refresh)
+ *     description: Autentica un usuario y devuelve tokens JWT (access + refresh). Opcionalmente acepta 'remember_me' para extender la duración de la sesión de 14 días (normal) a 90 días (extendida)
  *     tags: [Auth]
  *     security: []
  *     requestBody:
@@ -151,9 +151,16 @@ router.post('/register', validate(registerSchema), async (req, res, next) => {
  *                 type: string
  *                 format: email
  *                 example: user@example.com
+ *                 description: Email del usuario
  *               password:
  *                 type: string
  *                 example: SecurePass123!
+ *                 description: Contraseña del usuario
+ *               remember_me:
+ *                 type: boolean
+ *                 default: false
+ *                 example: true
+ *                 description: Si es true, la sesión dura 90 días (refresh token) con 30 días de idle timeout. Si es false (por defecto), la sesión dura 14 días con 7 días de idle timeout
  *     responses:
  *       200:
  *         description: Login exitoso
@@ -172,14 +179,18 @@ router.post('/register', validate(registerSchema), async (req, res, next) => {
  *                       $ref: '#/components/schemas/User'
  *                     access_token:
  *                       type: string
+ *                       description: Token JWT de acceso (válido por 15 minutos)
  *                     refresh_token:
  *                       type: string
+ *                       description: Token JWT de refresco (válido por 14 o 90 días según remember_me)
  *                     expires_in:
  *                       type: string
  *                       example: 15m
+ *                       description: Duración del access token
  *                     token_type:
  *                       type: string
  *                       example: Bearer
+ *                       description: Tipo de token para usar en el header Authorization
  *       400:
  *         description: Datos de entrada inválidos
  *         content:
@@ -195,12 +206,13 @@ router.post('/register', validate(registerSchema), async (req, res, next) => {
  */
 router.post('/login', validate(loginSchema), async (req, res, next) => {
     try {
-        const { email, password } = req.body;
+        const { email, password, remember_me } = req.body;
 
         // Extraer datos de sesión para auditoría
         const sessionData = {
             userAgent: req.headers['user-agent'],
-            ipAddress: req.ip || req.connection.remoteAddress
+            ipAddress: req.ip || req.connection.remoteAddress,
+            rememberMe: remember_me || false
         };
 
         const result = await authServices.login(email, password, sessionData);
@@ -439,9 +451,22 @@ router.get('/me', authenticate, async (req, res, next) => {
  * /auth/logout:
  *   post:
  *     summary: Cerrar sesión actual
- *     description: Revoca el refresh token actual. El token puede enviarse en el body o en el header Authorization
+ *     description: |
+ *       Cierra la sesión del usuario autenticado. Requiere el access token en el header Authorization.
+ *       
+ *       **Comportamiento:**
+ *       - Si se envía `refresh_token` en el body: Solo cierra esa sesión específica
+ *       - Si NO se envía `refresh_token`: Cierra TODAS las sesiones del usuario
+ *       
+ *       **Efectos:**
+ *       - Revoca refresh token(s) de la base de datos
+ *       - Incrementa `sessionVersion` (invalida todos los access tokens)
+ *       - Limpia caché Redis del usuario
+ *       
+ *       **Ventana de invalidación:** El access token actual seguirá válido hasta 15 min (tiempo de expiración natural), pero no podrá renovarse.
  *     tags: [Auth]
- *     security: []
+ *     security:
+ *       - BearerAuth: []
  *     requestBody:
  *       required: false
  *       content:
@@ -451,14 +476,8 @@ router.get('/me', authenticate, async (req, res, next) => {
  *             properties:
  *               refresh_token:
  *                 type: string
- *                 description: Refresh token a revocar (opcional si se envía en header)
- *     parameters:
- *       - in: header
- *         name: Authorization
- *         schema:
- *           type: string
- *         description: Bearer <refresh_token> (alternativa al body)
- *         example: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+ *                 description: Refresh token específico a revocar (opcional). Si no se envía, se revocan todos.
+ *                 example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
  *     responses:
  *       200:
  *         description: Sesión cerrada exitosamente
@@ -476,53 +495,42 @@ router.get('/me', authenticate, async (req, res, next) => {
  *                     message:
  *                       type: string
  *                       example: Sesión cerrada exitosamente
- *       400:
- *         description: Refresh token no proporcionado o vacío
+ *                     sessions_closed:
+ *                       type: integer
+ *                       description: Número de sesiones cerradas (solo si no se envió refresh_token)
+ *       401:
+ *         description: No autenticado, token inválido o refresh token no encontrado
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Error'
- *       401:
- *         description: Refresh token inválido o expirado
+ *       404:
+ *         description: Refresh token no encontrado (si se especificó uno)
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.post('/logout', validate(logoutSchema), async (req, res, next) => {
+router.post('/logout', authenticate, async (req, res, next) => {
     try {
-        let refresh_token = req.body.refresh_token;
+        const userId = req.user.userId;
+        const { refresh_token } = req.body;
 
-        // Si no viene en el body, intentar extraer del header Authorization
-        if (!refresh_token) {
-            const authHeader = req.headers.authorization;
+        // Si se proporciona refresh_token, hacer logout de esa sesión específica
+        if (refresh_token) {
+            await authServices.logout(refresh_token);
             
-            if (!authHeader) {
-                return errorResponse(res, {
-                    message: 'Refresh token requerido (en body o header Authorization)',
-                    status: 400,
-                    code: 'REFRESH_TOKEN_REQUIRED'
-                });
-            }
-
-            // Extraer token del header (formato: "Bearer <token>" o solo "<token>")
-            const parts = authHeader.split(' ');
-            refresh_token = parts.length === 2 && parts[0] === 'Bearer' ? parts[1] : authHeader;
-        }
-
-        // Validar que el token no esté vacío
-        if (!refresh_token || refresh_token.trim().length === 0) {
-            return errorResponse(res, {
-                message: 'Refresh token no puede estar vacío',
-                status: 400,
-                code: 'INVALID_REFRESH_TOKEN'
+            return successResponse(res, {
+                message: 'auth.logout.success'
             });
         }
 
-        await authServices.logout(refresh_token);
+        // Si NO se proporciona refresh_token, hacer logout de TODAS las sesiones
+        const sessionsRevoked = await authServices.logoutAll(userId);
 
         return successResponse(res, {
-            message: 'auth.logout.success'
+            message: 'auth.logout.all_success',
+            sessions_closed: sessionsRevoked
         });
     } catch (error) {
         next(error);
@@ -689,6 +697,52 @@ router.post('/sessions/:sessionId/revoke', authenticate, validate(revokeSessionS
 
         return successResponse(res, {
             message: 'auth.logout.session_revoked'
+        });
+    } catch (error) {
+        next(error);
+    }
+});
+
+/**
+ * @swagger
+ * /auth/admin-test:
+ *   get:
+ *     summary: Endpoint de prueba solo para administradores
+ *     description: Endpoint protegido con requireRole() - solo accesible para system-admin y org-admin
+ *     tags: [Auth]
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Acceso autorizado
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     message:
+ *                       type: string
+ *                       example: Acceso autorizado - Eres un administrador
+ *                     user_role:
+ *                       type: string
+ *                       example: system-admin
+ *       401:
+ *         description: No autenticado
+ *       403:
+ *         description: No autorizado - rol insuficiente
+ */
+router.get('/admin-test', authenticate, requireRole(['system-admin', 'org-admin']), async (req, res, next) => {
+    try {
+        return successResponse(res, {
+            message: 'Acceso autorizado - Eres un administrador',
+            user_role: req.user.role.name,
+            user_id: req.user.userId
         });
     } catch (error) {
         next(error);

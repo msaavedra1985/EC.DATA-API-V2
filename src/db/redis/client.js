@@ -11,6 +11,10 @@ import { dbLogger } from '../../utils/logger.js';
 let redisClient = null;
 let isRedisAvailable = false;
 
+// Fallback en memoria para desarrollo (cuando Redis no está disponible)
+const inMemoryCache = new Map();
+const inMemoryTTLs = new Map();
+
 /**
  * Inicializa el cliente Redis
  * @returns {Promise<void>}
@@ -23,7 +27,7 @@ export const initializeRedis = async () => {
                 url: config.redis.url,
                 socket: {
                     reconnectStrategy: false, // No reintentar automáticamente
-                    connectTimeout: 5000, // Timeout de 5 segundos
+                    connectTimeout: 10000, // Timeout de 10 segundos
                 }
             }
             : {
@@ -31,15 +35,16 @@ export const initializeRedis = async () => {
                     host: config.redis.host,
                     port: config.redis.port,
                     reconnectStrategy: false, // No reintentar automáticamente
-                    connectTimeout: 5000, // Timeout de 5 segundos
+                    connectTimeout: 10000, // Timeout de 10 segundos
                 },
                 ...(config.redis.password && { password: config.redis.password }),
             };
 
         redisClient = createClient(clientConfig);
 
-        // Manejo de errores silencioso (ya manejado en catch)
-        redisClient.on('error', () => {
+        // Manejo de errores con logging detallado
+        redisClient.on('error', (err) => {
+            dbLogger.error({ error: err.message, code: err.code }, '❌ Redis client error');
             isRedisAvailable = false;
         });
 
@@ -57,11 +62,18 @@ export const initializeRedis = async () => {
     } catch (error) {
         // En desarrollo, Redis es opcional
         if (config.env === 'development') {
-            dbLogger.warn('⚠️  Redis not available - Running with in-memory fallback');
+            dbLogger.warn({ 
+                error: error.message, 
+                code: error.code 
+            }, '⚠️  Redis not available - Running with in-memory fallback');
             isRedisAvailable = false;
             redisClient = null; // Limpiar cliente fallido
         } else {
-            dbLogger.error({ error: error.message }, '❌ Redis initialization failed');
+            dbLogger.error({ 
+                error: error.message, 
+                code: error.code,
+                stack: error.stack 
+            }, '❌ Redis initialization failed');
             throw error; // En producción, Redis es obligatorio
         }
     }
@@ -83,12 +95,30 @@ export const closeRedis = async () => {
 };
 
 /**
+ * Limpia entradas expiradas del cache en memoria
+ */
+const cleanExpiredMemoryCache = () => {
+    const now = Date.now();
+    for (const [key, expireAt] of inMemoryTTLs.entries()) {
+        if (expireAt && expireAt < now) {
+            inMemoryCache.delete(key);
+            inMemoryTTLs.delete(key);
+        }
+    }
+};
+
+/**
  * Obtiene un valor del cache
  * @param {string} key - Clave del cache
  * @returns {Promise<string|null>}
  */
 export const getCache = async key => {
-    if (!isRedisAvailable) return null;
+    // Fallback en memoria si Redis no está disponible
+    if (!isRedisAvailable) {
+        cleanExpiredMemoryCache();
+        return inMemoryCache.get(key) || null;
+    }
+    
     try {
         return await redisClient.get(key);
     } catch (error) {
@@ -105,7 +135,18 @@ export const getCache = async key => {
  * @returns {Promise<boolean>}
  */
 export const setCache = async (key, value, ttl = null) => {
-    if (!isRedisAvailable) return false;
+    // Fallback en memoria si Redis no está disponible
+    if (!isRedisAvailable) {
+        inMemoryCache.set(key, value);
+        if (ttl) {
+            const expireAt = Date.now() + (ttl * 1000);
+            inMemoryTTLs.set(key, expireAt);
+        } else {
+            inMemoryTTLs.delete(key);
+        }
+        return true;
+    }
+    
     try {
         if (ttl) {
             await redisClient.setEx(key, ttl, value);
@@ -125,7 +166,13 @@ export const setCache = async (key, value, ttl = null) => {
  * @returns {Promise<boolean>}
  */
 export const deleteCache = async key => {
-    if (!isRedisAvailable) return false;
+    // Fallback en memoria si Redis no está disponible
+    if (!isRedisAvailable) {
+        inMemoryCache.delete(key);
+        inMemoryTTLs.delete(key);
+        return true;
+    }
+    
     try {
         await redisClient.del(key);
         return true;

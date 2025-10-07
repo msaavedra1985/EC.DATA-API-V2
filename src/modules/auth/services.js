@@ -3,9 +3,12 @@
 
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 import { config } from '../../config/env.js';
 import * as authRepository from './repository.js';
 import * as refreshTokenRepository from './refreshTokenRepository.js';
+import * as authCache from './cache.js';
+import Role from './models/Role.js';
 
 // Configuración de bcrypt
 const SALT_ROUNDS = 10;
@@ -15,6 +18,8 @@ const JWT_ACCESS_SECRET = config.jwt.accessSecret;
 const JWT_ACCESS_EXPIRES_IN = config.jwt.accessExpiresIn;
 const JWT_REFRESH_SECRET = config.jwt.refreshSecret;
 const JWT_REFRESH_EXPIRES_IN = config.jwt.refreshExpiresIn;
+const JWT_ISSUER = config.jwt.issuer;
+const JWT_AUDIENCE = config.jwt.audience;
 
 /**
  * Registrar un nuevo usuario
@@ -24,11 +29,12 @@ const JWT_REFRESH_EXPIRES_IN = config.jwt.refreshExpiresIn;
  * @param {string} userData.first_name - Nombre
  * @param {string} userData.last_name - Apellido
  * @param {string} [userData.organization_id] - ID de la organización
+ * @param {string} [userData.role_id] - ID del rol (si no se provee, usa 'user' por defecto)
  * @param {Object} [sessionData] - Datos de la sesión (userAgent, ipAddress)
  * @returns {Promise<Object>} - Usuario creado y token JWT
  */
 export const register = async (userData, sessionData = {}) => {
-    const { email, password, first_name, last_name, organization_id } = userData;
+    const { email, password, first_name, last_name, organization_id, role_id } = userData;
 
     // Verificar si el email ya existe
     const existingUser = await authRepository.findUserByEmail(email);
@@ -37,6 +43,19 @@ export const register = async (userData, sessionData = {}) => {
         error.status = 409; // Conflict
         error.code = 'EMAIL_ALREADY_EXISTS';
         throw error;
+    }
+
+    // Si no se provee role_id, buscar el rol 'user' por defecto
+    let finalRoleId = role_id;
+    if (!finalRoleId) {
+        const defaultRole = await Role.findOne({ where: { name: 'user' } });
+        if (!defaultRole) {
+            const error = new Error('auth.register.default_role_not_found');
+            error.status = 500;
+            error.code = 'DEFAULT_ROLE_NOT_FOUND';
+            throw error;
+        }
+        finalRoleId = defaultRole.id;
     }
 
     // Hashear password con bcrypt
@@ -49,7 +68,7 @@ export const register = async (userData, sessionData = {}) => {
         first_name,
         last_name,
         organization_id,
-        role: 'user' // Por defecto todos son 'user'
+        role_id: finalRoleId
     });
 
     // Generar tokens JWT y guardar refresh token en BD
@@ -65,7 +84,8 @@ export const register = async (userData, sessionData = {}) => {
  * Login de usuario
  * @param {string} email - Email del usuario
  * @param {string} password - Password en texto plano
- * @param {Object} [sessionData] - Datos de la sesión (userAgent, ipAddress)
+ * @param {Object} [sessionData] - Datos de la sesión (userAgent, ipAddress, rememberMe)
+ * @param {boolean} [sessionData.rememberMe=false] - Si true, genera tokens con duración extendida
  * @returns {Promise<Object>} - Usuario y token JWT
  */
 export const login = async (email, password, sessionData = {}) => {
@@ -104,6 +124,7 @@ export const login = async (email, password, sessionData = {}) => {
     delete user.password_hash;
 
     // Generar tokens JWT y guardar refresh token en BD
+    // Pasar rememberMe a generateTokens para usar duración extendida si es necesario
     const tokens = await generateTokens(user, sessionData);
 
     return {
@@ -119,25 +140,33 @@ export const login = async (email, password, sessionData = {}) => {
  */
 export const verifyToken = async (token) => {
     try {
-        // Verificar y decodificar el access token con su secret
-        const decoded = jwt.verify(token, JWT_ACCESS_SECRET);
+        const decoded = jwt.verify(token, JWT_ACCESS_SECRET, {
+            issuer: JWT_ISSUER,
+            audience: JWT_AUDIENCE
+        });
 
-        // Verificar que sea un access token
-        if (decoded.type !== 'access') {
+        if (decoded.tokenType !== 'access') {
             const error = new Error('auth.token.invalid');
             error.status = 401;
             error.code = 'INVALID_TOKEN_TYPE';
             throw error;
         }
 
-        // Verificar que el usuario aún existe y está activo
-        const user = await authRepository.findUserById(decoded.userId);
+        const userId = decoded.sub;
+
+        let user = await authCache.getUserFromCache(userId);
 
         if (!user) {
-            const error = new Error('auth.profile.not_found');
-            error.status = 401;
-            error.code = 'USER_NOT_FOUND';
-            throw error;
+            user = await authRepository.findUserById(userId);
+
+            if (!user) {
+                const error = new Error('auth.profile.not_found');
+                error.status = 401;
+                error.code = 'USER_NOT_FOUND';
+                throw error;
+            }
+
+            await authCache.setUserCache(userId, user);
         }
 
         if (!user.is_active) {
@@ -147,11 +176,21 @@ export const verifyToken = async (token) => {
             throw error;
         }
 
+        const currentSessionVersion = await authCache.getSessionVersion(userId);
+        if (decoded.sessionVersion !== currentSessionVersion) {
+            const error = new Error('auth.token.session_revoked');
+            error.status = 401;
+            error.code = 'SESSION_REVOKED';
+            throw error;
+        }
+
         return {
-            userId: decoded.userId,
-            email: decoded.email,
-            role: decoded.role,
-            organization_id: decoded.organization_id
+            userId: user.id,
+            email: user.email,
+            role: user.role, // Ahora es un objeto con {id, name, description, is_active}
+            organization_id: user.organization_id,
+            first_name: user.first_name,
+            last_name: user.last_name
         };
     } catch (error) {
         if (error.name === 'JsonWebTokenError') {
@@ -185,17 +224,20 @@ export const verifyToken = async (token) => {
  */
 export const refreshAccessToken = async (refreshToken, sessionData = {}) => {
     try {
-        // Verificar refresh token JWT con su secret
-        const decoded = jwt.verify(refreshToken, JWT_REFRESH_SECRET);
+        const decoded = jwt.verify(refreshToken, JWT_REFRESH_SECRET, {
+            issuer: JWT_ISSUER,
+            audience: JWT_AUDIENCE
+        });
 
-        if (decoded.type !== 'refresh') {
+        if (decoded.tokenType !== 'refresh') {
             const error = new Error('auth.token.invalid');
             error.status = 401;
             error.code = 'INVALID_TOKEN_TYPE';
             throw error;
         }
 
-        // Buscar el refresh token en la base de datos (incluyendo soft-deleted para detectar robo)
+        const userId = decoded.sub;
+
         const storedToken = await refreshTokenRepository.findByTokenHash(refreshToken, true);
 
         if (!storedToken) {
@@ -205,10 +247,9 @@ export const refreshAccessToken = async (refreshToken, sessionData = {}) => {
             throw error;
         }
 
-        // DETECCIÓN DE ROBO: Si el token ya fue revocado, alguien está intentando reusarlo
         if (storedToken.is_revoked) {
-            // Revocar TODOS los tokens del usuario (posible robo)
-            await refreshTokenRepository.revokeAllUserTokens(decoded.userId, 'suspicious_activity');
+            await refreshTokenRepository.revokeAllUserTokens(userId, 'suspicious_activity');
+            await authCache.invalidateUserSession(userId);
             
             const error = new Error('auth.refresh.token_theft_detected');
             error.status = 401;
@@ -216,7 +257,6 @@ export const refreshAccessToken = async (refreshToken, sessionData = {}) => {
             throw error;
         }
 
-        // Verificar expiración absoluta
         if (new Date(storedToken.expires_at) < new Date()) {
             await refreshTokenRepository.revokeToken(refreshToken, 'expired');
             const error = new Error('auth.refresh.token_expired');
@@ -225,7 +265,6 @@ export const refreshAccessToken = async (refreshToken, sessionData = {}) => {
             throw error;
         }
 
-        // Verificar idle timeout (no usado en 7 días)
         if (refreshTokenRepository.isIdleTimeout(storedToken)) {
             await refreshTokenRepository.revokeToken(refreshToken, 'idle_timeout');
             const error = new Error('auth.refresh.token_expired');
@@ -234,8 +273,15 @@ export const refreshAccessToken = async (refreshToken, sessionData = {}) => {
             throw error;
         }
 
-        // Verificar que el usuario aún existe y está activo
-        const user = await authRepository.findUserById(decoded.userId);
+        const currentSessionVersion = await authCache.getSessionVersion(userId);
+        if (decoded.sessionVersion !== currentSessionVersion) {
+            const error = new Error('auth.token.session_revoked');
+            error.status = 401;
+            error.code = 'SESSION_REVOKED';
+            throw error;
+        }
+
+        const user = await authRepository.findUserById(userId);
 
         if (!user) {
             const error = new Error('auth.profile.not_found');
@@ -251,10 +297,8 @@ export const refreshAccessToken = async (refreshToken, sessionData = {}) => {
             throw error;
         }
 
-        // ROTACIÓN: Revocar el refresh token viejo ANTES de generar uno nuevo
         await refreshTokenRepository.revokeToken(refreshToken, 'rotated');
 
-        // Generar nuevos tokens (esto creará un nuevo refresh token en BD)
         const tokens = await generateTokens(user, sessionData);
 
         return tokens;
@@ -319,6 +363,9 @@ export const changePassword = async (userId, currentPassword, newPassword) => {
     // SEGURIDAD: Revocar TODOS los refresh tokens al cambiar password
     // Esto cierra todas las sesiones y obliga a re-login
     await refreshTokenRepository.revokeAllUserTokens(userId, 'password_change');
+    
+    // Invalidar sesión (incrementar sessionVersion y limpiar caché)
+    await authCache.invalidateUserSession(userId);
 
     return updated;
 };
@@ -330,50 +377,66 @@ export const changePassword = async (userId, currentPassword, newPassword) => {
  * @param {Object} [sessionData] - Datos de la sesión
  * @param {string} [sessionData.userAgent] - User agent del navegador
  * @param {string} [sessionData.ipAddress] - IP del cliente
+ * @param {boolean} [sessionData.rememberMe=false] - Si true, genera tokens con duración extendida (90 días)
  * @returns {Promise<Object>} - { access_token, refresh_token, expires_in }
  */
 const generateTokens = async (user, sessionData = {}) => {
-    // Payload del token
-    const payload = {
-        userId: user.id,
-        email: user.email,
-        role: user.role,
-        organization_id: user.organization_id
+    const sessionVersion = await authCache.getSessionVersion(user.id);
+    const rememberMe = sessionData.rememberMe || false;
+
+    // Determinar expiración del refresh token según remember_me
+    const refreshExpiresIn = rememberMe 
+        ? config.jwt.refreshExpiresInLong  // 90 días
+        : config.jwt.refreshExpiresIn;     // 14 días
+
+    const basePayload = {
+        iss: JWT_ISSUER,
+        aud: JWT_AUDIENCE,
+        sub: user.id,
+        orgId: user.organization_id,
+        sessionVersion,
+        role: user.role ? {
+            id: user.role.id,
+            name: user.role.name,
+            description: user.role.description,
+            is_active: user.role.is_active
+        } : null
     };
 
-    // Access token (corta duración - 15 minutos)
     const access_token = jwt.sign(
-        { ...payload, type: 'access' },
+        {
+            ...basePayload,
+            tokenType: 'access',
+            jti: crypto.randomUUID()
+        },
         JWT_ACCESS_SECRET,
         { expiresIn: JWT_ACCESS_EXPIRES_IN }
     );
 
-    // Refresh token (larga duración - 14 días)
-    // Agregar jti (JWT ID) único para evitar colisiones de hash
     const refresh_token = jwt.sign(
-        { 
-            ...payload, 
-            type: 'refresh',
-            jti: crypto.randomUUID() // Garantiza unicidad del token
+        {
+            ...basePayload,
+            tokenType: 'refresh',
+            jti: crypto.randomUUID()
         },
         JWT_REFRESH_SECRET,
-        { expiresIn: JWT_REFRESH_EXPIRES_IN }
+        { expiresIn: refreshExpiresIn }
     );
 
     // Calcular fecha de expiración del refresh token
     const expiresAt = new Date();
-    const daysMatch = JWT_REFRESH_EXPIRES_IN.match(/(\d+)d/);
+    const daysMatch = refreshExpiresIn.match(/(\d+)d/);
     if (daysMatch) {
         expiresAt.setDate(expiresAt.getDate() + parseInt(daysMatch[1], 10));
     }
 
-    // Guardar refresh token hasheado en la base de datos
     await refreshTokenRepository.createRefreshToken({
         userId: user.id,
         token: refresh_token,
         expiresAt,
         userAgent: sessionData.userAgent || null,
-        ipAddress: sessionData.ipAddress || null
+        ipAddress: sessionData.ipAddress || null,
+        rememberMe // Pasar rememberMe al repositorio para idle timeout correcto
     });
 
     return {
@@ -385,19 +448,38 @@ const generateTokens = async (user, sessionData = {}) => {
 };
 
 /**
- * Logout - Revocar refresh token actual
+ * Logout - Revocar refresh token actual e invalidar sesión
+ * 1. Busca el refresh token para obtener el userId
+ * 2. Revoca el refresh token de la BD
+ * 3. Incrementa sessionVersion (invalida access tokens existentes)
+ * 4. Limpia caché Redis del usuario
+ * 
  * @param {string} refreshToken - Refresh token a revocar
  * @returns {Promise<boolean>} - true si se revocó exitosamente
  */
 export const logout = async (refreshToken) => {
-    const revoked = await refreshTokenRepository.revokeToken(refreshToken, 'logout');
+    // Primero buscar el refresh token para obtener el userId
+    const tokenData = await refreshTokenRepository.findByTokenHash(refreshToken);
     
-    if (!revoked) {
+    if (!tokenData) {
         const error = new Error('auth.refresh.token_invalid');
         error.status = 404;
         error.code = 'TOKEN_NOT_FOUND';
         throw error;
     }
+    
+    // Revocar el refresh token
+    const revoked = await refreshTokenRepository.revokeToken(refreshToken, 'logout');
+    
+    if (!revoked) {
+        const error = new Error('auth.logout.revoke_failed');
+        error.status = 500;
+        error.code = 'REVOKE_FAILED';
+        throw error;
+    }
+    
+    // Invalidar sesión del usuario (incrementa sessionVersion y limpia caché)
+    await authCache.invalidateUserSession(tokenData.user_id);
     
     return true;
 };
@@ -409,6 +491,7 @@ export const logout = async (refreshToken) => {
  */
 export const logoutAll = async (userId) => {
     const revokedCount = await refreshTokenRepository.revokeAllUserTokens(userId, 'logout_all');
+    await authCache.invalidateUserSession(userId);
     return revokedCount;
 };
 
@@ -439,4 +522,44 @@ export const revokeSession = async (sessionId, userId) => {
     }
     
     return true;
+};
+
+/**
+ * Verificar email y limpiar caché del usuario
+ * @param {string} userId - ID del usuario
+ * @returns {Promise<boolean>} - true si se verificó correctamente
+ */
+export const verifyUserEmail = async (userId) => {
+    const updated = await authRepository.verifyEmail(userId);
+    if (updated) {
+        await authCache.deleteUserCache(userId);
+    }
+    return updated;
+};
+
+/**
+ * Activar/Desactivar usuario e invalidar su sesión
+ * @param {string} userId - ID del usuario
+ * @param {boolean} isActive - Estado activo/inactivo
+ * @returns {Promise<boolean>} - true si se actualizó correctamente
+ */
+export const setUserActiveStatus = async (userId, isActive) => {
+    const updated = await authRepository.setUserActiveStatus(userId, isActive);
+    if (updated && !isActive) {
+        await refreshTokenRepository.revokeAllUserTokens(userId, 'account_disabled');
+        await authCache.invalidateUserSession(userId);
+    } else if (updated) {
+        await authCache.deleteUserCache(userId);
+    }
+    return updated;
+};
+
+/**
+ * Invalidar sesión de un usuario (útil para forzar re-login)
+ * Exportada para uso externo cuando se actualice información crítica del usuario
+ * @param {string} userId - ID del usuario
+ * @returns {Promise<boolean>} - true si se invalidó correctamente
+ */
+export const invalidateUserSession = async (userId) => {
+    return await authCache.invalidateUserSession(userId);
 };

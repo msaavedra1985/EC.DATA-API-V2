@@ -87,6 +87,12 @@ const RefreshToken = sequelize.define(
             type: DataTypes.STRING(45),
             allowNull: true,
             comment: 'IP del cliente en formato IPv4 o IPv6 (solo para auditoría, no validación)'
+        },
+        remember_me: {
+            type: DataTypes.BOOLEAN,
+            defaultValue: false,
+            allowNull: false,
+            comment: 'Si true, el token usa duración extendida (90 días refresh, 30 días idle) en lugar de la normal (14 días refresh, 7 días idle)'
         }
     },
     {
