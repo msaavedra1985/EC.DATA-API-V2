@@ -134,7 +134,7 @@ router.post('/register', validate(registerSchema), async (req, res, next) => {
  * /auth/login:
  *   post:
  *     summary: Iniciar sesión
- *     description: Autentica un usuario y devuelve tokens JWT (access + refresh)
+ *     description: Autentica un usuario y devuelve tokens JWT (access + refresh). Opcionalmente acepta 'remember_me' para extender la duración de la sesión de 14 días (normal) a 90 días (extendida)
  *     tags: [Auth]
  *     security: []
  *     requestBody:
@@ -151,9 +151,16 @@ router.post('/register', validate(registerSchema), async (req, res, next) => {
  *                 type: string
  *                 format: email
  *                 example: user@example.com
+ *                 description: Email del usuario
  *               password:
  *                 type: string
  *                 example: SecurePass123!
+ *                 description: Contraseña del usuario
+ *               remember_me:
+ *                 type: boolean
+ *                 default: false
+ *                 example: true
+ *                 description: Si es true, la sesión dura 90 días (refresh token) con 30 días de idle timeout. Si es false (por defecto), la sesión dura 14 días con 7 días de idle timeout
  *     responses:
  *       200:
  *         description: Login exitoso
@@ -172,14 +179,18 @@ router.post('/register', validate(registerSchema), async (req, res, next) => {
  *                       $ref: '#/components/schemas/User'
  *                     access_token:
  *                       type: string
+ *                       description: Token JWT de acceso (válido por 15 minutos)
  *                     refresh_token:
  *                       type: string
+ *                       description: Token JWT de refresco (válido por 14 o 90 días según remember_me)
  *                     expires_in:
  *                       type: string
  *                       example: 15m
+ *                       description: Duración del access token
  *                     token_type:
  *                       type: string
  *                       example: Bearer
+ *                       description: Tipo de token para usar en el header Authorization
  *       400:
  *         description: Datos de entrada inválidos
  *         content:
