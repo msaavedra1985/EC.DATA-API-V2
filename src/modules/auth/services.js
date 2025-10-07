@@ -437,19 +437,38 @@ const generateTokens = async (user, sessionData = {}) => {
 };
 
 /**
- * Logout - Revocar refresh token actual
+ * Logout - Revocar refresh token actual e invalidar sesión
+ * 1. Busca el refresh token para obtener el userId
+ * 2. Revoca el refresh token de la BD
+ * 3. Incrementa sessionVersion (invalida access tokens existentes)
+ * 4. Limpia caché Redis del usuario
+ * 
  * @param {string} refreshToken - Refresh token a revocar
  * @returns {Promise<boolean>} - true si se revocó exitosamente
  */
 export const logout = async (refreshToken) => {
-    const revoked = await refreshTokenRepository.revokeToken(refreshToken, 'logout');
+    // Primero buscar el refresh token para obtener el userId
+    const tokenData = await refreshTokenRepository.findByTokenHash(refreshToken);
     
-    if (!revoked) {
+    if (!tokenData) {
         const error = new Error('auth.refresh.token_invalid');
         error.status = 404;
         error.code = 'TOKEN_NOT_FOUND';
         throw error;
     }
+    
+    // Revocar el refresh token
+    const revoked = await refreshTokenRepository.revokeToken(refreshToken, 'logout');
+    
+    if (!revoked) {
+        const error = new Error('auth.logout.revoke_failed');
+        error.status = 500;
+        error.code = 'REVOKE_FAILED';
+        throw error;
+    }
+    
+    // Invalidar sesión del usuario (incrementa sessionVersion y limpia caché)
+    await authCache.invalidateUserSession(tokenData.user_id);
     
     return true;
 };
