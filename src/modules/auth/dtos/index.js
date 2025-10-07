@@ -66,7 +66,13 @@ export const loginSchema = z.object({
             .string({
                 required_error: 'Password es requerido'
             })
-            .min(1, 'Password no puede estar vacío')
+            .min(1, 'Password no puede estar vacío'),
+        remember_me: z
+            .boolean({
+                invalid_type_error: 'remember_me debe ser un booleano'
+            })
+            .optional()
+            .default(false)
     })
 });
 
