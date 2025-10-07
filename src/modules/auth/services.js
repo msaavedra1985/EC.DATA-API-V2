@@ -84,7 +84,8 @@ export const register = async (userData, sessionData = {}) => {
  * Login de usuario
  * @param {string} email - Email del usuario
  * @param {string} password - Password en texto plano
- * @param {Object} [sessionData] - Datos de la sesión (userAgent, ipAddress)
+ * @param {Object} [sessionData] - Datos de la sesión (userAgent, ipAddress, rememberMe)
+ * @param {boolean} [sessionData.rememberMe=false] - Si true, genera tokens con duración extendida
  * @returns {Promise<Object>} - Usuario y token JWT
  */
 export const login = async (email, password, sessionData = {}) => {
@@ -123,6 +124,7 @@ export const login = async (email, password, sessionData = {}) => {
     delete user.password_hash;
 
     // Generar tokens JWT y guardar refresh token en BD
+    // Pasar rememberMe a generateTokens para usar duración extendida si es necesario
     const tokens = await generateTokens(user, sessionData);
 
     return {

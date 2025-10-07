@@ -195,12 +195,13 @@ router.post('/register', validate(registerSchema), async (req, res, next) => {
  */
 router.post('/login', validate(loginSchema), async (req, res, next) => {
     try {
-        const { email, password } = req.body;
+        const { email, password, remember_me } = req.body;
 
         // Extraer datos de sesión para auditoría
         const sessionData = {
             userAgent: req.headers['user-agent'],
-            ipAddress: req.ip || req.connection.remoteAddress
+            ipAddress: req.ip || req.connection.remoteAddress,
+            rememberMe: remember_me || false
         };
 
         const result = await authServices.login(email, password, sessionData);
