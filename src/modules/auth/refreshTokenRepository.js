@@ -25,9 +25,10 @@ export const hashToken = (token) => {
  * @param {Date} data.expiresAt - Fecha de expiración
  * @param {string} [data.userAgent] - User agent del navegador
  * @param {string} [data.ipAddress] - IP del cliente
+ * @param {boolean} [data.rememberMe=false] - Si true, el token usa duración extendida
  * @returns {Promise<Object>} - Refresh token creado
  */
-export const createRefreshToken = async ({ userId, token, expiresAt, userAgent = null, ipAddress = null }) => {
+export const createRefreshToken = async ({ userId, token, expiresAt, userAgent = null, ipAddress = null, rememberMe = false }) => {
     try {
         const id = generateUuidV7();
         const tokenHash = hashToken(token);
@@ -39,7 +40,8 @@ export const createRefreshToken = async ({ userId, token, expiresAt, userAgent =
             expires_at: expiresAt,
             last_used_at: new Date(),
             user_agent: userAgent,
-            ip_address: ipAddress
+            ip_address: ipAddress,
+            remember_me: rememberMe
         });
 
         return refreshToken.toJSON();
@@ -179,7 +181,11 @@ export const updateLastUsed = async (token) => {
  * @returns {boolean} - true si está en idle timeout
  */
 export const isIdleTimeout = (refreshToken) => {
-    const idleDays = config.jwt.refreshIdleDays;
+    // Usar idle timeout extendido si el token se creó con remember_me
+    const idleDays = refreshToken.remember_me 
+        ? config.jwt.refreshIdleDaysLong  // 30 días
+        : config.jwt.refreshIdleDays;     // 7 días
+    
     const idleMs = idleDays * 24 * 60 * 60 * 1000;
     const lastUsed = new Date(refreshToken.last_used_at);
     const now = new Date();
@@ -190,27 +196,41 @@ export const isIdleTimeout = (refreshToken) => {
 /**
  * Limpiar tokens expirados o en idle timeout
  * Se ejecuta periódicamente para mantener la BD limpia
+ * Respeta el idle timeout dinámico según remember_me (7 días vs 30 días)
  * @returns {Promise<number>} - Número de tokens eliminados
  */
 export const cleanupExpiredTokens = async () => {
     try {
-        const idleDays = config.jwt.refreshIdleDays;
-        const idleCutoff = new Date();
-        idleCutoff.setDate(idleCutoff.getDate() - idleDays);
+        const normalIdleDays = config.jwt.refreshIdleDays;      // 7 días para sesiones normales
+        const extendedIdleDays = config.jwt.refreshIdleDaysLong; // 30 días para remember_me
+        
+        const normalIdleCutoff = new Date();
+        normalIdleCutoff.setDate(normalIdleCutoff.getDate() - normalIdleDays);
+        
+        const extendedIdleCutoff = new Date();
+        extendedIdleCutoff.setDate(extendedIdleCutoff.getDate() - extendedIdleDays);
 
         const deletedCount = await RefreshToken.destroy({
             where: {
                 [Op.or]: [
-                    // Tokens expirados
+                    // Tokens expirados (por fecha absoluta)
                     {
                         expires_at: {
                             [Op.lt]: new Date()
                         }
                     },
-                    // Tokens en idle timeout
+                    // Tokens normales (remember_me = false) en idle timeout después de 7 días
                     {
+                        remember_me: false,
                         last_used_at: {
-                            [Op.lt]: idleCutoff
+                            [Op.lt]: normalIdleCutoff
+                        }
+                    },
+                    // Tokens extendidos (remember_me = true) en idle timeout después de 30 días
+                    {
+                        remember_me: true,
+                        last_used_at: {
+                            [Op.lt]: extendedIdleCutoff
                         }
                     },
                     // Tokens revocados hace más de 30 días (mantener historial limitado)

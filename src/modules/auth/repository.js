@@ -2,6 +2,7 @@
 // Repositorio de Auth - Capa de acceso a datos con Sequelize
 
 import User from './models/User.js';
+import Role from './models/Role.js';
 import { generateUuidV7, generateHumanId, generatePublicCode } from '../../utils/identifiers.js';
 import { authLogger } from '../../utils/logger.js';
 
@@ -41,11 +42,19 @@ export const createUser = async (userData) => {
             ...userData
         });
         
-        // Eliminar password_hash de la respuesta
-        const userJson = user.toJSON();
-        delete userJson.password_hash;
+        // Refetch con role incluido
+        const userWithRole = await User.findByPk(user.id, {
+            attributes: { exclude: ['password_hash'] },
+            include: [
+                {
+                    model: Role,
+                    as: 'role',
+                    attributes: ['id', 'name', 'description', 'is_active']
+                }
+            ]
+        });
         
-        return userJson;
+        return userWithRole ? userWithRole.toJSON() : null;
     } catch (error) {
         authLogger.error(error, 'Error creating user');
         throw error;
@@ -65,7 +74,14 @@ export const findUserByEmail = async (email, includePassword = false) => {
             // Si includePassword es true, necesitamos el campo para verificar login
             attributes: includePassword 
                 ? undefined // Incluir todos los campos
-                : { exclude: ['password_hash'] }
+                : { exclude: ['password_hash'] },
+            include: [
+                {
+                    model: Role,
+                    as: 'role',
+                    attributes: ['id', 'name', 'description', 'is_active']
+                }
+            ]
         });
         
         return user ? user.toJSON() : null;
@@ -83,7 +99,14 @@ export const findUserByEmail = async (email, includePassword = false) => {
 export const findUserById = async (userId) => {
     try {
         const user = await User.findByPk(userId, {
-            attributes: { exclude: ['password_hash'] }
+            attributes: { exclude: ['password_hash'] },
+            include: [
+                {
+                    model: Role,
+                    as: 'role',
+                    attributes: ['id', 'name', 'description', 'is_active']
+                }
+            ]
         });
         
         return user ? user.toJSON() : null;
@@ -180,7 +203,14 @@ export const findUserByPublicCode = async (publicCode) => {
     try {
         const user = await User.findOne({
             where: { public_code: publicCode },
-            attributes: { exclude: ['password_hash'] }
+            attributes: { exclude: ['password_hash'] },
+            include: [
+                {
+                    model: Role,
+                    as: 'role',
+                    attributes: ['id', 'name', 'description', 'is_active']
+                }
+            ]
         });
         
         return user ? user.toJSON() : null;
@@ -203,7 +233,14 @@ export const findUserByHumanId = async (humanId, organizationId) => {
                 human_id: humanId,
                 organization_id: organizationId
             },
-            attributes: { exclude: ['password_hash'] }
+            attributes: { exclude: ['password_hash'] },
+            include: [
+                {
+                    model: Role,
+                    as: 'role',
+                    attributes: ['id', 'name', 'description', 'is_active']
+                }
+            ]
         });
         
         return user ? user.toJSON() : null;
@@ -218,7 +255,8 @@ export const findUserByHumanId = async (humanId, organizationId) => {
  * @param {Object} options - Opciones de búsqueda
  * @param {number} [options.limit=50] - Límite de resultados
  * @param {number} [options.offset=0] - Offset para paginación
- * @param {string} [options.role] - Filtrar por rol
+ * @param {string} [options.role_id] - Filtrar por role_id (UUID)
+ * @param {string} [options.role_name] - Filtrar por nombre de rol
  * @param {string} [options.organization_id] - Filtrar por organización
  * @param {boolean} [options.is_active] - Filtrar por estado activo
  * @returns {Promise<Object>} - { users: Array, total: number }
@@ -228,22 +266,36 @@ export const listUsers = async (options = {}) => {
         const {
             limit = 50,
             offset = 0,
-            role,
+            role_id,
+            role_name,
             organization_id,
             is_active
         } = options;
 
         // Construir filtros dinámicos
         const where = {};
-        if (role) where.role = role;
+        if (role_id) where.role_id = role_id;
         if (organization_id !== undefined) where.organization_id = organization_id;
         if (is_active !== undefined) where.is_active = is_active;
+
+        // Para filtrar por role_name, usamos include con where
+        const roleFilter = role_name ? {
+            model: Role,
+            as: 'role',
+            attributes: ['id', 'name', 'description', 'is_active'],
+            where: { name: role_name }
+        } : {
+            model: Role,
+            as: 'role',
+            attributes: ['id', 'name', 'description', 'is_active']
+        };
 
         const { count, rows } = await User.findAndCountAll({
             where,
             limit,
             offset,
             attributes: { exclude: ['password_hash'] },
+            include: [roleFilter],
             order: [['created_at', 'DESC']]
         });
 
