@@ -55,9 +55,6 @@ export const seedUsers = async () => {
         // Password hasheado (todos usan: TestPassword123!)
         const passwordHash = await bcrypt.hash('TestPassword123!', 10);
 
-        // Scope para human_id de usuarios
-        const scope = 'USR';
-
         // Datos de usuarios de prueba (uno por cada rol)
         const usersData = [
             {
@@ -115,8 +112,10 @@ export const seedUsers = async () => {
         const users = [];
         for (const userData of usersData) {
             const id = generateUuidV7();
-            const humanId = await generateHumanId(scope);
-            const publicCode = generatePublicCode(scope, humanId);
+            // generateHumanId para usuarios (sin scope, es global)
+            const humanId = await generateHumanId(User, null, null);
+            // publicCode se genera a partir del UUID, no del humanId
+            const publicCode = generatePublicCode('USR', id);
             
             const roleId = roleMap[userData.role_name];
             const organizationId = userData.org_slug ? orgMap[userData.org_slug] : null;

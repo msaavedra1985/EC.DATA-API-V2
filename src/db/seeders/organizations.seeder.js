@@ -74,15 +74,14 @@ export const seedOrganizations = async () => {
             };
         }
 
-        // Obtener el scope para human_id (global para organizaciones)
-        const scope = 'ORG';
-        
         // Crear organizaciones con triple identificador
         const organizations = [];
         for (const data of organizationsData) {
             const id = generateUuidV7();
-            const humanId = await generateHumanId(scope);
-            const publicCode = generatePublicCode(scope, humanId);
+            // generateHumanId para organizaciones (sin scope, es global)
+            const humanId = await generateHumanId(Organization, null, null);
+            // publicCode se genera a partir del UUID, no del humanId
+            const publicCode = generatePublicCode('ORG', id);
             
             const org = await Organization.create({
                 id,
