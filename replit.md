@@ -114,6 +114,22 @@ The system implements a flexible RBAC model based on a `roles` table with 7 pred
 - **Health Checks:** Basic endpoint at `/api/v1/health` for service status.
 ## Recent Changes
 
+### October 7, 2025 - "Remember Me" Feature Implementation
+- **Extended Sessions:** Implemented optional `remember_me` field in login endpoint to extend session duration
+- **Token Duration Logic:** Normal sessions (14 days refresh, 7 days idle) vs Extended sessions (90 days refresh, 30 days idle)
+- **Database Schema:** Added `remember_me` boolean column to `refresh_tokens` table (default: false)
+- **Dynamic Idle Timeout:** Modified `isIdleTimeout()` to use 7 or 30 days based on stored `remember_me` value
+- **Token Cleanup Fix:** Updated `cleanupExpiredTokens()` to respect dynamic idle timeout per session type
+- **Environment Variables:** Added `JWT_REFRESH_EXPIRES_IN_LONG=90d` and `JWT_REFRESH_IDLE_DAYS_LONG=30`
+- **Swagger Documentation:** Updated `/auth/login` endpoint docs with complete `remember_me` field description
+- **Testing:** Verified both normal and extended sessions work correctly with proper expiration times
+- **Next.js Integration Guide:** Created comprehensive guide (`docs/NEXTJS_INTEGRATION.md`) with:
+  - Token storage strategies (HTTP-only cookies vs localStorage)
+  - Axios configuration with automatic token refresh
+  - Complete authentication context provider
+  - Security best practices for extended sessions
+  - Remember Me checkbox component example
+
 ### October 7, 2025 - Complete Logout System & Redis Fallback
 - **Logout Endpoints:** Implemented POST `/api/v1/auth/logout` and POST `/api/v1/auth/logout-all` with authentication middleware
 - **Session Invalidation:** Logout increments `sessionVersion` and clears user cache, instantly revoking all tokens
