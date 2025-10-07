@@ -114,6 +114,17 @@ The system implements a flexible RBAC model based on a `roles` table with 7 pred
 - **Health Checks:** Basic endpoint at `/api/v1/health` for service status.
 ## Recent Changes
 
+### October 7, 2025 - Complete Logout System & Redis Fallback
+- **Logout Endpoints:** Implemented POST `/api/v1/auth/logout` and POST `/api/v1/auth/logout-all` with authentication middleware
+- **Session Invalidation:** Logout increments `sessionVersion` and clears user cache, instantly revoking all tokens
+- **Flexible Logout:** `/logout` accepts optional `refresh_token` in body to revoke specific session, or revokes all sessions if empty
+- **Logout All:** `/logout-all` revokes all user sessions and deletes all refresh tokens
+- **Redis Fallback:** Implemented in-memory Map-based cache with TTL for sessionVersion when Redis unavailable
+- **Development Resilience:** System works correctly in development without Redis (in-memory fallback automatically activates)
+- **Translations:** Added complete Spanish/English translations for logout messages ("La sesión ha sido revocada" / "Session has been revoked")
+- **Security:** All logout operations require valid access token authentication
+- **Swagger Documentation:** Complete OpenAPI documentation for both logout endpoints
+
 ### October 6, 2025 - Role-Based Access Control (RBAC) System
 - **RBAC Implementation:** Migrated from ENUM-based roles to flexible database-driven RBAC system
 - **7 Roles Created:** system-admin, org-admin, org-manager, user, viewer, guest, demo
