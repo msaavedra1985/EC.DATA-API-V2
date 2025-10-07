@@ -11,6 +11,10 @@ import { dbLogger } from '../../utils/logger.js';
 let redisClient = null;
 let isRedisAvailable = false;
 
+// Fallback en memoria para desarrollo (cuando Redis no está disponible)
+const inMemoryCache = new Map();
+const inMemoryTTLs = new Map();
+
 /**
  * Inicializa el cliente Redis
  * @returns {Promise<void>}
@@ -83,12 +87,30 @@ export const closeRedis = async () => {
 };
 
 /**
+ * Limpia entradas expiradas del cache en memoria
+ */
+const cleanExpiredMemoryCache = () => {
+    const now = Date.now();
+    for (const [key, expireAt] of inMemoryTTLs.entries()) {
+        if (expireAt && expireAt < now) {
+            inMemoryCache.delete(key);
+            inMemoryTTLs.delete(key);
+        }
+    }
+};
+
+/**
  * Obtiene un valor del cache
  * @param {string} key - Clave del cache
  * @returns {Promise<string|null>}
  */
 export const getCache = async key => {
-    if (!isRedisAvailable) return null;
+    // Fallback en memoria si Redis no está disponible
+    if (!isRedisAvailable) {
+        cleanExpiredMemoryCache();
+        return inMemoryCache.get(key) || null;
+    }
+    
     try {
         return await redisClient.get(key);
     } catch (error) {
@@ -105,7 +127,18 @@ export const getCache = async key => {
  * @returns {Promise<boolean>}
  */
 export const setCache = async (key, value, ttl = null) => {
-    if (!isRedisAvailable) return false;
+    // Fallback en memoria si Redis no está disponible
+    if (!isRedisAvailable) {
+        inMemoryCache.set(key, value);
+        if (ttl) {
+            const expireAt = Date.now() + (ttl * 1000);
+            inMemoryTTLs.set(key, expireAt);
+        } else {
+            inMemoryTTLs.delete(key);
+        }
+        return true;
+    }
+    
     try {
         if (ttl) {
             await redisClient.setEx(key, ttl, value);
@@ -125,7 +158,13 @@ export const setCache = async (key, value, ttl = null) => {
  * @returns {Promise<boolean>}
  */
 export const deleteCache = async key => {
-    if (!isRedisAvailable) return false;
+    // Fallback en memoria si Redis no está disponible
+    if (!isRedisAvailable) {
+        inMemoryCache.delete(key);
+        inMemoryTTLs.delete(key);
+        return true;
+    }
+    
     try {
         await redisClient.del(key);
         return true;
