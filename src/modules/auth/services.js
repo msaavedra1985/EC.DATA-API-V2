@@ -375,10 +375,17 @@ export const changePassword = async (userId, currentPassword, newPassword) => {
  * @param {Object} [sessionData] - Datos de la sesión
  * @param {string} [sessionData.userAgent] - User agent del navegador
  * @param {string} [sessionData.ipAddress] - IP del cliente
+ * @param {boolean} [sessionData.rememberMe=false] - Si true, genera tokens con duración extendida (90 días)
  * @returns {Promise<Object>} - { access_token, refresh_token, expires_in }
  */
 const generateTokens = async (user, sessionData = {}) => {
     const sessionVersion = await authCache.getSessionVersion(user.id);
+    const rememberMe = sessionData.rememberMe || false;
+
+    // Determinar expiración del refresh token según remember_me
+    const refreshExpiresIn = rememberMe 
+        ? config.jwt.refreshExpiresInLong  // 90 días
+        : config.jwt.refreshExpiresIn;     // 14 días
 
     const basePayload = {
         iss: JWT_ISSUER,
@@ -411,11 +418,12 @@ const generateTokens = async (user, sessionData = {}) => {
             jti: crypto.randomUUID()
         },
         JWT_REFRESH_SECRET,
-        { expiresIn: JWT_REFRESH_EXPIRES_IN }
+        { expiresIn: refreshExpiresIn }
     );
 
+    // Calcular fecha de expiración del refresh token
     const expiresAt = new Date();
-    const daysMatch = JWT_REFRESH_EXPIRES_IN.match(/(\d+)d/);
+    const daysMatch = refreshExpiresIn.match(/(\d+)d/);
     if (daysMatch) {
         expiresAt.setDate(expiresAt.getDate() + parseInt(daysMatch[1], 10));
     }
@@ -425,7 +433,8 @@ const generateTokens = async (user, sessionData = {}) => {
         token: refresh_token,
         expiresAt,
         userAgent: sessionData.userAgent || null,
-        ipAddress: sessionData.ipAddress || null
+        ipAddress: sessionData.ipAddress || null,
+        rememberMe // Pasar rememberMe al repositorio para idle timeout correcto
     });
 
     return {
