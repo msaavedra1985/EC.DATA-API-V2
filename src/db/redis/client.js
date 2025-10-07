@@ -27,7 +27,7 @@ export const initializeRedis = async () => {
                 url: config.redis.url,
                 socket: {
                     reconnectStrategy: false, // No reintentar automáticamente
-                    connectTimeout: 5000, // Timeout de 5 segundos
+                    connectTimeout: 10000, // Timeout de 10 segundos
                 }
             }
             : {
@@ -35,15 +35,16 @@ export const initializeRedis = async () => {
                     host: config.redis.host,
                     port: config.redis.port,
                     reconnectStrategy: false, // No reintentar automáticamente
-                    connectTimeout: 5000, // Timeout de 5 segundos
+                    connectTimeout: 10000, // Timeout de 10 segundos
                 },
                 ...(config.redis.password && { password: config.redis.password }),
             };
 
         redisClient = createClient(clientConfig);
 
-        // Manejo de errores silencioso (ya manejado en catch)
-        redisClient.on('error', () => {
+        // Manejo de errores con logging detallado
+        redisClient.on('error', (err) => {
+            dbLogger.error({ error: err.message, code: err.code }, '❌ Redis client error');
             isRedisAvailable = false;
         });
 
@@ -61,11 +62,18 @@ export const initializeRedis = async () => {
     } catch (error) {
         // En desarrollo, Redis es opcional
         if (config.env === 'development') {
-            dbLogger.warn('⚠️  Redis not available - Running with in-memory fallback');
+            dbLogger.warn({ 
+                error: error.message, 
+                code: error.code 
+            }, '⚠️  Redis not available - Running with in-memory fallback');
             isRedisAvailable = false;
             redisClient = null; // Limpiar cliente fallido
         } else {
-            dbLogger.error({ error: error.message }, '❌ Redis initialization failed');
+            dbLogger.error({ 
+                error: error.message, 
+                code: error.code,
+                stack: error.stack 
+            }, '❌ Redis initialization failed');
             throw error; // En producción, Redis es obligatorio
         }
     }
