@@ -439,9 +439,22 @@ router.get('/me', authenticate, async (req, res, next) => {
  * /auth/logout:
  *   post:
  *     summary: Cerrar sesión actual
- *     description: Revoca el refresh token actual. El token puede enviarse en el body o en el header Authorization
+ *     description: |
+ *       Cierra la sesión del usuario autenticado. Requiere el access token en el header Authorization.
+ *       
+ *       **Comportamiento:**
+ *       - Si se envía `refresh_token` en el body: Solo cierra esa sesión específica
+ *       - Si NO se envía `refresh_token`: Cierra TODAS las sesiones del usuario
+ *       
+ *       **Efectos:**
+ *       - Revoca refresh token(s) de la base de datos
+ *       - Incrementa `sessionVersion` (invalida todos los access tokens)
+ *       - Limpia caché Redis del usuario
+ *       
+ *       **Ventana de invalidación:** El access token actual seguirá válido hasta 15 min (tiempo de expiración natural), pero no podrá renovarse.
  *     tags: [Auth]
- *     security: []
+ *     security:
+ *       - BearerAuth: []
  *     requestBody:
  *       required: false
  *       content:
@@ -451,14 +464,8 @@ router.get('/me', authenticate, async (req, res, next) => {
  *             properties:
  *               refresh_token:
  *                 type: string
- *                 description: Refresh token a revocar (opcional si se envía en header)
- *     parameters:
- *       - in: header
- *         name: Authorization
- *         schema:
- *           type: string
- *         description: Bearer <refresh_token> (alternativa al body)
- *         example: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+ *                 description: Refresh token específico a revocar (opcional). Si no se envía, se revocan todos.
+ *                 example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
  *     responses:
  *       200:
  *         description: Sesión cerrada exitosamente
@@ -476,53 +483,42 @@ router.get('/me', authenticate, async (req, res, next) => {
  *                     message:
  *                       type: string
  *                       example: Sesión cerrada exitosamente
- *       400:
- *         description: Refresh token no proporcionado o vacío
+ *                     sessions_closed:
+ *                       type: integer
+ *                       description: Número de sesiones cerradas (solo si no se envió refresh_token)
+ *       401:
+ *         description: No autenticado, token inválido o refresh token no encontrado
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Error'
- *       401:
- *         description: Refresh token inválido o expirado
+ *       404:
+ *         description: Refresh token no encontrado (si se especificó uno)
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.post('/logout', validate(logoutSchema), async (req, res, next) => {
+router.post('/logout', authenticate, async (req, res, next) => {
     try {
-        let refresh_token = req.body.refresh_token;
+        const userId = req.user.userId;
+        const { refresh_token } = req.body;
 
-        // Si no viene en el body, intentar extraer del header Authorization
-        if (!refresh_token) {
-            const authHeader = req.headers.authorization;
+        // Si se proporciona refresh_token, hacer logout de esa sesión específica
+        if (refresh_token) {
+            await authServices.logout(refresh_token);
             
-            if (!authHeader) {
-                return errorResponse(res, {
-                    message: 'Refresh token requerido (en body o header Authorization)',
-                    status: 400,
-                    code: 'REFRESH_TOKEN_REQUIRED'
-                });
-            }
-
-            // Extraer token del header (formato: "Bearer <token>" o solo "<token>")
-            const parts = authHeader.split(' ');
-            refresh_token = parts.length === 2 && parts[0] === 'Bearer' ? parts[1] : authHeader;
-        }
-
-        // Validar que el token no esté vacío
-        if (!refresh_token || refresh_token.trim().length === 0) {
-            return errorResponse(res, {
-                message: 'Refresh token no puede estar vacío',
-                status: 400,
-                code: 'INVALID_REFRESH_TOKEN'
+            return successResponse(res, {
+                message: 'auth.logout.success'
             });
         }
 
-        await authServices.logout(refresh_token);
+        // Si NO se proporciona refresh_token, hacer logout de TODAS las sesiones
+        const sessionsRevoked = await authServices.logoutAll(userId);
 
         return successResponse(res, {
-            message: 'auth.logout.success'
+            message: 'auth.logout.all_success',
+            sessions_closed: sessionsRevoked
         });
     } catch (error) {
         next(error);
