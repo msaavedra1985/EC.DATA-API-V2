@@ -25,9 +25,10 @@ export const hashToken = (token) => {
  * @param {Date} data.expiresAt - Fecha de expiración
  * @param {string} [data.userAgent] - User agent del navegador
  * @param {string} [data.ipAddress] - IP del cliente
+ * @param {boolean} [data.rememberMe=false] - Si true, el token usa duración extendida
  * @returns {Promise<Object>} - Refresh token creado
  */
-export const createRefreshToken = async ({ userId, token, expiresAt, userAgent = null, ipAddress = null }) => {
+export const createRefreshToken = async ({ userId, token, expiresAt, userAgent = null, ipAddress = null, rememberMe = false }) => {
     try {
         const id = generateUuidV7();
         const tokenHash = hashToken(token);
@@ -39,7 +40,8 @@ export const createRefreshToken = async ({ userId, token, expiresAt, userAgent =
             expires_at: expiresAt,
             last_used_at: new Date(),
             user_agent: userAgent,
-            ip_address: ipAddress
+            ip_address: ipAddress,
+            remember_me: rememberMe
         });
 
         return refreshToken.toJSON();
@@ -179,7 +181,11 @@ export const updateLastUsed = async (token) => {
  * @returns {boolean} - true si está en idle timeout
  */
 export const isIdleTimeout = (refreshToken) => {
-    const idleDays = config.jwt.refreshIdleDays;
+    // Usar idle timeout extendido si el token se creó con remember_me
+    const idleDays = refreshToken.remember_me 
+        ? config.jwt.refreshIdleDaysLong  // 30 días
+        : config.jwt.refreshIdleDays;     // 7 días
+    
     const idleMs = idleDays * 24 * 60 * 60 * 1000;
     const lastUsed = new Date(refreshToken.last_used_at);
     const now = new Date();
