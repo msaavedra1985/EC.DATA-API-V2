@@ -102,5 +102,6 @@
     "common.back": "Back",
     "common.next": "Next",
     "common.previous": "Previous",
-    "common.finish": "Finish"
+    "common.finish": "Finish",
+    "res.status is not a function": "res.status is not a function"
 }

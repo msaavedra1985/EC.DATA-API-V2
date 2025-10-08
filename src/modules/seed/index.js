@@ -220,14 +220,10 @@ router.post('/test-data', async (req, res) => {
         // Ejecutar seeding
         const summary = await seedTestData(fresh);
         
-        return successResponse({
-            res,
-            data: summary,
-        });
+        return successResponse(res, summary);
     } catch (error) {
-        return errorResponse({
-            res,
-            statusCode: 400,
+        return errorResponse(res, {
+            status: 400,
             code: 'SEEDING_ERROR',
             message: error.message,
         });
