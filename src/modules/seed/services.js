@@ -6,7 +6,8 @@ import CountryTranslation from '../countries/models/CountryTranslation.js';
 import Organization from '../organizations/models/Organization.js';
 import User from '../auth/models/User.js';
 import Role from '../auth/models/Role.js';
-import { countries, countryTranslations, organizations, users } from './seed-data.js';
+import { countries, countryTranslations, roles, organizations, users } from './seed-data.js';
+import { generateUuidV7, generateHumanId, generatePublicCode } from '../../utils/identifiers.js';
 
 /**
  * Limpia todos los datos de prueba de la base de datos
@@ -26,6 +27,30 @@ export const cleanTestData = async () => {
         translations: deletedTranslations,
         countries: deletedCountries,
     };
+};
+
+/**
+ * Inserta roles en la base de datos (idempotente - verifica por name)
+ * @returns {Promise<Object>} Roles insertados y existentes
+ */
+const seedRoles = async () => {
+    let inserted = 0;
+    let existing = 0;
+    
+    for (const roleData of roles) {
+        const [role, created] = await Role.findOrCreate({
+            where: { name: roleData.name },
+            defaults: roleData,
+        });
+        
+        if (created) {
+            inserted++;
+        } else {
+            existing++;
+        }
+    }
+    
+    return { inserted, existing, total: roles.length };
 };
 
 /**
@@ -113,19 +138,29 @@ const seedOrganizations = async () => {
             continue; // Saltar si el país no existe
         }
         
-        const [org, created] = await Organization.findOrCreate({
-            where: { slug: orgData.slug },
-            defaults: {
-                ...orgData,
-                country_id: country.id, // Usar el ID real de la BD
-            },
+        // Verificar si ya existe
+        const existingOrg = await Organization.findOne({ where: { slug: orgData.slug } });
+        
+        if (existingOrg) {
+            existing++;
+            continue;
+        }
+        
+        // Generar campos obligatorios para nueva organización
+        const id = generateUuidV7();
+        const humanId = await generateHumanId(Organization, null, null);
+        const publicCode = generatePublicCode('ORG', id); // Usar UUID, no humanId
+        
+        // Crear organización con todos los campos requeridos
+        await Organization.create({
+            id,
+            human_id: humanId,
+            public_code: publicCode,
+            ...orgData,
+            country_id: country.id, // Usar el ID real de la BD
         });
         
-        if (created) {
-            inserted++;
-        } else {
-            existing++;
-        }
+        inserted++;
     }
     
     return { inserted, existing, total: organizations.length };
@@ -168,24 +203,34 @@ const seedUsers = async () => {
         // Obtener organization_id (puede ser null)
         const organizationId = userData.org_slug ? orgMap[userData.org_slug] : null;
         
-        const [user, created] = await User.findOrCreate({
-            where: { email: userData.email },
-            defaults: {
-                email: userData.email,
-                first_name: userData.first_name,
-                last_name: userData.last_name,
-                password_hash: passwordHash,
-                role_id: roleId,
-                organization_id: organizationId,
-                is_active: true,
-            },
+        // Verificar si el usuario ya existe
+        const existingUser = await User.findOne({ where: { email: userData.email } });
+        
+        if (existingUser) {
+            existing++;
+            continue;
+        }
+        
+        // Generar campos obligatorios para nuevo usuario
+        const id = generateUuidV7();
+        const humanId = await generateHumanId(User, 'organization_id', organizationId);
+        const publicCode = generatePublicCode('EC', id); // Usar UUID para public_code
+        
+        // Crear usuario con todos los campos requeridos
+        await User.create({
+            id,
+            human_id: humanId,
+            public_code: publicCode,
+            email: userData.email,
+            first_name: userData.first_name,
+            last_name: userData.last_name,
+            password_hash: passwordHash,
+            role_id: roleId,
+            organization_id: organizationId,
+            is_active: true,
         });
         
-        if (created) {
-            inserted++;
-        } else {
-            existing++;
-        }
+        inserted++;
     }
     
     return { inserted, existing, total: users.length };
@@ -204,12 +249,15 @@ export const seedTestData = async (fresh = false) => {
         summary.cleaned = await cleanTestData();
     }
     
-    // Verificar que existan roles (prerequisito)
+    // Verificar y crear roles si no existen (prerequisito fundamental)
     const rolesCount = await Role.count();
     if (rolesCount === 0) {
-        throw new Error('Roles table is empty. Please run role seeders first.');
+        // Crear roles automáticamente si la tabla está vacía
+        summary.roles = await seedRoles();
+    } else {
+        // Roles ya existen
+        summary.roles = { inserted: 0, existing: rolesCount, total: rolesCount };
     }
-    summary.roles = rolesCount;
     
     // Ejecutar seeding en orden correcto (respetando foreign keys)
     summary.countries = await seedCountries();
@@ -219,6 +267,7 @@ export const seedTestData = async (fresh = false) => {
     
     // Calcular totales
     summary.totals = {
+        roles: summary.roles.inserted + summary.roles.existing,
         countries: summary.countries.inserted + summary.countries.existing,
         translations: summary.translations.inserted + summary.translations.existing,
         organizations: summary.organizations.inserted + summary.organizations.existing,
