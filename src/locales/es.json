@@ -103,5 +103,7 @@
     "common.next": "Siguiente",
     "common.previous": "Anterior",
     "common.finish": "Finalizar",
-    "res.status is not a function": "res.status is not a function"
+    "res.status is not a function": "res.status is not a function",
+    "notNull Violation: Organization.human_id cannot be null,\nnotNull Violation: Organization.public_code cannot be null": "notNull Violation: Organization.human_id cannot be null,\nnotNull Violation: Organization.public_code cannot be null",
+    "notNull Violation: User.human_id cannot be null,\nnotNull Violation: User.public_code cannot be null": "notNull Violation: User.human_id cannot be null,\nnotNull Violation: User.public_code cannot be null"
 }
