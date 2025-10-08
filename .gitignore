@@ -134,3 +134,4 @@ dist
 
 # Attached assets folder
 attached_assets/
+.vscode/settings.json
