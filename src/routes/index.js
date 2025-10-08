@@ -2,6 +2,7 @@
 import express from 'express';
 import healthRouter from '../modules/health/index.js';
 import authRouter from '../modules/auth/index.js';
+import seedRouter from '../modules/seed/index.js';
 
 const router = express.Router();
 
@@ -15,6 +16,9 @@ router.use('/health', healthRouter);
 
 // Auth (Fase 2)
 router.use('/auth', authRouter);
+
+// Seeding (Testing/Development)
+router.use('/seed', seedRouter);
 
 // Tenants (Fase 3+)
 // router.use('/tenants', tenantsRouter);

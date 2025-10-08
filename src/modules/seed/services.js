@@ -3,7 +3,7 @@ import bcrypt from 'bcrypt';
 import { Op } from 'sequelize';
 import Country from '../countries/models/Country.js';
 import CountryTranslation from '../countries/models/CountryTranslation.js';
-import Organization from '../tenants/models/Organization.js';
+import Organization from '../organizations/models/Organization.js';
 import User from '../auth/models/User.js';
 import Role from '../auth/models/Role.js';
 import { countries, countryTranslations, organizations, users } from './seed-data.js';
