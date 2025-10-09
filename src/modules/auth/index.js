@@ -218,7 +218,17 @@ router.post('/login', validate(loginSchema), async (req, res, next) => {
 
         const result = await authServices.login(email, password, sessionData);
 
-        return successResponse(res, { ...result, message: 'auth.login.success' });
+        // Simplificar role en la respuesta - solo enviar el nombre
+        const responseData = {
+            ...result,
+            user: {
+                ...result.user,
+                role: result.user.role?.name || null
+            },
+            message: 'auth.login.success'
+        };
+
+        return successResponse(res, responseData);
     } catch (error) {
         next(error);
     }
@@ -441,7 +451,13 @@ router.get('/me', authenticate, async (req, res, next) => {
             });
         }
 
-        return successResponse(res, { user, message: 'auth.profile.retrieved' });
+        // Simplificar role en la respuesta - solo enviar el nombre
+        const userResponse = {
+            ...user,
+            role: user.role?.name || null
+        };
+
+        return successResponse(res, { user: userResponse, message: 'auth.profile.retrieved' });
     } catch (error) {
         next(error);
     }

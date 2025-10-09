@@ -280,12 +280,7 @@ EC.DATA (root)
       "email": "admin@ecdata.com",
       "first_name": "System",
       "last_name": "Admin",
-      "role": {
-        "id": "01919d2e-...",
-        "name": "system-admin",
-        "description": "System Administrator",
-        "is_active": true
-      },
+      "role": "system-admin",
       "is_active": true,
       "created_at": "2025-10-09T10:00:00.000Z"
     },
@@ -300,8 +295,9 @@ EC.DATA (root)
 }
 ```
 
-**Cambios en JWT:**
-- El JWT ahora incluye `activeOrgId`, `primaryOrgId` y `canAccessAllOrgs`
+**Cambios importantes:**
+- `user.role` ahora es un **string simple** con el nombre del rol (ej: "system-admin", "org-admin", "user")
+- El JWT incluye `activeOrgId`, `primaryOrgId` y `canAccessAllOrgs`
 - `activeOrgId` = `primaryOrgId` en el primer login
 
 ### POST `/api/v1/auth/refresh`
