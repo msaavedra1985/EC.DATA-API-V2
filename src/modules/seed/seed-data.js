@@ -278,10 +278,29 @@ export const roles = [
 ];
 
 /**
- * Organizaciones - 3 organizaciones de ejemplo
+ * Organizaciones - 4 organizaciones con jerarquía
+ * EC.DATA es la raíz (parent_id = null), las demás pueden ser hijas
  * Los country_id corresponden al array countries (USA=14, Argentina=1, España=16)
  */
 export const organizations = [
+    {
+        slug: 'ec-data',
+        name: 'EC.DATA',
+        country_id: 14, // USA
+        tax_id: '99-9999999',
+        email: 'platform@ec.data',
+        phone: '+1-800-ECDATA',
+        address: '1 Platform Way, San Francisco, CA 94105, USA',
+        description: 'Plataforma raíz de EC.DATA - contenedor principal del sistema',
+        logo_url: 'https://via.placeholder.com/200x200?text=EC.DATA',
+        config: { 
+            currency: 'USD', 
+            language: 'en', 
+            timezone: 'America/Los_Angeles',
+            theme: { primary: '#1a73e8', secondary: '#34a853' }
+        },
+        parent_id: null, // Organización raíz
+    },
     {
         slug: 'acme-corp',
         name: 'ACME Corporation',
@@ -290,7 +309,9 @@ export const organizations = [
         email: 'contact@acmecorp.com',
         phone: '+1-555-0100',
         address: '123 Main St, New York, NY 10001, USA',
+        description: 'Leading enterprise solutions provider',
         config: { currency: 'USD', language: 'en', timezone: 'America/New_York' },
+        parent_slug: 'ec-data', // Hija de EC.DATA
     },
     {
         slug: 'techsolutions-ar',
@@ -300,7 +321,9 @@ export const organizations = [
         email: 'info@techsolutions.com.ar',
         phone: '+54-11-4567-8900',
         address: 'Av. Corrientes 1234, Buenos Aires, Argentina',
+        description: 'Soluciones tecnológicas innovadoras para empresas',
         config: { currency: 'ARS', language: 'es', timezone: 'America/Argentina/Buenos_Aires' },
+        parent_slug: 'ec-data', // Hija de EC.DATA
     },
     {
         slug: 'global-enterprises',
@@ -310,7 +333,9 @@ export const organizations = [
         email: 'contacto@globalenterprises.es',
         phone: '+34-91-123-4567',
         address: 'Gran Vía 123, 28013 Madrid, España',
+        description: 'Multinacional de servicios empresariales',
         config: { currency: 'EUR', language: 'es', timezone: 'Europe/Madrid' },
+        parent_slug: 'ec-data', // Hija de EC.DATA
     },
 ];
 
@@ -325,7 +350,7 @@ export const users = [
         first_name: 'System',
         last_name: 'Administrator',
         role_name: 'system-admin',
-        org_slug: null, // Sin organización (acceso global)
+        org_slug: 'ec-data', // Pertenece a EC.DATA (acceso global a todas las orgs)
     },
     {
         email: 'orgadmin@acme.com',
