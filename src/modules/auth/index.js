@@ -11,7 +11,8 @@ import {
     refreshTokenSchema,
     changePasswordSchema,
     logoutSchema,
-    revokeSessionSchema
+    revokeSessionSchema,
+    switchOrgSchema
 } from './dtos/index.js';
 import { successResponse, errorResponse } from '../../utils/response.js';
 import * as authRepository from './repository.js';
@@ -744,6 +745,185 @@ router.get('/admin-test', authenticate, requireRole(['system-admin', 'org-admin'
             user_role: req.user.role.name,
             user_id: req.user.userId
         });
+    } catch (error) {
+        next(error);
+    }
+});
+
+/**
+ * @swagger
+ * /auth/organizations:
+ *   get:
+ *     summary: Obtener organizaciones disponibles del usuario
+ *     description: Retorna todas las organizaciones a las que el usuario tiene acceso, incluyendo su organización primaria y scope organizacional
+ *     tags: [Auth]
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Lista de organizaciones disponibles
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     canAccessAll:
+ *                       type: boolean
+ *                       description: true si el usuario es system-admin y puede acceder a todas las organizaciones
+ *                       example: false
+ *                     userOrganizations:
+ *                       type: array
+ *                       description: Organizaciones donde el usuario es miembro
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           organization_id:
+ *                             type: string
+ *                             format: uuid
+ *                           slug:
+ *                             type: string
+ *                           name:
+ *                             type: string
+ *                           logo_url:
+ *                             type: string
+ *                             nullable: true
+ *                           is_primary:
+ *                             type: boolean
+ *                           is_active:
+ *                             type: boolean
+ *                           parent_id:
+ *                             type: string
+ *                             format: uuid
+ *                             nullable: true
+ *                           joined_at:
+ *                             type: string
+ *                             format: date-time
+ *                     totalAccessible:
+ *                       type: integer
+ *                       description: Total de organizaciones accesibles (incluye descendientes según rol)
+ *                       example: 5
+ *                 meta:
+ *                   type: object
+ *                   properties:
+ *                     timestamp:
+ *                       type: string
+ *                       format: date-time
+ *       401:
+ *         description: No autenticado o token inválido
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+router.get('/organizations', authenticate, async (req, res, next) => {
+    try {
+        const userId = req.user.userId;
+        const organizations = await authServices.getUserAvailableOrganizations(userId);
+        
+        return successResponse(res, organizations);
+    } catch (error) {
+        next(error);
+    }
+});
+
+/**
+ * @swagger
+ * /auth/switch-org:
+ *   post:
+ *     summary: Cambiar organización activa del usuario
+ *     description: Cambia la organización activa en el contexto de la sesión y genera nuevos tokens JWT con la nueva activeOrgId
+ *     tags: [Auth]
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - organization_id
+ *             properties:
+ *               organization_id:
+ *                 type: string
+ *                 format: uuid
+ *                 description: UUID de la organización a la que se desea cambiar
+ *                 example: 01234567-89ab-cdef-0123-456789abcdef
+ *     responses:
+ *       200:
+ *         description: Organización cambiada exitosamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     access_token:
+ *                       type: string
+ *                       description: Nuevo access token JWT con activeOrgId actualizado
+ *                     refresh_token:
+ *                       type: string
+ *                       description: Nuevo refresh token JWT
+ *                     expires_in:
+ *                       type: string
+ *                       example: 15m
+ *                     token_type:
+ *                       type: string
+ *                       example: Bearer
+ *                     active_organization_id:
+ *                       type: string
+ *                       format: uuid
+ *                       description: UUID de la nueva organización activa
+ *                 meta:
+ *                   type: object
+ *                   properties:
+ *                     timestamp:
+ *                       type: string
+ *                       format: date-time
+ *       400:
+ *         description: Datos de entrada inválidos
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       401:
+ *         description: No autenticado o token inválido
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       403:
+ *         description: Acceso denegado - El usuario no puede acceder a la organización especificada
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+router.post('/switch-org', authenticate, validate(switchOrgSchema), async (req, res, next) => {
+    try {
+        const userId = req.user.userId;
+        const { organization_id } = req.body;
+        
+        // Extraer datos de sesión para auditoría
+        const sessionData = {
+            userAgent: req.headers['user-agent'],
+            ipAddress: req.ip || req.connection.remoteAddress
+        };
+        
+        const result = await authServices.switchOrganization(userId, organization_id, sessionData);
+        
+        return successResponse(res, result);
     } catch (error) {
         next(error);
     }

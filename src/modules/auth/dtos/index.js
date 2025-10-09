@@ -181,3 +181,17 @@ export const revokeSessionSchema = z.object({
             .uuid('Session ID debe ser un UUID válido')
     })
 });
+
+/**
+ * Schema para cambiar organización activa
+ * POST /auth/switch-org
+ */
+export const switchOrgSchema = z.object({
+    body: z.object({
+        organization_id: z
+            .string({
+                required_error: 'organization_id es requerido'
+            })
+            .uuid('organization_id debe ser un UUID válido')
+    })
+});
