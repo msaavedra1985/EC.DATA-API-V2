@@ -277,3 +277,83 @@ export const deleteOrganization = async (id) => {
     
     return true;
 };
+
+/**
+ * Obtener organización raíz (EC.DATA)
+ * 
+ * @returns {Promise<Object|null>} - Organización raíz o null
+ */
+export const getRootOrganization = async () => {
+    const organization = await Organization.findOne({
+        where: { parent_id: null }
+    });
+    
+    if (!organization) {
+        return null;
+    }
+    
+    return {
+        id: organization.id,
+        public_code: organization.public_code,
+        human_id: organization.human_id,
+        slug: organization.slug,
+        name: organization.name,
+        parent_id: organization.parent_id,
+        logo_url: organization.logo_url,
+        description: organization.description,
+        config: organization.config,
+        is_active: organization.is_active,
+        created_at: organization.created_at
+    };
+};
+
+/**
+ * Obtener hijos directos de una organización
+ * 
+ * @param {string} parentId - ID de la organización padre
+ * @returns {Promise<Array>} - Lista de organizaciones hijas
+ */
+export const getChildOrganizations = async (parentId) => {
+    const organizations = await Organization.findAll({
+        where: { parent_id: parentId, is_active: true },
+        order: [['name', 'ASC']]
+    });
+    
+    return organizations.map(org => ({
+        id: org.id,
+        public_code: org.public_code,
+        human_id: org.human_id,
+        slug: org.slug,
+        name: org.name,
+        parent_id: org.parent_id,
+        logo_url: org.logo_url,
+        is_active: org.is_active
+    }));
+};
+
+/**
+ * Obtener todos los descendientes de una organización (recursivo)
+ * 
+ * @param {string} organizationId - ID de la organización
+ * @returns {Promise<Array>} - Lista de IDs de descendientes
+ */
+export const getOrganizationDescendants = async (organizationId) => {
+    const descendants = [];
+    
+    // Obtener hijos directos
+    const children = await Organization.findAll({
+        where: { parent_id: organizationId },
+        attributes: ['id']
+    });
+    
+    // Agregar hijos a la lista
+    for (const child of children) {
+        descendants.push(child.id);
+        
+        // Recursivamente obtener descendientes de cada hijo
+        const childDescendants = await getOrganizationDescendants(child.id);
+        descendants.push(...childDescendants);
+    }
+    
+    return descendants;
+};

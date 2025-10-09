@@ -1,8 +1,8 @@
 import { getCache, setCache, deleteCache } from '../../db/redis/client.js';
 import { dbLogger } from '../../utils/logger.js';
 
-const USER_CACHE_PREFIX = 'user:';
-const SESSION_VERSION_PREFIX = 'session_version:';
+const USER_CACHE_PREFIX = 'ec:user:';
+const SESSION_VERSION_PREFIX = 'ec:session_version:';
 const USER_CACHE_TTL = 900;
 
 export const getUserFromCache = async (userId) => {

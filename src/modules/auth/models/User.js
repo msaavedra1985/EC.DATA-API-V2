@@ -4,6 +4,7 @@
 import { DataTypes } from 'sequelize';
 import sequelize from '../../../db/sql/sequelize.js';
 import Role from './Role.js';
+import Organization from '../../organizations/models/Organization.js';
 
 /**
  * Modelo User - Usuarios del sistema con autenticación JWT
@@ -146,6 +147,14 @@ const User = sequelize.define(
 User.belongsTo(Role, {
     foreignKey: 'role_id',
     as: 'role'
+});
+
+// Relación many-to-many con Organizations a través de UserOrganization
+User.belongsToMany(Organization, {
+    through: 'user_organizations',
+    foreignKey: 'user_id',
+    otherKey: 'organization_id',
+    as: 'organizations'
 });
 
 /**

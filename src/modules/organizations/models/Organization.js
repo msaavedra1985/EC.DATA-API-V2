@@ -38,6 +38,17 @@ const Organization = sequelize.define('Organization', {
         allowNull: false,
         comment: 'Nombre de la organización'
     },
+    parent_id: {
+        type: DataTypes.UUID,
+        allowNull: true,
+        references: {
+            model: 'organizations',
+            key: 'id'
+        },
+        onUpdate: 'CASCADE',
+        onDelete: 'RESTRICT',
+        comment: 'FK a organizations - organización padre (null = raíz)'
+    },
     country_id: {
         type: DataTypes.INTEGER,
         allowNull: false,
@@ -48,6 +59,16 @@ const Organization = sequelize.define('Organization', {
         onUpdate: 'CASCADE',
         onDelete: 'RESTRICT',
         comment: 'FK a tabla countries - país de la organización'
+    },
+    logo_url: {
+        type: DataTypes.STRING(500),
+        allowNull: true,
+        comment: 'URL del logo de la organización'
+    },
+    description: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+        comment: 'Descripción de la organización'
     },
     tax_id: {
         type: DataTypes.STRING(50),
@@ -72,11 +93,11 @@ const Organization = sequelize.define('Organization', {
         allowNull: true,
         comment: 'Dirección física de la organización'
     },
-    settings: {
+    config: {
         type: DataTypes.JSONB,
         allowNull: true,
         defaultValue: {},
-        comment: 'Configuración JSON de la organización'
+        comment: 'Configuración JSON de la organización (theme, formatos, preferencias)'
     },
     is_active: {
         type: DataTypes.BOOLEAN,
@@ -100,6 +121,9 @@ const Organization = sequelize.define('Organization', {
             fields: ['slug']
         },
         {
+            fields: ['parent_id']
+        },
+        {
             fields: ['country_id']
         },
         {
@@ -110,6 +134,18 @@ const Organization = sequelize.define('Organization', {
         }
     ],
     comment: 'Organizaciones/tenants del sistema con identificadores UUID v7'
+});
+
+// Relación jerárquica: organización padre
+Organization.belongsTo(Organization, {
+    foreignKey: 'parent_id',
+    as: 'parent'
+});
+
+// Relación jerárquica: organizaciones hijas
+Organization.hasMany(Organization, {
+    foreignKey: 'parent_id',
+    as: 'children'
 });
 
 export default Organization;

@@ -1,0 +1,25 @@
+antes de continuar, como siempre, nuevas normativas:
+
+siempre en cada seccion cuando algo se tenga que cargar, se armara un skeleton loader similar al contenido de la pagina para que el usuario ya sepa como se veria la interfaz de antemano y le da ese toque moderno
+vamos a crear roles de usuarios, a continuacion te los paso:
+system-admin
+Control total de la plataforma (todas las organizaciones). Accede al panel global, auditoría, planes/cuotas, feature flags, y puede crear/suspender/eliminar organizaciones y usuarios. No tiene restricciones por tenant.
+org-admin
+Administrador de su organización (y sub-organizaciones si existen). Crea/gestiona usuarios de su org, asigna roles, configura preferencias/temas/idiomas de la org, y puede crear otros org-admins. Regla: no puede existir una organización sin al menos un org-admin.
+
+org-manager
+Gestión operativa avanzada dentro de la org (equipos/secciones/procesos). Puede ver y administrar datos operativos (p. ej., facturas, reportes, dashboards) y usuarios de su área, pero no cambia configuraciones globales de la organización (billing, branding global, SSO, etc.).
+
+user
+Usuario interno estándar. Acceso a las secciones que le habiliten; puede crear/consultar contenido propio o de su equipo (p. ej., subir facturas, ver dashboards), sin permisos de administración de usuarios ni de configuración.
+
+viewer
+Solo lectura. Ideal para dashboards y reportes. Puede ver información y (si está habilitado) descargar archivos/reportes. No puede editar ni ejecutar acciones que modifiquen datos.
+
+guest
+Acceso temporal o limitado (por token/enlace con expiración). Normalmente solo lectura en un subconjunto de recursos específicos; pensado para compartir datos puntuales con terceros sin alta completa.
+
+demo
+Usuario de entorno demostración. Siempre read-only y aislado de datos reales; ve datos de ejemplo (mock) con coherencia estadística. No puede modificar nada, aunque la UI lo intente.
+
+los roles tendran que ir a una tabla y con su relaci

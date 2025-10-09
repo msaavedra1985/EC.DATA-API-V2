@@ -8,6 +8,7 @@ import { config } from '../../config/env.js';
 import * as authRepository from './repository.js';
 import * as refreshTokenRepository from './refreshTokenRepository.js';
 import * as authCache from './cache.js';
+import * as organizationService from '../organizations/services.js';
 import Role from './models/Role.js';
 
 // Configuración de bcrypt
@@ -126,6 +127,20 @@ export const login = async (email, password, sessionData = {}) => {
     // Generar tokens JWT y guardar refresh token en BD
     // Pasar rememberMe a generateTokens para usar duración extendida si es necesario
     const tokens = await generateTokens(user, sessionData);
+    
+    // Guardar session_context en Redis
+    const primaryOrg = await organizationService.getPrimaryOrganization(user.id);
+    const { setSessionContext } = await import('./sessionContextCache.js');
+    await setSessionContext(user.id, {
+        activeOrgId: sessionData.activeOrgId || (primaryOrg ? primaryOrg.organization_id : null),
+        primaryOrgId: primaryOrg ? primaryOrg.organization_id : null,
+        canAccessAllOrgs: user.role && user.role.name === 'system-admin',
+        role: user.role ? user.role.name : null,
+        email: user.email,
+        firstName: user.first_name,
+        lastName: user.last_name,
+        userId: user.id
+    });
 
     return {
         user,
@@ -187,8 +202,10 @@ export const verifyToken = async (token) => {
         return {
             userId: user.id,
             email: user.email,
-            role: user.role, // Ahora es un objeto con {id, name, description, is_active}
-            organization_id: user.organization_id,
+            role: decoded.role, // Rol del JWT (string: nombre del rol)
+            activeOrgId: decoded.activeOrgId,
+            primaryOrgId: decoded.primaryOrgId,
+            canAccessAllOrgs: decoded.canAccessAllOrgs || false,
             first_name: user.first_name,
             last_name: user.last_name
         };
@@ -372,12 +389,14 @@ export const changePassword = async (userId, currentPassword, newPassword) => {
 
 /**
  * Generar tokens JWT (access + refresh) con rotación y persistencia
+ * Incluye soporte multi-tenant con activeOrgId y primaryOrgId
  * 
  * @param {Object} user - Datos del usuario
  * @param {Object} [sessionData] - Datos de la sesión
  * @param {string} [sessionData.userAgent] - User agent del navegador
  * @param {string} [sessionData.ipAddress] - IP del cliente
  * @param {boolean} [sessionData.rememberMe=false] - Si true, genera tokens con duración extendida (90 días)
+ * @param {string} [sessionData.activeOrgId] - ID de la organización activa (si se está haciendo switch)
  * @returns {Promise<Object>} - { access_token, refresh_token, expires_in }
  */
 const generateTokens = async (user, sessionData = {}) => {
@@ -389,18 +408,25 @@ const generateTokens = async (user, sessionData = {}) => {
         ? config.jwt.refreshExpiresInLong  // 90 días
         : config.jwt.refreshExpiresIn;     // 14 días
 
+    // Obtener organización primaria del usuario
+    const primaryOrg = await organizationService.getPrimaryOrganization(user.id);
+    
+    // activeOrgId: usar la especificada en sessionData o la primaria por defecto
+    const activeOrgId = sessionData.activeOrgId || (primaryOrg ? primaryOrg.organization_id : null);
+    const primaryOrgId = primaryOrg ? primaryOrg.organization_id : null;
+
+    // Determinar si puede acceder a todas las orgs (solo system-admin)
+    const canAccessAllOrgs = user.role && user.role.name === 'system-admin';
+
     const basePayload = {
         iss: JWT_ISSUER,
         aud: JWT_AUDIENCE,
         sub: user.id,
-        orgId: user.organization_id,
+        activeOrgId,
+        primaryOrgId,
+        canAccessAllOrgs,
         sessionVersion,
-        role: user.role ? {
-            id: user.role.id,
-            name: user.role.name,
-            description: user.role.description,
-            is_active: user.role.is_active
-        } : null
+        role: user.role ? user.role.name : null
     };
 
     const access_token = jwt.sign(
@@ -562,4 +588,131 @@ export const setUserActiveStatus = async (userId, isActive) => {
  */
 export const invalidateUserSession = async (userId) => {
     return await authCache.invalidateUserSession(userId);
+};
+
+/**
+ * Cambiar organización activa del usuario
+ * Genera nuevos tokens JWT con la nueva activeOrgId
+ * 
+ * @param {string} userId - ID del usuario
+ * @param {string} newActiveOrgId - ID de la nueva organización activa
+ * @param {Object} [sessionData] - Datos de la sesión
+ * @returns {Promise<Object>} - Nuevos tokens y datos de organización
+ */
+export const switchOrganization = async (userId, newActiveOrgId, sessionData = {}) => {
+    // Obtener usuario con rol incluido
+    const user = await authRepository.findUserById(userId);
+    
+    if (!user) {
+        const error = new Error('auth.user.not_found');
+        error.status = 404;
+        error.code = 'USER_NOT_FOUND';
+        throw error;
+    }
+    
+    // Verificar que el usuario puede acceder a la organización
+    const canAccess = await organizationService.canAccessOrganization(
+        userId, 
+        newActiveOrgId, 
+        user.role.name
+    );
+    
+    if (!canAccess) {
+        const error = new Error('auth.organization.access_denied');
+        error.status = 403;
+        error.code = 'ORGANIZATION_ACCESS_DENIED';
+        throw error;
+    }
+    
+    // Generar nuevos tokens con la nueva activeOrgId
+    sessionData.activeOrgId = newActiveOrgId;
+    const tokens = await generateTokens(user, sessionData);
+    
+    // Invalidar cache de scope organizacional
+    await organizationService.invalidateUserOrgScope(userId);
+    
+    // Actualizar session_context en Redis con la nueva org activa
+    const { updateActiveOrg } = await import('./sessionContextCache.js');
+    await updateActiveOrg(userId, newActiveOrgId);
+    
+    return {
+        ...tokens,
+        active_organization_id: newActiveOrgId
+    };
+};
+
+/**
+ * Obtener organizaciones disponibles del usuario
+ * @param {string} userId - ID del usuario
+ * @returns {Promise<Array>} - Lista de organizaciones con detalles
+ */
+export const getUserAvailableOrganizations = async (userId) => {
+    const user = await authRepository.findUserById(userId);
+    
+    if (!user) {
+        const error = new Error('auth.user.not_found');
+        error.status = 404;
+        error.code = 'USER_NOT_FOUND';
+        throw error;
+    }
+    
+    // Obtener scope organizacional completo
+    const scope = await organizationService.getOrganizationScope(userId, user.role.name);
+    
+    // Para system-admin, obtener TODAS las organizaciones activas con detalles completos
+    let accessibleOrganizations = scope.userOrganizations;
+    
+    if (scope.canAccessAll) {
+        // system-admin: obtener todas las organizaciones del sistema con detalles
+        const Organization = (await import('../organizations/models/Organization.js')).default;
+        const allOrgs = await Organization.findAll({
+            where: { is_active: true },
+            attributes: ['id', 'slug', 'name', 'logo_url', 'is_active', 'parent_id'],
+            order: [['name', 'ASC']]
+        });
+        
+        // Mapear a formato consistente, marcando cuáles son de membresía directa
+        const directOrgIds = scope.userOrganizations.map(uo => uo.organization_id);
+        accessibleOrganizations = allOrgs.map(org => ({
+            organization_id: org.id,
+            slug: org.slug,
+            name: org.name,
+            logo_url: org.logo_url,
+            is_primary: scope.userOrganizations.find(uo => uo.organization_id === org.id)?.is_primary || false,
+            is_active: org.is_active,
+            parent_id: org.parent_id,
+            joined_at: scope.userOrganizations.find(uo => uo.organization_id === org.id)?.joined_at || null,
+            is_direct_member: directOrgIds.includes(org.id)
+        }));
+    } else if (user.role.name === 'org-admin' || user.role.name === 'org-manager') {
+        // Para org-admin/org-manager: obtener organizaciones accesibles con detalles
+        const Organization = (await import('../organizations/models/Organization.js')).default;
+        const accessibleOrgs = await Organization.findAll({
+            where: { 
+                id: scope.organizationIds,
+                is_active: true 
+            },
+            attributes: ['id', 'slug', 'name', 'logo_url', 'is_active', 'parent_id'],
+            order: [['name', 'ASC']]
+        });
+        
+        const directOrgIds = scope.userOrganizations.map(uo => uo.organization_id);
+        accessibleOrganizations = accessibleOrgs.map(org => ({
+            organization_id: org.id,
+            slug: org.slug,
+            name: org.name,
+            logo_url: org.logo_url,
+            is_primary: scope.userOrganizations.find(uo => uo.organization_id === org.id)?.is_primary || false,
+            is_active: org.is_active,
+            parent_id: org.parent_id,
+            joined_at: scope.userOrganizations.find(uo => uo.organization_id === org.id)?.joined_at || null,
+            is_direct_member: directOrgIds.includes(org.id)
+        }));
+    }
+    
+    return {
+        canAccessAll: scope.canAccessAll,
+        userOrganizations: accessibleOrganizations,
+        totalAccessible: scope.organizationIds.length
+    };
 };
