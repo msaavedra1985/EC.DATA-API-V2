@@ -188,7 +188,7 @@ export const verifyToken = async (token) => {
         return {
             userId: user.id,
             email: user.email,
-            role: user.role, // Ahora es un objeto con {id, name, description, is_active}
+            role: decoded.role, // Rol del JWT (string: nombre del rol)
             activeOrgId: decoded.activeOrgId,
             primaryOrgId: decoded.primaryOrgId,
             canAccessAllOrgs: decoded.canAccessAllOrgs || false,
@@ -412,12 +412,7 @@ const generateTokens = async (user, sessionData = {}) => {
         primaryOrgId,
         canAccessAllOrgs,
         sessionVersion,
-        role: user.role ? {
-            id: user.role.id,
-            name: user.role.name,
-            description: user.role.description,
-            is_active: user.role.is_active
-        } : null
+        role: user.role ? user.role.name : null
     };
 
     const access_token = jwt.sign(

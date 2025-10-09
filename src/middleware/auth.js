@@ -78,8 +78,8 @@ export const authorize = (allowedRoles = []) => {
             });
         }
 
-        // Verificar que el usuario tenga un rol permitido (role es un objeto con {id, name, description, is_active})
-        const userRoleName = req.user.role?.name;
+        // Verificar que el usuario tenga un rol permitido (role ahora es un string con el nombre del rol)
+        const userRoleName = req.user.role;
         if (!userRoleName || !allowedRoles.includes(userRoleName)) {
             logger.warn(`User ${req.user.email} with role ${userRoleName} attempted to access protected route without permission`);
             
