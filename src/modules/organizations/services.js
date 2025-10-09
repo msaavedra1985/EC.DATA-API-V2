@@ -13,6 +13,10 @@ import { getCache, setCache, deleteCache } from '../../db/redis/client.js';
 const ORG_SCOPE_CACHE_TTL = 900; // 15 minutos
 const ORG_TREE_CACHE_TTL = 1800; // 30 minutos
 
+// Cache key prefixes
+const ORG_SCOPE_CACHE_PREFIX = 'ec:org_scope:';
+const ORG_TREE_CACHE_PREFIX = 'ec:org_tree:';
+
 /**
  * Obtener organizaciones del usuario
  * Retorna todas las organizaciones donde el usuario es miembro
@@ -83,20 +87,20 @@ export const getPrimaryOrganization = async (userId) => {
  * @returns {Promise<Array>} - Lista de IDs de descendientes
  */
 export const getOrganizationDescendantsWithCache = async (organizationId) => {
-    const cacheKey = `org:descendants:${organizationId}`;
-    
+    const cacheKey = `${ORG_TREE_CACHE_PREFIX}${organizationId}`;
+
     // Intentar obtener del cache
     const cached = await getCache(cacheKey);
     if (cached) {
         return JSON.parse(cached);
     }
-    
+
     // Obtener de la base de datos
     const descendants = await orgRepository.getOrganizationDescendants(organizationId);
-    
+
     // Guardar en cache
     await setCache(cacheKey, JSON.stringify(descendants), ORG_TREE_CACHE_TTL);
-    
+
     return descendants;
 };
 
@@ -116,18 +120,18 @@ export const calculateOrganizationScope = async (userId, roleSlug) => {
             attributes: ['id'],
             where: { is_active: true }
         });
-        
+
         return {
             canAccessAll: true,
             organizationIds: allOrgs.map(org => org.id),
             userOrganizations: await getUserOrganizations(userId)
         };
     }
-    
+
     // Obtener organizaciones del usuario
     const userOrgs = await getUserOrganizations(userId);
     const directOrgIds = userOrgs.map(uo => uo.organization_id);
-    
+
     if (directOrgIds.length === 0) {
         return {
             canAccessAll: false,
@@ -135,40 +139,40 @@ export const calculateOrganizationScope = async (userId, roleSlug) => {
             userOrganizations: []
         };
     }
-    
+
     // org-admin puede acceder a su organización y todos sus descendientes
     if (roleSlug === 'org-admin') {
         const allAccessible = new Set(directOrgIds);
-        
+
         // Por cada org del usuario, agregar descendientes
         for (const orgId of directOrgIds) {
             const descendants = await getOrganizationDescendantsWithCache(orgId);
             descendants.forEach(id => allAccessible.add(id));
         }
-        
+
         return {
             canAccessAll: false,
             organizationIds: Array.from(allAccessible),
             userOrganizations: userOrgs
         };
     }
-    
+
     // org-manager puede acceder solo a descendientes directos (hijos)
     if (roleSlug === 'org-manager') {
         const allAccessible = new Set(directOrgIds);
-        
+
         for (const orgId of directOrgIds) {
             const children = await orgRepository.getChildOrganizations(orgId);
             children.forEach(child => allAccessible.add(child.id));
         }
-        
+
         return {
             canAccessAll: false,
             organizationIds: Array.from(allAccessible),
             userOrganizations: userOrgs
         };
     }
-    
+
     // Roles restantes (user, viewer, guest, demo) solo acceden a sus organizaciones directas
     return {
         canAccessAll: false,
@@ -185,20 +189,20 @@ export const calculateOrganizationScope = async (userId, roleSlug) => {
  * @returns {Promise<Object>} - Scope organizacional
  */
 export const getOrganizationScope = async (userId, roleSlug) => {
-    const cacheKey = `user:${userId}:org-scope`;
-    
+    const cacheKey = `${ORG_SCOPE_CACHE_PREFIX}${userId}`;
+
     // Intentar obtener del cache
     const cached = await getCache(cacheKey);
     if (cached) {
         return JSON.parse(cached);
     }
-    
+
     // Calcular scope
     const scope = await calculateOrganizationScope(userId, roleSlug);
-    
+
     // Guardar en cache
     await setCache(cacheKey, JSON.stringify(scope), ORG_SCOPE_CACHE_TTL);
-    
+
     return scope;
 };
 
@@ -212,11 +216,11 @@ export const getOrganizationScope = async (userId, roleSlug) => {
  */
 export const canAccessOrganization = async (userId, organizationId, roleSlug) => {
     const scope = await getOrganizationScope(userId, roleSlug);
-    
+
     if (scope.canAccessAll) {
         return true;
     }
-    
+
     return scope.organizationIds.includes(organizationId);
 };
 
@@ -235,15 +239,15 @@ export const switchPrimaryOrganization = async (userId, newPrimaryOrgId) => {
             organization_id: newPrimaryOrgId
         }
     });
-    
+
     if (!userOrg) {
         throw new Error('USER_NOT_MEMBER_OF_ORGANIZATION');
     }
-    
+
     // Usar transacción para garantizar consistencia
     const { sequelize } = UserOrganization;
     const transaction = await sequelize.transaction();
-    
+
     try {
         // Remover is_primary de todas las organizaciones del usuario
         await UserOrganization.update(
@@ -253,7 +257,7 @@ export const switchPrimaryOrganization = async (userId, newPrimaryOrgId) => {
                 transaction
             }
         );
-        
+
         // Marcar la nueva como primaria
         await UserOrganization.update(
             { is_primary: true },
@@ -265,18 +269,18 @@ export const switchPrimaryOrganization = async (userId, newPrimaryOrgId) => {
                 transaction
             }
         );
-        
+
         await transaction.commit();
-        
+
         // Invalidar cache de scope organizacional
-        const cacheKey = `user:${userId}:org-scope`;
+        const cacheKey = `${ORG_SCOPE_CACHE_PREFIX}${userId}`;
         await deleteCache(cacheKey);
-        
+
         return {
             success: true,
             new_primary_org_id: newPrimaryOrgId
         };
-        
+
     } catch (error) {
         await transaction.rollback();
         throw error;
@@ -290,7 +294,7 @@ export const switchPrimaryOrganization = async (userId, newPrimaryOrgId) => {
  * @returns {Promise<void>}
  */
 export const invalidateUserOrgScope = async (userId) => {
-    const cacheKey = `user:${userId}:org-scope`;
+    const cacheKey = `${ORG_SCOPE_CACHE_PREFIX}${userId}`;
     await deleteCache(cacheKey);
 };
 
@@ -301,6 +305,6 @@ export const invalidateUserOrgScope = async (userId) => {
  * @returns {Promise<void>}
  */
 export const invalidateOrgDescendants = async (organizationId) => {
-    const cacheKey = `org:descendants:${organizationId}`;
+    const cacheKey = `${ORG_TREE_CACHE_PREFIX}${organizationId}`;
     await deleteCache(cacheKey);
 };

@@ -188,4 +188,42 @@ export const deleteCache = async key => {
  */
 export const isConnected = () => isRedisAvailable;
 
+/**
+ * Agrega el prefijo 'ec:' a una clave si no lo tiene ya
+ * @param {string} key - Clave original
+ * @returns {string} - Clave con prefijo
+ */
+const ensurePrefix = (key) => {
+    return key.startsWith('ec:') ? key : `ec:${key}`;
+};
+
+/**
+ * Obtiene un valor del cache con prefijo 'ec:' automático
+ * @param {string} key - Clave del cache (se agregará 'ec:' si no lo tiene)
+ * @returns {Promise<string|null>}
+ */
+export const getCacheWithPrefix = async (key) => {
+    return getCache(ensurePrefix(key));
+};
+
+/**
+ * Establece un valor en el cache con prefijo 'ec:' automático
+ * @param {string} key - Clave del cache (se agregará 'ec:' si no lo tiene)
+ * @param {string} value - Valor a almacenar
+ * @param {number} ttl - Tiempo de vida en segundos (opcional)
+ * @returns {Promise<boolean>}
+ */
+export const setCacheWithPrefix = async (key, value, ttl = null) => {
+    return setCache(ensurePrefix(key), value, ttl);
+};
+
+/**
+ * Elimina una clave del cache con prefijo 'ec:' automático
+ * @param {string} key - Clave a eliminar (se agregará 'ec:' si no lo tiene)
+ * @returns {Promise<boolean>}
+ */
+export const deleteCacheWithPrefix = async (key) => {
+    return deleteCache(ensurePrefix(key));
+};
+
 export default redisClient;

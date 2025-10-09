@@ -4,7 +4,7 @@
 import { getCache, setCache, deleteCache } from '../../db/redis/client.js';
 import logger from '../../utils/logger.js';
 
-const CACHE_PREFIX = 'session_context:';
+const CACHE_PREFIX = 'ec:session_context:';
 const CACHE_TTL = 60 * 15; // 15 minutos (igual que el access token)
 
 /**
