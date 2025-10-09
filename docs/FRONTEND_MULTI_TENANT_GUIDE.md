@@ -536,13 +536,13 @@ El endpoint `/api/v1/seed/test-data?fresh=true` crea usuarios de prueba con orga
 
 | Email | Password | Rol | Org Primaria |
 |-------|----------|-----|--------------|
-| admin@ecdata.com | Admin123! | system-admin | EC.DATA |
-| orgadmin@acme.com | Admin123! | org-admin | ACME Corporation |
-| manager@techsolutions.com.ar | Admin123! | org-manager | Tech Solutions Argentina |
-| user@global.es | Admin123! | user | Global Enterprises S.A. |
-| viewer@acme.com | Admin123! | viewer | ACME Corporation |
-| guest@demo.com | Admin123! | guest | EC.DATA |
-| demo@ecdata.com | Admin123! | demo | EC.DATA |
+| admin@ecdata.com | Test123! | system-admin | EC.DATA |
+| orgadmin@acme.com | Test123! | org-admin | ACME Corporation |
+| manager@techsolutions.com.ar | Test123! | org-manager | Tech Solutions Argentina |
+| user@global.es | Test123! | user | Global Enterprises S.A. |
+| viewer@acme.com | Test123! | viewer | ACME Corporation |
+| guest@demo.com | Test123! | guest | EC.DATA |
+| demo@ecdata.com | Test123! | demo | EC.DATA |
 
 **Organizaciones creadas:**
 1. EC.DATA (root, parent_id=null)

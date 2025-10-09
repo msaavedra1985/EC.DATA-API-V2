@@ -1,5 +1,7 @@
 import { DataTypes } from 'sequelize';
 import sequelize from '../../../db/sql/sequelize.js';
+import Organization from '../../organizations/models/Organization.js';
+import User from './User.js';
 
 /**
  * Modelo de relación Usuario-Organización (many-to-many)
@@ -78,6 +80,17 @@ const UserOrganization = sequelize.define('UserOrganization', {
         }
     ],
     comment: 'Relación many-to-many entre usuarios y organizaciones'
+});
+
+// Definir asociaciones inmediatamente después de crear el modelo
+UserOrganization.belongsTo(Organization, {
+    foreignKey: 'organization_id',
+    as: 'organization'
+});
+
+UserOrganization.belongsTo(User, {
+    foreignKey: 'user_id',
+    as: 'user'
 });
 
 export default UserOrganization;
