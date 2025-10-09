@@ -133,4 +133,5 @@ dist
 .breakpoints
 
 # Attached assets folder
-attached_assets/scripts/PRODUCTION_CREDENTIALS.md
+attached_assets/
+.vscode/settings.json
