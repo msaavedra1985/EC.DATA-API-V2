@@ -74,6 +74,7 @@ Preferred communication style: Simple, everyday language.
 - **Organization Scope Service:** Redis-cached organizational scope calculation (TTL: 15min) with hierarchical access control. Includes endpoints: `GET /auth/organizations` (list available orgs), `POST /auth/switch-org` (change active org with new JWT generation).
 - **Logout System:** Endpoints for `/logout` and `/logout-all` to invalidate sessions by incrementing `sessionVersion` and clearing user cache. Supports revoking specific refresh tokens.
 - **"Remember Me" Feature:** Extends session duration for login with `remember_me` flag, dynamically adjusting token expiration and idle timeouts.
+- **Session Context Caching:** **CRITICAL RULE: Frontend NEVER decodes JWT.** All session context (activeOrgId, primaryOrgId, role, canAccessAllOrgs, user info) is cached in Redis with 15-min TTL and returned via API responses (`/auth/login`, `/auth/me`, `/auth/switch-org`, `/auth/session-context`). This eliminates frontend JWT decoding, improves performance, and maintains security. The `session_context` object is the single source of truth for frontend state.
 
 ## External Dependencies
 

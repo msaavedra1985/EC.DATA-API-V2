@@ -47,43 +47,39 @@ CREATE TABLE user_organizations (
 
 ---
 
-## Cambios en JWT (Token)
+## ⚠️ REGLA CRÍTICA: Frontend NUNCA decodifica el JWT
 
-### ❌ Campo ELIMINADO
-- `orgId` - Ya NO existe en el JWT
+**El frontend NO debe decodificar el JWT bajo ninguna circunstancia.**
 
-### ✅ Nuevos Campos en JWT
+En su lugar, la API provee un objeto `session_context` cacheado en Redis que contiene toda la información que el frontend necesita:
 
-```json
-{
-  "iss": "ec.data-api",
-  "aud": "ec.data-client",
-  "sub": "01919d2f-...",
-  "activeOrgId": "01919d30-...",
-  "primaryOrgId": "01919d30-...",
-  "canAccessAllOrgs": false,
-  "sessionVersion": 1,
-  "role": "org-admin",
-  "tokenType": "access",
-  "jti": "uuid...",
-  "iat": 1728489723,
-  "exp": 1728490623
+```typescript
+interface SessionContext {
+  activeOrgId: string;      // Organización actualmente activa
+  primaryOrgId: string;     // Organización primaria del usuario
+  canAccessAllOrgs: boolean; // true solo para system-admin
+  role: string;             // Nombre del rol ("system-admin", "org-admin", etc.)
+  email: string;
+  firstName: string;
+  lastName: string;
+  userId: string;
 }
 ```
 
-**Campos clave:**
+### ¿Por qué NO decodificar el JWT?
 
-| Campo | Tipo | Descripción |
-|-------|------|-------------|
-| `activeOrgId` | UUID | Organización actualmente activa en la sesión |
-| `primaryOrgId` | UUID | Organización primaria del usuario (is_primary=true) |
-| `canAccessAllOrgs` | boolean | `true` solo para system-admin, permite acceso global |
-| `role` | string | Nombre del rol (ej: "system-admin", "org-admin", "user"). **Nota:** Antes era un objeto, ahora es solo el string del nombre |
+1. **Performance**: `session_context` viene de Redis (ultra-rápido), no requiere operaciones de decodificación
+2. **Seguridad**: El JWT debe ser opaco para el frontend
+3. **Escalabilidad**: Redis distribuido permite cachear información de sesión sin carga en DB
+4. **Mantenibilidad**: El frontend no depende de la estructura interna del JWT
 
-**Flujo:**
-1. Al hacer login, `activeOrgId` = `primaryOrgId` por defecto
-2. El usuario puede cambiar `activeOrgId` usando el endpoint `/auth/switch-org`
-3. `primaryOrgId` nunca cambia a menos que se actualice `is_primary` en la BD
+### ¿Cómo obtener el session_context?
+
+El `session_context` se devuelve automáticamente en:
+- `POST /auth/login` - En la respuesta inicial
+- `GET /auth/me` - Al consultar el perfil del usuario
+- `POST /auth/switch-org` - Al cambiar de organización
+- `GET /auth/session-context` - Endpoint dedicado (solo lee Redis, ultra-rápido)
 
 ---
 
@@ -308,34 +304,57 @@ EC.DATA (root)
 
 ## Implementación en Frontend
 
-### 1. Decodificar JWT
+### 1. Obtener Session Context (SIN decodificar JWT)
 
+**❌ NUNCA hagas esto:**
 ```typescript
-import { jwtDecode } from 'jwt-decode';
+import { jwtDecode } from 'jwt-decode';  // ❌ NO INSTALAR NI USAR
+const decoded = jwtDecode(accessToken);  // ❌ PROHIBIDO
+```
 
-interface JWTPayload {
-  sub: string;
-  activeOrgId: string;
-  primaryOrgId: string;
-  canAccessAllOrgs: boolean;
-  role: string;  // Nombre del rol: "system-admin", "org-admin", "user", etc.
-  sessionVersion: number;
-  tokenType: 'access' | 'refresh';
-  jti: string;
-  iat: number;
-  exp: number;
-}
+**✅ HAZ ESTO en su lugar:**
+```typescript
+// Opción A: Usar el session_context que viene en la respuesta de login
+const handleLogin = async (email: string, password: string) => {
+  const response = await fetch('/api/v1/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password })
+  });
+  
+  const { data } = await response.json();
+  
+  // Guardar tokens
+  localStorage.setItem('access_token', data.access_token);
+  localStorage.setItem('refresh_token', data.refresh_token);
+  
+  // Guardar session_context en estado/localStorage
+  localStorage.setItem('session_context', JSON.stringify(data.session_context));
+  
+  // Usar el contexto
+  console.log('Active Org:', data.session_context.activeOrgId);
+  console.log('Primary Org:', data.session_context.primaryOrgId);
+  console.log('Can Access All:', data.session_context.canAccessAllOrgs);
+  console.log('Role:', data.session_context.role);
+};
 
-const decoded: JWTPayload = jwtDecode(accessToken);
-console.log('Active Org:', decoded.activeOrgId);
-console.log('Primary Org:', decoded.primaryOrgId);
-console.log('Can Access All:', decoded.canAccessAllOrgs);
-console.log('Role:', decoded.role);  // "system-admin", "org-admin", etc.
+// Opción B: Consultar el endpoint dedicado (ultra-rápido, solo Redis)
+const getSessionContext = async () => {
+  const response = await fetch('/api/v1/auth/session-context', {
+    headers: {
+      'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+    }
+  });
+  
+  const { data } = await response.json();
+  return data.session_context;
+};
 
-// Verificar permisos basados en rol (ahora es un string simple)
-const isSystemAdmin = decoded.role === 'system-admin';
-const isOrgAdmin = decoded.role === 'org-admin';
-const canManageUsers = ['system-admin', 'org-admin', 'org-manager'].includes(decoded.role);
+// Verificar permisos basados en rol
+const sessionContext = JSON.parse(localStorage.getItem('session_context'));
+const isSystemAdmin = sessionContext.role === 'system-admin';
+const isOrgAdmin = sessionContext.role === 'org-admin';
+const canManageUsers = ['system-admin', 'org-admin', 'org-manager'].includes(sessionContext.role);
 ```
 
 ### 2. Selector de Organizaciones (UI Component)
@@ -372,10 +391,9 @@ const OrganizationSwitcher = () => {
     const { data } = await response.json();
     setOrgs(data.userOrganizations);
     
-    // Obtener activeOrgId del JWT
-    const token = localStorage.getItem('access_token');
-    const decoded = jwtDecode(token);
-    setActiveOrgId(decoded.activeOrgId);
+    // Obtener activeOrgId del session_context
+    const sessionContext = JSON.parse(localStorage.getItem('session_context'));
+    setActiveOrgId(sessionContext.activeOrgId);
   };
 
   const handleSwitch = async (orgId: string) => {
@@ -395,6 +413,9 @@ const OrganizationSwitcher = () => {
       // Actualizar tokens
       localStorage.setItem('access_token', data.access_token);
       localStorage.setItem('refresh_token', data.refresh_token);
+      
+      // Actualizar session_context con la nueva organización activa
+      localStorage.setItem('session_context', JSON.stringify(data.session_context));
       
       // Recargar aplicación
       window.location.reload();
@@ -457,14 +478,29 @@ export const OrganizationProvider: React.FC = ({ children }) => {
   }, []);
 
   const initializeOrganizations = async () => {
-    // Decodificar JWT
+    // Obtener session_context (NO decodificar JWT)
     const token = localStorage.getItem('access_token');
     if (!token) return;
     
-    const decoded = jwtDecode(token);
-    setActiveOrgId(decoded.activeOrgId);
-    setPrimaryOrgId(decoded.primaryOrgId);
-    setCanAccessAllOrgs(decoded.canAccessAllOrgs);
+    // Leer desde localStorage o consultar el endpoint
+    const cachedContext = localStorage.getItem('session_context');
+    let sessionContext;
+    
+    if (cachedContext) {
+      sessionContext = JSON.parse(cachedContext);
+    } else {
+      // Consultar endpoint si no hay cache
+      const response = await fetch('/api/v1/auth/session-context', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const { data } = await response.json();
+      sessionContext = data.session_context;
+      localStorage.setItem('session_context', JSON.stringify(sessionContext));
+    }
+    
+    setActiveOrgId(sessionContext.activeOrgId);
+    setPrimaryOrgId(sessionContext.primaryOrgId);
+    setCanAccessAllOrgs(sessionContext.canAccessAllOrgs);
     
     // Fetch organizaciones
     await refetchOrganizations();
@@ -494,6 +530,7 @@ export const OrganizationProvider: React.FC = ({ children }) => {
     
     localStorage.setItem('access_token', data.access_token);
     localStorage.setItem('refresh_token', data.refresh_token);
+    localStorage.setItem('session_context', JSON.stringify(data.session_context));
     
     await initializeOrganizations();
   };
@@ -566,16 +603,35 @@ El cache se invalida automáticamente cuando:
 
 ## Migraci\u00f3n de Proyectos Existentes
 
-### 1. Actualizar Decodificación de JWT
+### 1. ⚠️ ELIMINAR librería jwt-decode y actualizar código
 
-**Antes:**
-```typescript
-const { orgId } = jwtDecode(token);
+**❌ Código ANTIGUO a eliminar:**
+```bash
+npm uninstall jwt-decode  # Eliminar la librería
 ```
 
-**Ahora:**
 ```typescript
-const { activeOrgId, primaryOrgId, canAccessAllOrgs } = jwtDecode(token);
+import { jwtDecode } from 'jwt-decode';  // ❌ BORRAR ESTE IMPORT
+const { orgId } = jwtDecode(token);       // ❌ BORRAR ESTA LÓGICA
+```
+
+**✅ Código NUEVO:**
+```typescript
+// Ya no necesitas jwt-decode - usa session_context
+const sessionContext = JSON.parse(localStorage.getItem('session_context'));
+const activeOrgId = sessionContext.activeOrgId;
+const primaryOrgId = sessionContext.primaryOrgId;
+const canAccessAllOrgs = sessionContext.canAccessAllOrgs;
+const role = sessionContext.role;
+```
+
+O si necesitas obtenerlo fresh desde el servidor:
+```typescript
+const response = await fetch('/api/v1/auth/session-context', {
+  headers: { 'Authorization': `Bearer ${token}` }
+});
+const { data } = await response.json();
+const sessionContext = data.session_context;
 ```
 
 ### 2. Actualizar Headers de Request

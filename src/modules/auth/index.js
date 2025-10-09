@@ -16,6 +16,8 @@ import {
 } from './dtos/index.js';
 import { successResponse, errorResponse } from '../../utils/response.js';
 import * as authRepository from './repository.js';
+import * as sessionContextCache from './sessionContextCache.js';
+import * as organizationService from '../organizations/services.js';
 
 const router = express.Router();
 
@@ -218,6 +220,26 @@ router.post('/login', validate(loginSchema), async (req, res, next) => {
 
         const result = await authServices.login(email, password, sessionData);
 
+        // Obtener organización primaria del usuario
+        const primaryOrg = await organizationService.getPrimaryOrganization(result.user.id);
+        const activeOrgId = primaryOrg ? primaryOrg.organization_id : null;
+        const primaryOrgId = activeOrgId;
+        const canAccessAllOrgs = result.user.role && result.user.role.name === 'system-admin';
+
+        // Crear session_context y cachearlo en Redis
+        const sessionContext = {
+            activeOrgId,
+            primaryOrgId,
+            canAccessAllOrgs,
+            role: result.user.role?.name || null,
+            email: result.user.email,
+            firstName: result.user.first_name,
+            lastName: result.user.last_name,
+            userId: result.user.id
+        };
+
+        await sessionContextCache.setSessionContext(result.user.id, sessionContext);
+
         // Simplificar role en la respuesta - solo enviar el nombre
         const responseData = {
             ...result,
@@ -225,6 +247,7 @@ router.post('/login', validate(loginSchema), async (req, res, next) => {
                 ...result.user,
                 role: result.user.role?.name || null
             },
+            session_context: sessionContext,
             message: 'auth.login.success'
         };
 
@@ -451,13 +474,20 @@ router.get('/me', authenticate, async (req, res, next) => {
             });
         }
 
+        // Obtener session_context desde Redis
+        const sessionContext = await sessionContextCache.getSessionContext(userId);
+
         // Simplificar role en la respuesta - solo enviar el nombre
         const userResponse = {
             ...user,
             role: user.role?.name || null
         };
 
-        return successResponse(res, { user: userResponse, message: 'auth.profile.retrieved' });
+        return successResponse(res, { 
+            user: userResponse, 
+            session_context: sessionContext,
+            message: 'auth.profile.retrieved' 
+        });
     } catch (error) {
         next(error);
     }
@@ -939,7 +969,112 @@ router.post('/switch-org', authenticate, validate(switchOrgSchema), async (req, 
         
         const result = await authServices.switchOrganization(userId, organization_id, sessionData);
         
-        return successResponse(res, result);
+        // Actualizar session_context en Redis con la nueva activeOrgId
+        const updatedContext = await sessionContextCache.updateActiveOrg(userId, organization_id);
+        
+        return successResponse(res, {
+            ...result,
+            session_context: updatedContext
+        });
+    } catch (error) {
+        next(error);
+    }
+});
+
+/**
+ * @swagger
+ * /auth/session-context:
+ *   get:
+ *     summary: Obtener contexto de sesión actual
+ *     description: |
+ *       Retorna el contexto de sesión cacheado en Redis sin necesidad de decodificar el JWT.
+ *       Este endpoint es ultra-rápido ya que solo lee de Redis sin tocar la base de datos.
+ *       
+ *       El frontend debe usar este contexto en lugar de decodificar el JWT para obtener:
+ *       - activeOrgId (organización actualmente activa)
+ *       - primaryOrgId (organización primaria del usuario)
+ *       - canAccessAllOrgs (si el usuario puede acceder a todas las orgs)
+ *       - role (nombre del rol del usuario)
+ *       - email, firstName, lastName, userId
+ *     tags: [Auth]
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Contexto de sesión obtenido exitosamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     session_context:
+ *                       type: object
+ *                       properties:
+ *                         activeOrgId:
+ *                           type: string
+ *                           format: uuid
+ *                           description: ID de la organización actualmente activa
+ *                         primaryOrgId:
+ *                           type: string
+ *                           format: uuid
+ *                           description: ID de la organización primaria del usuario
+ *                         canAccessAllOrgs:
+ *                           type: boolean
+ *                           description: Si el usuario puede acceder a todas las organizaciones (system-admin)
+ *                         role:
+ *                           type: string
+ *                           example: org-admin
+ *                           description: Nombre del rol del usuario
+ *                         email:
+ *                           type: string
+ *                           example: admin@ecdata.com
+ *                         firstName:
+ *                           type: string
+ *                           example: System
+ *                         lastName:
+ *                           type: string
+ *                           example: Admin
+ *                         userId:
+ *                           type: string
+ *                           format: uuid
+ *       401:
+ *         description: No autenticado o token inválido
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       404:
+ *         description: Contexto de sesión no encontrado (no hay sesión activa en caché)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+router.get('/session-context', authenticate, async (req, res, next) => {
+    try {
+        const userId = req.user.userId;
+        
+        // Obtener session_context desde Redis (sin hit a DB)
+        const sessionContext = await sessionContextCache.getSessionContext(userId);
+        
+        if (!sessionContext) {
+            return errorResponse(res, {
+                message: 'Session context not found - please login again',
+                status: 404,
+                code: 'SESSION_CONTEXT_NOT_FOUND'
+            });
+        }
+        
+        return successResponse(res, { 
+            session_context: sessionContext,
+            message: 'Session context retrieved successfully'
+        });
     } catch (error) {
         next(error);
     }
