@@ -1,4 +1,4 @@
-// Database Schema - Generated on 2025-10-05T05:59:01.844Z
+// Database Schema - Generated on 2025-10-09T15:08:39.312Z
 // Project: EC.DATA API - Enterprise REST API
 // Use this file at https://dbdiagram.io to visualize the schema
 
@@ -51,18 +51,23 @@ Table organizations {
   email varchar(255) // Email de contacto de la organización
   phone varchar(50) // Teléfono de contacto
   address text // Dirección física de la organización
-  settings jsonb // Configuración JSON de la organización
+  config jsonb // Configuración JSON de la organización
   is_active boolean [not null, default: true] // Indica si la organización está activa
   created_at timestamptz [not null]
   updated_at timestamptz [not null]
   deleted_at timestamptz
+  parent_id uuid
+  logo_url varchar(500)
+  description text
 
   Indexes {
+    (parent_id) [name: 'idx_organizations_parent_id']
     (country_id) [name: 'organizations_country_id']
     (email) [name: 'organizations_email']
     (human_id) [name: 'organizations_human_id']
     (human_id) [name: 'organizations_human_id_key', unique]
     (is_active) [name: 'organizations_is_active']
+    (parent_id) [name: 'organizations_parent_id']
     (public_code) [name: 'organizations_public_code']
     (public_code) [name: 'organizations_public_code_key', unique]
     (slug) [name: 'organizations_slug']
@@ -85,6 +90,7 @@ Table refresh_tokens {
   created_at timestamptz [not null]
   updated_at timestamptz [not null]
   deleted_at timestamptz
+  remember_me boolean [not null, default: false]
 
   Indexes {
     (expires_at, is_revoked) [name: 'idx_refresh_tokens_cleanup']
@@ -93,6 +99,44 @@ Table refresh_tokens {
     (token_hash) [name: 'idx_refresh_tokens_token_hash', unique]
     (user_id) [name: 'idx_refresh_tokens_user_id']
     (token_hash) [name: 'refresh_tokens_token_hash_key', unique]
+  }
+}
+
+Table roles {
+  id uuid [pk, not null] // UUID v7 - clave primaria time-ordered
+  name varchar(50) [unique, not null] // Nombre único del rol (system-admin, org-admin, etc.)
+  description text [not null] // Descripción detallada de las responsabilidades del rol
+  is_active boolean [not null, default: true] // Habilitar/deshabilitar roles sin eliminar
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+
+  Indexes {
+    (name) [name: 'roles_name', unique]
+    (name) [name: 'roles_name_key', unique]
+  }
+}
+
+// Relación many-to-many entre usuarios y organizaciones
+Table user_organizations {
+  id uuid [pk, not null]
+  user_id uuid [unique, not null]
+  organization_id uuid [unique, not null]
+  is_primary boolean [not null, default: false]
+  joined_at timestamptz [not null, default: `now()`]
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+  deleted_at timestamptz
+
+  Indexes {
+    (is_primary) [name: 'idx_user_organizations_is_primary']
+    (joined_at) [name: 'idx_user_organizations_joined_at']
+    (organization_id) [name: 'idx_user_organizations_organization_id']
+    (user_id) [name: 'idx_user_organizations_user_id']
+    (user_id, organization_id) [name: 'user_org_unique', unique]
+    (is_primary) [name: 'user_organizations_is_primary']
+    (joined_at) [name: 'user_organizations_joined_at']
+    (organization_id) [name: 'user_organizations_organization_id']
+    (user_id) [name: 'user_organizations_user_id']
   }
 }
 
@@ -105,7 +149,6 @@ Table users {
   password_hash varchar(255) [not null] // Hash bcrypt de la contraseña (nunca devolver al cliente)
   first_name varchar(100) [not null] // Nombre del usuario
   last_name varchar(100) [not null] // Apellido del usuario
-  role enum_users_role [not null] // Rol para control de acceso basado en roles (RBAC)
   organization_id uuid // FK a organizations para multi-tenancy (null = usuario global)
   is_active boolean [not null, default: true] // Usuario activo/inactivo (soft disable)
   last_login_at timestamptz // Última fecha de login exitoso
@@ -113,6 +156,7 @@ Table users {
   created_at timestamptz [not null]
   updated_at timestamptz [not null]
   deleted_at timestamptz
+  role_id uuid [not null]
 
   Indexes {
     (email) [name: 'users_email_key', unique]
@@ -122,7 +166,7 @@ Table users {
     (organization_id) [name: 'users_organization_id_idx']
     (public_code) [name: 'users_public_code_key', unique]
     (public_code) [name: 'users_public_code_unique', unique]
-    (role) [name: 'users_role_idx']
+    (role_id) [name: 'users_role_id_idx']
   }
 }
 
@@ -130,5 +174,9 @@ Table users {
 // Foreign Key References
 Ref: country_translations.country_id > countries.id [update: cascade, delete: cascade]
 Ref: organizations.country_id > countries.id [update: cascade, delete: restrict]
+Ref: organizations.parent_id > organizations.id [update: cascade, delete: restrict]
 Ref: refresh_tokens.user_id > users.id [update: cascade, delete: cascade]
+Ref: user_organizations.organization_id > organizations.id [update: cascade, delete: restrict]
+Ref: user_organizations.user_id > users.id [update: cascade, delete: cascade]
 Ref: users.organization_id > organizations.id [update: cascade, delete: restrict]
+Ref: users.role_id > roles.id [update: cascade, delete: restrict]

@@ -6,6 +6,7 @@ import CountryTranslation from '../countries/models/CountryTranslation.js';
 import Organization from '../organizations/models/Organization.js';
 import User from '../auth/models/User.js';
 import Role from '../auth/models/Role.js';
+import UserOrganization from '../auth/models/UserOrganization.js';
 import { countries, countryTranslations, roles, organizations, users } from './seed-data.js';
 import { generateUuidV7, generateHumanId, generatePublicCode } from '../../utils/identifiers.js';
 
@@ -120,7 +121,8 @@ const seedCountryTranslations = async () => {
 };
 
 /**
- * Inserta organizaciones (idempotente - verifica por slug)
+ * Inserta organizaciones con jerarquía (idempotente - verifica por slug)
+ * Procesa en 2 pasadas: primero raíz, luego hijas con parent_id
  * @returns {Promise<Object>} Organizaciones insertadas y existentes
  */
 const seedOrganizations = async () => {
@@ -130,36 +132,88 @@ const seedOrganizations = async () => {
     // Obtener todos los países para mapear country_id
     const allCountries = await Country.findAll({ order: [['id', 'ASC']] });
     
+    // Mapa para rastrear organizaciones creadas
+    const createdOrgs = {};
+    
+    // PASADA 1: Crear organizaciones sin parent (raíz) o que ya existen
     for (const orgData of organizations) {
-        // Mapear country_id del array (1-based) a country real de BD
         const country = allCountries[orgData.country_id - 1];
+        if (!country) continue;
         
-        if (!country) {
-            continue; // Saltar si el país no existe
-        }
-        
-        // Verificar si ya existe
         const existingOrg = await Organization.findOne({ where: { slug: orgData.slug } });
         
         if (existingOrg) {
             existing++;
+            createdOrgs[orgData.slug] = existingOrg.id;
             continue;
         }
         
-        // Generar campos obligatorios para nueva organización
+        // Solo crear si no tiene parent_slug (es raíz)
+        if (!orgData.parent_slug) {
+            const id = generateUuidV7();
+            const humanId = await generateHumanId(Organization, null, null);
+            const publicCode = generatePublicCode('ORG', id);
+            
+            const newOrg = await Organization.create({
+                id,
+                human_id: humanId,
+                public_code: publicCode,
+                slug: orgData.slug,
+                name: orgData.name,
+                country_id: country.id,
+                tax_id: orgData.tax_id,
+                email: orgData.email,
+                phone: orgData.phone,
+                address: orgData.address,
+                description: orgData.description,
+                logo_url: orgData.logo_url,
+                config: orgData.config,
+                parent_id: null,
+            });
+            
+            createdOrgs[orgData.slug] = newOrg.id;
+            inserted++;
+        }
+    }
+    
+    // PASADA 2: Crear organizaciones hijas con parent_id
+    for (const orgData of organizations) {
+        if (!orgData.parent_slug) continue; // Ya procesada en pasada 1
+        
+        const country = allCountries[orgData.country_id - 1];
+        if (!country) continue;
+        
+        // Verificar si ya existe
+        if (createdOrgs[orgData.slug]) continue;
+        
+        const parentId = createdOrgs[orgData.parent_slug];
+        if (!parentId) {
+            console.warn(`Parent org "${orgData.parent_slug}" not found for "${orgData.slug}"`);
+            continue;
+        }
+        
         const id = generateUuidV7();
         const humanId = await generateHumanId(Organization, null, null);
-        const publicCode = generatePublicCode('ORG', id); // Usar UUID, no humanId
+        const publicCode = generatePublicCode('ORG', id);
         
-        // Crear organización con todos los campos requeridos
-        await Organization.create({
+        const newOrg = await Organization.create({
             id,
             human_id: humanId,
             public_code: publicCode,
-            ...orgData,
-            country_id: country.id, // Usar el ID real de la BD
+            slug: orgData.slug,
+            name: orgData.name,
+            country_id: country.id,
+            tax_id: orgData.tax_id,
+            email: orgData.email,
+            phone: orgData.phone,
+            address: orgData.address,
+            description: orgData.description,
+            logo_url: orgData.logo_url,
+            config: orgData.config,
+            parent_id: parentId,
         });
         
+        createdOrgs[orgData.slug] = newOrg.id;
         inserted++;
     }
     
@@ -167,8 +221,10 @@ const seedOrganizations = async () => {
 };
 
 /**
- * Inserta usuarios de prueba (idempotente - verifica por email)
+ * Inserta usuarios de prueba con relaciones many-to-many (idempotente - verifica por email)
  * Password: "Test123!" (hasheado con bcrypt)
+ * - system-admin: pertenecen a EC.DATA
+ * - otros roles: pertenecen a su org asignada (is_primary=true)
  * @returns {Promise<Object>} Usuarios insertados y existentes
  */
 const seedUsers = async () => {
@@ -193,15 +249,15 @@ const seedUsers = async () => {
         orgMap[org.slug] = org.id;
     });
     
+    // Obtener EC.DATA para system-admins
+    const ecDataId = orgMap['ec-data'];
+    
     for (const userData of users) {
         // Verificar que el rol exista
         const roleId = roleMap[userData.role_name];
         if (!roleId) {
             continue; // Saltar si el rol no existe
         }
-        
-        // Obtener organization_id (puede ser null)
-        const organizationId = userData.org_slug ? orgMap[userData.org_slug] : null;
         
         // Verificar si el usuario ya existe
         const existingUser = await User.findOne({ where: { email: userData.email } });
@@ -211,13 +267,28 @@ const seedUsers = async () => {
             continue;
         }
         
+        // Determinar organización primaria:
+        // - system-admin: EC.DATA
+        // - otros: su org_slug asignada
+        let primaryOrgId;
+        if (userData.role_name === 'system-admin') {
+            primaryOrgId = ecDataId;
+        } else {
+            primaryOrgId = userData.org_slug ? orgMap[userData.org_slug] : ecDataId;
+        }
+        
+        if (!primaryOrgId) {
+            console.warn(`No primary org found for user ${userData.email}`);
+            continue;
+        }
+        
         // Generar campos obligatorios para nuevo usuario
         const id = generateUuidV7();
-        const humanId = await generateHumanId(User, 'organization_id', organizationId);
-        const publicCode = generatePublicCode('EC', id); // Usar UUID para public_code
+        const humanId = await generateHumanId(User, 'organization_id', primaryOrgId);
+        const publicCode = generatePublicCode('EC', id);
         
-        // Crear usuario con todos los campos requeridos
-        await User.create({
+        // Crear usuario (sin organization_id directo)
+        const newUser = await User.create({
             id,
             human_id: humanId,
             public_code: publicCode,
@@ -226,8 +297,17 @@ const seedUsers = async () => {
             last_name: userData.last_name,
             password_hash: passwordHash,
             role_id: roleId,
-            organization_id: organizationId,
+            organization_id: primaryOrgId, // Mantener por ahora para human_id scoping
             is_active: true,
+        });
+        
+        // Crear relación en user_organizations (many-to-many)
+        await UserOrganization.create({
+            id: generateUuidV7(),
+            user_id: newUser.id,
+            organization_id: primaryOrgId,
+            is_primary: true, // Esta es su organización primaria
+            joined_at: new Date(),
         });
         
         inserted++;

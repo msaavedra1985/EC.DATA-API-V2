@@ -13,6 +13,7 @@ import Organization from '../modules/organizations/models/Organization.js';
 
 // Modelos con dependencia a Organizations y Roles
 import User from '../modules/auth/models/User.js';
+import UserOrganization from '../modules/auth/models/UserOrganization.js';
 
 // Modelos con dependencia a Users
 import RefreshToken from '../modules/auth/models/RefreshToken.js';
@@ -27,6 +28,7 @@ export const models = [
     Role,
     Organization,
     User,
+    UserOrganization,
     RefreshToken
 ];
 
@@ -36,5 +38,6 @@ export default {
     Role,
     Organization,
     User,
+    UserOrganization,
     RefreshToken
 };
