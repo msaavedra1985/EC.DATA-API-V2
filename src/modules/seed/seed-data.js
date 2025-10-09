@@ -290,7 +290,7 @@ export const organizations = [
         email: 'contact@acmecorp.com',
         phone: '+1-555-0100',
         address: '123 Main St, New York, NY 10001, USA',
-        settings: { currency: 'USD', language: 'en', timezone: 'America/New_York' },
+        config: { currency: 'USD', language: 'en', timezone: 'America/New_York' },
     },
     {
         slug: 'techsolutions-ar',
@@ -300,7 +300,7 @@ export const organizations = [
         email: 'info@techsolutions.com.ar',
         phone: '+54-11-4567-8900',
         address: 'Av. Corrientes 1234, Buenos Aires, Argentina',
-        settings: { currency: 'ARS', language: 'es', timezone: 'America/Argentina/Buenos_Aires' },
+        config: { currency: 'ARS', language: 'es', timezone: 'America/Argentina/Buenos_Aires' },
     },
     {
         slug: 'global-enterprises',
@@ -310,7 +310,7 @@ export const organizations = [
         email: 'contacto@globalenterprises.es',
         phone: '+34-91-123-4567',
         address: 'Gran Vía 123, 28013 Madrid, España',
-        settings: { currency: 'EUR', language: 'es', timezone: 'Europe/Madrid' },
+        config: { currency: 'EUR', language: 'es', timezone: 'Europe/Madrid' },
     },
 ];
 

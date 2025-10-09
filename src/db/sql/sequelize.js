@@ -65,7 +65,7 @@ export const initializeDatabase = async () => {
 
         // En desarrollo, sincronizar esquema (en producción usar migraciones Umzug)
         if (config.env === 'development') {
-            await sequelize.sync({ alter: false }); // alter: false para mantener datos
+            await sequelize.sync({ alter: true }); // alter: true para aplicar cambios de esquema
             dbLogger.info('✅ Database schema synchronized');
         }
     } catch (error) {
