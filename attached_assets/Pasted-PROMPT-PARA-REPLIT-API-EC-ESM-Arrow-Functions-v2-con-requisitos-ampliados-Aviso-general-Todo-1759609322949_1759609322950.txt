@@ -1,0 +1,105 @@
+PROMPT PARA REPLIT API EC (ESM + Arrow Functions) v2 con requisitos ampliados
+Aviso general
+- Todo lo siguiente es **referencia y requisitos**. Vamos a **construir de a poco**, en etapas,
+priorizando calidad sobre velocidad. El agente debe respetar estas pautas en cada cambio.
+Contexto de integración
+- Esta API se usará junto con **otro proyecto de Replit (Next.js/BFF)**.
+- El agente debe proponer la forma **más cómoda y simple** para conectar ambos proyectos:
+ - BaseURL clara mediante `NEXT_PUBLIC_API_URL` en el front.
+ - CORS dinámico desde SQL cacheado en Redis con fallback por env.
+- En dev, habilitar `DEVFRONTURL{NEXT_PUBLIC_APP_URL}` y
+`${NEXT_PUBLIC_ADMIN_URL}` si aplica.
+ - Opcional: usar un **repl proxy** o **túnel** para mapear un subdominio estable hacia la API.
+- Cuando se arme la base de **PostgreSQL** en Replit, el **ORM debe ser Sequelize** (sí o sí).
+Nada de Prisma/TypeORM.
+- Respetar el **orden y estructura** del proyecto previamente definido (rutas por feature, capas,
+models por archivo, loader central).
+Estándares de código
+- **ESM** (`"type":"module"`) y **arrow functions only**.
+- **Código en inglés**, **comentarios en español**.
+- Comentar **TODO el código posible** (muy importante): cada función, middleware, helper, modelo y
+ endpoint deben tener comentarios explicativos.
+- JSON camelCase; SQL snake_case (underscored: true).
+Alcance funcional inicial (scaffolding)
+- JWT Auth (Bearer) + scopes.
+- Validación Zod (body/query/params).
+- Envelope respuesta: OK -> `{ ok:true, data, meta }`; Error -> `{ ok:false, error:{ message,
+code, status, details? }, meta }`.
+- CORS dinámico desde SQL (`allowed_origins`), cache Redis (TTL 600s), fallback por env.
+- Compresión (brotli/gzip), ETag + `If-None-Match` para 304.
+- Rate-limit en **modo observe** (no bloquear por ahora), con headers `X-RateLimit-*`.
+- Logging universal con **pino/pino-http** + auditoría en SQL.
+- Métricas Prometheus en `/metrics` (dev/internal).
+- OpenAPI/Swagger en `/docs` (solo dev).
+- Testing mínimo (Vitest + Supertest).
+- ESLint (single quotes) + `import/no-cycle: error`.
+- Versionado `/api/v1`.
+- Paginación obligatoria en listas (`limit` máx 200 + `offset`).
+Mock data y multilenguaje
+- Cuando se generen endpoints, ofrecer **opción de mock data** (in-memory o fixtures) hasta que
+tengamos DBs pobladas.
+- La plataforma es **multilenguaje**: diseñar modelos pensando en localización.
+ - Ejemplo: tablas `countries` y `country_translations` (`country_id`, `lang`, `name`).
+ - A futuro, el backend elegirá traducción según idioma del usuario recibido por header o token.
+WebSockets (preparación)
+- Dejar preparada la API para aceptar **WS/Socket.io** en el futuro.
+ - Sugerencia: aislar inicialización del servidor HTTP en `src/index.js` para poder inyectar
+Socket.io.
+ - Documentar puerto/orígenes y CORS para WS.
+Logs globales sin bloquear el main thread
+- Establecer un sistema de logs **global y universal**:
+ - Request logs (pino-http) + action logs (auditoría SQL) + debug logs (stream).
+ - Minimizar impacto en el main thread: usar **transport de pino** asíncrono, colas en memoria, e
+ incluso **Worker Threads** o procesos secundarios para flush a disco/externo si es viable en
+Replit.
+ - Evitar await sin necesidad; batch y backpressure cuando corresponda.
+- Mantener latencias bajas: logging y métricas deben ser no bloqueantes.
+Integración con Next.js (resumen)
+- Variables de entorno (Replit Secrets):
+ - `NEXT_PUBLIC_APP_URL`, `NEXT_PUBLIC_ADMIN_URL` (opcional), `DEV_FRONT_URL`,
+`NEXT_PUBLIC_API_URL`
+ - `ALLOWED_ORIGINS_FALLBACK=${DEV_FRONT_URL},${NEXT_PUBLIC_APP_URL},${NEXT_PUBLIC_ADMIN_URL}`
+- BFF del front:
+ - Instancia Axios con `baseURL = NEXT_PUBLIC_API_URL`, `withCredentials: true` si cookies.
+ - Interceptor que devuelve `data` directa y deja `meta` disponible.
+- Contrato esperado por el BFF: envelope, paginación, ETag/304, rate-limit headers.
+ORM y base de datos
+- **PostgreSQL** como base primaria. **Sequelize** como ORM obligatorio.
+- Modelos por archivo por feature, asociaciones en loader central.
+- Migraciones con **Umzug** (más adelante), no `sync()` en prod.
+- Auditoría en SQL (mejor para SOC2/reporting); logs técnicos a stack externo si luego se integra.
+README requerido
+- Generar un **README.md** con:
+ - Resumen de la API y objetivos.
+ - Librerías usadas (Express, Sequelize, Zod, JWT, Redis, pino, prom-client, swagger-ui-express,
+etc.).
+ - Requisitos de entorno (Node 20+, env vars).
+ - Cómo correr (dev), cómo testear, cómo documentar endpoints.
+ - Estándares de respuesta, paginación y errores.
+ - Notas de multilenguaje y mock data.
+ - Roadmap (WS, exports, rate-limit enforce, SOC2).
+- El README apunta al **equipo interno**: debe ser claro y detallado.
+Conexión cómoda entre proyectos Replit
+- Sugerencias del agente:
+ 1) Fijar `NEXT_PUBLIC_API_URL` al dominio del repl de API y exponer `/api/v1`.
+ 2) Usar un **proxy** en el repl del front que redirija `/api` -> API (para evitar CORS en dev).
+ 3) Compartir un archivo `.replit` con comandos y un `replit.nix` con Node 20 + build tools.
+ 4) Documentar en el README de ambos proyectos la baseURL y variables compartidas.
+- El agente debe elegir la alternativa **más simple** primero y justificar cambios.
+Reglas adicionales que el agente debe cumplir
+- Respetar la estructura de carpetas y capas acordada.
+- Código en **inglés** con **comentarios en español** extensivos.
+- Cada archivo nuevo debe traer comentarios y descripción de su propósito.
+- Endpoints nuevos: documentados en OpenAPI, con opción de mock data.
+- Preparar sockets sin acoplarlos (comentarios y hooks).
+- Evitar saturar el thread principal con logging/metrics: usar transports/queues.
+- Añadir headers `ETag` y `X-RateLimit-*` cuando corresponda.
+Checklist al finalizar el scaffolding inicial
+- `npm run dev` arranca sin errores (Node 20+).
+- `/api/v1/health` responde `{ ok: true }`.
+- `/api/v1/auth/login` mock emite `{ token, user }`.
+- `/docs` y `/metrics` disponibles solo en dev.
+- CORS dinámico funcional (con fallback).
+- Sequelize presente (PostgreSQL), modelos por feature.
+- ESLint/Prettier activos, `import/no-cycle: error`.
+- Tests básicos (Vitest + Supertest) pasan.

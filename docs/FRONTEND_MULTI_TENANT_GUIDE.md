@@ -697,15 +697,6 @@ Solo `system-admin` tiene este flag en `true`. Significa que puede acceder a TOD
 
 ---
 
-## Contacto
-
-Para dudas sobre esta implementación:
-- Backend Lead: [email]
-- Frontend Lead: [email]
-- Slack: #api-ec-data
-
----
-
 **Fecha de actualización:** 2025-10-09  
 **Versión API:** v1  
 **Estado:** ✅ Implementado y funcional
