@@ -127,6 +127,20 @@ export const login = async (email, password, sessionData = {}) => {
     // Generar tokens JWT y guardar refresh token en BD
     // Pasar rememberMe a generateTokens para usar duración extendida si es necesario
     const tokens = await generateTokens(user, sessionData);
+    
+    // Guardar session_context en Redis
+    const primaryOrg = await organizationService.getPrimaryOrganization(user.id);
+    const { setSessionContext } = await import('./sessionContextCache.js');
+    await setSessionContext(user.id, {
+        activeOrgId: sessionData.activeOrgId || (primaryOrg ? primaryOrg.organization_id : null),
+        primaryOrgId: primaryOrg ? primaryOrg.organization_id : null,
+        canAccessAllOrgs: user.role && user.role.name === 'system-admin',
+        role: user.role ? user.role.name : null,
+        email: user.email,
+        firstName: user.first_name,
+        lastName: user.last_name,
+        userId: user.id
+    });
 
     return {
         user,
@@ -617,6 +631,10 @@ export const switchOrganization = async (userId, newActiveOrgId, sessionData = {
     // Invalidar cache de scope organizacional
     await organizationService.invalidateUserOrgScope(userId);
     
+    // Actualizar session_context en Redis con la nueva org activa
+    const { updateActiveOrg } = await import('./sessionContextCache.js');
+    await updateActiveOrg(userId, newActiveOrgId);
+    
     return {
         ...tokens,
         active_organization_id: newActiveOrgId
@@ -641,9 +659,60 @@ export const getUserAvailableOrganizations = async (userId) => {
     // Obtener scope organizacional completo
     const scope = await organizationService.getOrganizationScope(userId, user.role.name);
     
+    // Para system-admin, obtener TODAS las organizaciones activas con detalles completos
+    let accessibleOrganizations = scope.userOrganizations;
+    
+    if (scope.canAccessAll) {
+        // system-admin: obtener todas las organizaciones del sistema con detalles
+        const Organization = (await import('../organizations/models/Organization.js')).default;
+        const allOrgs = await Organization.findAll({
+            where: { is_active: true },
+            attributes: ['id', 'slug', 'name', 'logo_url', 'is_active', 'parent_id'],
+            order: [['name', 'ASC']]
+        });
+        
+        // Mapear a formato consistente, marcando cuáles son de membresía directa
+        const directOrgIds = scope.userOrganizations.map(uo => uo.organization_id);
+        accessibleOrganizations = allOrgs.map(org => ({
+            organization_id: org.id,
+            slug: org.slug,
+            name: org.name,
+            logo_url: org.logo_url,
+            is_primary: scope.userOrganizations.find(uo => uo.organization_id === org.id)?.is_primary || false,
+            is_active: org.is_active,
+            parent_id: org.parent_id,
+            joined_at: scope.userOrganizations.find(uo => uo.organization_id === org.id)?.joined_at || null,
+            is_direct_member: directOrgIds.includes(org.id)
+        }));
+    } else if (user.role.name === 'org-admin' || user.role.name === 'org-manager') {
+        // Para org-admin/org-manager: obtener organizaciones accesibles con detalles
+        const Organization = (await import('../organizations/models/Organization.js')).default;
+        const accessibleOrgs = await Organization.findAll({
+            where: { 
+                id: scope.organizationIds,
+                is_active: true 
+            },
+            attributes: ['id', 'slug', 'name', 'logo_url', 'is_active', 'parent_id'],
+            order: [['name', 'ASC']]
+        });
+        
+        const directOrgIds = scope.userOrganizations.map(uo => uo.organization_id);
+        accessibleOrganizations = accessibleOrgs.map(org => ({
+            organization_id: org.id,
+            slug: org.slug,
+            name: org.name,
+            logo_url: org.logo_url,
+            is_primary: scope.userOrganizations.find(uo => uo.organization_id === org.id)?.is_primary || false,
+            is_active: org.is_active,
+            parent_id: org.parent_id,
+            joined_at: scope.userOrganizations.find(uo => uo.organization_id === org.id)?.joined_at || null,
+            is_direct_member: directOrgIds.includes(org.id)
+        }));
+    }
+    
     return {
         canAccessAll: scope.canAccessAll,
-        userOrganizations: scope.userOrganizations,
+        userOrganizations: accessibleOrganizations,
         totalAccessible: scope.organizationIds.length
     };
 };
