@@ -63,12 +63,7 @@ CREATE TABLE user_organizations (
   "primaryOrgId": "01919d30-...",
   "canAccessAllOrgs": false,
   "sessionVersion": 1,
-  "role": {
-    "id": "01919d2e-...",
-    "name": "org-admin",
-    "description": "Organization Administrator",
-    "is_active": true
-  },
+  "role": "org-admin",
   "tokenType": "access",
   "jti": "uuid...",
   "iat": 1728489723,
@@ -83,6 +78,7 @@ CREATE TABLE user_organizations (
 | `activeOrgId` | UUID | Organización actualmente activa en la sesión |
 | `primaryOrgId` | UUID | Organización primaria del usuario (is_primary=true) |
 | `canAccessAllOrgs` | boolean | `true` solo para system-admin, permite acceso global |
+| `role` | string | Nombre del rol (ej: "system-admin", "org-admin", "user"). **Nota:** Antes era un objeto, ahora es solo el string del nombre |
 
 **Flujo:**
 1. Al hacer login, `activeOrgId` = `primaryOrgId` por defecto
@@ -326,12 +322,7 @@ interface JWTPayload {
   activeOrgId: string;
   primaryOrgId: string;
   canAccessAllOrgs: boolean;
-  role: {
-    id: string;
-    name: string;
-    description: string;
-    is_active: boolean;
-  };
+  role: string;  // Nombre del rol: "system-admin", "org-admin", "user", etc.
   sessionVersion: number;
   tokenType: 'access' | 'refresh';
   jti: string;
@@ -343,6 +334,12 @@ const decoded: JWTPayload = jwtDecode(accessToken);
 console.log('Active Org:', decoded.activeOrgId);
 console.log('Primary Org:', decoded.primaryOrgId);
 console.log('Can Access All:', decoded.canAccessAllOrgs);
+console.log('Role:', decoded.role);  // "system-admin", "org-admin", etc.
+
+// Verificar permisos basados en rol (ahora es un string simple)
+const isSystemAdmin = decoded.role === 'system-admin';
+const isOrgAdmin = decoded.role === 'org-admin';
+const canManageUsers = ['system-admin', 'org-admin', 'org-manager'].includes(decoded.role);
 ```
 
 ### 2. Selector de Organizaciones (UI Component)
