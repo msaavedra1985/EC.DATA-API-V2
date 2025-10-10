@@ -41,7 +41,10 @@ const seedRoles = async () => {
     for (const roleData of roles) {
         const [role, created] = await Role.findOrCreate({
             where: { name: roleData.name },
-            defaults: roleData,
+            defaults: {
+                id: generateUuidV7(),
+                ...roleData,
+            },
         });
         
         if (created) {
@@ -65,7 +68,10 @@ const seedCountries = async () => {
     for (const countryData of countries) {
         const [country, created] = await Country.findOrCreate({
             where: { iso_alpha2: countryData.iso_alpha2 },
-            defaults: countryData,
+            defaults: {
+                id: generateUuidV7(),
+                ...countryData,
+            },
         });
         
         if (created) {
@@ -103,6 +109,7 @@ const seedCountryTranslations = async () => {
                 lang: translation.lang,
             },
             defaults: {
+                id: generateUuidV7(),
                 country_id: country.id,
                 lang: translation.lang,
                 name: translation.name,
