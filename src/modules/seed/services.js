@@ -145,16 +145,27 @@ const seedOrganizations = async () => {
     let inserted = 0;
     let existing = 0;
 
-    // Obtener todos los países para mapear country_id
+    // Obtener todos los países para mapear country_id por índice del array countries
     const allCountries = await Country.findAll({ order: [['id', 'ASC']] });
+    
+    // Crear mapa de países por índice (1-based) del array countries en seed-data.js
+    const countryMap = {};
+    for (let i = 0; i < allCountries.length; i++) {
+        // El índice en seed-data.js es 1-based, así que mapeamos i+1 al ID real de BD
+        countryMap[i + 1] = allCountries[i].id;
+    }
 
     // Mapa para rastrear organizaciones creadas
     const createdOrgs = {};
 
     // PASADA 1: Crear organizaciones sin parent (raíz) o que ya existen
     for (const orgData of organizations) {
-        const country = allCountries[orgData.country_id - 1];
-        if (!country) continue;
+        // Obtener el ID real del país desde el mapa
+        const realCountryId = countryMap[orgData.country_id];
+        if (!realCountryId) {
+            console.warn(`Country with index ${orgData.country_id} not found in database`);
+            continue;
+        }
 
         const existingOrg = await Organization.findOne({ where: { slug: orgData.slug } });
 
@@ -176,7 +187,7 @@ const seedOrganizations = async () => {
                 public_code: publicCode,
                 slug: orgData.slug,
                 name: orgData.name,
-                country_id: country.id,
+                country_id: realCountryId,
                 tax_id: orgData.tax_id,
                 email: orgData.email,
                 phone: orgData.phone,
@@ -196,8 +207,12 @@ const seedOrganizations = async () => {
     for (const orgData of organizations) {
         if (!orgData.parent_slug) continue; // Ya procesada en pasada 1
 
-        const country = allCountries[orgData.country_id - 1];
-        if (!country) continue;
+        // Obtener el ID real del país desde el mapa
+        const realCountryId = countryMap[orgData.country_id];
+        if (!realCountryId) {
+            console.warn(`Country with index ${orgData.country_id} not found in database`);
+            continue;
+        }
 
         // Verificar si ya existe
         if (createdOrgs[orgData.slug]) continue;
@@ -218,7 +233,7 @@ const seedOrganizations = async () => {
             public_code: publicCode,
             slug: orgData.slug,
             name: orgData.name,
-            country_id: country.id,
+            country_id: realCountryId,
             tax_id: orgData.tax_id,
             email: orgData.email,
             phone: orgData.phone,
