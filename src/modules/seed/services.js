@@ -21,7 +21,7 @@ export const cleanTestData = async () => {
     const deletedOrganizations = await Organization.destroy({ where: {}, force: true });
     const deletedTranslations = await CountryTranslation.destroy({ where: {}, force: true });
     const deletedCountries = await Country.destroy({ where: {}, force: true });
-    
+
     return {
         users: deletedUsers,
         organizations: deletedOrganizations,
@@ -37,7 +37,7 @@ export const cleanTestData = async () => {
 const seedRoles = async () => {
     let inserted = 0;
     let existing = 0;
-    
+
     for (const roleData of roles) {
         const [role, created] = await Role.findOrCreate({
             where: { name: roleData.name },
@@ -46,14 +46,14 @@ const seedRoles = async () => {
                 ...roleData,
             },
         });
-        
+
         if (created) {
             inserted++;
         } else {
             existing++;
         }
     }
-    
+
     return { inserted, existing, total: roles.length };
 };
 
@@ -64,7 +64,7 @@ const seedRoles = async () => {
 const seedCountries = async () => {
     let inserted = 0;
     let existing = 0;
-    
+
     for (const countryData of countries) {
         const [country, created] = await Country.findOrCreate({
             where: { iso_alpha2: countryData.iso_alpha2 },
@@ -73,14 +73,14 @@ const seedCountries = async () => {
                 ...countryData,
             },
         });
-        
+
         if (created) {
             inserted++;
         } else {
             existing++;
         }
     }
-    
+
     return { inserted, existing, total: countries.length };
 };
 
@@ -91,39 +91,48 @@ const seedCountries = async () => {
 const seedCountryTranslations = async () => {
     let inserted = 0;
     let existing = 0;
-    
-    // Obtener todos los países para mapear country_id (del array) a id (de BD)
-    const allCountries = await Country.findAll({ order: [['id', 'ASC']] });
-    
+
+    // Crear mapa de países por iso_alpha2 para búsqueda eficiente
+    const allCountries = await Country.findAll();
+    const countryMap = {};
+    allCountries.forEach(country => {
+        // Mapear por índice basado en el orden en el array countries
+        const countryData = countries.find(c => c.iso_alpha2 === country.iso_alpha2);
+        if (countryData) {
+            const arrayIndex = countries.indexOf(countryData) + 1; // 1-based index
+            countryMap[arrayIndex] = country.id;
+        }
+    });
+
     for (const translation of countryTranslations) {
-        // Mapear country_id del array (1-based) a country real de BD
-        const country = allCountries[translation.country_id - 1];
-        
-        if (!country) {
+        // Obtener el ID real del país desde el mapa
+        const countryId = countryMap[translation.country_id];
+
+        if (!countryId) {
+            console.warn(`Country with array index ${translation.country_id} not found in database`);
             continue; // Saltar si el país no existe
         }
-        
+
         const [trans, created] = await CountryTranslation.findOrCreate({
             where: {
-                country_id: country.id,
+                country_id: countryId,
                 lang: translation.lang,
             },
             defaults: {
-                id: generateUuidV7(),
-                country_id: country.id,
+                country_id: countryId,
                 lang: translation.lang,
                 name: translation.name,
                 official_name: translation.official_name,
             },
         });
-        
+
         if (created) {
             inserted++;
         } else {
             existing++;
         }
     }
-    
+
     return { inserted, existing, total: countryTranslations.length };
 };
 
@@ -135,32 +144,32 @@ const seedCountryTranslations = async () => {
 const seedOrganizations = async () => {
     let inserted = 0;
     let existing = 0;
-    
+
     // Obtener todos los países para mapear country_id
     const allCountries = await Country.findAll({ order: [['id', 'ASC']] });
-    
+
     // Mapa para rastrear organizaciones creadas
     const createdOrgs = {};
-    
+
     // PASADA 1: Crear organizaciones sin parent (raíz) o que ya existen
     for (const orgData of organizations) {
         const country = allCountries[orgData.country_id - 1];
         if (!country) continue;
-        
+
         const existingOrg = await Organization.findOne({ where: { slug: orgData.slug } });
-        
+
         if (existingOrg) {
             existing++;
             createdOrgs[orgData.slug] = existingOrg.id;
             continue;
         }
-        
+
         // Solo crear si no tiene parent_slug (es raíz)
         if (!orgData.parent_slug) {
             const id = generateUuidV7();
             const humanId = await generateHumanId(Organization, null, null);
             const publicCode = generatePublicCode('ORG', id);
-            
+
             const newOrg = await Organization.create({
                 id,
                 human_id: humanId,
@@ -177,32 +186,32 @@ const seedOrganizations = async () => {
                 config: orgData.config,
                 parent_id: null,
             });
-            
+
             createdOrgs[orgData.slug] = newOrg.id;
             inserted++;
         }
     }
-    
+
     // PASADA 2: Crear organizaciones hijas con parent_id
     for (const orgData of organizations) {
         if (!orgData.parent_slug) continue; // Ya procesada en pasada 1
-        
+
         const country = allCountries[orgData.country_id - 1];
         if (!country) continue;
-        
+
         // Verificar si ya existe
         if (createdOrgs[orgData.slug]) continue;
-        
+
         const parentId = createdOrgs[orgData.parent_slug];
         if (!parentId) {
             console.warn(`Parent org "${orgData.parent_slug}" not found for "${orgData.slug}"`);
             continue;
         }
-        
+
         const id = generateUuidV7();
         const humanId = await generateHumanId(Organization, null, null);
         const publicCode = generatePublicCode('ORG', id);
-        
+
         const newOrg = await Organization.create({
             id,
             human_id: humanId,
@@ -219,11 +228,11 @@ const seedOrganizations = async () => {
             config: orgData.config,
             parent_id: parentId,
         });
-        
+
         createdOrgs[orgData.slug] = newOrg.id;
         inserted++;
     }
-    
+
     return { inserted, existing, total: organizations.length };
 };
 
@@ -237,43 +246,43 @@ const seedOrganizations = async () => {
 const seedUsers = async () => {
     let inserted = 0;
     let existing = 0;
-    
+
     // Password de prueba para todos los usuarios
     const testPassword = 'Test123!';
     const passwordHash = await bcrypt.hash(testPassword, 10);
-    
+
     // Obtener todos los roles para mapeo
     const allRoles = await Role.findAll();
     const roleMap = {};
     allRoles.forEach(role => {
         roleMap[role.name] = role.id;
     });
-    
+
     // Obtener todas las organizaciones para mapeo
     const allOrganizations = await Organization.findAll();
     const orgMap = {};
     allOrganizations.forEach(org => {
         orgMap[org.slug] = org.id;
     });
-    
+
     // Obtener EC.DATA para system-admins
     const ecDataId = orgMap['ec-data'];
-    
+
     for (const userData of users) {
         // Verificar que el rol exista
         const roleId = roleMap[userData.role_name];
         if (!roleId) {
             continue; // Saltar si el rol no existe
         }
-        
+
         // Verificar si el usuario ya existe
         const existingUser = await User.findOne({ where: { email: userData.email } });
-        
+
         if (existingUser) {
             existing++;
             continue;
         }
-        
+
         // Determinar organización primaria:
         // - system-admin: EC.DATA
         // - otros: su org_slug asignada
@@ -283,17 +292,17 @@ const seedUsers = async () => {
         } else {
             primaryOrgId = userData.org_slug ? orgMap[userData.org_slug] : ecDataId;
         }
-        
+
         if (!primaryOrgId) {
             console.warn(`No primary org found for user ${userData.email}`);
             continue;
         }
-        
+
         // Generar campos obligatorios para nuevo usuario
         const id = generateUuidV7();
         const humanId = await generateHumanId(User, 'organization_id', primaryOrgId);
         const publicCode = generatePublicCode('EC', id);
-        
+
         // Crear usuario (sin organization_id directo)
         const newUser = await User.create({
             id,
@@ -307,7 +316,7 @@ const seedUsers = async () => {
             organization_id: primaryOrgId, // Mantener por ahora para human_id scoping
             is_active: true,
         });
-        
+
         // Crear relación en user_organizations (many-to-many)
         await UserOrganization.create({
             id: generateUuidV7(),
@@ -316,10 +325,10 @@ const seedUsers = async () => {
             is_primary: true, // Esta es su organización primaria
             joined_at: new Date(),
         });
-        
+
         inserted++;
     }
-    
+
     return { inserted, existing, total: users.length };
 };
 
@@ -330,12 +339,12 @@ const seedUsers = async () => {
  */
 export const seedTestData = async (fresh = false) => {
     const summary = {};
-    
+
     // Si fresh=true, limpiar datos primero
     if (fresh) {
         summary.cleaned = await cleanTestData();
     }
-    
+
     // Verificar y crear roles si no existen (prerequisito fundamental)
     const rolesCount = await Role.count();
     if (rolesCount === 0) {
@@ -345,13 +354,13 @@ export const seedTestData = async (fresh = false) => {
         // Roles ya existen
         summary.roles = { inserted: 0, existing: rolesCount, total: rolesCount };
     }
-    
+
     // Ejecutar seeding en orden correcto (respetando foreign keys)
     summary.countries = await seedCountries();
     summary.translations = await seedCountryTranslations();
     summary.organizations = await seedOrganizations();
     summary.users = await seedUsers();
-    
+
     // Calcular totales
     summary.totals = {
         roles: summary.roles.inserted + summary.roles.existing,
@@ -360,6 +369,6 @@ export const seedTestData = async (fresh = false) => {
         organizations: summary.organizations.inserted + summary.organizations.existing,
         users: summary.users.inserted + summary.users.existing,
     };
-    
+
     return summary;
 };
