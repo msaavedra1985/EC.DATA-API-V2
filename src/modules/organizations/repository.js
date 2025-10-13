@@ -1,4 +1,5 @@
 import Organization from './models/Organization.js';
+import { Op } from 'sequelize';
 import { generateUuidV7, generateHumanId, generatePublicCode } from '../../utils/identifiers.js';
 
 /**
@@ -196,6 +197,24 @@ export const listOrganizations = async (limit = 50, offset = 0, filters = {}) =>
     
     if (filters.country_id) {
         where.country_id = filters.country_id;
+    }
+
+    // Filtro de scope - organizaciones permitidas por permisos
+    if (filters.organization_ids && Array.isArray(filters.organization_ids)) {
+        where.id = { [Op.in]: filters.organization_ids };
+    }
+
+    // Búsqueda por nombre o slug
+    if (filters.search) {
+        where[Op.or] = [
+            { name: { [Op.iLike]: `%${filters.search}%` } },
+            { slug: { [Op.iLike]: `%${filters.search}%` } }
+        ];
+    }
+
+    // Filtro por parent_id
+    if (filters.parent_id) {
+        where.parent_id = filters.parent_id;
     }
     
     const { count, rows } = await Organization.findAndCountAll({

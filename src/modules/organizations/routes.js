@@ -68,33 +68,33 @@ router.get('/', authenticate, async (req, res) => {
         // Obtener scope del usuario
         const scope = await orgServices.getOrganizationScope(req.user.id, req.user.role?.slug);
         
-        // Buscar organizaciones
+        // Construir filtros incluyendo scope
+        const filters = {
+            search,
+            parent_id,
+            is_active: active_only === 'true'
+        };
+
+        // Agregar filtro de scope si no es system-admin
+        if (!scope.canAccessAll) {
+            filters.organization_ids = scope.organizationIds;
+        }
+
+        // Buscar organizaciones con scope aplicado
         const result = await orgRepository.listOrganizations(
             parseInt(limit),
             parseInt(offset),
-            {
-                search,
-                parent_id,
-                is_active: active_only === 'true'
-            }
+            filters
         );
-
-        // Filtrar por scope del usuario (si no es system-admin)
-        let organizations = result.organizations;
-        if (!scope.canAccessAll) {
-            organizations = organizations.filter(org => 
-                scope.organizationIds.includes(org.id)
-            );
-        }
 
         res.json({
             ok: true,
-            data: organizations,
+            data: result.organizations,
             meta: {
-                total: organizations.length,
+                total: result.total,
                 limit: parseInt(limit),
                 offset: parseInt(offset),
-                has_more: organizations.length === parseInt(limit)
+                has_more: result.total > parseInt(offset) + result.organizations.length
             }
         });
     } catch (error) {
