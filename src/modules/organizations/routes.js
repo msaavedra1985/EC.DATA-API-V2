@@ -86,21 +86,101 @@ const orgLogger = logger.child({ component: 'organizations' });
  *                   type: array
  *                   items:
  *                     $ref: '#/components/schemas/Organization'
+ *                   example:
+ *                     - id: "ORG-1A2B3C"
+ *                       human_id: 1
+ *                       name: "EC.DATA"
+ *                       slug: "ecdata"
+ *                       description: "Root organization"
+ *                       parent_id: null
+ *                       is_active: true
+ *                       logo_url: null
+ *                       website: "https://ec.data"
+ *                       created_at: "2025-10-01T10:00:00Z"
+ *                       updated_at: "2025-10-01T10:00:00Z"
+ *                     - id: "ORG-4D5E6F"
+ *                       human_id: 2
+ *                       name: "ACME Corporation"
+ *                       slug: "acme-corp"
+ *                       description: "Client organization"
+ *                       parent_id: "ORG-1A2B3C"
+ *                       is_active: true
+ *                       logo_url: "https://storage.azure.com/logos/acme.png"
+ *                       website: "https://acme.com"
+ *                       created_at: "2025-10-05T14:30:00Z"
+ *                       updated_at: "2025-10-05T14:30:00Z"
  *                 meta:
  *                   type: object
  *                   properties:
  *                     total:
  *                       type: integer
+ *                       example: 42
  *                     limit:
  *                       type: integer
+ *                       example: 20
  *                     offset:
  *                       type: integer
+ *                       example: 0
  *                     has_more:
  *                       type: boolean
+ *                       example: true
  *       401:
- *         description: No autenticado
+ *         description: No autenticado - Token JWT faltante o inválido
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: object
+ *                   properties:
+ *                     code:
+ *                       type: string
+ *                       example: "UNAUTHORIZED"
+ *                     message:
+ *                       type: string
+ *                       example: "Authentication required"
+ *       403:
+ *         description: Sin permisos - Usuario no tiene acceso a organizaciones
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: object
+ *                   properties:
+ *                     code:
+ *                       type: string
+ *                       example: "FORBIDDEN"
+ *                     message:
+ *                       type: string
+ *                       example: "Insufficient permissions"
  *       500:
  *         description: Error interno del servidor
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: object
+ *                   properties:
+ *                     code:
+ *                       type: string
+ *                       example: "INTERNAL_ERROR"
+ *                     message:
+ *                       type: string
+ *                       example: "Error listing organizations"
  */
 router.get('/', authenticate, async (req, res) => {
     try {
@@ -179,15 +259,95 @@ router.get('/', authenticate, async (req, res) => {
  *                   type: boolean
  *                   example: true
  *                 data:
- *                   $ref: '#/components/schemas/Organization'
+ *                   type: object
+ *                   example:
+ *                     id: "ORG-1A2B3C"
+ *                     human_id: 1
+ *                     name: "EC.DATA"
+ *                     slug: "ecdata"
+ *                     description: "Root organization for EC.DATA platform"
+ *                     parent_id: null
+ *                     is_active: true
+ *                     logo_url: "https://storage.azure.com/logos/ecdata.png"
+ *                     website: "https://ec.data"
+ *                     created_at: "2025-10-01T10:00:00Z"
+ *                     updated_at: "2025-10-01T10:00:00Z"
  *       401:
- *         description: No autenticado
+ *         description: No autenticado - Token JWT faltante o inválido
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: object
+ *                   properties:
+ *                     code:
+ *                       type: string
+ *                       example: "UNAUTHORIZED"
+ *                     message:
+ *                       type: string
+ *                       example: "Authentication required"
  *       403:
  *         description: Sin permisos para ver esta organización
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: object
+ *                   properties:
+ *                     code:
+ *                       type: string
+ *                       example: "FORBIDDEN"
+ *                     message:
+ *                       type: string
+ *                       example: "Insufficient permissions to view organization"
  *       404:
  *         description: Organización no encontrada
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: object
+ *                   properties:
+ *                     code:
+ *                       type: string
+ *                       example: "NOT_FOUND"
+ *                     message:
+ *                       type: string
+ *                       example: "Organization not found"
  *       500:
  *         description: Error interno del servidor
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: object
+ *                   properties:
+ *                     code:
+ *                       type: string
+ *                       example: "INTERNAL_ERROR"
+ *                     message:
+ *                       type: string
+ *                       example: "Error getting organization"
  */
 router.get('/:id', authenticate, requireOrgPermission('view'), async (req, res) => {
     try {
@@ -298,21 +458,166 @@ router.get('/:id', authenticate, requireOrgPermission('view'), async (req, res) 
  *                   type: boolean
  *                   example: true
  *                 data:
- *                   $ref: '#/components/schemas/Organization'
+ *                   type: object
+ *                   example:
+ *                     id: "ORG-7G8H9J"
+ *                     human_id: 15
+ *                     name: "ACME Corporation"
+ *                     slug: "acme-corporation"
+ *                     description: null
+ *                     parent_id: "ORG-1A2B3C"
+ *                     is_active: true
+ *                     logo_url: "https://storage.azure.com/logos/acme.png"
+ *                     website: null
+ *                     created_at: "2025-10-13T17:15:00Z"
+ *                     updated_at: "2025-10-13T17:15:00Z"
  *       400:
- *         description: Error de validación
+ *         description: Error de validación - Datos inválidos en el request body
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: object
+ *                   properties:
+ *                     code:
+ *                       type: string
+ *                       example: "VALIDATION_ERROR"
+ *                     message:
+ *                       type: string
+ *                       example: "Invalid data"
+ *                     details:
+ *                       type: array
+ *                       description: Array de errores de validación de Zod
+ *                       example:
+ *                         - path: ["name"]
+ *                           message: "Required"
+ *                         - path: ["country_id"]
+ *                           message: "Invalid country code"
  *       401:
- *         description: No autenticado
+ *         description: No autenticado - Token JWT faltante o inválido
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: object
+ *                   properties:
+ *                     code:
+ *                       type: string
+ *                       example: "UNAUTHORIZED"
+ *                     message:
+ *                       type: string
+ *                       example: "Authentication required"
  *       403:
  *         description: Sin permisos para crear organizaciones
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: object
+ *                   properties:
+ *                     code:
+ *                       type: string
+ *                       example: "FORBIDDEN"
+ *                     message:
+ *                       type: string
+ *                       example: "Insufficient permissions to create organization"
  *       404:
  *         description: Organización padre no encontrada
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: object
+ *                   properties:
+ *                     code:
+ *                       type: string
+ *                       example: "PARENT_NOT_FOUND"
+ *                     message:
+ *                       type: string
+ *                       example: "Parent organization not found"
  *       409:
  *         description: El slug ya existe
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: object
+ *                   properties:
+ *                     code:
+ *                       type: string
+ *                       example: "SLUG_EXISTS"
+ *                     message:
+ *                       type: string
+ *                       example: "Slug already exists"
+ *                     details:
+ *                       type: object
+ *                       properties:
+ *                         slug:
+ *                           type: string
+ *                           example: "acme-corporation"
  *       422:
  *         description: Profundidad máxima excedida (5 niveles)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: object
+ *                   properties:
+ *                     code:
+ *                       type: string
+ *                       example: "MAX_DEPTH_EXCEEDED"
+ *                     message:
+ *                       type: string
+ *                       example: "Maximum organization depth (5 levels) exceeded"
  *       500:
  *         description: Error interno del servidor
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: object
+ *                   properties:
+ *                     code:
+ *                       type: string
+ *                       example: "INTERNAL_ERROR"
+ *                     message:
+ *                       type: string
+ *                       example: "Error creating organization"
  */
 router.post('/', authenticate, requireOrgPermission('create'), async (req, res) => {
     try {
@@ -477,21 +782,166 @@ router.post('/', authenticate, requireOrgPermission('create'), async (req, res) 
  *                   type: boolean
  *                   example: true
  *                 data:
- *                   $ref: '#/components/schemas/Organization'
+ *                   type: object
+ *                   example:
+ *                     id: "ORG-4D5E6F"
+ *                     human_id: 2
+ *                     name: "ACME Corporation - Updated"
+ *                     slug: "acme-corporation"
+ *                     description: "Updated description"
+ *                     parent_id: "ORG-1A2B3C"
+ *                     is_active: true
+ *                     logo_url: "https://storage.azure.com/logos/acme-new.png"
+ *                     website: "https://acme.com"
+ *                     created_at: "2025-10-05T14:30:00Z"
+ *                     updated_at: "2025-10-13T17:20:00Z"
  *       400:
  *         description: Error de validación o referencia cíclica detectada
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: object
+ *                   properties:
+ *                     code:
+ *                       type: string
+ *                       example: "VALIDATION_ERROR"
+ *                     message:
+ *                       type: string
+ *                       example: "Invalid data"
+ *                     details:
+ *                       type: array
+ *                       description: Array de errores de validación de Zod
+ *                       example:
+ *                         - path: ["slug"]
+ *                           message: "Invalid slug format"
+ *                         - path: ["parent_id"]
+ *                           message: "Invalid organization ID"
  *       401:
- *         description: No autenticado
+ *         description: No autenticado - Token JWT faltante o inválido
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: object
+ *                   properties:
+ *                     code:
+ *                       type: string
+ *                       example: "UNAUTHORIZED"
+ *                     message:
+ *                       type: string
+ *                       example: "Authentication required"
  *       403:
  *         description: Sin permisos para editar esta organización
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: object
+ *                   properties:
+ *                     code:
+ *                       type: string
+ *                       example: "FORBIDDEN"
+ *                     message:
+ *                       type: string
+ *                       example: "Insufficient permissions to edit organization"
  *       404:
  *         description: Organización no encontrada
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: object
+ *                   properties:
+ *                     code:
+ *                       type: string
+ *                       example: "NOT_FOUND"
+ *                     message:
+ *                       type: string
+ *                       example: "Organization not found"
  *       409:
  *         description: El slug ya existe
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: object
+ *                   properties:
+ *                     code:
+ *                       type: string
+ *                       example: "SLUG_EXISTS"
+ *                     message:
+ *                       type: string
+ *                       example: "Slug already exists"
+ *                     details:
+ *                       type: object
+ *                       properties:
+ *                         slug:
+ *                           type: string
+ *                           example: "acme-corporation"
  *       422:
- *         description: Profundidad máxima excedida
+ *         description: Profundidad máxima excedida o ciclo detectado
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: object
+ *                   properties:
+ *                     code:
+ *                       type: string
+ *                       example: "CYCLE_DETECTED"
+ *                     message:
+ *                       type: string
+ *                       example: "Cannot create circular hierarchy"
  *       500:
  *         description: Error interno del servidor
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: object
+ *                   properties:
+ *                     code:
+ *                       type: string
+ *                       example: "INTERNAL_ERROR"
+ *                     message:
+ *                       type: string
+ *                       example: "Error updating organization"
  */
 router.put('/:id', authenticate, requireOrgPermission('edit'), async (req, res) => {
     try {
@@ -517,7 +967,8 @@ router.put('/:id', authenticate, requireOrgPermission('edit'), async (req, res) 
                     ok: false,
                     error: {
                         code: 'SLUG_EXISTS',
-                        message: 'Slug already exists'
+                        message: 'Slug already exists',
+                        details: { slug: validatedData.slug }
                     }
                 });
             }
@@ -652,16 +1103,106 @@ router.put('/:id', authenticate, requireOrgPermission('edit'), async (req, res) 
  *                       type: integer
  *                     users_deleted:
  *                       type: integer
+ *                   example:
+ *                     organizations_deleted: 2
+ *                     children_deleted: 5
+ *                     users_reassigned: 12
+ *                     users_deleted: 0
  *       400:
- *         description: Error de validación
+ *         description: Error de validación - Datos inválidos
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: object
+ *                   properties:
+ *                     code:
+ *                       type: string
+ *                       example: "VALIDATION_ERROR"
+ *                     message:
+ *                       type: string
+ *                       example: "Invalid data"
  *       401:
- *         description: No autenticado
+ *         description: No autenticado - Token JWT faltante o inválido
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: object
+ *                   properties:
+ *                     code:
+ *                       type: string
+ *                       example: "UNAUTHORIZED"
+ *                     message:
+ *                       type: string
+ *                       example: "Authentication required"
  *       403:
  *         description: Sin permisos (requiere system-admin o org-admin)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: object
+ *                   properties:
+ *                     code:
+ *                       type: string
+ *                       example: "FORBIDDEN"
+ *                     message:
+ *                       type: string
+ *                       example: "Insufficient permissions for batch delete"
  *       404:
- *         description: No se encontraron organizaciones
+ *         description: No se encontraron organizaciones para eliminar
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: object
+ *                   properties:
+ *                     code:
+ *                       type: string
+ *                       example: "NO_ORGANIZATIONS_FOUND"
+ *                     message:
+ *                       type: string
+ *                       example: "No organizations found to delete"
  *       500:
  *         description: Error interno del servidor
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: object
+ *                   properties:
+ *                     code:
+ *                       type: string
+ *                       example: "INTERNAL_ERROR"
+ *                     message:
+ *                       type: string
+ *                       example: "Error deleting organizations"
  */
 router.post('/batch-delete', authenticate, requireRole(['system-admin', 'org-admin']), async (req, res) => {
     try {
@@ -800,12 +1341,67 @@ router.post('/batch-delete', authenticate, requireRole(['system-admin', 'org-adm
  *                     expires_at:
  *                       type: string
  *                       format: date-time
+ *                   example:
+ *                     upload_url: "https://ecstorage.blob.core.windows.net/organizations/logos/logo-1697456789.png?sv=2021-06-08&se=2025-10-13T18%3A30%3A00Z&sr=b&sp=cw&sig=AbCdEf123456789..."
+ *                     public_url: "https://ecstorage.blob.core.windows.net/organizations/logos/logo-1697456789.png"
+ *                     expires_at: "2025-10-13T18:30:00Z"
  *       400:
- *         description: Error de validación
+ *         description: Error de validación - Datos inválidos en el request
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: object
+ *                   properties:
+ *                     code:
+ *                       type: string
+ *                       example: "VALIDATION_ERROR"
+ *                     message:
+ *                       type: string
+ *                       example: "Invalid data"
  *       401:
- *         description: No autenticado
+ *         description: No autenticado - Token JWT faltante o inválido
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: object
+ *                   properties:
+ *                     code:
+ *                       type: string
+ *                       example: "UNAUTHORIZED"
+ *                     message:
+ *                       type: string
+ *                       example: "Authentication required"
  *       500:
- *         description: Error generando URL
+ *         description: Error interno del servidor
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: object
+ *                   properties:
+ *                     code:
+ *                       type: string
+ *                       example: "INTERNAL_ERROR"
+ *                     message:
+ *                       type: string
+ *                       example: "Error generating upload URL"
  */
 router.post('/upload-url', authenticate, async (req, res) => {
     try {
@@ -897,12 +1493,99 @@ router.post('/upload-url', authenticate, async (req, res) => {
  *                       items:
  *                         type: object
  *                         description: Mismo esquema recursivamente
+ *                   example:
+ *                     id: "ORG-1A2B3C"
+ *                     human_id: 1
+ *                     name: "EC.DATA"
+ *                     slug: "ecdata"
+ *                     parent_id: null
+ *                     is_active: true
+ *                     children:
+ *                       - id: "ORG-4D5E6F"
+ *                         human_id: 2
+ *                         name: "ACME Corporation"
+ *                         slug: "acme-corp"
+ *                         parent_id: "ORG-1A2B3C"
+ *                         is_active: true
+ *                         children:
+ *                           - id: "ORG-7G8H9J"
+ *                             human_id: 5
+ *                             name: "ACME North Division"
+ *                             slug: "acme-north"
+ *                             parent_id: "ORG-4D5E6F"
+ *                             is_active: true
+ *                             children: []
+ *                           - id: "ORG-2K3L4M"
+ *                             human_id: 6
+ *                             name: "ACME South Division"
+ *                             slug: "acme-south"
+ *                             parent_id: "ORG-4D5E6F"
+ *                             is_active: true
+ *                             children: []
+ *                       - id: "ORG-5N6P7Q"
+ *                         human_id: 3
+ *                         name: "TechStart Inc"
+ *                         slug: "techstart"
+ *                         parent_id: "ORG-1A2B3C"
+ *                         is_active: true
+ *                         children: []
  *       401:
- *         description: No autenticado
+ *         description: No autenticado - Token JWT faltante o inválido
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: object
+ *                   properties:
+ *                     code:
+ *                       type: string
+ *                       example: "UNAUTHORIZED"
+ *                     message:
+ *                       type: string
+ *                       example: "Authentication required"
  *       404:
  *         description: Organización raíz no encontrada
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: object
+ *                   properties:
+ *                     code:
+ *                       type: string
+ *                       example: "ROOT_NOT_FOUND"
+ *                     message:
+ *                       type: string
+ *                       example: "Root organization not found"
  *       500:
  *         description: Error interno del servidor
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: object
+ *                   properties:
+ *                     code:
+ *                       type: string
+ *                       example: "INTERNAL_ERROR"
+ *                     message:
+ *                       type: string
+ *                       example: "Error getting hierarchy"
  */
 router.get('/hierarchy', authenticate, async (req, res) => {
     try {
@@ -984,14 +1667,105 @@ router.get('/hierarchy', authenticate, async (req, res) => {
  *                   type: array
  *                   items:
  *                     $ref: '#/components/schemas/Organization'
+ *                   example:
+ *                     - id: "ORG-4D5E6F"
+ *                       human_id: 2
+ *                       name: "ACME Corporation"
+ *                       slug: "acme-corp"
+ *                       description: "Technology division"
+ *                       parent_id: "ORG-1A2B3C"
+ *                       is_active: true
+ *                       logo_url: "https://storage.azure.com/logos/acme.png"
+ *                       website: "https://acme.com"
+ *                       created_at: "2025-10-05T14:30:00Z"
+ *                       updated_at: "2025-10-05T14:30:00Z"
+ *                     - id: "ORG-5N6P7Q"
+ *                       human_id: 3
+ *                       name: "TechStart Inc"
+ *                       slug: "techstart"
+ *                       description: "Innovation startup"
+ *                       parent_id: "ORG-1A2B3C"
+ *                       is_active: true
+ *                       logo_url: "https://storage.azure.com/logos/techstart.png"
+ *                       website: "https://techstart.io"
+ *                       created_at: "2025-10-07T09:15:00Z"
+ *                       updated_at: "2025-10-07T09:15:00Z"
  *       401:
- *         description: No autenticado
+ *         description: No autenticado - Token JWT faltante o inválido
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: object
+ *                   properties:
+ *                     code:
+ *                       type: string
+ *                       example: "UNAUTHORIZED"
+ *                     message:
+ *                       type: string
+ *                       example: "Authentication required"
  *       403:
- *         description: Sin permisos
+ *         description: Sin permisos para ver hijos de esta organización
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: object
+ *                   properties:
+ *                     code:
+ *                       type: string
+ *                       example: "FORBIDDEN"
+ *                     message:
+ *                       type: string
+ *                       example: "Insufficient permissions to view children"
  *       404:
  *         description: Organización no encontrada
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: object
+ *                   properties:
+ *                     code:
+ *                       type: string
+ *                       example: "NOT_FOUND"
+ *                     message:
+ *                       type: string
+ *                       example: "Organization not found"
  *       500:
  *         description: Error interno del servidor
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: object
+ *                   properties:
+ *                     code:
+ *                       type: string
+ *                       example: "INTERNAL_ERROR"
+ *                     message:
+ *                       type: string
+ *                       example: "Error getting children"
  */
 router.get('/:id/children', authenticate, requireOrgPermission('view'), async (req, res) => {
     try {
@@ -1046,14 +1820,127 @@ router.get('/:id/children', authenticate, requireOrgPermission('view'), async (r
  *                   type: array
  *                   items:
  *                     $ref: '#/components/schemas/Organization'
+ *                   example:
+ *                     - id: "ORG-4D5E6F"
+ *                       human_id: 2
+ *                       name: "ACME Corporation"
+ *                       slug: "acme-corp"
+ *                       description: "Technology division"
+ *                       parent_id: "ORG-1A2B3C"
+ *                       is_active: true
+ *                       logo_url: "https://storage.azure.com/logos/acme.png"
+ *                       website: "https://acme.com"
+ *                       created_at: "2025-10-05T14:30:00Z"
+ *                       updated_at: "2025-10-05T14:30:00Z"
+ *                     - id: "ORG-7G8H9J"
+ *                       human_id: 5
+ *                       name: "ACME North Division"
+ *                       slug: "acme-north"
+ *                       description: "Northern operations"
+ *                       parent_id: "ORG-4D5E6F"
+ *                       is_active: true
+ *                       logo_url: null
+ *                       website: null
+ *                       created_at: "2025-10-08T11:00:00Z"
+ *                       updated_at: "2025-10-08T11:00:00Z"
+ *                     - id: "ORG-2K3L4M"
+ *                       human_id: 6
+ *                       name: "ACME South Division"
+ *                       slug: "acme-south"
+ *                       description: "Southern operations"
+ *                       parent_id: "ORG-4D5E6F"
+ *                       is_active: true
+ *                       logo_url: null
+ *                       website: null
+ *                       created_at: "2025-10-08T11:30:00Z"
+ *                       updated_at: "2025-10-08T11:30:00Z"
+ *                     - id: "ORG-5N6P7Q"
+ *                       human_id: 3
+ *                       name: "TechStart Inc"
+ *                       slug: "techstart"
+ *                       description: "Innovation startup"
+ *                       parent_id: "ORG-1A2B3C"
+ *                       is_active: true
+ *                       logo_url: "https://storage.azure.com/logos/techstart.png"
+ *                       website: "https://techstart.io"
+ *                       created_at: "2025-10-07T09:15:00Z"
+ *                       updated_at: "2025-10-07T09:15:00Z"
  *       401:
- *         description: No autenticado
+ *         description: No autenticado - Token JWT faltante o inválido
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: object
+ *                   properties:
+ *                     code:
+ *                       type: string
+ *                       example: "UNAUTHORIZED"
+ *                     message:
+ *                       type: string
+ *                       example: "Authentication required"
  *       403:
- *         description: Sin permisos
+ *         description: Sin permisos para ver descendientes de esta organización
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: object
+ *                   properties:
+ *                     code:
+ *                       type: string
+ *                       example: "FORBIDDEN"
+ *                     message:
+ *                       type: string
+ *                       example: "Insufficient permissions to view descendants"
  *       404:
  *         description: Organización no encontrada
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: object
+ *                   properties:
+ *                     code:
+ *                       type: string
+ *                       example: "NOT_FOUND"
+ *                     message:
+ *                       type: string
+ *                       example: "Organization not found"
  *       500:
  *         description: Error interno del servidor
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: object
+ *                   properties:
+ *                     code:
+ *                       type: string
+ *                       example: "INTERNAL_ERROR"
+ *                     message:
+ *                       type: string
+ *                       example: "Error getting descendants"
  */
 router.get('/:id/descendants', authenticate, requireOrgPermission('view'), async (req, res) => {
     try {
@@ -1113,12 +2000,66 @@ router.get('/:id/descendants', authenticate, requireOrgPermission('view'), async
  *                     available:
  *                       type: boolean
  *                       description: true si está disponible, false si ya existe
+ *                   example:
+ *                     slug: "acme-corporation"
+ *                     available: true
  *       400:
  *         description: Slug no proporcionado o formato inválido
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: object
+ *                   properties:
+ *                     code:
+ *                       type: string
+ *                       example: "VALIDATION_ERROR"
+ *                     message:
+ *                       type: string
+ *                       example: "Invalid slug format"
  *       401:
- *         description: No autenticado
+ *         description: No autenticado - Token JWT faltante o inválido
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: object
+ *                   properties:
+ *                     code:
+ *                       type: string
+ *                       example: "UNAUTHORIZED"
+ *                     message:
+ *                       type: string
+ *                       example: "Authentication required"
  *       500:
  *         description: Error interno del servidor
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: object
+ *                   properties:
+ *                     code:
+ *                       type: string
+ *                       example: "INTERNAL_ERROR"
+ *                     message:
+ *                       type: string
+ *                       example: "Error validating slug"
  */
 router.get('/validate-slug', authenticate, async (req, res) => {
     try {
@@ -1218,14 +2159,87 @@ router.get('/validate-slug', authenticate, async (req, res) => {
  *                     orphan_users:
  *                       type: integer
  *                       description: Usuarios que quedarían sin organización
+ *                   example:
+ *                     organizations_to_delete: 2
+ *                     children_to_delete: 7
+ *                     users_affected: 24
+ *                     orphan_users: 3
  *       400:
- *         description: Error de validación
+ *         description: Error de validación - Datos inválidos
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: object
+ *                   properties:
+ *                     code:
+ *                       type: string
+ *                       example: "INVALID_INPUT"
+ *                     message:
+ *                       type: string
+ *                       example: "organization_ids must be an array"
  *       401:
- *         description: No autenticado
+ *         description: No autenticado - Token JWT faltante o inválido
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: object
+ *                   properties:
+ *                     code:
+ *                       type: string
+ *                       example: "UNAUTHORIZED"
+ *                     message:
+ *                       type: string
+ *                       example: "Authentication required"
  *       403:
  *         description: Sin permisos (requiere system-admin o org-admin)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: object
+ *                   properties:
+ *                     code:
+ *                       type: string
+ *                       example: "FORBIDDEN"
+ *                     message:
+ *                       type: string
+ *                       example: "Insufficient permissions for delete preview"
  *       500:
  *         description: Error interno del servidor
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: object
+ *                   properties:
+ *                     code:
+ *                       type: string
+ *                       example: "INTERNAL_ERROR"
+ *                     message:
+ *                       type: string
+ *                       example: "Error generating preview"
  */
 router.post('/delete-preview', authenticate, requireRole(['system-admin', 'org-admin']), async (req, res) => {
     try {
@@ -1314,14 +2328,88 @@ router.post('/delete-preview', authenticate, requireRole(['system-admin', 'org-a
  *                     updated_at:
  *                       type: string
  *                       format: date-time
+ *                   example:
+ *                     total_users: 45
+ *                     total_children: 3
+ *                     total_descendants: 8
+ *                     created_at: "2025-10-01T10:00:00Z"
+ *                     updated_at: "2025-10-13T16:45:00Z"
  *       401:
- *         description: No autenticado
+ *         description: No autenticado - Token JWT faltante o inválido
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: object
+ *                   properties:
+ *                     code:
+ *                       type: string
+ *                       example: "UNAUTHORIZED"
+ *                     message:
+ *                       type: string
+ *                       example: "Authentication required"
  *       403:
- *         description: Sin permisos
+ *         description: Sin permisos para ver estadísticas de esta organización
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: object
+ *                   properties:
+ *                     code:
+ *                       type: string
+ *                       example: "FORBIDDEN"
+ *                     message:
+ *                       type: string
+ *                       example: "Insufficient permissions to view stats"
  *       404:
  *         description: Organización no encontrada
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: object
+ *                   properties:
+ *                     code:
+ *                       type: string
+ *                       example: "NOT_FOUND"
+ *                     message:
+ *                       type: string
+ *                       example: "Organization not found"
  *       500:
  *         description: Error interno del servidor
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: object
+ *                   properties:
+ *                     code:
+ *                       type: string
+ *                       example: "INTERNAL_ERROR"
+ *                     message:
+ *                       type: string
+ *                       example: "Error getting stats"
  */
 router.get('/:id/stats', authenticate, requireOrgPermission('view'), async (req, res) => {
     try {
@@ -1397,14 +2485,85 @@ router.get('/:id/stats', authenticate, requireOrgPermission('view'), async (req,
  *                     is_active:
  *                       type: boolean
  *                       example: true
+ *                   example:
+ *                     id: "ORG-4D5E6F"
+ *                     is_active: true
  *       401:
- *         description: No autenticado
+ *         description: No autenticado - Token JWT faltante o inválido
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: object
+ *                   properties:
+ *                     code:
+ *                       type: string
+ *                       example: "UNAUTHORIZED"
+ *                     message:
+ *                       type: string
+ *                       example: "Authentication required"
  *       403:
- *         description: Sin permisos
+ *         description: Sin permisos para activar esta organización
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: object
+ *                   properties:
+ *                     code:
+ *                       type: string
+ *                       example: "FORBIDDEN"
+ *                     message:
+ *                       type: string
+ *                       example: "Insufficient permissions to activate organization"
  *       404:
  *         description: Organización no encontrada
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: object
+ *                   properties:
+ *                     code:
+ *                       type: string
+ *                       example: "NOT_FOUND"
+ *                     message:
+ *                       type: string
+ *                       example: "Organization not found"
  *       500:
  *         description: Error interno del servidor
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: object
+ *                   properties:
+ *                     code:
+ *                       type: string
+ *                       example: "INTERNAL_ERROR"
+ *                     message:
+ *                       type: string
+ *                       example: "Error activating organization"
  */
 router.put('/:id/activate', authenticate, requireOrgPermission('edit'), async (req, res) => {
     try {
@@ -1482,14 +2641,85 @@ router.put('/:id/activate', authenticate, requireOrgPermission('edit'), async (r
  *                     is_active:
  *                       type: boolean
  *                       example: false
+ *                   example:
+ *                     id: "ORG-4D5E6F"
+ *                     is_active: false
  *       401:
- *         description: No autenticado
+ *         description: No autenticado - Token JWT faltante o inválido
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: object
+ *                   properties:
+ *                     code:
+ *                       type: string
+ *                       example: "UNAUTHORIZED"
+ *                     message:
+ *                       type: string
+ *                       example: "Authentication required"
  *       403:
- *         description: Sin permisos
+ *         description: Sin permisos para desactivar esta organización
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: object
+ *                   properties:
+ *                     code:
+ *                       type: string
+ *                       example: "FORBIDDEN"
+ *                     message:
+ *                       type: string
+ *                       example: "Insufficient permissions to deactivate organization"
  *       404:
  *         description: Organización no encontrada
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: object
+ *                   properties:
+ *                     code:
+ *                       type: string
+ *                       example: "NOT_FOUND"
+ *                     message:
+ *                       type: string
+ *                       example: "Organization not found"
  *       500:
  *         description: Error interno del servidor
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: object
+ *                   properties:
+ *                     code:
+ *                       type: string
+ *                       example: "INTERNAL_ERROR"
+ *                     message:
+ *                       type: string
+ *                       example: "Error deactivating organization"
  */
 router.put('/:id/deactivate', authenticate, requireOrgPermission('edit'), async (req, res) => {
     try {
