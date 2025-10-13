@@ -33,33 +33,74 @@ const orgLogger = logger.child({ component: 'organizations' });
  * /api/v1/organizations:
  *   get:
  *     summary: Listar organizaciones con paginación y filtros
+ *     description: Obtiene lista de organizaciones con scope basado en permisos. System-admin ve todas, otros roles ven según jerarquía.
  *     tags: [Organizations]
  *     security:
  *       - bearerAuth: []
  *     parameters:
  *       - in: query
  *         name: limit
+ *         description: Número máximo de resultados
  *         schema:
  *           type: integer
  *           default: 20
+ *           minimum: 1
+ *           maximum: 100
  *       - in: query
  *         name: offset
+ *         description: Número de registros a saltar (paginación)
  *         schema:
  *           type: integer
  *           default: 0
+ *           minimum: 0
  *       - in: query
  *         name: search
+ *         description: Buscar por nombre o slug
  *         schema:
  *           type: string
+ *           example: "acme"
  *       - in: query
  *         name: parent_id
+ *         description: Filtrar por organización padre (public_code)
  *         schema:
  *           type: string
+ *           example: "ORG-1A2B3C"
  *       - in: query
  *         name: active_only
+ *         description: Solo mostrar organizaciones activas
  *         schema:
  *           type: boolean
  *           default: true
+ *     responses:
+ *       200:
+ *         description: Lista de organizaciones obtenida exitosamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Organization'
+ *                 meta:
+ *                   type: object
+ *                   properties:
+ *                     total:
+ *                       type: integer
+ *                     limit:
+ *                       type: integer
+ *                     offset:
+ *                       type: integer
+ *                     has_more:
+ *                       type: boolean
+ *       401:
+ *         description: No autenticado
+ *       500:
+ *         description: Error interno del servidor
  */
 router.get('/', authenticate, async (req, res) => {
     try {
@@ -114,9 +155,39 @@ router.get('/', authenticate, async (req, res) => {
  * /api/v1/organizations/{id}:
  *   get:
  *     summary: Obtener detalles de una organización
+ *     description: Obtiene información completa de una organización específica. Requiere permiso de vista sobre la organización.
  *     tags: [Organizations]
  *     security:
  *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         description: Public code de la organización (ej. ORG-1A2B3C)
+ *         schema:
+ *           type: string
+ *           example: "ORG-1A2B3C"
+ *     responses:
+ *       200:
+ *         description: Detalles de la organización obtenidos exitosamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   $ref: '#/components/schemas/Organization'
+ *       401:
+ *         description: No autenticado
+ *       403:
+ *         description: Sin permisos para ver esta organización
+ *       404:
+ *         description: Organización no encontrada
+ *       500:
+ *         description: Error interno del servidor
  */
 router.get('/:id', authenticate, requireOrgPermission('view'), async (req, res) => {
     try {
@@ -164,9 +235,84 @@ router.get('/:id', authenticate, requireOrgPermission('view'), async (req, res) 
  * /api/v1/organizations:
  *   post:
  *     summary: Crear nueva organización
+ *     description: Crea una nueva organización. Requiere permisos de creación. Máximo 5 niveles de profundidad en jerarquía.
  *     tags: [Organizations]
  *     security:
  *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - name
+ *               - country_id
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 description: Nombre de la organización
+ *                 example: "ACME Corporation"
+ *               slug:
+ *                 type: string
+ *                 description: Slug único (se genera automáticamente si no se proporciona)
+ *                 example: "acme-corporation"
+ *               parent_id:
+ *                 type: string
+ *                 description: Public code de la organización padre (opcional)
+ *                 example: "ORG-1A2B3C"
+ *               country_id:
+ *                 type: string
+ *                 description: ID del país
+ *                 example: "MX"
+ *               tax_id:
+ *                 type: string
+ *                 description: RFC o Tax ID
+ *                 example: "ABC123456XYZ"
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 example: "contact@acme.com"
+ *               phone:
+ *                 type: string
+ *                 example: "+52 55 1234 5678"
+ *               address:
+ *                 type: string
+ *                 example: "Av. Reforma 123, CDMX"
+ *               logo_url:
+ *                 type: string
+ *                 format: uri
+ *                 example: "https://storage.azure.com/logos/acme.png"
+ *               settings:
+ *                 type: object
+ *                 description: Configuraciones personalizadas JSON
+ *     responses:
+ *       201:
+ *         description: Organización creada exitosamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   $ref: '#/components/schemas/Organization'
+ *       400:
+ *         description: Error de validación
+ *       401:
+ *         description: No autenticado
+ *       403:
+ *         description: Sin permisos para crear organizaciones
+ *       404:
+ *         description: Organización padre no encontrada
+ *       409:
+ *         description: El slug ya existe
+ *       422:
+ *         description: Profundidad máxima excedida (5 niveles)
+ *       500:
+ *         description: Error interno del servidor
  */
 router.post('/', authenticate, requireOrgPermission('create'), async (req, res) => {
     try {
@@ -279,9 +425,73 @@ router.post('/', authenticate, requireOrgPermission('create'), async (req, res) 
  * /api/v1/organizations/{id}:
  *   put:
  *     summary: Actualizar organización
+ *     description: Actualiza información de una organización existente. Requiere permisos de edición. No permite cambios cíclicos en jerarquía.
  *     tags: [Organizations]
  *     security:
  *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         description: Public code de la organización
+ *         schema:
+ *           type: string
+ *           example: "ORG-1A2B3C"
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *               slug:
+ *                 type: string
+ *               parent_id:
+ *                 type: string
+ *                 description: Public code del nuevo padre
+ *               country_id:
+ *                 type: string
+ *               tax_id:
+ *                 type: string
+ *               email:
+ *                 type: string
+ *               phone:
+ *                 type: string
+ *               address:
+ *                 type: string
+ *               logo_url:
+ *                 type: string
+ *               settings:
+ *                 type: object
+ *     responses:
+ *       200:
+ *         description: Organización actualizada exitosamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   $ref: '#/components/schemas/Organization'
+ *       400:
+ *         description: Error de validación o referencia cíclica detectada
+ *       401:
+ *         description: No autenticado
+ *       403:
+ *         description: Sin permisos para editar esta organización
+ *       404:
+ *         description: Organización no encontrada
+ *       409:
+ *         description: El slug ya existe
+ *       422:
+ *         description: Profundidad máxima excedida
+ *       500:
+ *         description: Error interno del servidor
  */
 router.put('/:id', authenticate, requireOrgPermission('edit'), async (req, res) => {
     try {
@@ -390,9 +600,68 @@ router.put('/:id', authenticate, requireOrgPermission('edit'), async (req, res) 
  * /api/v1/organizations/batch-delete:
  *   post:
  *     summary: Eliminar múltiples organizaciones con cascade
+ *     description: Elimina varias organizaciones en lote con opción de cascade (elimina organizaciones hijas y usuarios). Solo para system-admin y org-admin.
  *     tags: [Organizations]
  *     security:
  *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - organization_ids
+ *             properties:
+ *               organization_ids:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 description: Lista de public codes de organizaciones a eliminar
+ *                 example: ["ORG-1A2B3C", "ORG-4D5E6F"]
+ *               hard_delete:
+ *                 type: boolean
+ *                 description: Si true, elimina permanentemente. Si false, marca como deleted
+ *                 default: false
+ *               delete_users:
+ *                 type: boolean
+ *                 description: Si true, elimina usuarios huérfanos
+ *                 default: false
+ *               reassign_org_id:
+ *                 type: string
+ *                 description: Public code de organización para reasignar usuarios huérfanos
+ *     responses:
+ *       200:
+ *         description: Organizaciones eliminadas exitosamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     organizations_deleted:
+ *                       type: integer
+ *                     children_deleted:
+ *                       type: integer
+ *                     users_reassigned:
+ *                       type: integer
+ *                     users_deleted:
+ *                       type: integer
+ *       400:
+ *         description: Error de validación
+ *       401:
+ *         description: No autenticado
+ *       403:
+ *         description: Sin permisos (requiere system-admin o org-admin)
+ *       404:
+ *         description: No se encontraron organizaciones
+ *       500:
+ *         description: Error interno del servidor
  */
 router.post('/batch-delete', authenticate, requireRole(['system-admin', 'org-admin']), async (req, res) => {
     try {
@@ -473,9 +742,70 @@ router.post('/batch-delete', authenticate, requireRole(['system-admin', 'org-adm
  * /api/v1/organizations/upload-url:
  *   post:
  *     summary: Generar presigned URL para upload de logo
+ *     description: Genera URL de Azure Blob Storage con firma temporal para subir archivos (logos, documentos). Expira en tiempo configurable.
  *     tags: [Organizations]
  *     security:
  *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - filename
+ *             properties:
+ *               filename:
+ *                 type: string
+ *                 description: Nombre del archivo
+ *                 example: "logo.png"
+ *               content_type:
+ *                 type: string
+ *                 description: MIME type del archivo
+ *                 default: "image/png"
+ *                 example: "image/png"
+ *               prefix:
+ *                 type: string
+ *                 description: Prefijo de ruta en storage
+ *                 default: "organizations"
+ *                 example: "organizations/logos"
+ *               expiry_minutes:
+ *                 type: integer
+ *                 description: Minutos antes de que expire la URL
+ *                 default: 60
+ *                 minimum: 1
+ *                 maximum: 1440
+ *     responses:
+ *       200:
+ *         description: URL presignada generada exitosamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     upload_url:
+ *                       type: string
+ *                       format: uri
+ *                       description: URL para hacer PUT del archivo
+ *                     public_url:
+ *                       type: string
+ *                       format: uri
+ *                       description: URL pública del archivo después de subirlo
+ *                     expires_at:
+ *                       type: string
+ *                       format: date-time
+ *       400:
+ *         description: Error de validación
+ *       401:
+ *         description: No autenticado
+ *       500:
+ *         description: Error generando URL
  */
 router.post('/upload-url', authenticate, async (req, res) => {
     try {
@@ -522,9 +852,57 @@ router.post('/upload-url', authenticate, async (req, res) => {
  * /api/v1/organizations/hierarchy:
  *   get:
  *     summary: Obtener árbol jerárquico completo
+ *     description: Obtiene estructura de árbol de organizaciones desde la raíz. Incluye todas las organizaciones hijas recursivamente. Usa caché de Redis.
  *     tags: [Organizations]
  *     security:
  *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: root_id
+ *         description: Public code de la organización raíz (opcional, por defecto EC.DATA)
+ *         schema:
+ *           type: string
+ *           example: "ORG-1A2B3C"
+ *       - in: query
+ *         name: active_only
+ *         description: Solo incluir organizaciones activas
+ *         schema:
+ *           type: boolean
+ *           default: true
+ *     responses:
+ *       200:
+ *         description: Árbol jerárquico obtenido exitosamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   description: Nodo raíz con children recursivos
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                     public_code:
+ *                       type: string
+ *                     name:
+ *                       type: string
+ *                     slug:
+ *                       type: string
+ *                     children:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         description: Mismo esquema recursivamente
+ *       401:
+ *         description: No autenticado
+ *       404:
+ *         description: Organización raíz no encontrada
+ *       500:
+ *         description: Error interno del servidor
  */
 router.get('/hierarchy', authenticate, async (req, res) => {
     try {
@@ -579,9 +957,41 @@ router.get('/hierarchy', authenticate, async (req, res) => {
  * /api/v1/organizations/{id}/children:
  *   get:
  *     summary: Obtener hijos directos de una organización
+ *     description: Obtiene solo los hijos de primer nivel (no recursivo) de una organización específica.
  *     tags: [Organizations]
  *     security:
  *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         description: Public code de la organización
+ *         schema:
+ *           type: string
+ *           example: "ORG-1A2B3C"
+ *     responses:
+ *       200:
+ *         description: Lista de hijos obtenida exitosamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Organization'
+ *       401:
+ *         description: No autenticado
+ *       403:
+ *         description: Sin permisos
+ *       404:
+ *         description: Organización no encontrada
+ *       500:
+ *         description: Error interno del servidor
  */
 router.get('/:id/children', authenticate, requireOrgPermission('view'), async (req, res) => {
     try {
@@ -609,9 +1019,41 @@ router.get('/:id/children', authenticate, requireOrgPermission('view'), async (r
  * /api/v1/organizations/{id}/descendants:
  *   get:
  *     summary: Obtener todos los descendientes (recursivo)
+ *     description: Obtiene todos los descendientes de una organización de forma recursiva (hijos, nietos, etc).
  *     tags: [Organizations]
  *     security:
  *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         description: Public code de la organización
+ *         schema:
+ *           type: string
+ *           example: "ORG-1A2B3C"
+ *     responses:
+ *       200:
+ *         description: Lista de descendientes obtenida exitosamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Organization'
+ *       401:
+ *         description: No autenticado
+ *       403:
+ *         description: Sin permisos
+ *       404:
+ *         description: Organización no encontrada
+ *       500:
+ *         description: Error interno del servidor
  */
 router.get('/:id/descendants', authenticate, requireOrgPermission('view'), async (req, res) => {
     try {
@@ -639,9 +1081,44 @@ router.get('/:id/descendants', authenticate, requireOrgPermission('view'), async
  * /api/v1/organizations/validate-slug:
  *   get:
  *     summary: Validar si un slug está disponible
+ *     description: Verifica si un slug está disponible para usar en una nueva organización o para renombrar existente.
  *     tags: [Organizations]
  *     security:
  *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: slug
+ *         required: true
+ *         description: Slug a validar
+ *         schema:
+ *           type: string
+ *           pattern: '^[a-z0-9-]+$'
+ *           example: "acme-corporation"
+ *     responses:
+ *       200:
+ *         description: Validación completada
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     slug:
+ *                       type: string
+ *                     available:
+ *                       type: boolean
+ *                       description: true si está disponible, false si ya existe
+ *       400:
+ *         description: Slug no proporcionado o formato inválido
+ *       401:
+ *         description: No autenticado
+ *       500:
+ *         description: Error interno del servidor
  */
 router.get('/validate-slug', authenticate, async (req, res) => {
     try {
@@ -696,9 +1173,59 @@ router.get('/validate-slug', authenticate, async (req, res) => {
  * /api/v1/organizations/delete-preview:
  *   post:
  *     summary: Preview del impacto de eliminación (sin ejecutar)
+ *     description: Simula la eliminación de organizaciones mostrando cuántas organizaciones hijas y usuarios se verían afectados. NO ejecuta la eliminación.
  *     tags: [Organizations]
  *     security:
  *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - organization_ids
+ *             properties:
+ *               organization_ids:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 description: Lista de public codes de organizaciones
+ *                 example: ["ORG-1A2B3C", "ORG-4D5E6F"]
+ *     responses:
+ *       200:
+ *         description: Preview generado exitosamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     organizations_to_delete:
+ *                       type: integer
+ *                       description: Número de organizaciones a eliminar
+ *                     children_to_delete:
+ *                       type: integer
+ *                       description: Número de organizaciones hijas que se eliminarían
+ *                     users_affected:
+ *                       type: integer
+ *                       description: Número de usuarios que perderían acceso
+ *                     orphan_users:
+ *                       type: integer
+ *                       description: Usuarios que quedarían sin organización
+ *       400:
+ *         description: Error de validación
+ *       401:
+ *         description: No autenticado
+ *       403:
+ *         description: Sin permisos (requiere system-admin o org-admin)
+ *       500:
+ *         description: Error interno del servidor
  */
 router.post('/delete-preview', authenticate, requireRole(['system-admin', 'org-admin']), async (req, res) => {
     try {
@@ -746,9 +1273,55 @@ router.post('/delete-preview', authenticate, requireRole(['system-admin', 'org-a
  * /api/v1/organizations/{id}/stats:
  *   get:
  *     summary: Obtener estadísticas de una organización
+ *     description: Obtiene métricas y estadísticas de una organización (usuarios, hijos, descendientes, fechas).
  *     tags: [Organizations]
  *     security:
  *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         description: Public code de la organización
+ *         schema:
+ *           type: string
+ *           example: "ORG-1A2B3C"
+ *     responses:
+ *       200:
+ *         description: Estadísticas obtenidas exitosamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     total_users:
+ *                       type: integer
+ *                       description: Número de usuarios asignados
+ *                     total_children:
+ *                       type: integer
+ *                       description: Número de organizaciones hijas directas
+ *                     total_descendants:
+ *                       type: integer
+ *                       description: Número total de descendientes (recursivo)
+ *                     created_at:
+ *                       type: string
+ *                       format: date-time
+ *                     updated_at:
+ *                       type: string
+ *                       format: date-time
+ *       401:
+ *         description: No autenticado
+ *       403:
+ *         description: Sin permisos
+ *       404:
+ *         description: Organización no encontrada
+ *       500:
+ *         description: Error interno del servidor
  */
 router.get('/:id/stats', authenticate, requireOrgPermission('view'), async (req, res) => {
     try {
@@ -792,9 +1365,46 @@ router.get('/:id/stats', authenticate, requireOrgPermission('view'), async (req,
  * /api/v1/organizations/{id}/activate:
  *   put:
  *     summary: Activar una organización
+ *     description: Activa una organización previamente desactivada. Requiere permisos de edición.
  *     tags: [Organizations]
  *     security:
  *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         description: Public code de la organización
+ *         schema:
+ *           type: string
+ *           example: "ORG-1A2B3C"
+ *     responses:
+ *       200:
+ *         description: Organización activada exitosamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                       description: Public code de la organización
+ *                     is_active:
+ *                       type: boolean
+ *                       example: true
+ *       401:
+ *         description: No autenticado
+ *       403:
+ *         description: Sin permisos
+ *       404:
+ *         description: Organización no encontrada
+ *       500:
+ *         description: Error interno del servidor
  */
 router.put('/:id/activate', authenticate, requireOrgPermission('edit'), async (req, res) => {
     try {
@@ -840,9 +1450,46 @@ router.put('/:id/activate', authenticate, requireOrgPermission('edit'), async (r
  * /api/v1/organizations/{id}/deactivate:
  *   put:
  *     summary: Desactivar una organización
+ *     description: Desactiva una organización (soft disable). Requiere permisos de edición. No elimina la organización ni sus datos.
  *     tags: [Organizations]
  *     security:
  *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         description: Public code de la organización
+ *         schema:
+ *           type: string
+ *           example: "ORG-1A2B3C"
+ *     responses:
+ *       200:
+ *         description: Organización desactivada exitosamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                       description: Public code de la organización
+ *                     is_active:
+ *                       type: boolean
+ *                       example: false
+ *       401:
+ *         description: No autenticado
+ *       403:
+ *         description: Sin permisos
+ *       404:
+ *         description: Organización no encontrada
+ *       500:
+ *         description: Error interno del servidor
  */
 router.put('/:id/deactivate', authenticate, requireOrgPermission('edit'), async (req, res) => {
     try {
