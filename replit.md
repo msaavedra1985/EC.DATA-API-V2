@@ -18,6 +18,13 @@ Preferred communication style: Simple, everyday language.
 - Single quotes for strings (enforced by ESLint)
 - Comment extensively - every function, middleware, helper, model, and endpoint should have explanatory comments in Spanish
 
+**Audit Standards (MANDATORY):**
+- **Every CREATE, UPDATE, DELETE operation MUST log to `audit_logs` table** - No exceptions
+- Use the centralized `auditLog` helper service (never direct database inserts)
+- Log structure: `{ entity_type, entity_id, action, performed_by, changes: { field: { old, new } }, metadata }`
+- Include IP address and user agent for security tracking
+- Never skip audit logging, even in batch operations or background jobs
+
 **Development Approach:**
 - Build incrementally in stages, prioritizing quality over speed
 - Focus on one feature at a time
@@ -75,6 +82,7 @@ Preferred communication style: Simple, everyday language.
 - **Logout System:** Endpoints for `/logout` and `/logout-all` to invalidate sessions by incrementing `sessionVersion` and clearing user cache. Supports revoking specific refresh tokens.
 - **"Remember Me" Feature:** Extends session duration for login with `remember_me` flag, dynamically adjusting token expiration and idle timeouts.
 - **Session Context Caching:** **CRITICAL RULE: Frontend NEVER decodes JWT.** All session context (activeOrgId, primaryOrgId, role, canAccessAllOrgs, user info) is cached in Redis with 15-min TTL and returned via API responses (`/auth/login`, `/auth/me`, `/auth/switch-org`, `/auth/session-context`). This eliminates frontend JWT decoding, improves performance, and maintains security. The `session_context` object is the single source of truth for frontend state.
+- **Global Audit Logging:** **MANDATORY: Every CUD operation (Create, Update, Delete) MUST be logged to the global `audit_logs` table.** Centralized audit trail with `entity_type`, `entity_id`, `action`, `performed_by`, `changes` (JSONB), `metadata` (JSONB), `ip_address`, and `user_agent`. This table tracks ALL platform activity across modules (organizations, users, products, orders, etc.) for compliance, security audits, and operational visibility. Always use the `auditLog` helper to record actions. Structure: `{ entity_type, entity_id, action, performed_by, changes, metadata }`. Indexed by entity, user, date, and action for fast queries. Retention policy: 2 years minimum for compliance.
 
 ## External Dependencies
 
