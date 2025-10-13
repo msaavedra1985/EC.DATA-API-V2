@@ -2,7 +2,9 @@
 // Helper centralizado para registro de auditoría global
 
 import AuditLog from '../modules/audit/models/AuditLog.js';
-import { apiLogger } from '../utils/logger.js';
+import logger from '../utils/logger.js';
+
+const auditLogger = logger.child({ component: 'audit' });
 
 /**
  * Registra una acción en el log de auditoría global
@@ -77,7 +79,7 @@ export const logAuditAction = async ({
             performed_at: new Date()
         });
 
-        apiLogger.debug({
+        auditLogger.debug({
             msg: 'Audit log created',
             entityType,
             entityId,
@@ -88,7 +90,7 @@ export const logAuditAction = async ({
         return auditLog;
     } catch (error) {
         // Log el error pero NO fallar la operación principal
-        apiLogger.error({
+        auditLogger.error({
             err: error,
             msg: 'Error creating audit log - operation will continue',
             entityType,
@@ -133,7 +135,7 @@ export const getEntityAuditLogs = async (entityType, entityId, { limit = 50, off
 
         return result;
     } catch (error) {
-        apiLogger.error({
+        auditLogger.error({
             err: error,
             msg: 'Error fetching entity audit logs',
             entityType,
@@ -165,7 +167,7 @@ export const getUserAuditLogs = async (userId, { limit = 50, offset = 0 } = {}) 
 
         return result;
     } catch (error) {
-        apiLogger.error({
+        auditLogger.error({
             err: error,
             msg: 'Error fetching user audit logs',
             userId
@@ -217,7 +219,7 @@ export const getRecentActivity = async ({
 
         return result;
     } catch (error) {
-        apiLogger.error({
+        auditLogger.error({
             err: error,
             msg: 'Error fetching recent activity'
         });

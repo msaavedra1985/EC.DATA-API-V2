@@ -3,8 +3,10 @@
 
 import { BlobServiceClient, generateBlobSASQueryParameters, StorageSharedKeyCredential, BlobSASPermissions } from '@azure/storage-blob';
 import { config } from '../config/env.js';
-import { apiLogger } from '../utils/logger.js';
+import logger from '../utils/logger.js';
 import crypto from 'crypto';
+
+const azureLogger = logger.child({ component: 'azure-storage' });
 
 /**
  * Cliente de Azure Blob Storage
@@ -39,10 +41,10 @@ const initializeBlobClient = () => {
             sharedKeyCredential
         );
 
-        apiLogger.info('✅ Azure Blob Storage client initialized');
+        azureLogger.info('✅ Azure Blob Storage client initialized');
         return blobServiceClient;
     } catch (error) {
-        apiLogger.error({ err: error }, '❌ Error initializing Azure Blob Storage client');
+        azureLogger.error({ err: error }, '❌ Error initializing Azure Blob Storage client');
         throw error;
     }
 };
@@ -145,7 +147,7 @@ export const generatePresignedUploadUrl = async ({
         // URL pública (sin SAS token - el container debe ser público para lectura)
         const publicUrl = blobClient.url;
         
-        apiLogger.info({
+        azureLogger.info({
             msg: 'Presigned URL generated',
             blobName,
             containerName,
@@ -159,7 +161,7 @@ export const generatePresignedUploadUrl = async ({
             expiresAt: expiresOn
         };
     } catch (error) {
-        apiLogger.error({ err: error }, 'Error generating presigned URL');
+        azureLogger.error({ err: error }, 'Error generating presigned URL');
         throw error;
     }
 };
@@ -179,7 +181,7 @@ export const deleteBlob = async (blobName, containerName = config.azure?.storage
         
         await blobClient.deleteIfExists();
         
-        apiLogger.info({
+        azureLogger.info({
             msg: 'Blob deleted',
             blobName,
             containerName
@@ -187,7 +189,7 @@ export const deleteBlob = async (blobName, containerName = config.azure?.storage
         
         return true;
     } catch (error) {
-        apiLogger.error({ err: error, blobName }, 'Error deleting blob');
+        azureLogger.error({ err: error, blobName }, 'Error deleting blob');
         throw error;
     }
 };
@@ -209,7 +211,7 @@ export const extractBlobNameFromUrl = (url) => {
         // Formato: /container-name/blob-name
         return pathParts.length >= 2 ? pathParts.slice(2).join('/') : null;
     } catch (error) {
-        apiLogger.warn({ url }, 'Invalid Azure Blob URL');
+        azureLogger.warn({ url }, 'Invalid Azure Blob URL');
         return null;
     }
 };
