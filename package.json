@@ -24,6 +24,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@azure/storage-blob": "^12.28.0",
     "@types/node": "^22.13.11",
     "bcrypt": "^5.1.1",
     "compression": "^1.7.5",

@@ -70,6 +70,14 @@ export const config = {
     corsCache: {
         ttl: parseInt(process.env.CORS_CACHE_TTL || '600', 10), // 10 minutos
     },
+
+    // Azure Blob Storage para archivos (logos, imágenes, documentos)
+    azure: {
+        storageAccountName: process.env.AZURE_STORAGE_ACCOUNT_NAME || null,
+        storageAccountKey: process.env.AZURE_STORAGE_ACCOUNT_KEY || null,
+        storageContainerName: process.env.AZURE_STORAGE_CONTAINER_NAME || 'organization-logos',
+        sasExpiryMinutes: parseInt(process.env.AZURE_STORAGE_SAS_EXPIRY || '60', 10), // 1 hora
+    },
 };
 
 /**
