@@ -4,7 +4,9 @@
 import Organization from '../models/Organization.js';
 import User from '../../auth/models/User.js';
 import { getDescendants } from './hierarchy.js';
-import { apiLogger } from '../../../utils/logger.js';
+import logger from '../../../utils/logger.js';
+
+const orgLogger = logger.child({ component: 'organizations' });
 import { invalidateOrganizationHierarchyBulk } from '../cache.js';
 import sequelize from '../../../db/sql/sequelize.js';
 
@@ -77,7 +79,7 @@ export const getDeletePreview = async (organizationIds) => {
 
         return preview;
     } catch (error) {
-        apiLogger.error({ err: error, organizationIds }, 'Error generating delete preview');
+        orgLogger.error({ err: error, organizationIds }, 'Error generating delete preview');
         throw error;
     }
 };
@@ -186,7 +188,7 @@ export const cascadeDelete = async (organizationIds, options = {}) => {
         // Commit transaction
         await transaction.commit();
 
-        apiLogger.info({
+        orgLogger.info({
             ...result,
             organizationIds,
             hardDelete,
@@ -196,7 +198,7 @@ export const cascadeDelete = async (organizationIds, options = {}) => {
         return result;
     } catch (error) {
         await transaction.rollback();
-        apiLogger.error({
+        orgLogger.error({
             err: error,
             organizationIds,
             options
@@ -238,7 +240,7 @@ export const validateCanDelete = async (organizationIds) => {
             errors
         };
     } catch (error) {
-        apiLogger.error({ err: error, organizationIds }, 'Error validating delete');
+        orgLogger.error({ err: error, organizationIds }, 'Error validating delete');
         throw error;
     }
 };

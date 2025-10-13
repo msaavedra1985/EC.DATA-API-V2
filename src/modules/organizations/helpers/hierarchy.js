@@ -2,7 +2,9 @@
 // Funciones para manejar la jerarquía de organizaciones
 
 import Organization from '../models/Organization.js';
-import { apiLogger } from '../../../utils/logger.js';
+import logger from '../../../utils/logger.js';
+
+const orgLogger = logger.child({ component: 'organizations' });
 
 /**
  * Obtiene los hijos directos de una organización
@@ -26,7 +28,7 @@ export const getChildren = async (organizationId, activeOnly = true) => {
 
         return children;
     } catch (error) {
-        apiLogger.error({ err: error, organizationId }, 'Error getting organization children');
+        orgLogger.error({ err: error, organizationId }, 'Error getting organization children');
         throw error;
     }
 };
@@ -55,7 +57,7 @@ export const getDescendants = async (organizationId, activeOnly = true) => {
 
         return descendants;
     } catch (error) {
-        apiLogger.error({ err: error, organizationId }, 'Error getting organization descendants');
+        orgLogger.error({ err: error, organizationId }, 'Error getting organization descendants');
         throw error;
     }
 };
@@ -86,7 +88,7 @@ export const getAncestors = async (organizationId, activeOnly = true) => {
 
         return ancestors;
     } catch (error) {
-        apiLogger.error({ err: error, organizationId }, 'Error getting organization ancestors');
+        orgLogger.error({ err: error, organizationId }, 'Error getting organization ancestors');
         throw error;
     }
 };
@@ -126,7 +128,7 @@ export const getHierarchyTree = async (organizationId, activeOnly = true) => {
             children: childrenTrees.filter(Boolean) // Filtrar nulls si hay inactivas
         };
     } catch (error) {
-        apiLogger.error({ err: error, organizationId }, 'Error getting hierarchy tree');
+        orgLogger.error({ err: error, organizationId }, 'Error getting hierarchy tree');
         throw error;
     }
 };
@@ -155,7 +157,7 @@ export const wouldCreateCycle = async (organizationId, newParentId) => {
         const descendantIds = descendants.map(d => d.id);
 
         if (descendantIds.includes(newParentId)) {
-            apiLogger.warn({
+            orgLogger.warn({
                 organizationId,
                 newParentId
             }, 'Cycle detected: newParent is a descendant of organization');
@@ -164,7 +166,7 @@ export const wouldCreateCycle = async (organizationId, newParentId) => {
 
         return false;
     } catch (error) {
-        apiLogger.error({ err: error, organizationId, newParentId }, 'Error detecting cycle');
+        orgLogger.error({ err: error, organizationId, newParentId }, 'Error detecting cycle');
         throw error;
     }
 };
@@ -181,7 +183,7 @@ export const getDepth = async (organizationId) => {
         const ancestors = await getAncestors(organizationId, false);
         return ancestors.length; // Root tiene 0 ancestros = profundidad 0
     } catch (error) {
-        apiLogger.error({ err: error, organizationId }, 'Error calculating organization depth');
+        orgLogger.error({ err: error, organizationId }, 'Error calculating organization depth');
         throw error;
     }
 };
@@ -212,7 +214,7 @@ export const canHaveChild = async (parentId, maxDepth = 5) => {
             currentDepth
         };
     } catch (error) {
-        apiLogger.error({ err: error, parentId }, 'Error validating if can have child');
+        orgLogger.error({ err: error, parentId }, 'Error validating if can have child');
         throw error;
     }
 };
@@ -231,7 +233,7 @@ export const getRootOrganization = async () => {
 
         return root;
     } catch (error) {
-        apiLogger.error({ err: error }, 'Error getting root organization');
+        orgLogger.error({ err: error }, 'Error getting root organization');
         throw error;
     }
 };
@@ -247,7 +249,7 @@ export const countOrganizationsInTree = async (organizationId) => {
         const descendants = await getDescendants(organizationId, false);
         return descendants.length + 1; // +1 para incluir la organización misma
     } catch (error) {
-        apiLogger.error({ err: error, organizationId }, 'Error counting organizations in tree');
+        orgLogger.error({ err: error, organizationId }, 'Error counting organizations in tree');
         throw error;
     }
 };

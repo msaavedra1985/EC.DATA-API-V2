@@ -1,8 +1,10 @@
 // modules/organizations/cache.js
 // Sistema de caché Redis para organizaciones - Multi-usuario con invalidación inteligente
 
-import { setCache, getCache, deleteCache } from '../../db/cache/redis.js';
-import { apiLogger } from '../../utils/logger.js';
+import { setCache, getCache, deleteCache } from '../../db/redis/client.js';
+import logger from '../../utils/logger.js';
+
+const orgLogger = logger.child({ component: 'organizations' });
 
 // TTLs configurados
 const ORGANIZATION_TTL = 30 * 60; // 30 minutos
@@ -19,17 +21,17 @@ const PERMISSIONS_TTL = 15 * 60; // 15 minutos (sincronizado con session_context
 export const cacheOrganization = async (organization) => {
     try {
         if (!organization?.public_code) {
-            apiLogger.warn('Cannot cache organization without public_code');
+            orgLogger.warn('Cannot cache organization without public_code');
             return false;
         }
 
         const key = `org:${organization.public_code}`;
         await setCache(key, organization, ORGANIZATION_TTL);
         
-        apiLogger.debug({ publicCode: organization.public_code }, 'Organization cached');
+        orgLogger.debug({ publicCode: organization.public_code }, 'Organization cached');
         return true;
     } catch (error) {
-        apiLogger.error({ err: error, publicCode: organization?.public_code }, 'Error caching organization');
+        orgLogger.error({ err: error, publicCode: organization?.public_code }, 'Error caching organization');
         return false;
     }
 };
@@ -46,12 +48,12 @@ export const getCachedOrganization = async (publicCode) => {
         const cached = await getCache(key);
         
         if (cached) {
-            apiLogger.debug({ publicCode }, 'Organization cache hit');
+            orgLogger.debug({ publicCode }, 'Organization cache hit');
         }
         
         return cached;
     } catch (error) {
-        apiLogger.error({ err: error, publicCode }, 'Error getting cached organization');
+        orgLogger.error({ err: error, publicCode }, 'Error getting cached organization');
         return null;
     }
 };
@@ -78,10 +80,10 @@ export const invalidateOrganizationCache = async (publicCode, parentPublicCode =
         
         await Promise.all(keysToDelete.map(key => deleteCache(key)));
         
-        apiLogger.info({ publicCode, parentPublicCode }, 'Organization cache invalidated');
+        orgLogger.info({ publicCode, parentPublicCode }, 'Organization cache invalidated');
         return true;
     } catch (error) {
-        apiLogger.error({ err: error, publicCode }, 'Error invalidating organization cache');
+        orgLogger.error({ err: error, publicCode }, 'Error invalidating organization cache');
         return false;
     }
 };
@@ -100,10 +102,10 @@ export const cacheOrganizationHierarchy = async (publicCode, hierarchy) => {
         const key = `org:hierarchy:${publicCode}`;
         await setCache(key, hierarchy, HIERARCHY_TTL);
         
-        apiLogger.debug({ publicCode, childrenCount: hierarchy.children?.length || 0 }, 'Organization hierarchy cached');
+        orgLogger.debug({ publicCode, childrenCount: hierarchy.children?.length || 0 }, 'Organization hierarchy cached');
         return true;
     } catch (error) {
-        apiLogger.error({ err: error, publicCode }, 'Error caching organization hierarchy');
+        orgLogger.error({ err: error, publicCode }, 'Error caching organization hierarchy');
         return false;
     }
 };
@@ -120,12 +122,12 @@ export const getCachedOrganizationHierarchy = async (publicCode) => {
         const cached = await getCache(key);
         
         if (cached) {
-            apiLogger.debug({ publicCode }, 'Organization hierarchy cache hit');
+            orgLogger.debug({ publicCode }, 'Organization hierarchy cache hit');
         }
         
         return cached;
     } catch (error) {
-        apiLogger.error({ err: error, publicCode }, 'Error getting cached organization hierarchy');
+        orgLogger.error({ err: error, publicCode }, 'Error getting cached organization hierarchy');
         return null;
     }
 };
@@ -144,10 +146,10 @@ export const cacheOrganizationPermissions = async (userId, publicCode, permissio
         const key = `org:access:${userId}:${publicCode}`;
         await setCache(key, permissions, PERMISSIONS_TTL);
         
-        apiLogger.debug({ userId, publicCode }, 'Organization permissions cached');
+        orgLogger.debug({ userId, publicCode }, 'Organization permissions cached');
         return true;
     } catch (error) {
-        apiLogger.error({ err: error, userId, publicCode }, 'Error caching organization permissions');
+        orgLogger.error({ err: error, userId, publicCode }, 'Error caching organization permissions');
         return false;
     }
 };
@@ -165,12 +167,12 @@ export const getCachedOrganizationPermissions = async (userId, publicCode) => {
         const cached = await getCache(key);
         
         if (cached) {
-            apiLogger.debug({ userId, publicCode }, 'Organization permissions cache hit');
+            orgLogger.debug({ userId, publicCode }, 'Organization permissions cache hit');
         }
         
         return cached;
     } catch (error) {
-        apiLogger.error({ err: error, userId, publicCode }, 'Error getting cached organization permissions');
+        orgLogger.error({ err: error, userId, publicCode }, 'Error getting cached organization permissions');
         return null;
     }
 };
@@ -190,13 +192,13 @@ export const invalidateUserOrgPermissions = async (userId) => {
         // Redis SCAN para encontrar keys que coincidan
         // Nota: esto requiere acceso directo a Redis client
         // Por simplicidad, log y marcar para limpieza manual/automática
-        apiLogger.info({ userId, pattern }, 'User org permissions marked for invalidation');
+        orgLogger.info({ userId, pattern }, 'User org permissions marked for invalidation');
         
         // En producción, implementar SCAN + DEL
         // Por ahora, los permisos expiran automáticamente en 15 min
         return true;
     } catch (error) {
-        apiLogger.error({ err: error, userId }, 'Error invalidating user org permissions');
+        orgLogger.error({ err: error, userId }, 'Error invalidating user org permissions');
         return false;
     }
 };
@@ -217,10 +219,10 @@ export const invalidateOrganizationHierarchyBulk = async (publicCodes) => {
         
         await Promise.all(keysToDelete.map(key => deleteCache(key)));
         
-        apiLogger.info({ count: publicCodes.length }, 'Organization hierarchy bulk invalidated');
+        orgLogger.info({ count: publicCodes.length }, 'Organization hierarchy bulk invalidated');
         return true;
     } catch (error) {
-        apiLogger.error({ err: error }, 'Error bulk invalidating organization hierarchy');
+        orgLogger.error({ err: error }, 'Error bulk invalidating organization hierarchy');
         return false;
     }
 };
