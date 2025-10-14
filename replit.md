@@ -26,14 +26,19 @@ Preferred communication style: Simple, everyday language.
 - Never skip audit logging, even in batch operations or background jobs
 
 **Error Logging Standards (MANDATORY):**
-- **ALL API errors (4xx, 5xx) are automatically logged to `error_logs` table via global middleware** - Zero configuration required
-- The global `errorHandler` middleware captures every error automatically with full context (endpoint, method, user, stack trace, request data)
-- Backend errors: Logged automatically by middleware - developers don't need to manually log
+- **Winston-powered error logging system** with dual transports: PostgreSQL (`error_logs` table) + rotating daily files (`logs/errors-YYYY-MM-DD.log`)
+- **ALL API errors (4xx, 5xx) are automatically logged via global middleware** - Zero configuration required
+- **Custom SqlTransport** for Winston writes errors directly to PostgreSQL with full context
+- **Rotating file transport** creates daily JSON log files with 30-day retention for redundancy and historical analysis
+- Backend errors: Logged automatically by `errorHandler` middleware using Winston - developers don't need to manually log
 - Frontend errors: Use the public `POST /api/v1/error-logs` endpoint (no authentication required)
 - Frontend can optionally include JWT Bearer token to associate errors with users
 - Error logs include: source (frontend/backend), level (error/warning/critical), error_code, message, stack_trace, endpoint, user context, IP, user-agent
-- The `error_logs` table is separate from `audit_logs` - different purposes, volumes, and retention policies
-- Use the `logError()` helper for manual backend error logging (rare - only for custom scenarios)
+- **Correlation tracking:** Both `error_logs` and `audit_logs` support `correlation_id` field to link related errors and audit actions
+- Use `correlation_id` to trace error → audit action relationships for operational debugging and incident analysis
+- The `error_logs` table is separate from `audit_logs` - different purposes, volumes, and retention policies (30-90 days vs 2 years)
+- Use the `winstonLogger.logError()` helper for manual backend error logging (rare - only for custom scenarios)
+- Pino logger remains for general/console logging; Winston handles structured error persistence
 - Error logs enable platform-wide observability, debugging, and proactive issue detection
 
 **Development Approach:**
@@ -108,5 +113,9 @@ Preferred communication style: Simple, everyday language.
 
 ### Monitoring & Observability
 - **Metrics (Prometheus):** HTTP request duration, counts, active connections, custom metrics.
-- **Logging:** Structured JSON logs via Pino (service: `ecdata-api`), request/response logging, database audit trail.
+- **Logging:** 
+  - **Pino:** Structured JSON console logging for general application logs (service: `ecdata-api`), request/response logging
+  - **Winston:** Structured error persistence with custom SqlTransport (PostgreSQL) + rotating daily files (30-day retention)
+  - **Audit Trail:** Database-backed audit logging (`audit_logs` table) with 2-year retention
+  - **Correlation System:** `correlation_id` field links errors with audit actions for operational tracing
 - **Health Checks:** Basic endpoint at `/api/v1/health` for service status.
