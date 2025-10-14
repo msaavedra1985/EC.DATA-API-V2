@@ -1,7 +1,7 @@
 // Middleware global para manejo de errores con formato envelope
 import { errorResponse, ERROR_CODES } from '../utils/response.js';
 import logger from '../utils/logger.js';
-import logError from '../helpers/errorLog.js';
+import winstonLogger from '../utils/winston/logger.js';
 
 /**
  * Middleware global de manejo de errores
@@ -85,8 +85,9 @@ export const errorHandler = (err, req, res, next) => {
         }
     };
 
-    // Registrar error en la base de datos (sin await para no bloquear la respuesta)
-    logError({
+    // Registrar error usando Winston (no bloqueante)
+    // Winston automáticamente escribe a SQL + archivos vía transportes
+    winstonLogger.logError({
         source: 'backend',
         level,
         errorCode: code,
@@ -101,12 +102,6 @@ export const errorHandler = (err, req, res, next) => {
         userAgent,
         context,
         metadata
-    }).catch(dbError => {
-        // Si falla el logging a la BD, solo loguear en Pino para evitar loops infinitos
-        logger.error({
-            err: dbError,
-            originalError: err
-        }, 'Failed to log error to database in global error handler');
     });
 
     // Enviar respuesta envelope

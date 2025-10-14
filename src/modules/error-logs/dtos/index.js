@@ -16,6 +16,7 @@ export const createErrorLogSchema = z.object({
     method: z.string().max(10).optional().nullable(),
     status_code: z.number().int().min(100).max(599).optional().nullable(),
     session_id: z.string().max(100).optional().nullable(),
+    correlation_id: z.string().max(100).optional().nullable(),
     context: z.record(z.any()).optional().default({}),
     metadata: z.record(z.any()).optional().default({})
 });

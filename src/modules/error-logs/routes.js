@@ -1,8 +1,8 @@
 import { Router } from 'express';
 import { validateCreateErrorLog } from './dtos/index.js';
-import ErrorLog from './models/ErrorLog.js';
 import { v7 as uuidv7 } from 'uuid';
 import logger from '../../utils/logger.js';
+import winstonLogger from '../../utils/winston/logger.js';
 import jwt from 'jsonwebtoken';
 import { config } from '../../config/env.js';
 
@@ -216,41 +216,42 @@ router.post('/', async (req, res) => {
         // Generar request_id único
         const requestId = uuidv7();
 
-        // Crear el error log
-        const errorLog = await ErrorLog.create({
+        // Loguear usando Winston - automáticamente escribe a SQL + archivos
+        winstonLogger.logError({
             source: validatedData.source,
             level: validatedData.level,
-            error_code: validatedData.error_code,
-            error_message: validatedData.error_message,
-            stack_trace: validatedData.stack_trace,
+            errorCode: validatedData.error_code,
+            errorMessage: validatedData.error_message,
+            stackTrace: validatedData.stack_trace,
             endpoint: validatedData.endpoint,
             method: validatedData.method,
-            status_code: validatedData.status_code,
-            user_id: userId,
-            organization_id: organizationId,
-            session_id: validatedData.session_id,
-            ip_address: ipAddress,
-            user_agent: userAgent,
-            request_id: requestId,
+            statusCode: validatedData.status_code,
+            userId,
+            organizationId,
+            sessionId: validatedData.session_id,
+            ipAddress,
+            userAgent,
+            requestId,
+            correlationId: validatedData.correlation_id,
             context: validatedData.context,
             metadata: validatedData.metadata
         });
 
         errorLogger.info({
-            errorLogId: errorLog.id,
-            source: errorLog.source,
-            errorCode: errorLog.error_code,
-            userId
-        }, 'Error logged successfully');
+            source: validatedData.source,
+            errorCode: validatedData.error_code,
+            userId,
+            correlationId: validatedData.correlation_id
+        }, 'Error logged successfully via Winston');
 
         res.status(201).json({
             ok: true,
             data: {
-                id: errorLog.id,
-                source: errorLog.source,
-                level: errorLog.level,
-                error_code: errorLog.error_code,
-                created_at: errorLog.created_at
+                request_id: requestId,
+                source: validatedData.source,
+                level: validatedData.level,
+                error_code: validatedData.error_code,
+                correlation_id: validatedData.correlation_id || null
             }
         });
     } catch (error) {

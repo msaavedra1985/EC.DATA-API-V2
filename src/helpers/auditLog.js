@@ -20,6 +20,7 @@ const auditLogger = logger.child({ component: 'audit' });
  * @param {Object|null} params.metadata - Info contextual adicional
  * @param {string|null} params.ipAddress - IP del cliente
  * @param {string|null} params.userAgent - User agent del navegador
+ * @param {string|null} params.correlationId - ID de correlación con error_logs (opcional)
  * @returns {Promise<AuditLog>} Log de auditoría creado
  * 
  * @example
@@ -58,7 +59,8 @@ export const logAuditAction = async ({
     changes = null,
     metadata = null,
     ipAddress = null,
-    userAgent = null
+    userAgent = null,
+    correlationId = null
 }) => {
     try {
         // Validación básica
@@ -76,6 +78,7 @@ export const logAuditAction = async ({
             metadata,
             ip_address: ipAddress,
             user_agent: userAgent,
+            correlation_id: correlationId,
             performed_at: new Date()
         });
 
