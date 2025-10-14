@@ -1,4 +1,4 @@
-// Database Schema - Generated on 2025-10-14T04:06:44.799Z
+// Database Schema - Generated on 2025-10-14T17:44:57.691Z
 // Project: EC.DATA API - Enterprise REST API
 // Use this file at https://dbdiagram.io to visualize the schema
 
@@ -13,9 +13,11 @@ Table audit_logs {
   user_agent text // User agent del navegador/cliente para tracking de seguridad
   changes jsonb // Cambios realizados: { field: { old: value, new: value } }
   metadata jsonb // Información contextual adicional (nombres, descripciones, etc.)
+  correlation_id varchar(100)
 
   Indexes {
     (entity_type, action) [name: 'idx_audit_action']
+    (correlation_id) [name: 'idx_audit_correlation_id']
     (performed_at) [name: 'idx_audit_date']
     (entity_type, entity_id) [name: 'idx_audit_entity']
     (performed_by, performed_at) [name: 'idx_audit_user']
@@ -79,8 +81,10 @@ Table error_logs {
   metadata jsonb // Metadata adicional (browser, OS, screen size, API version, etc)
   created_at timestamptz [not null]
   deleted_at timestamptz
+  correlation_id varchar(100)
 
   Indexes {
+    (correlation_id) [name: 'idx_error_logs_correlation_id']
     (created_at) [name: 'idx_error_logs_created_at']
     (endpoint) [name: 'idx_error_logs_endpoint']
     (error_code) [name: 'idx_error_logs_error_code']

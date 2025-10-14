@@ -41,7 +41,18 @@ class SqlTransport extends Transport {
         });
 
         try {
-            // Extraer datos del log de Winston
+            // Winston puede pasar los datos de dos formas:
+            // 1. Directamente en info (nivel superior)
+            // 2. Dentro de info.message si se usa winston.log({ message: {...} })
+            
+            let data = info;
+            
+            // Si los datos están dentro de message, extraerlos
+            if (info.message && typeof info.message === 'object' && info.message.error_code) {
+                data = { ...info, ...info.message };
+            }
+            
+            // Extraer datos del log
             const {
                 level,
                 message,
@@ -63,7 +74,7 @@ class SqlTransport extends Transport {
                 context = {},
                 metadata = {},
                 ...rest
-            } = info;
+            } = data;
 
             // Validar campos requeridos
             if (!error_code || !error_message) {
