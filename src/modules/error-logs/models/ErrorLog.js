@@ -97,6 +97,11 @@ const ErrorLog = sequelize.define('ErrorLog', {
         allowNull: true,
         comment: 'ID único de request para correlación con logs de Pino'
     },
+    correlation_id: {
+        type: DataTypes.STRING(100),
+        allowNull: true,
+        comment: 'ID de correlación para vincular errores con auditorías (opcional)'
+    },
     context: {
         type: DataTypes.JSONB,
         allowNull: true,
@@ -147,6 +152,10 @@ const ErrorLog = sequelize.define('ErrorLog', {
         {
             fields: ['endpoint'],
             name: 'idx_error_logs_endpoint'
+        },
+        {
+            fields: ['correlation_id'],
+            name: 'idx_error_logs_correlation_id'
         }
     ]
 });

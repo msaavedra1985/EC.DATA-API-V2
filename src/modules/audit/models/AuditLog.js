@@ -85,6 +85,11 @@ const AuditLog = sequelize.define(
             type: DataTypes.JSONB,
             allowNull: true,
             comment: 'Información contextual adicional (nombres, descripciones, etc.)'
+        },
+        correlation_id: {
+            type: DataTypes.STRING(100),
+            allowNull: true,
+            comment: 'ID de correlación para vincular auditorías con errores (opcional)'
         }
     },
     {
@@ -112,6 +117,11 @@ const AuditLog = sequelize.define(
                 name: 'idx_audit_action',
                 fields: ['entity_type', 'action'],
                 comment: 'Índice para filtrar por tipo de acción'
+            },
+            {
+                name: 'idx_audit_correlation_id',
+                fields: ['correlation_id'],
+                comment: 'Índice para correlación con error_logs'
             }
         ]
     }
