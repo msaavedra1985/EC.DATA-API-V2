@@ -1,17 +1,22 @@
 // Middleware global para manejo de errores con formato envelope
 import { errorResponse, ERROR_CODES } from '../utils/response.js';
 import logger from '../utils/logger.js';
+import logError from '../helpers/errorLog.js';
 
 /**
  * Middleware global de manejo de errores
  * Captura todos los errores no manejados y los formatea con envelope response
+ * 
+ * DIRECTIVA CRÍTICA: Este middleware garantiza que TODOS los errores de la API 
+ * se registren automáticamente en la tabla error_logs para auditoría y debugging
+ * 
  * @param {Error} err - Error capturado
  * @param {Object} req - Request de Express
  * @param {Object} res - Response de Express
  * @param {Function} next - Next middleware
  */
 export const errorHandler = (err, req, res, next) => {
-    // Log del error para debugging
+    // Log del error para debugging en Pino
     logger.error(err, 'Error capturado');
 
     // Determinar el código de estado HTTP
@@ -38,6 +43,71 @@ export const errorHandler = (err, req, res, next) => {
                   ...(err.details && { details: err.details }),
               }
             : null;
+
+    // ========================================
+    // LOGGING AUTOMÁTICO A LA BASE DE DATOS
+    // ========================================
+    
+    // Determinar nivel de severidad
+    let level = 'error';
+    if (status >= 500) {
+        level = 'critical'; // Errores del servidor son críticos
+    } else if (status >= 400 && status < 500) {
+        level = 'warning'; // Errores del cliente son warnings
+    }
+
+    // Extraer información del request
+    const endpoint = req.originalUrl || req.url;
+    const method = req.method;
+    const userId = req.user?.id || null;
+    const organizationId = req.user?.activeOrgId || null;
+    const ipAddress = req.ip || req.connection?.remoteAddress;
+    const userAgent = req.get('user-agent');
+
+    // Construir contexto (sin incluir passwords u otros datos sensibles)
+    const context = {
+        url: endpoint,
+        query: req.query,
+        params: req.params
+    };
+
+    // Solo incluir body si no contiene datos sensibles
+    if (req.body && !req.body.password && !req.body.token && !req.body.refresh_token) {
+        context.body = req.body;
+    }
+
+    // Metadata adicional
+    const metadata = {
+        headers: {
+            host: req.get('host'),
+            referer: req.get('referer'),
+            origin: req.get('origin')
+        }
+    };
+
+    // Registrar error en la base de datos (sin await para no bloquear la respuesta)
+    logError({
+        source: 'backend',
+        level,
+        errorCode: code,
+        errorMessage: message,
+        stackTrace: err.stack || null,
+        endpoint,
+        method,
+        statusCode: status,
+        userId,
+        organizationId,
+        ipAddress,
+        userAgent,
+        context,
+        metadata
+    }).catch(dbError => {
+        // Si falla el logging a la BD, solo loguear en Pino para evitar loops infinitos
+        logger.error({
+            err: dbError,
+            originalError: err
+        }, 'Failed to log error to database in global error handler');
+    });
 
     // Enviar respuesta envelope
     return errorResponse(res, {

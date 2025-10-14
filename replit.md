@@ -25,6 +25,17 @@ Preferred communication style: Simple, everyday language.
 - Include IP address and user agent for security tracking
 - Never skip audit logging, even in batch operations or background jobs
 
+**Error Logging Standards (MANDATORY):**
+- **ALL API errors (4xx, 5xx) are automatically logged to `error_logs` table via global middleware** - Zero configuration required
+- The global `errorHandler` middleware captures every error automatically with full context (endpoint, method, user, stack trace, request data)
+- Backend errors: Logged automatically by middleware - developers don't need to manually log
+- Frontend errors: Use the public `POST /api/v1/error-logs` endpoint (no authentication required)
+- Frontend can optionally include JWT Bearer token to associate errors with users
+- Error logs include: source (frontend/backend), level (error/warning/critical), error_code, message, stack_trace, endpoint, user context, IP, user-agent
+- The `error_logs` table is separate from `audit_logs` - different purposes, volumes, and retention policies
+- Use the `logError()` helper for manual backend error logging (rare - only for custom scenarios)
+- Error logs enable platform-wide observability, debugging, and proactive issue detection
+
 **Development Approach:**
 - Build incrementally in stages, prioritizing quality over speed
 - Focus on one feature at a time

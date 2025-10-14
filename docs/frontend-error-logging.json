@@ -1,0 +1,290 @@
+{
+  "endpoint": {
+    "url": "POST /api/v1/error-logs",
+    "authentication": "NONE (opcional - si se envía JWT Bearer, se captura user_id automáticamente)",
+    "description": "Endpoint público para que el frontend reporte errores. La API captura automáticamente IP, user-agent, y user_id si hay JWT presente."
+  },
+  "request_structure": {
+    "required_fields": [
+      {
+        "field": "source",
+        "type": "string",
+        "enum": ["frontend", "backend"],
+        "description": "Origen del error",
+        "example": "frontend"
+      },
+      {
+        "field": "error_code",
+        "type": "string",
+        "max_length": 100,
+        "description": "Código único del error para identificación",
+        "example": "COMPONENT_RENDER_ERROR"
+      },
+      {
+        "field": "error_message",
+        "type": "string",
+        "description": "Mensaje descriptivo del error",
+        "example": "Failed to render ProductList component"
+      }
+    ],
+    "optional_fields": [
+      {
+        "field": "level",
+        "type": "string",
+        "enum": ["error", "warning", "critical"],
+        "default": "error",
+        "description": "Nivel de severidad del error",
+        "example": "error"
+      },
+      {
+        "field": "stack_trace",
+        "type": "string",
+        "description": "Stack trace completo del error",
+        "example": "Error: Cannot read property 'map' of undefined\\n    at ProductList.render..."
+      },
+      {
+        "field": "endpoint",
+        "type": "string",
+        "max_length": 500,
+        "description": "Ruta o endpoint donde ocurrió el error",
+        "example": "/dashboard/products"
+      },
+      {
+        "field": "method",
+        "type": "string",
+        "max_length": 10,
+        "description": "Método HTTP (para errores de API)",
+        "example": "GET"
+      },
+      {
+        "field": "status_code",
+        "type": "integer",
+        "range": [100, 599],
+        "description": "Código de estado HTTP (para errores de API)",
+        "example": 500
+      },
+      {
+        "field": "session_id",
+        "type": "string",
+        "max_length": 100,
+        "description": "ID de sesión del usuario (para rastrear múltiples errores de la misma sesión)",
+        "example": "sess_abc123xyz"
+      },
+      {
+        "field": "context",
+        "type": "object",
+        "description": "Contexto adicional del error (cualquier objeto JSON)",
+        "example": {
+          "url": "/dashboard/products",
+          "component": "ProductList",
+          "action": "initial_render",
+          "user_action": "page_load",
+          "props": {
+            "productId": "ORG-12345-A"
+          }
+        }
+      },
+      {
+        "field": "metadata",
+        "type": "object",
+        "description": "Metadata adicional del entorno (cualquier objeto JSON)",
+        "example": {
+          "browser": "Chrome 118",
+          "os": "Windows 11",
+          "screen_size": "1920x1080",
+          "viewport": "1600x900",
+          "locale": "es-AR"
+        }
+      }
+    ],
+    "auto_captured_fields": [
+      {
+        "field": "ip_address",
+        "description": "Capturado automáticamente por la API desde req.ip"
+      },
+      {
+        "field": "user_agent",
+        "description": "Capturado automáticamente desde headers"
+      },
+      {
+        "field": "user_id",
+        "description": "Extraído del JWT Bearer token si está presente (opcional)"
+      },
+      {
+        "field": "organization_id",
+        "description": "Extraído del JWT Bearer token si está presente (opcional)"
+      },
+      {
+        "field": "request_id",
+        "description": "UUID único generado por la API para cada error log"
+      },
+      {
+        "field": "created_at",
+        "description": "Timestamp generado automáticamente por la base de datos"
+      }
+    ]
+  },
+  "recommended_error_codes": {
+    "component_errors": [
+      "COMPONENT_RENDER_ERROR",
+      "COMPONENT_MOUNT_ERROR",
+      "COMPONENT_UNMOUNT_ERROR",
+      "COMPONENT_UPDATE_ERROR"
+    ],
+    "api_errors": [
+      "API_REQUEST_FAILED",
+      "API_TIMEOUT",
+      "API_NETWORK_ERROR",
+      "API_PARSE_ERROR",
+      "API_UNAUTHORIZED",
+      "API_FORBIDDEN"
+    ],
+    "state_errors": [
+      "STATE_UPDATE_ERROR",
+      "STATE_SYNC_ERROR",
+      "REDUX_ACTION_ERROR",
+      "CONTEXT_ERROR"
+    ],
+    "routing_errors": [
+      "ROUTE_NOT_FOUND",
+      "NAVIGATION_ERROR",
+      "ROUTE_GUARD_ERROR"
+    ],
+    "data_errors": [
+      "DATA_VALIDATION_ERROR",
+      "DATA_PARSE_ERROR",
+      "DATA_TRANSFORM_ERROR"
+    ],
+    "user_action_errors": [
+      "FORM_SUBMIT_ERROR",
+      "FILE_UPLOAD_ERROR",
+      "DOWNLOAD_ERROR",
+      "PRINT_ERROR"
+    ]
+  },
+  "examples": {
+    "component_render_error": {
+      "source": "frontend",
+      "level": "error",
+      "error_code": "COMPONENT_RENDER_ERROR",
+      "error_message": "Failed to render ProductList component",
+      "stack_trace": "Error: Cannot read property 'map' of undefined\\n    at ProductList.render (ProductList.jsx:45:10)\\n    at finishClassComponent...",
+      "context": {
+        "url": "/dashboard/products",
+        "component": "ProductList",
+        "action": "initial_render",
+        "user_action": "page_load"
+      },
+      "metadata": {
+        "browser": "Chrome 118",
+        "os": "Windows 11",
+        "screen_size": "1920x1080",
+        "react_version": "18.2.0"
+      }
+    },
+    "api_request_failed": {
+      "source": "frontend",
+      "level": "warning",
+      "error_code": "API_REQUEST_FAILED",
+      "error_message": "Failed to fetch organizations: Server returned 500",
+      "endpoint": "/api/v1/organizations",
+      "method": "GET",
+      "status_code": 500,
+      "context": {
+        "retry_count": 3,
+        "timeout": 5000,
+        "url": "/api/v1/organizations?limit=20&offset=0"
+      },
+      "metadata": {
+        "axios_version": "1.4.0",
+        "request_id": "req-frontend-abc123"
+      }
+    },
+    "form_submit_error": {
+      "source": "frontend",
+      "level": "error",
+      "error_code": "FORM_SUBMIT_ERROR",
+      "error_message": "Failed to submit organization form",
+      "stack_trace": "Error: Validation failed\\n    at handleSubmit...",
+      "context": {
+        "url": "/organizations/create",
+        "component": "OrganizationForm",
+        "action": "submit",
+        "form_data": {
+          "name": "Acme Corp",
+          "slug": "acme"
+        }
+      }
+    },
+    "navigation_error": {
+      "source": "frontend",
+      "level": "warning",
+      "error_code": "NAVIGATION_ERROR",
+      "error_message": "Failed to navigate to protected route: User not authenticated",
+      "context": {
+        "from": "/dashboard",
+        "to": "/admin/settings",
+        "reason": "unauthorized"
+      }
+    }
+  },
+  "response": {
+    "success_201": {
+      "ok": true,
+      "data": {
+        "id": "01919eb8-5e8a-7890-b456-123456789abc",
+        "source": "frontend",
+        "level": "error",
+        "error_code": "COMPONENT_RENDER_ERROR",
+        "created_at": "2025-10-13T18:00:00Z"
+      }
+    },
+    "error_400": {
+      "ok": false,
+      "error": {
+        "code": "VALIDATION_ERROR",
+        "message": "Invalid data",
+        "details": [
+          {
+            "path": ["source"],
+            "message": "Source must be either 'frontend' or 'backend'"
+          }
+        ]
+      }
+    },
+    "error_500": {
+      "ok": false,
+      "error": {
+        "code": "INTERNAL_ERROR",
+        "message": "Error logging error"
+      }
+    }
+  },
+  "implementation_guide": {
+    "react_example": {
+      "error_boundary": "// ErrorBoundary.jsx\\nimport { Component } from 'react';\\nimport { logError } from './utils/errorLogger';\\n\\nclass ErrorBoundary extends Component {\\n  componentDidCatch(error, errorInfo) {\\n    logError({\\n      source: 'frontend',\\n      level: 'error',\\n      error_code: 'COMPONENT_RENDER_ERROR',\\n      error_message: error.message,\\n      stack_trace: error.stack,\\n      context: {\\n        componentStack: errorInfo.componentStack,\\n        url: window.location.pathname\\n      },\\n      metadata: {\\n        browser: navigator.userAgent,\\n        screen_size: `${window.screen.width}x${window.screen.height}`\\n      }\\n    });\\n  }\\n}",
+      "axios_interceptor": "// axiosConfig.js\\nimport axios from 'axios';\\nimport { logError } from './utils/errorLogger';\\n\\naxios.interceptors.response.use(\\n  response => response,\\n  error => {\\n    if (error.response && error.response.status >= 500) {\\n      logError({\\n        source: 'frontend',\\n        level: 'critical',\\n        error_code: 'API_REQUEST_FAILED',\\n        error_message: `API error: ${error.message}`,\\n        endpoint: error.config?.url,\\n        method: error.config?.method?.toUpperCase(),\\n        status_code: error.response?.status,\\n        context: {\\n          url: window.location.pathname,\\n          request_data: error.config?.data\\n        }\\n      });\\n    }\\n    return Promise.reject(error);\\n  }\\n);",
+      "utility_function": "// utils/errorLogger.js\\nimport axios from 'axios';\\n\\nconst API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';\\n\\nexport const logError = async (errorData) => {\\n  try {\\n    // Obtener token JWT si está disponible\\n    const token = localStorage.getItem('access_token');\\n    \\n    const headers = {};\\n    if (token) {\\n      headers.Authorization = `Bearer ${token}`;\\n    }\\n\\n    await axios.post(`${API_URL}/api/v1/error-logs`, errorData, { headers });\\n  } catch (err) {\\n    // Si falla el logging, solo hacer console.error para no interrumpir la app\\n    console.error('Failed to log error:', err);\\n  }\\n};"
+    },
+    "nextjs_example": "// app/error.tsx (Next.js 13+ App Router)\\n'use client';\\n\\nimport { useEffect } from 'react';\\nimport { logError } from '@/lib/errorLogger';\\n\\nexport default function Error({\\n  error,\\n  reset,\\n}: {\\n  error: Error & { digest?: string };\\n  reset: () => void;\\n}) {\\n  useEffect(() => {\\n    logError({\\n      source: 'frontend',\\n      level: 'error',\\n      error_code: 'NEXTJS_ERROR',\\n      error_message: error.message,\\n      stack_trace: error.stack,\\n      context: {\\n        digest: error.digest,\\n        url: window.location.pathname\\n      }\\n    });\\n  }, [error]);\\n\\n  return <div>Something went wrong!</div>;\\n}"
+  },
+  "best_practices": [
+    "Siempre enviar stack_trace cuando esté disponible - ayuda mucho al debugging",
+    "Incluir en context la URL, componente y acción del usuario",
+    "Usar level: 'critical' para errores que bloquean funcionalidad importante",
+    "Usar level: 'warning' para errores recuperables o de API",
+    "Incluir metadata del navegador/OS para reproducir bugs específicos de plataforma",
+    "Si el usuario está autenticado, incluir el JWT Bearer token para asociar el error al usuario",
+    "Usar session_id consistente durante toda la sesión del usuario para rastrear errores relacionados",
+    "No enviar datos sensibles (passwords, tokens) en context o metadata",
+    "Implementar rate limiting en el cliente para evitar flood de errores (max 10 por minuto)",
+    "Usar try-catch alrededor de logError() para que fallos en logging no rompan la app"
+  ],
+  "notes": [
+    "El endpoint NO requiere autenticación - es completamente público",
+    "Si se envía JWT Bearer token, la API captura automáticamente user_id y organization_id",
+    "La API captura automáticamente IP y user-agent - no es necesario enviarlos",
+    "Los campos context y metadata aceptan cualquier estructura JSON - usar libremente",
+    "TODOS los errores del backend ya se registran automáticamente - este endpoint es solo para frontend"
+  ]
+}

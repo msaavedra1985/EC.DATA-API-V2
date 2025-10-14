@@ -4,6 +4,7 @@ import healthRouter from '../modules/health/index.js';
 import authRouter from '../modules/auth/index.js';
 import seedRouter from '../modules/seed/index.js';
 import organizationsRouter from '../modules/organizations/index.js';
+import errorLogsRouter from '../modules/error-logs/index.js';
 
 const router = express.Router();
 
@@ -20,6 +21,9 @@ router.use('/auth', authRouter);
 
 // Organizations (Fase 2)
 router.use('/organizations', organizationsRouter);
+
+// Error Logs (público - sin autenticación requerida)
+router.use('/error-logs', errorLogsRouter);
 
 // Seeding (Testing/Development)
 router.use('/seed', seedRouter);

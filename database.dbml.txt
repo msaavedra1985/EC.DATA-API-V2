@@ -1,4 +1,4 @@
-// Database Schema - Generated on 2025-10-13T17:11:40.797Z
+// Database Schema - Generated on 2025-10-14T04:06:44.799Z
 // Project: EC.DATA API - Enterprise REST API
 // Use this file at https://dbdiagram.io to visualize the schema
 
@@ -56,6 +56,39 @@ Table country_translations {
   Indexes {
     (lang) [name: 'country_translations_lang']
     (country_id, lang) [name: 'unique_country_lang', unique]
+  }
+}
+
+Table error_logs {
+  id uuid [pk, not null] // UUID v7 - clave primaria time-ordered
+  source enum_error_logs_source [not null] // Origen del error: frontend o backend
+  level enum_error_logs_level [not null] // Nivel de severidad del error
+  error_code varchar(100) [not null] // Código de error (ej: VALIDATION_ERROR, DATABASE_ERROR)
+  error_message text [not null] // Mensaje descriptivo del error
+  stack_trace text // Stack trace completo del error (si está disponible)
+  endpoint varchar(500) // Endpoint de la API (ej: /api/v1/organizations)
+  method varchar(10) // Método HTTP (GET, POST, PUT, DELETE, etc)
+  status_code integer // Código de estado HTTP (400, 500, etc)
+  user_id uuid // FK a users - usuario que generó el error (null = sistema/anónimo)
+  organization_id uuid // FK a organizations - organización del usuario (null = sin contexto org)
+  session_id varchar(100) // ID de sesión para rastrear múltiples errores de una sesión
+  ip_address inet // Dirección IP del cliente
+  user_agent text // User agent del navegador/cliente
+  request_id varchar(100) // ID único de request para correlación con logs de Pino
+  context jsonb // Contexto adicional del error (URL, componente, acción, query params, etc)
+  metadata jsonb // Metadata adicional (browser, OS, screen size, API version, etc)
+  created_at timestamptz [not null]
+  deleted_at timestamptz
+
+  Indexes {
+    (created_at) [name: 'idx_error_logs_created_at']
+    (endpoint) [name: 'idx_error_logs_endpoint']
+    (error_code) [name: 'idx_error_logs_error_code']
+    (level) [name: 'idx_error_logs_level']
+    (organization_id) [name: 'idx_error_logs_organization_id']
+    (source) [name: 'idx_error_logs_source']
+    (status_code) [name: 'idx_error_logs_status_code']
+    (user_id) [name: 'idx_error_logs_user_id']
   }
 }
 
@@ -194,6 +227,8 @@ Table users {
 // Foreign Key References
 Ref: audit_logs.performed_by > users.id [update: cascade, delete: set null]
 Ref: country_translations.country_id > countries.id [update: cascade, delete: cascade]
+Ref: error_logs.organization_id > organizations.id [update: cascade, delete: set null]
+Ref: error_logs.user_id > users.id [update: cascade, delete: set null]
 Ref: organizations.country_id > countries.id [update: cascade, delete: restrict]
 Ref: organizations.parent_id > organizations.id [update: cascade, delete: restrict]
 Ref: refresh_tokens.user_id > users.id [update: cascade, delete: cascade]
