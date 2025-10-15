@@ -261,15 +261,15 @@ router.get('/', authenticate, async (req, res) => {
  *                 data:
  *                   type: object
  *                   example:
- *                     id: "ORG-1A2B3C"
- *                     human_id: 1
+ *                     id: "ORG-7K9D2-X"
+ *                     slug: "ec-data"
  *                     name: "EC.DATA"
- *                     slug: "ecdata"
- *                     description: "Root organization for EC.DATA platform"
- *                     parent_id: null
- *                     is_active: true
+ *                     description: "Enterprise data solutions and backend infrastructure"
  *                     logo_url: "https://storage.azure.com/logos/ecdata.png"
  *                     website: "https://ec.data"
+ *                     country_id: "US"
+ *                     is_active: true
+ *                     has_parent: false
  *                     created_at: "2025-10-01T10:00:00Z"
  *                     updated_at: "2025-10-01T10:00:00Z"
  *       401:
@@ -987,8 +987,8 @@ router.put('/:id', authenticate, requireOrgPermission('edit'), async (req, res) 
                 });
             }
 
-            // Detectar ciclos
-            const hasCycle = await wouldCreateCycle(organization.id, newParent.id);
+            // Detectar ciclos (usa UUID interno)
+            const hasCycle = await wouldCreateCycle(req.organizationInternal.id, newParent.id);
             if (hasCycle) {
                 return res.status(422).json({
                     ok: false,
@@ -1002,8 +1002,8 @@ router.put('/:id', authenticate, requireOrgPermission('edit'), async (req, res) 
             validatedData.parent_id = newParent.id;
         }
 
-        // Actualizar
-        const updated = await orgRepository.updateOrganization(organization.id, validatedData);
+        // Actualizar (usa UUID interno)
+        const updated = await orgRepository.updateOrganization(req.organizationInternal.id, validatedData);
 
         // Auditoría
         await logAuditAction({
@@ -1770,7 +1770,7 @@ router.get('/hierarchy', authenticate, async (req, res) => {
 router.get('/:id/children', authenticate, requireOrgPermission('view'), async (req, res) => {
     try {
         const organization = req.organization;
-        const children = await getChildren(organization.id);
+        const children = await getChildren(req.organizationInternal.id); // UUID interno
 
         res.json({
             ok: true,
@@ -1945,7 +1945,7 @@ router.get('/:id/children', authenticate, requireOrgPermission('view'), async (r
 router.get('/:id/descendants', authenticate, requireOrgPermission('view'), async (req, res) => {
     try {
         const organization = req.organization;
-        const descendants = await getDescendants(organization.id);
+        const descendants = await getDescendants(req.organizationInternal.id); // UUID interno
 
         res.json({
             ok: true,
@@ -2415,16 +2415,16 @@ router.get('/:id/stats', authenticate, requireOrgPermission('view'), async (req,
     try {
         const organization = req.organization;
 
-        // Contar usuarios
+        // Contar usuarios (usa UUID interno)
         const usersCount = await UserOrganization.count({
-            where: { organization_id: organization.id }
+            where: { organization_id: req.organizationInternal.id }
         });
 
         // Contar hijos directos
-        const children = await getChildren(organization.id, false);
+        const children = await getChildren(req.organizationInternal.id, false);
         
         // Contar todos los descendientes
-        const descendants = await getDescendants(organization.id, false);
+        const descendants = await getDescendants(req.organizationInternal.id, false);
 
         res.json({
             ok: true,
@@ -2569,7 +2569,7 @@ router.put('/:id/activate', authenticate, requireOrgPermission('edit'), async (r
     try {
         const organization = req.organization;
 
-        const updated = await orgRepository.updateOrganization(organization.id, {
+        const updated = await orgRepository.updateOrganization(req.organizationInternal.id, {
             is_active: true
         });
 
@@ -2725,7 +2725,7 @@ router.put('/:id/deactivate', authenticate, requireOrgPermission('edit'), async 
     try {
         const organization = req.organization;
 
-        const updated = await orgRepository.updateOrganization(organization.id, {
+        const updated = await orgRepository.updateOrganization(req.organizationInternal.id, {
             is_active: false
         });
 

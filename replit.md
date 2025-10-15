@@ -91,6 +91,15 @@ Preferred communication style: Simple, everyday language.
 - **WebSocket Preparation:** HTTP server initialization isolated for easy Socket.io integration.
 - **Graceful Shutdown:** Proper cleanup on SIGINT/SIGTERM for Redis, Sequelize, and in-flight requests.
 - **Identifier System:** UUID v7, human_id (scoped incremental ID), and public_code (opaque, Hashids + Luhn checksum) for entities.
+- **Public API Identifier Policy (CRITICAL SECURITY):** 
+  - **NEVER expose UUIDs or human_id in public API responses** - Prevents enumeration attacks and data leakage
+  - **Public APIs ALWAYS use `public_code` as `id`** - All responses return `{ id: "ORG-7K9D2-X", ... }` where id is the public_code
+  - **Internal operations use UUID** - Database queries, scope calculations, and relationships use UUID internally
+  - **DTO Serialization Layer:** All repository functions return DTOs via `toPublicOrganizationDto()` and `toPublicUserDto()` serializers
+  - **Dual req.organization pattern:** Middleware sets both `req.organization` (public DTO) and `req.organizationInternal` (UUID model)
+  - **Admin endpoints exception:** System-admin endpoints may use `toAdminOrganizationDto()` to include internal IDs for support/debugging
+  - **Relationships:** Parent-child relationships returned as objects `{ parent: { id, slug, name } }`, not `parent_id` UUIDs
+  - **This policy applies to ALL entities:** Organizations, users, products, orders, etc. - No exceptions
 - **Authentication:** Comprehensive JWT-based system with access/refresh tokens, token rotation, theft detection, and role-based access control (RBAC). Refresh tokens are database-persisted and SHA-256 hashed. JWT includes standard claims (`iss`, `aud`, `sub`, `iat`, `exp`, `jti`, `activeOrgId`, `primaryOrgId`, `canAccessAllOrgs`, `sessionVersion`, `tokenType`).
 - **RBAC:** Flexible, database-driven RBAC with 7 predefined roles (`system-admin`, `org-admin`, `org-manager`, `user`, `viewer`, `guest`, `demo`). Implemented with `User.belongsTo(Role)`, `User.prototype.hasRole()`, `authenticate` and `requireRole` middleware. Role data is cached in Redis and included in JWT.
 - **Multi-Tenant Organizations:** Hierarchical organization system with many-to-many user-organization relationships. Users can belong to multiple organizations with one marked as primary. Supports organizational scope with role-based access inheritance (system-admin: all orgs, org-admin: org + descendants, org-manager: org + direct children, user/viewer/guest/demo: direct orgs only). EC.DATA is the root organization.

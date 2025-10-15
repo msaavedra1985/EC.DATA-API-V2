@@ -1,6 +1,7 @@
 import Organization from './models/Organization.js';
 import { Op } from 'sequelize';
 import { generateUuidV7, generateHumanId, generatePublicCode } from '../../utils/identifiers.js';
+import { toPublicOrganizationDto } from '../../helpers/serializers.js';
 
 /**
  * Repository para Organizations
@@ -31,30 +32,15 @@ export const createOrganization = async (data) => {
         ...data
     });
     
-    // Retornar sin campos sensibles
-    return {
-        id: organization.id,
-        public_code: organization.public_code,
-        human_id: organization.human_id,
-        slug: organization.slug,
-        name: organization.name,
-        country_id: organization.country_id,
-        tax_id: organization.tax_id,
-        email: organization.email,
-        phone: organization.phone,
-        address: organization.address,
-        settings: organization.settings,
-        is_active: organization.is_active,
-        created_at: organization.created_at,
-        updated_at: organization.updated_at
-    };
+    // Retornar DTO público seguro (public_code como id, sin UUID ni human_id)
+    return toPublicOrganizationDto(organization);
 };
 
 /**
- * Buscar organización por public_code
+ * Buscar organización por public_code (retorna DTO público)
  * 
  * @param {string} publicCode - public_code de la organización
- * @returns {Promise<Object|null>} - Organización o null
+ * @returns {Promise<Object|null>} - DTO público de organización o null
  */
 export const findOrganizationByPublicCode = async (publicCode) => {
     const organization = await Organization.findOne({
@@ -65,22 +51,21 @@ export const findOrganizationByPublicCode = async (publicCode) => {
         return null;
     }
     
-    return {
-        id: organization.id,
-        public_code: organization.public_code,
-        human_id: organization.human_id,
-        slug: organization.slug,
-        name: organization.name,
-        country_id: organization.country_id,
-        tax_id: organization.tax_id,
-        email: organization.email,
-        phone: organization.phone,
-        address: organization.address,
-        settings: organization.settings,
-        is_active: organization.is_active,
-        created_at: organization.created_at,
-        updated_at: organization.updated_at
-    };
+    return toPublicOrganizationDto(organization);
+};
+
+/**
+ * Buscar organización por public_code (SOLO USO INTERNO - retorna modelo con UUID)
+ * Esta función NO debe usarse para respuestas API, solo para lógica interna
+ * que requiere el UUID para relaciones o verificaciones de permisos
+ * 
+ * @param {string} publicCode - public_code de la organización
+ * @returns {Promise<Object|null>} - Modelo de Sequelize con UUID o null
+ */
+export const findOrganizationByPublicCodeInternal = async (publicCode) => {
+    return await Organization.findOne({
+        where: { public_code: publicCode }
+    });
 };
 
 /**
@@ -98,22 +83,7 @@ export const findOrganizationByHumanId = async (humanId) => {
         return null;
     }
     
-    return {
-        id: organization.id,
-        public_code: organization.public_code,
-        human_id: organization.human_id,
-        slug: organization.slug,
-        name: organization.name,
-        country_id: organization.country_id,
-        tax_id: organization.tax_id,
-        email: organization.email,
-        phone: organization.phone,
-        address: organization.address,
-        settings: organization.settings,
-        is_active: organization.is_active,
-        created_at: organization.created_at,
-        updated_at: organization.updated_at
-    };
+    return toPublicOrganizationDto(organization);
 };
 
 /**
@@ -129,22 +99,7 @@ export const findOrganizationById = async (id) => {
         return null;
     }
     
-    return {
-        id: organization.id,
-        public_code: organization.public_code,
-        human_id: organization.human_id,
-        slug: organization.slug,
-        name: organization.name,
-        country_id: organization.country_id,
-        tax_id: organization.tax_id,
-        email: organization.email,
-        phone: organization.phone,
-        address: organization.address,
-        settings: organization.settings,
-        is_active: organization.is_active,
-        created_at: organization.created_at,
-        updated_at: organization.updated_at
-    };
+    return toPublicOrganizationDto(organization);
 };
 
 /**
@@ -162,22 +117,7 @@ export const findOrganizationBySlug = async (slug) => {
         return null;
     }
     
-    return {
-        id: organization.id,
-        public_code: organization.public_code,
-        human_id: organization.human_id,
-        slug: organization.slug,
-        name: organization.name,
-        country_id: organization.country_id,
-        tax_id: organization.tax_id,
-        email: organization.email,
-        phone: organization.phone,
-        address: organization.address,
-        settings: organization.settings,
-        is_active: organization.is_active,
-        created_at: organization.created_at,
-        updated_at: organization.updated_at
-    };
+    return toPublicOrganizationDto(organization);
 };
 
 /**
@@ -226,17 +166,7 @@ export const listOrganizations = async (limit = 50, offset = 0, filters = {}) =>
     
     return {
         total: count,
-        organizations: rows.map(org => ({
-            id: org.id,
-            public_code: org.public_code,
-            human_id: org.human_id,
-            slug: org.slug,
-            name: org.name,
-            country_id: org.country_id,
-            is_active: org.is_active,
-            created_at: org.created_at,
-            updated_at: org.updated_at
-        }))
+        organizations: rows.map(org => toPublicOrganizationDto(org))
     };
 };
 
@@ -261,22 +191,7 @@ export const updateOrganization = async (id, updates) => {
     
     await organization.update(updates);
     
-    return {
-        id: organization.id,
-        public_code: organization.public_code,
-        human_id: organization.human_id,
-        slug: organization.slug,
-        name: organization.name,
-        country_id: organization.country_id,
-        tax_id: organization.tax_id,
-        email: organization.email,
-        phone: organization.phone,
-        address: organization.address,
-        settings: organization.settings,
-        is_active: organization.is_active,
-        created_at: organization.created_at,
-        updated_at: organization.updated_at
-    };
+    return toPublicOrganizationDto(organization);
 };
 
 /**
@@ -311,19 +226,7 @@ export const getRootOrganization = async () => {
         return null;
     }
     
-    return {
-        id: organization.id,
-        public_code: organization.public_code,
-        human_id: organization.human_id,
-        slug: organization.slug,
-        name: organization.name,
-        parent_id: organization.parent_id,
-        logo_url: organization.logo_url,
-        description: organization.description,
-        config: organization.config,
-        is_active: organization.is_active,
-        created_at: organization.created_at
-    };
+    return toPublicOrganizationDto(organization);
 };
 
 /**
@@ -338,16 +241,7 @@ export const getChildOrganizations = async (parentId) => {
         order: [['name', 'ASC']]
     });
     
-    return organizations.map(org => ({
-        id: org.id,
-        public_code: org.public_code,
-        human_id: org.human_id,
-        slug: org.slug,
-        name: org.name,
-        parent_id: org.parent_id,
-        logo_url: org.logo_url,
-        is_active: org.is_active
-    }));
+    return organizations.map(org => toPublicOrganizationDto(org));
 };
 
 /**

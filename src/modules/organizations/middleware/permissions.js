@@ -35,13 +35,13 @@ export const requireOrgPermission = (permission = 'view') => {
             }
 
             // system-admin tiene acceso total
-            if (user.role?.slug === 'system-admin') {
+            if (user.role === 'system-admin') {
                 return next();
             }
 
             // Si el endpoint requiere crear, solo system-admin y org-admin pueden
             if (permission === 'create') {
-                if (!['system-admin', 'org-admin'].includes(user.role?.slug)) {
+                if (!['system-admin', 'org-admin'].includes(user.role)) {
                     return res.status(403).json({
                         ok: false,
                         error: {
@@ -69,17 +69,21 @@ export const requireOrgPermission = (permission = 'view') => {
                 }
 
                 // Verificar si el usuario puede acceder
+                // NOTA: org.id ya es public_code (gracias al DTO), pero canAccessOrganization necesita el UUID interno
+                // Por eso necesitamos obtener el UUID de la BD antes de verificar acceso
+                const orgWithInternalId = await orgRepository.findOrganizationByPublicCodeInternal(orgPublicCode);
+                
                 const hasAccess = await canAccessOrganization(
-                    user.id,
-                    org.id,
-                    user.role?.slug
+                    user.userId,
+                    orgWithInternalId.id, // UUID interno necesario para scope calculation
+                    user.role
                 );
 
                 if (!hasAccess) {
                     orgLogger.warn({
-                        userId: user.id,
-                        orgId: org.id,
-                        role: user.role?.slug,
+                        userId: user.userId,
+                        orgPublicCode: org.id, // org.id es public_code ahora
+                        role: user.role,
                         permission
                     }, 'Permission denied for organization access');
 
@@ -95,7 +99,7 @@ export const requireOrgPermission = (permission = 'view') => {
                 // Verificar permisos específicos
                 if (permission === 'edit') {
                     // Solo system-admin y org-admin pueden editar
-                    if (!['system-admin', 'org-admin'].includes(user.role?.slug)) {
+                    if (!['system-admin', 'org-admin'].includes(user.role)) {
                         return res.status(403).json({
                             ok: false,
                             error: {
@@ -108,7 +112,7 @@ export const requireOrgPermission = (permission = 'view') => {
 
                 if (permission === 'delete') {
                     // Solo system-admin y org-admin pueden eliminar
-                    if (!['system-admin', 'org-admin'].includes(user.role?.slug)) {
+                    if (!['system-admin', 'org-admin'].includes(user.role)) {
                         return res.status(403).json({
                             ok: false,
                             error: {
@@ -120,7 +124,10 @@ export const requireOrgPermission = (permission = 'view') => {
                 }
 
                 // Adjuntar organización al request para uso posterior
-                req.organization = org;
+                // org = DTO público (con public_code como id)
+                // orgWithInternalId = modelo interno (con UUID)
+                req.organization = org; // DTO público para responses
+                req.organizationInternal = orgWithInternalId; // Modelo interno para operaciones
             }
 
             next();
