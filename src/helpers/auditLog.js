@@ -29,7 +29,7 @@ const auditLogger = logger.child({ component: 'audit' });
  *   entityType: 'organization',
  *   entityId: org.public_code,
  *   action: 'created',
- *   performedBy: req.user.id,
+ *   performedBy: req.user.userId,
  *   metadata: { organization_name: org.name },
  *   ipAddress: req.ip,
  *   userAgent: req.headers['user-agent']
@@ -41,7 +41,7 @@ const auditLogger = logger.child({ component: 'audit' });
  *   entityType: 'organization',
  *   entityId: org.public_code,
  *   action: 'updated',
- *   performedBy: req.user.id,
+ *   performedBy: req.user.userId,
  *   changes: {
  *     logo_url: { old: oldLogo, new: newLogo },
  *     name: { old: 'Old Name', new: 'New Name' }

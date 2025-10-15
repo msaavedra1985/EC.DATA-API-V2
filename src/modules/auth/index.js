@@ -788,7 +788,7 @@ router.get('/admin-test', authenticate, requireRole(['system-admin', 'org-admin'
     try {
         return successResponse(res, {
             message: 'Acceso autorizado - Eres un administrador',
-            user_role: req.user.role.name,
+            user_role: req.user.role,
             user_id: req.user.userId
         });
     } catch (error) {

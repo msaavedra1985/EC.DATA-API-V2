@@ -187,7 +187,7 @@ router.get('/', authenticate, async (req, res) => {
         const { limit = 20, offset = 0, search, parent_id, active_only = 'true' } = req.query;
         
         // Obtener scope del usuario
-        const scope = await orgServices.getOrganizationScope(req.user.id, req.user.role?.slug);
+        const scope = await orgServices.getOrganizationScope(req.user.userId, req.user.role);
         
         // Construir filtros incluyendo scope
         const filters = {
@@ -685,7 +685,7 @@ router.post('/', authenticate, requireOrgPermission('create'), async (req, res) 
             entityType: 'organization',
             entityId: organization.id,
             action: 'create',
-            performedBy: req.user.id,
+            performedBy: req.user.userId,
             changes: { created: validatedData },
             ipAddress: req.ip,
             userAgent: req.get('user-agent')
@@ -696,7 +696,7 @@ router.post('/', authenticate, requireOrgPermission('create'), async (req, res) 
             await invalidateOrganizationCache(parentOrg.public_code);
         }
 
-        orgLogger.info({ orgId: organization.id, userId: req.user.id }, 'Organization created');
+        orgLogger.info({ orgId: organization.id, userId: req.user.userId }, 'Organization created');
 
         res.status(201).json({
             ok: true,
@@ -1010,7 +1010,7 @@ router.put('/:id', authenticate, requireOrgPermission('edit'), async (req, res) 
             entityType: 'organization',
             entityId: organization.id,
             action: 'update',
-            performedBy: req.user.id,
+            performedBy: req.user.userId,
             changes: { updated: validatedData },
             ipAddress: req.ip,
             userAgent: req.get('user-agent')
@@ -1244,7 +1244,7 @@ router.post('/batch-delete', authenticate, requireRole(['system-admin', 'org-adm
                 entityType: 'organization',
                 entityId: orgId,
                 action: 'delete',
-                performedBy: req.user.id,
+                performedBy: req.user.userId,
                 changes: { deleted: true, cascade: result },
                 ipAddress: req.ip,
                 userAgent: req.get('user-agent')
@@ -2577,7 +2577,7 @@ router.put('/:id/activate', authenticate, requireOrgPermission('edit'), async (r
             entityType: 'organization',
             entityId: organization.id,
             action: 'activate',
-            performedBy: req.user.id,
+            performedBy: req.user.userId,
             changes: { is_active: true },
             ipAddress: req.ip,
             userAgent: req.get('user-agent')
@@ -2733,7 +2733,7 @@ router.put('/:id/deactivate', authenticate, requireOrgPermission('edit'), async 
             entityType: 'organization',
             entityId: organization.id,
             action: 'deactivate',
-            performedBy: req.user.id,
+            performedBy: req.user.userId,
             changes: { is_active: false },
             ipAddress: req.ip,
             userAgent: req.get('user-agent')
