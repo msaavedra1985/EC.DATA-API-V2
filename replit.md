@@ -80,6 +80,10 @@ Preferred communication style: Simple, everyday language.
 
 ### Performance & Scalability
 - **Caching:** Redis-based caching with configurable TTLs, ETag generation for 304 responses.
+  - **Organizations Cache:** Org details (30 min), hierarchy (30 min), permissions (15 min), paginated lists (5 min)
+  - **Roles Cache:** Role lookups by name (30 min) - improves RBAC performance
+  - **Auth Cache:** User data (15 min), session context (15 min), session versions
+  - **Automatic Invalidation:** Caches invalidate on CUD operations (create/update/delete)
 - **Compression:** Brotli/gzip compression middleware.
 - **Rate Limiting:** "Observe mode" with `X-RateLimit-*` headers, configurable.
 - **Pagination:** Mandatory offset-based pagination (`limit`, `offset`) for list endpoints.

@@ -1,8 +1,9 @@
 // modules/organizations/cache.js
 // Sistema de caché Redis para organizaciones - Multi-usuario con invalidación inteligente
 
-import { setCache, getCache, deleteCache } from '../../db/redis/client.js';
+import { setCache, getCache, deleteCache, scanAndDelete } from '../../db/redis/client.js';
 import logger from '../../utils/logger.js';
+import crypto from 'crypto';
 
 const orgLogger = logger.child({ component: 'organizations' });
 
@@ -10,6 +11,24 @@ const orgLogger = logger.child({ component: 'organizations' });
 const ORGANIZATION_TTL = 30 * 60; // 30 minutos
 const HIERARCHY_TTL = 30 * 60; // 30 minutos
 const PERMISSIONS_TTL = 15 * 60; // 15 minutos (sincronizado con session_context)
+const LIST_CACHE_TTL = 5 * 60; // 5 minutos para listas paginadas
+
+/**
+ * Genera un hash MD5 de los filtros para usar como key de cache
+ * @param {Object} filters - Objeto con filtros (is_active, country_id, search, etc.)
+ * @returns {string} Hash MD5 de los filtros
+ */
+const generateFiltersHash = (filters) => {
+    // Ordenar las keys para que el mismo objeto genere el mismo hash
+    const sortedFilters = Object.keys(filters)
+        .sort()
+        .reduce((acc, key) => {
+            acc[key] = filters[key];
+            return acc;
+        }, {});
+    
+    return crypto.createHash('md5').update(JSON.stringify(sortedFilters)).digest('hex');
+};
 
 /**
  * Guarda una organización en caché
@@ -227,6 +246,76 @@ export const invalidateOrganizationHierarchyBulk = async (publicCodes) => {
     }
 };
 
+/**
+ * Cachea una lista paginada de organizaciones
+ * Key pattern: ec:org:list:{limit}:{offset}:{filtersHash}
+ * 
+ * @param {number} limit - Límite de resultados
+ * @param {number} offset - Offset para paginación
+ * @param {Object} filters - Filtros aplicados
+ * @param {Object} result - Resultado de la query (total y organizations)
+ * @returns {Promise<boolean>} true si se guardó correctamente
+ */
+export const cacheOrganizationList = async (limit, offset, filters, result) => {
+    try {
+        const filtersHash = generateFiltersHash(filters);
+        const key = `ec:org:list:${limit}:${offset}:${filtersHash}`;
+        
+        await setCache(key, result, LIST_CACHE_TTL);
+        
+        orgLogger.debug({ limit, offset, filtersHash, count: result.organizations?.length }, 'Organization list cached');
+        return true;
+    } catch (error) {
+        orgLogger.error({ err: error, limit, offset }, 'Error caching organization list');
+        return false;
+    }
+};
+
+/**
+ * Obtiene una lista paginada cacheada de organizaciones
+ * 
+ * @param {number} limit - Límite de resultados
+ * @param {number} offset - Offset para paginación
+ * @param {Object} filters - Filtros aplicados
+ * @returns {Promise<Object|null>} Lista cacheada o null
+ */
+export const getCachedOrganizationList = async (limit, offset, filters) => {
+    try {
+        const filtersHash = generateFiltersHash(filters);
+        const key = `ec:org:list:${limit}:${offset}:${filtersHash}`;
+        
+        const cached = await getCache(key);
+        
+        if (cached) {
+            orgLogger.debug({ limit, offset, filtersHash }, 'Organization list cache hit');
+        }
+        
+        return cached;
+    } catch (error) {
+        orgLogger.error({ err: error, limit, offset }, 'Error getting cached organization list');
+        return null;
+    }
+};
+
+/**
+ * Invalida TODAS las listas cacheadas de organizaciones usando SCAN+DEL
+ * Se debe llamar cuando se crea, actualiza o elimina cualquier organización
+ * 
+ * @returns {Promise<boolean>} true si se invalidó correctamente
+ */
+export const invalidateAllOrganizationLists = async () => {
+    try {
+        const pattern = 'ec:org:list:*';
+        const deletedCount = await scanAndDelete(pattern);
+        
+        orgLogger.info({ deletedCount }, 'All organization list caches invalidated');
+        return true;
+    } catch (error) {
+        orgLogger.error({ err: error }, 'Error invalidating organization lists');
+        return false;
+    }
+};
+
 export default {
     cacheOrganization,
     getCachedOrganization,
@@ -236,5 +325,8 @@ export default {
     cacheOrganizationPermissions,
     getCachedOrganizationPermissions,
     invalidateUserOrgPermissions,
-    invalidateOrganizationHierarchyBulk
+    invalidateOrganizationHierarchyBulk,
+    cacheOrganizationList,
+    getCachedOrganizationList,
+    invalidateAllOrganizationLists
 };

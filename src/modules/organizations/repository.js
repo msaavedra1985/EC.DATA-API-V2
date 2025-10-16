@@ -2,6 +2,11 @@ import Organization from './models/Organization.js';
 import { Op } from 'sequelize';
 import { generateUuidV7, generateHumanId, generatePublicCode } from '../../utils/identifiers.js';
 import { toPublicOrganizationDto } from '../../helpers/serializers.js';
+import { 
+    cacheOrganizationList, 
+    getCachedOrganizationList, 
+    invalidateAllOrganizationLists 
+} from './cache.js';
 
 /**
  * Repository para Organizations
@@ -10,6 +15,7 @@ import { toPublicOrganizationDto } from '../../helpers/serializers.js';
 
 /**
  * Crear nueva organización con identificadores UUID v7
+ * Invalida cache de listas al crear
  * 
  * @param {Object} data - Datos de la organización
  * @returns {Promise<Object>} - Organización creada (sin campos sensibles)
@@ -31,6 +37,9 @@ export const createOrganization = async (data) => {
         public_code: publicCode,
         ...data
     });
+    
+    // Invalidar cache de listas (nueva organización afecta todas las listas)
+    await invalidateAllOrganizationLists();
     
     // Retornar DTO público seguro (public_code como id, sin UUID ni human_id)
     return toPublicOrganizationDto(organization);
@@ -121,7 +130,8 @@ export const findOrganizationBySlug = async (slug) => {
 };
 
 /**
- * Listar organizaciones con paginación
+ * Listar organizaciones con paginación y cache
+ * Cache: 5 minutos | Key: org:list:{limit}:{offset}:{filtersHash}
  * 
  * @param {number} limit - Límite de resultados
  * @param {number} offset - Offset para paginación
@@ -129,6 +139,12 @@ export const findOrganizationBySlug = async (slug) => {
  * @returns {Promise<Object>} - Lista de organizaciones y total
  */
 export const listOrganizations = async (limit = 50, offset = 0, filters = {}) => {
+    // Intentar obtener desde cache
+    const cached = await getCachedOrganizationList(limit, offset, filters);
+    if (cached) {
+        return cached;
+    }
+    
     const where = {};
     
     if (filters.is_active !== undefined) {
@@ -164,14 +180,20 @@ export const listOrganizations = async (limit = 50, offset = 0, filters = {}) =>
         order: [['created_at', 'DESC']]
     });
     
-    return {
+    const result = {
         total: count,
         organizations: rows.map(org => toPublicOrganizationDto(org))
     };
+    
+    // Guardar en cache
+    await cacheOrganizationList(limit, offset, filters, result);
+    
+    return result;
 };
 
 /**
  * Actualizar organización
+ * Invalida cache de listas al actualizar
  * 
  * @param {string} id - ID de la organización
  * @param {Object} updates - Datos a actualizar
@@ -191,11 +213,15 @@ export const updateOrganization = async (id, updates) => {
     
     await organization.update(updates);
     
+    // Invalidar cache de listas (la actualización puede cambiar ordenamiento/filtros)
+    await invalidateAllOrganizationLists();
+    
     return toPublicOrganizationDto(organization);
 };
 
 /**
  * Soft delete de organización
+ * Invalida cache de listas al eliminar
  * 
  * @param {string} id - ID de la organización
  * @returns {Promise<boolean>} - true si se eliminó
@@ -208,6 +234,9 @@ export const deleteOrganization = async (id) => {
     }
     
     await organization.destroy(); // Soft delete por paranoid: true
+    
+    // Invalidar cache de listas (organización eliminada afecta todas las listas)
+    await invalidateAllOrganizationLists();
     
     return true;
 };

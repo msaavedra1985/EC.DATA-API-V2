@@ -108,9 +108,9 @@ const cleanExpiredMemoryCache = () => {
 };
 
 /**
- * Obtiene un valor del cache
+ * Obtiene un valor del cache y lo parsea automáticamente si es JSON
  * @param {string} key - Clave del cache
- * @returns {Promise<string|null>}
+ * @returns {Promise<any|null>}
  */
 export const getCache = async key => {
     // Fallback en memoria si Redis no está disponible
@@ -120,7 +120,15 @@ export const getCache = async key => {
     }
     
     try {
-        return await redisClient.get(key);
+        const value = await redisClient.get(key);
+        if (!value) return null;
+        
+        // Intentar parsear como JSON, si falla retornar string
+        try {
+            return JSON.parse(value);
+        } catch {
+            return value;
+        }
     } catch (error) {
         dbLogger.error(error, 'Redis GET error');
         return null;
@@ -129,15 +137,19 @@ export const getCache = async key => {
 
 /**
  * Establece un valor en el cache con TTL opcional
+ * Serializa automáticamente objetos a JSON
  * @param {string} key - Clave del cache
- * @param {string} value - Valor a almacenar
+ * @param {any} value - Valor a almacenar (string, number, object, array)
  * @param {number} ttl - Tiempo de vida en segundos (opcional)
  * @returns {Promise<boolean>}
  */
 export const setCache = async (key, value, ttl = null) => {
+    // Serializar objetos a JSON
+    const serializedValue = typeof value === 'object' ? JSON.stringify(value) : String(value);
+    
     // Fallback en memoria si Redis no está disponible
     if (!isRedisAvailable) {
-        inMemoryCache.set(key, value);
+        inMemoryCache.set(key, value); // Guardar objeto original en memoria
         if (ttl) {
             const expireAt = Date.now() + (ttl * 1000);
             inMemoryTTLs.set(key, expireAt);
@@ -149,9 +161,9 @@ export const setCache = async (key, value, ttl = null) => {
     
     try {
         if (ttl) {
-            await redisClient.setEx(key, ttl, value);
+            await redisClient.setEx(key, ttl, serializedValue);
         } else {
-            await redisClient.set(key, value);
+            await redisClient.set(key, serializedValue);
         }
         return true;
     } catch (error) {
@@ -224,6 +236,65 @@ export const setCacheWithPrefix = async (key, value, ttl = null) => {
  */
 export const deleteCacheWithPrefix = async (key) => {
     return deleteCache(ensurePrefix(key));
+};
+
+/**
+ * Escanea y elimina todas las keys que coincidan con un patrón
+ * Útil para invalidación masiva de cache (ej: 'ec:org:list:*', 'ec:role:*')
+ * 
+ * @param {string} pattern - Patrón de keys a eliminar (usa * como wildcard)
+ * @returns {Promise<number>} Número de keys eliminadas
+ */
+export const scanAndDelete = async (pattern) => {
+    // Fallback en memoria si Redis no está disponible
+    if (!isRedisAvailable) {
+        let count = 0;
+        const regex = new RegExp('^' + pattern.replace(/\*/g, '.*') + '$');
+        
+        for (const key of inMemoryCache.keys()) {
+            if (regex.test(key)) {
+                inMemoryCache.delete(key);
+                inMemoryTTLs.delete(key);
+                count++;
+            }
+        }
+        
+        dbLogger.debug({ pattern, count }, 'In-memory cache pattern deletion');
+        return count;
+    }
+    
+    try {
+        let cursor = '0';
+        let deletedCount = 0;
+        const keysToDelete = [];
+        
+        // SCAN iterativo para encontrar todas las keys que coinciden
+        do {
+            const result = await redisClient.scan(cursor, {
+                MATCH: pattern,
+                COUNT: 100
+            });
+            
+            cursor = result.cursor;
+            const keys = result.keys;
+            
+            if (keys.length > 0) {
+                keysToDelete.push(...keys);
+            }
+        } while (cursor !== '0');
+        
+        // Eliminar keys en batch (spread para node-redis)
+        if (keysToDelete.length > 0) {
+            await redisClient.del(...keysToDelete);
+            deletedCount = keysToDelete.length;
+        }
+        
+        dbLogger.debug({ pattern, deletedCount }, 'Redis pattern deletion completed');
+        return deletedCount;
+    } catch (error) {
+        dbLogger.error({ err: error, pattern }, 'Redis SCAN+DEL error');
+        return 0;
+    }
 };
 
 export default redisClient;

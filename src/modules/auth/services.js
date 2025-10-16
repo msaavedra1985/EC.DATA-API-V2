@@ -8,6 +8,7 @@ import { config } from '../../config/env.js';
 import * as authRepository from './repository.js';
 import * as refreshTokenRepository from './refreshTokenRepository.js';
 import * as authCache from './cache.js';
+import * as rolesCache from './rolesCache.js';
 import * as organizationService from '../organizations/services.js';
 import Role from './models/Role.js';
 
@@ -21,6 +22,30 @@ const JWT_REFRESH_SECRET = config.jwt.refreshSecret;
 const JWT_REFRESH_EXPIRES_IN = config.jwt.refreshExpiresIn;
 const JWT_ISSUER = config.jwt.issuer;
 const JWT_AUDIENCE = config.jwt.audience;
+
+/**
+ * Obtiene un rol por nombre usando cache de Redis (TTL: 30 min)
+ * @param {string} roleName - Nombre del rol (ej: 'user', 'system-admin')
+ * @returns {Promise<Object|null>} Role object o null
+ */
+const getRoleByName = async (roleName) => {
+    // Intentar obtener desde cache
+    const cached = await rolesCache.getCachedRole(roleName);
+    if (cached) {
+        return cached;
+    }
+    
+    // Si no está en cache, buscar en BD
+    const role = await Role.findOne({ where: { name: roleName } });
+    
+    if (role) {
+        // Guardar en cache para futuras consultas
+        await rolesCache.cacheRole(role);
+        return role;
+    }
+    
+    return null;
+};
 
 /**
  * Registrar un nuevo usuario
@@ -46,10 +71,10 @@ export const register = async (userData, sessionData = {}) => {
         throw error;
     }
 
-    // Si no se provee role_id, buscar el rol 'user' por defecto
+    // Si no se provee role_id, buscar el rol 'user' por defecto (usa cache)
     let finalRoleId = role_id;
     if (!finalRoleId) {
-        const defaultRole = await Role.findOne({ where: { name: 'user' } });
+        const defaultRole = await getRoleByName('user');
         if (!defaultRole) {
             const error = new Error('auth.register.default_role_not_found');
             error.status = 500;
