@@ -505,11 +505,11 @@ router.post('/validate', async (req, res) => {
         // Validar datos del request
         const validatedData = validateOrganizationValidation(req.body);
         
-        // Llamar al servicio de validación
+        // Llamar al servicio de validación (mapear exclude_id a excludePublicCode)
         const result = await orgServices.validateOrganization({
             name: validatedData.name,
             slug: validatedData.slug,
-            excludePublicCode: validatedData.exclude_id
+            excludePublicCode: validatedData.exclude_id || null
         });
 
         res.json({
