@@ -392,6 +392,155 @@ router.get('/:id', authenticate, requireOrgPermission('view'), async (req, res) 
 
 /**
  * @swagger
+ * /api/v1/organizations/validate:
+ *   post:
+ *     summary: Validar disponibilidad de nombre y/o slug de organización
+ *     description: Verifica si el nombre o slug ya están en uso. Útil para validación en tiempo real en formularios.
+ *     tags: [Organizations]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 description: Nombre de organización a validar
+ *                 example: "ACME Corporation"
+ *               slug:
+ *                 type: string
+ *                 description: Slug a validar
+ *                 example: "acme-corp"
+ *               exclude_id:
+ *                 type: string
+ *                 description: Public code de organización a excluir (para edición)
+ *                 example: "ORG-1A2B3C"
+ *             oneOf:
+ *               - required: [name]
+ *               - required: [slug]
+ *     responses:
+ *       200:
+ *         description: Validación exitosa
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     valid:
+ *                       type: boolean
+ *                       description: true si está disponible, false si hay conflictos
+ *                       example: false
+ *                     conflicts:
+ *                       type: object
+ *                       properties:
+ *                         name:
+ *                           type: boolean
+ *                           description: true si el nombre ya existe
+ *                           example: true
+ *                         slug:
+ *                           type: boolean
+ *                           description: true si el slug ya existe
+ *                           example: false
+ *                   example:
+ *                     valid: false
+ *                     conflicts:
+ *                       name: true
+ *                       slug: false
+ *       400:
+ *         description: Error de validación - Al menos name o slug debe estar presente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: object
+ *                   properties:
+ *                     code:
+ *                       type: string
+ *                       example: "VALIDATION_ERROR"
+ *                     message:
+ *                       type: string
+ *                       example: "Invalid data"
+ *                     details:
+ *                       type: array
+ *                       example:
+ *                         - path: ["name"]
+ *                           message: "At least one of name or slug must be provided"
+ *       500:
+ *         description: Error interno del servidor
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: object
+ *                   properties:
+ *                     code:
+ *                       type: string
+ *                       example: "INTERNAL_ERROR"
+ *                     message:
+ *                       type: string
+ *                       example: "Error validating organization"
+ */
+router.post('/validate', async (req, res) => {
+    try {
+        // Importar el validator
+        const { validateOrganizationValidation } = await import('./dtos/validate.dto.js');
+        
+        // Validar datos del request
+        const validatedData = validateOrganizationValidation(req.body);
+        
+        // Llamar al servicio de validación
+        const result = await orgServices.validateOrganization({
+            name: validatedData.name,
+            slug: validatedData.slug,
+            excludePublicCode: validatedData.exclude_id
+        });
+
+        res.json({
+            ok: true,
+            data: result
+        });
+    } catch (error) {
+        if (error.name === 'ZodError') {
+            return res.status(400).json({
+                ok: false,
+                error: {
+                    code: 'VALIDATION_ERROR',
+                    message: 'Invalid data',
+                    details: error.errors
+                }
+            });
+        }
+
+        orgLogger.error({ err: error }, 'Error validating organization');
+        res.status(500).json({
+            ok: false,
+            error: {
+                code: 'INTERNAL_ERROR',
+                message: 'Error validating organization'
+            }
+        });
+    }
+});
+
+/**
+ * @swagger
  * /api/v1/organizations:
  *   post:
  *     summary: Crear nueva organización
