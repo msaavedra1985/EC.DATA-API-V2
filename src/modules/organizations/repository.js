@@ -299,3 +299,67 @@ export const getOrganizationDescendants = async (organizationId) => {
     
     return descendants;
 };
+
+/**
+ * Validar unicidad de nombre y/o slug de organización
+ * Verifica si ya existe una organización con el nombre o slug proporcionado
+ * Permite excluir una organización específica (útil para edición)
+ * 
+ * @param {Object} params - Parámetros de validación
+ * @param {string} [params.name] - Nombre a validar
+ * @param {string} [params.slug] - Slug a validar
+ * @param {string} [params.excludePublicCode] - public_code de organización a excluir
+ * @returns {Promise<Object>} - Resultado de validación { valid, conflicts: { name, slug } }
+ */
+export const validateOrganizationUniqueness = async ({ name, slug, excludePublicCode }) => {
+    const conflicts = {
+        name: false,
+        slug: false
+    };
+    
+    // Construir condiciones de búsqueda
+    const conditions = [];
+    
+    if (name) {
+        conditions.push({ name: { [Op.iLike]: name } });
+    }
+    
+    if (slug) {
+        conditions.push({ slug: { [Op.iLike]: slug } });
+    }
+    
+    // Si no hay nada que validar, retornar válido
+    if (conditions.length === 0) {
+        return { valid: true, conflicts };
+    }
+    
+    // Buscar organizaciones que coincidan con nombre o slug
+    const where = {
+        [Op.or]: conditions
+    };
+    
+    // Excluir organización actual si se proporciona excludePublicCode
+    if (excludePublicCode) {
+        where.public_code = { [Op.ne]: excludePublicCode };
+    }
+    
+    const existingOrganizations = await Organization.findAll({
+        where,
+        attributes: ['name', 'slug']
+    });
+    
+    // Verificar conflictos específicos (case-insensitive)
+    for (const org of existingOrganizations) {
+        if (name && org.name.toLowerCase() === name.toLowerCase()) {
+            conflicts.name = true;
+        }
+        if (slug && org.slug.toLowerCase() === slug.toLowerCase()) {
+            conflicts.slug = true;
+        }
+    }
+    
+    // La validación es válida si no hay conflictos
+    const valid = !conflicts.name && !conflicts.slug;
+    
+    return { valid, conflicts };
+};
