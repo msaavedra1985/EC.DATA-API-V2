@@ -308,3 +308,21 @@ export const invalidateOrgDescendants = async (organizationId) => {
     const cacheKey = `${ORG_TREE_CACHE_PREFIX}${organizationId}`;
     await deleteCache(cacheKey);
 };
+
+/**
+ * Validar unicidad de nombre y/o slug de organización
+ * Endpoint de validación para verificar disponibilidad antes de crear/editar
+ * 
+ * @param {Object} params - Parámetros de validación
+ * @param {string} [params.name] - Nombre a validar
+ * @param {string} [params.slug] - Slug a validar
+ * @param {string} [params.excludePublicCode] - public_code de organización a excluir
+ * @returns {Promise<Object>} - Resultado de validación { valid, conflicts }
+ */
+export const validateOrganization = async ({ name, slug, excludePublicCode }) => {
+    return await orgRepository.validateOrganizationUniqueness({ 
+        name, 
+        slug, 
+        excludePublicCode 
+    });
+};
