@@ -42,6 +42,7 @@ Preferred communication style: Simple, everyday language.
 - Error logs enable platform-wide observability, debugging, and proactive issue detection
 
 **Development Approach:**
+- **CRITICAL DEVELOPMENT DIRECTIVE**: "What works, don't touch" - Do NOT modify working files unless absolutely necessary. If changes to working code are required, perform deep impact analysis first to assess platform-wide effects.
 - Build incrementally in stages, prioritizing quality over speed
 - Focus on one feature at a time
 - Ensure proper testing coverage for new features
