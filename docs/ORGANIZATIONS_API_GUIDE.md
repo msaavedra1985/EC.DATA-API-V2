@@ -466,7 +466,92 @@ Obtiene TODOS los descendientes (recursivo).
 
 ## 🛠️ Endpoints de Utilidad
 
-### 9. GET /api/v1/organizations/validate-slug
+### 9. POST /api/v1/organizations/validate
+
+Valida disponibilidad de nombre y/o slug de organización.
+
+**⚠️ Endpoint público - NO requiere autenticación**
+
+**Request Body:**
+```json
+{
+  "name": "Nueva Organización",
+  "slug": "nueva-org",
+  "exclude_id": "ORG-00123-X"  // Opcional - para excluir en edición
+}
+```
+
+**Campos:**
+- `name` (string, opcional) - Nombre a validar
+- `slug` (string, opcional) - Slug a validar
+- `exclude_id` (string, opcional) - Public code a excluir (útil al editar)
+- **Mínimo uno de `name` o `slug` debe estar presente**
+
+**Response:**
+```json
+{
+  "ok": true,
+  "data": {
+    "valid": false,
+    "conflicts": {
+      "name": true,
+      "slug": false
+    }
+  }
+}
+```
+
+**Ejemplo de uso (validación en tiempo real):**
+```javascript
+const validateOrganization = async (name, slug, excludeId = null) => {
+  const response = await fetch('/api/v1/organizations/validate', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      name,
+      slug,
+      exclude_id: excludeId
+    })
+  });
+  
+  const { data } = await response.json();
+  return data; // { valid: boolean, conflicts: { name, slug } }
+};
+
+// En un formulario de creación
+const handleNameChange = async (e) => {
+  const name = e.target.value;
+  setName(name);
+  
+  if (name.length >= 2) {
+    const result = await validateOrganization(name, null);
+    if (result.conflicts.name) {
+      setNameError('Este nombre ya está en uso');
+    }
+  }
+};
+
+// En un formulario de edición (excluyendo la org actual)
+const validateBeforeUpdate = async (orgId, newName, newSlug) => {
+  const result = await validateOrganization(newName, newSlug, orgId);
+  return result.valid;
+};
+```
+
+**Casos de uso:**
+- ✅ Validar nombre único antes de crear organización
+- ✅ Validar slug único antes de crear organización
+- ✅ Validar ambos campos simultáneamente
+- ✅ Excluir organización actual al editar (evita falsos positivos)
+- ✅ Validación case-insensitive (previene bypass)
+
+---
+
+### 10. GET /api/v1/organizations/validate-slug
+
+**⚠️ Deprecado - Usar POST /api/v1/organizations/validate en su lugar**
 
 Valida si un slug está disponible.
 
@@ -512,7 +597,7 @@ const handleSlugChange = async (e) => {
 
 ---
 
-### 10. POST /api/v1/organizations/delete-preview
+### 11. POST /api/v1/organizations/delete-preview
 
 Preview del impacto de eliminación (SIN ejecutar).
 
