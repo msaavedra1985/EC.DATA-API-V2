@@ -113,6 +113,20 @@ SELECT
     NOW()
 WHERE NOT EXISTS (SELECT 1 FROM users WHERE email = 'admin@ecdata.com');
 
+-- 3.1b. System Admin - Nahuel Basael - Password: Test123!
+INSERT INTO users (id, email, password_hash, first_name, last_name, role_id, organization_id, is_active, email_verified_at)
+SELECT 
+    gen_random_uuid(),
+    'nbasael@ecdata.com',
+    '$2b$10$Pgn0Z9sWVKZZ5Z5Z5Z5Z5uP5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5.',
+    'Nahuel',
+    'Basael Jimenez',
+    (SELECT id FROM roles WHERE name = 'system-admin'),
+    (SELECT id FROM organizations WHERE slug = 'ecdata'),
+    true,
+    NOW()
+WHERE NOT EXISTS (SELECT 1 FROM users WHERE email = 'nbasael@ecdata.com');
+
 -- 3.2. Org Admins - Password: Admin123!
 INSERT INTO users (id, email, password_hash, first_name, last_name, role_id, organization_id, is_active, email_verified_at)
 SELECT 
@@ -242,6 +256,21 @@ WHERE NOT EXISTS (
     JOIN users u ON u.id = uo.user_id
     JOIN organizations o ON o.id = uo.organization_id
     WHERE u.email = 'admin@ecdata.com' AND o.slug = 'ecdata'
+);
+
+-- 4.1b. System Admin - Nahuel Basael - EC.DATA
+INSERT INTO user_organizations (id, user_id, organization_id, is_primary, joined_at)
+SELECT 
+    gen_random_uuid(),
+    (SELECT id FROM users WHERE email = 'nbasael@ecdata.com'),
+    (SELECT id FROM organizations WHERE slug = 'ecdata'),
+    true,
+    NOW()
+WHERE NOT EXISTS (
+    SELECT 1 FROM user_organizations uo
+    JOIN users u ON u.id = uo.user_id
+    JOIN organizations o ON o.id = uo.organization_id
+    WHERE u.email = 'nbasael@ecdata.com' AND o.slug = 'ecdata'
 );
 
 -- 4.2. ACME Admin - Pertenece a ACME y ACME LATAM
