@@ -75,9 +75,7 @@ export const createOrganizationSchema = z.object({
     
     country_id: z.coerce.number()
         .int('Country ID must be an integer')
-        .positive('Country ID must be a positive number')
-        .optional()
-        .nullable(),
+        .positive('Country ID must be a positive number'),
     
     is_active: z.boolean()
         .optional()
