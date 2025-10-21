@@ -119,7 +119,9 @@ const ErrorLog = sequelize.define('ErrorLog', {
     underscored: true,
     timestamps: true,
     createdAt: 'created_at',
-    updatedAt: false, // Error logs son inmutables
+    updatedAt: false,
+    paranoid: false,
+    deletedAt: false,
     indexes: [
         {
             fields: ['source'],
