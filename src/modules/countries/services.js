@@ -7,7 +7,7 @@ import { getCache, setCache, deleteCache } from '../../db/redis/client.js';
  */
 
 const COUNTRIES_CACHE_TTL = 3600; // 1 hora (países no cambian frecuentemente)
-const COUNTRIES_CACHE_PREFIX = 'ec:countries:';
+const COUNTRIES_CACHE_PREFIX = 'countries:';
 
 /**
  * Obtener todos los países activos en un idioma específico (con caché)
