@@ -194,14 +194,14 @@ export const getOrganizationScope = async (userId, roleSlug) => {
     // Intentar obtener del cache
     const cached = await getCache(cacheKey);
     if (cached) {
-        return JSON.parse(cached);
+        return cached; // getCache ya parsea el JSON automáticamente
     }
 
     // Calcular scope
     const scope = await calculateOrganizationScope(userId, roleSlug);
 
     // Guardar en cache
-    await setCache(cacheKey, JSON.stringify(scope), ORG_SCOPE_CACHE_TTL);
+    await setCache(cacheKey, scope, ORG_SCOPE_CACHE_TTL); // setCache hace stringify automáticamente
 
     return scope;
 };
