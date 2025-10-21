@@ -556,7 +556,6 @@ router.post('/validate', async (req, res) => {
  *             type: object
  *             required:
  *               - name
- *               - country_id
  *             properties:
  *               name:
  *                 type: string

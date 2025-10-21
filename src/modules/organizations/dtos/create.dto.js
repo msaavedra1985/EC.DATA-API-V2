@@ -73,6 +73,12 @@ export const createOrganizationSchema = z.object({
         .optional()
         .nullable(),
     
+    country_id: z.string()
+        .length(2, 'Country ID must be exactly 2 characters (ISO 3166-1 alpha-2)')
+        .toUpperCase()
+        .optional()
+        .nullable(),
+    
     is_active: z.boolean()
         .optional()
         .default(true)
