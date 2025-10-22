@@ -34,18 +34,17 @@ export const toPublicUserDto = (user) => {
     // Incluir rol si está cargado
     if (user.role) {
         dto.role = {
-            id: user.role.public_code,
             name: user.role.name,
-            display_name: user.role.display_name
+            description: user.role.description
         };
     }
     
-    // Incluir organización si está cargada
-    if (user.organization) {
-        dto.organization = {
-            id: user.organization.public_code,
-            slug: user.organization.slug,
-            name: user.organization.name
+    // Incluir organización primaria si está cargada (no hay belongsTo directo, se carga manual)
+    if (user.primaryOrganization) {
+        dto.primary_organization = {
+            id: user.primaryOrganization.public_code,
+            slug: user.primaryOrganization.slug,
+            name: user.primaryOrganization.name
         };
     }
     
@@ -99,8 +98,7 @@ export const findUserById = async (id, includeRelations = true, useCache = true)
     }
     
     const include = includeRelations ? [
-        { model: Role, as: 'role' },
-        { model: Organization, as: 'organization' }
+        { model: Role, as: 'role' }
     ] : [];
     
     const user = await User.findOne({
@@ -129,8 +127,7 @@ export const findUserById = async (id, includeRelations = true, useCache = true)
  */
 export const findUserByEmail = async (email, includeRelations = true) => {
     const include = includeRelations ? [
-        { model: Role, as: 'role' },
-        { model: Organization, as: 'organization' }
+        { model: Role, as: 'role' }
     ] : [];
     
     const user = await User.findOne({
@@ -191,8 +188,7 @@ export const listUsers = async (limit = 50, offset = 0, filters = {}) => {
         limit,
         offset,
         include: [
-            { model: Role, as: 'role' },
-            { model: Organization, as: 'organization' }
+            { model: Role, as: 'role' }
         ],
         order: [['created_at', 'DESC']]
     });
@@ -221,8 +217,7 @@ export const createUser = async (userData) => {
     // Cargar relaciones
     await user.reload({
         include: [
-            { model: Role, as: 'role' },
-            { model: Organization, as: 'organization' }
+            { model: Role, as: 'role' }
         ]
     });
     
@@ -257,8 +252,7 @@ export const updateUser = async (userId, updateData) => {
     // Recargar relaciones
     await user.reload({
         include: [
-            { model: Role, as: 'role' },
-            { model: Organization, as: 'organization' }
+            { model: Role, as: 'role' }
         ]
     });
     
