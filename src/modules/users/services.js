@@ -428,3 +428,80 @@ export const changePassword = async (userId, currentPassword, newPassword, metad
     return true;
 };
 
+/**
+ * Toggle de estado activo/inactivo de usuario
+ * Permite activar o desactivar usuarios
+ * 
+ * @param {string} targetUserId - Public code del usuario
+ * @param {boolean} isActive - Nuevo estado (true = activo, false = inactivo)
+ * @param {Object} actor - Usuario que realiza la acción
+ * @param {Object} metadata - IP, user-agent, etc
+ * @returns {Promise<Object>} - Usuario actualizado (DTO)
+ */
+export const toggleUserStatus = async (targetUserId, isActive, actor, metadata = {}) => {
+    // Obtener usuario target con rol para validaciones
+    const targetUser = await userRepository.getUserModelById(targetUserId, true);
+    if (!targetUser) {
+        const error = new Error('User not found');
+        error.status = 404;
+        error.code = 'USER_NOT_FOUND';
+        throw error;
+    }
+    
+    // Impedir auto-desactivación
+    if (targetUser.id === actor.userId && isActive === false) {
+        const error = new Error('You cannot deactivate yourself');
+        error.status = 403;
+        error.code = 'SELF_DEACTIVATE_FORBIDDEN';
+        throw error;
+    }
+    
+    // Verificar scope (excepto system-admin)
+    if (actor.role !== 'system-admin') {
+        const scope = await getUserScope(actor.userId, actor.role);
+        if (!scope.canAccessAll && !scope.userIds.includes(targetUser.id)) {
+            const error = new Error('User not in your organization scope');
+            error.status = 403;
+            error.code = 'SCOPE_VIOLATION';
+            throw error;
+        }
+    }
+    
+    // Verificar que no se puede desactivar a un usuario con rol superior
+    if (isActive === false && targetUser.role) {
+        const actorRoleLevel = getRoleLevel(actor.role);
+        const targetRoleLevel = getRoleLevel(targetUser.role.name);
+        
+        if (targetRoleLevel < actorRoleLevel) {
+            const error = new Error('Cannot deactivate user with higher role');
+            error.status = 403;
+            error.code = 'ROLE_HIERARCHY_VIOLATION';
+            throw error;
+        }
+    }
+    
+    // Si el estado no cambia, retornar usuario actual
+    if (targetUser.is_active === isActive) {
+        return userRepository.toPublicUserDto(targetUser);
+    }
+    
+    // Actualizar estado
+    const updatedUser = await userRepository.updateUser(targetUser.id, { is_active: isActive });
+    
+    // Auditar cambio de estado
+    await auditLog.log({
+        entity_type: 'user',
+        entity_id: targetUser.public_code,
+        action: isActive ? 'activated' : 'deactivated',
+        performed_by: actor.userId,
+        changes: {
+            is_active: { old: targetUser.is_active, new: isActive }
+        },
+        metadata
+    });
+    
+    userLogger.info({ userId: targetUser.id, isActive }, 'User status toggled successfully');
+    
+    return updatedUser;
+};
+

@@ -5,6 +5,7 @@ import authRouter from '../modules/auth/index.js';
 import seedRouter from '../modules/seed/index.js';
 import organizationsRouter from '../modules/organizations/index.js';
 import usersRouter from '../modules/users/index.js';
+import rolesRouter from '../modules/roles/index.js';
 import errorLogsRouter from '../modules/error-logs/index.js';
 import countriesRouter from '../modules/countries/index.js';
 
@@ -26,6 +27,9 @@ router.use('/organizations', organizationsRouter);
 
 // Users (Fase 2)
 router.use('/users', usersRouter);
+
+// Roles (público - datos de referencia para formularios)
+router.use('/roles', rolesRouter);
 
 // Countries (público - datos de referencia)
 router.use('/countries', countriesRouter);

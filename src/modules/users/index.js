@@ -9,6 +9,7 @@ import { validateCreateUser } from './dtos/create.dto.js';
 import { validateUpdateUser } from './dtos/update.dto.js';
 import { validateUpdateMe } from './dtos/updateMe.dto.js';
 import { validateChangePassword } from './dtos/changePassword.dto.js';
+import { validateToggleStatus } from './dtos/toggleStatus.dto.js';
 import { successResponse, errorResponse } from '../../utils/response.js';
 import pino from 'pino';
 
@@ -238,6 +239,170 @@ router.delete('/:id', authenticate, requireRole(['system-admin', 'org-admin']), 
         return res.status(204).send();
     } catch (error) {
         userLogger.error({ err: error, userId: req.params.id }, 'Error deleting user');
+        next(error);
+    }
+});
+
+/**
+ * GET /api/v1/users/:id/organizations
+ * Obtener todas las organizaciones del usuario con is_primary
+ */
+router.get('/:id/organizations', authenticate, async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        
+        // Obtener modelo para UUID (necesitamos UUID interno, no public_code)
+        const userModel = await userRepository.getUserModelById(id, false);
+        
+        if (!userModel) {
+            return errorResponse(res, 'User not found', 404, 'USER_NOT_FOUND');
+        }
+        
+        // Verificar scope (excepto system-admin)
+        if (req.user.role !== 'system-admin') {
+            // Permitir ver propias organizaciones
+            if (userModel.id !== req.user.userId) {
+                const scope = await userServices.getUserScope(req.user.userId, req.user.role);
+                
+                if (!scope.canAccessAll && !scope.userIds.includes(userModel.id)) {
+                    return errorResponse(res, 'User not in your organization scope', 403, 'SCOPE_VIOLATION');
+                }
+            }
+        }
+        
+        // Usar servicio de organizaciones para obtener user organizations
+        const organizationService = await import('../organizations/services.js');
+        const userOrgs = await organizationService.getUserOrganizations(userModel.id);
+        
+        // Convertir organization_id (UUID) a public_code para frontend
+        const Organization = (await import('../organizations/models/Organization.js')).default;
+        const orgsWithPublicCode = await Promise.all(
+            userOrgs.map(async (uo) => {
+                const org = await Organization.findByPk(uo.organization_id);
+                return {
+                    organization_id: org.public_code,
+                    slug: uo.slug,
+                    name: uo.name,
+                    logo_url: uo.logo_url,
+                    is_primary: uo.is_primary,
+                    joined_at: uo.joined_at
+                };
+            })
+        );
+        
+        return res.json({
+            ok: true,
+            data: orgsWithPublicCode,
+            meta: {
+                total: orgsWithPublicCode.length
+            }
+        });
+    } catch (error) {
+        userLogger.error({ err: error, userId: req.params.id }, 'Error getting user organizations');
+        next(error);
+    }
+});
+
+/**
+ * GET /api/v1/users/:id/audit-logs
+ * Obtener historial de auditoría del usuario (acciones realizadas por él)
+ */
+router.get('/:id/audit-logs', authenticate, async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        const { limit = 20, offset = 0, entity_type, action } = req.query;
+        
+        // Validar parámetros de paginación
+        const parsedLimit = Math.min(Math.max(parseInt(limit) || 20, 1), 100);
+        const parsedOffset = Math.max(parseInt(offset) || 0, 0);
+        
+        // Obtener modelo para UUID (necesitamos UUID interno)
+        const userModel = await userRepository.getUserModelById(id, false);
+        
+        if (!userModel) {
+            return errorResponse(res, 'User not found', 404, 'USER_NOT_FOUND');
+        }
+        
+        // Verificar scope (excepto system-admin)
+        if (req.user.role !== 'system-admin') {
+            // Permitir ver propios audit logs
+            if (userModel.id !== req.user.userId) {
+                const scope = await userServices.getUserScope(req.user.userId, req.user.role);
+                
+                if (!scope.canAccessAll && !scope.userIds.includes(userModel.id)) {
+                    return errorResponse(res, 'User not in your organization scope', 403, 'SCOPE_VIOLATION');
+                }
+            }
+        }
+        
+        // Importar modelo AuditLog
+        const AuditLog = (await import('../audit/models/AuditLog.js')).default;
+        
+        // Construir query filters
+        const where = {
+            performed_by: userModel.id // Filtrar por usuario que realizó la acción
+        };
+        
+        if (entity_type) {
+            where.entity_type = entity_type;
+        }
+        
+        if (action) {
+            where.action = action;
+        }
+        
+        // Consultar audit logs
+        const { count, rows } = await AuditLog.findAndCountAll({
+            where,
+            limit: parsedLimit,
+            offset: parsedOffset,
+            order: [['performed_at', 'DESC']],
+            attributes: [
+                'id',
+                'entity_type',
+                'entity_id',
+                'action',
+                'performed_by',
+                'changes',
+                'metadata',
+                'performed_at'
+            ]
+        });
+        
+        return res.json({
+            ok: true,
+            data: rows,
+            meta: {
+                total: count,
+                limit: parsedLimit,
+                offset: parsedOffset,
+                has_more: count > parsedOffset + rows.length
+            }
+        });
+    } catch (error) {
+        userLogger.error({ err: error, userId: req.params.id }, 'Error getting user audit logs');
+        next(error);
+    }
+});
+
+/**
+ * PATCH /api/v1/users/:id/status
+ * Activar/desactivar usuario
+ * Requiere rol org-admin o superior
+ */
+router.patch('/:id/status', authenticate, requireRole(['system-admin', 'org-admin']), async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        const validatedData = validateToggleStatus(req.body);
+        
+        const actor = { userId: req.user.userId, role: req.user.role };
+        const metadata = { ip_address: req.ip, user_agent: req.get('user-agent') };
+        
+        const updatedUser = await userServices.toggleUserStatus(id, validatedData.is_active, actor, metadata);
+        
+        return successResponse(res, updatedUser);
+    } catch (error) {
+        userLogger.error({ err: error, userId: req.params.id }, 'Error toggling user status');
         next(error);
     }
 });

@@ -6,6 +6,7 @@ import User from '../auth/models/User.js';
 import Role from '../auth/models/Role.js';
 import Organization from '../organizations/models/Organization.js';
 import { getCachedUser, cacheUser, invalidateUserCache, getCachedUserList, cacheUserList } from './cache.js';
+import { getPrimaryOrganization } from '../organizations/services.js';
 
 /**
  * Serializa un modelo User a DTO público
@@ -23,28 +24,24 @@ export const toPublicUserDto = (user) => {
         email: user.email,
         first_name: user.first_name,
         last_name: user.last_name,
-        full_name: user.getFullName(),
         is_active: user.is_active,
+        email_verified: user.email_verified_at !== null,
         last_login_at: user.last_login_at,
-        email_verified_at: user.email_verified_at,
         created_at: user.created_at,
         updated_at: user.updated_at
     };
+    
+    // Campos opcionales
+    if (user.phone) dto.phone = user.phone;
+    if (user.avatar_url) dto.avatar_url = user.avatar_url;
+    if (user.language) dto.language = user.language;
+    if (user.timezone) dto.timezone = user.timezone;
     
     // Incluir rol si está cargado
     if (user.role) {
         dto.role = {
             name: user.role.name,
             description: user.role.description
-        };
-    }
-    
-    // Incluir organización primaria si está cargada (no hay belongsTo directo, se carga manual)
-    if (user.primaryOrganization) {
-        dto.primary_organization = {
-            id: user.primaryOrganization.public_code,
-            slug: user.primaryOrganization.slug,
-            name: user.primaryOrganization.name
         };
     }
     
