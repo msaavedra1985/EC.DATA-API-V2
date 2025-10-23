@@ -314,7 +314,20 @@ export const updateUser = async (userId, updateData) => {
     // Recargar relaciones
     await user.reload({
         include: [
-            { model: Role, as: 'role' }
+            { model: Role, as: 'role' },
+            {
+                model: UserOrganization,
+                as: 'UserOrganizations',
+                where: { is_primary: true },
+                required: false,
+                include: [
+                    {
+                        model: Organization,
+                        as: 'organization',
+                        attributes: ['public_code', 'name', 'slug']
+                    }
+                ]
+            }
         ]
     });
     
