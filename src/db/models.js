@@ -18,6 +18,13 @@ import UserOrganization from '../modules/auth/models/UserOrganization.js';
 // Modelos con dependencia a Users
 import RefreshToken from '../modules/auth/models/RefreshToken.js';
 
+// Definir asociaciones adicionales después de importar todos los modelos
+// para evitar dependencias circulares
+User.hasMany(UserOrganization, {
+    foreignKey: 'user_id',
+    as: 'UserOrganizations'
+});
+
 /**
  * Array de modelos en orden de dependencia
  * Sequelize.sync() los crea en este orden

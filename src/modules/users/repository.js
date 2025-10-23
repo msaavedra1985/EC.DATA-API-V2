@@ -5,8 +5,8 @@ import { Op } from 'sequelize';
 import User from '../auth/models/User.js';
 import Role from '../auth/models/Role.js';
 import Organization from '../organizations/models/Organization.js';
+import UserOrganization from '../auth/models/UserOrganization.js';
 import { getCachedUser, cacheUser, invalidateUserCache, getCachedUserList, cacheUserList } from './cache.js';
-import { getPrimaryOrganization } from '../organizations/services.js';
 
 /**
  * Serializa un modelo User a DTO público
@@ -43,6 +43,19 @@ export const toPublicUserDto = (user) => {
             name: user.role.name,
             description: user.role.description
         };
+    }
+    
+    // Incluir organización primaria si está cargada
+    // Se carga desde UserOrganizations where is_primary = true
+    if (user.UserOrganizations && user.UserOrganizations.length > 0) {
+        const primaryOrgRelation = user.UserOrganizations.find(uo => uo.is_primary);
+        if (primaryOrgRelation && primaryOrgRelation.organization) {
+            dto.primary_organization = {
+                id: primaryOrgRelation.organization.public_code,
+                name: primaryOrgRelation.organization.name,
+                slug: primaryOrgRelation.organization.slug
+            };
+        }
     }
     
     return dto;
@@ -95,7 +108,20 @@ export const findUserById = async (id, includeRelations = true, useCache = true)
     }
     
     const include = includeRelations ? [
-        { model: Role, as: 'role' }
+        { model: Role, as: 'role' },
+        {
+            model: UserOrganization,
+            as: 'UserOrganizations',
+            where: { is_primary: true },
+            required: false, // LEFT JOIN para no excluir usuarios sin org primaria
+            include: [
+                {
+                    model: Organization,
+                    as: 'organization',
+                    attributes: ['public_code', 'name', 'slug']
+                }
+            ]
+        }
     ] : [];
     
     const user = await User.findOne({
@@ -124,7 +150,20 @@ export const findUserById = async (id, includeRelations = true, useCache = true)
  */
 export const findUserByEmail = async (email, includeRelations = true) => {
     const include = includeRelations ? [
-        { model: Role, as: 'role' }
+        { model: Role, as: 'role' },
+        {
+            model: UserOrganization,
+            as: 'UserOrganizations',
+            where: { is_primary: true },
+            required: false,
+            include: [
+                {
+                    model: Organization,
+                    as: 'organization',
+                    attributes: ['public_code', 'name', 'slug']
+                }
+            ]
+        }
     ] : [];
     
     const user = await User.findOne({
@@ -185,7 +224,20 @@ export const listUsers = async (limit = 50, offset = 0, filters = {}) => {
         limit,
         offset,
         include: [
-            { model: Role, as: 'role' }
+            { model: Role, as: 'role' },
+            {
+                model: UserOrganization,
+                as: 'UserOrganizations',
+                where: { is_primary: true },
+                required: false, // LEFT JOIN para no excluir usuarios sin org primaria
+                include: [
+                    {
+                        model: Organization,
+                        as: 'organization',
+                        attributes: ['public_code', 'name', 'slug']
+                    }
+                ]
+            }
         ],
         order: [['created_at', 'DESC']]
     });
@@ -214,7 +266,20 @@ export const createUser = async (userData) => {
     // Cargar relaciones
     await user.reload({
         include: [
-            { model: Role, as: 'role' }
+            { model: Role, as: 'role' },
+            {
+                model: UserOrganization,
+                as: 'UserOrganizations',
+                where: { is_primary: true },
+                required: false,
+                include: [
+                    {
+                        model: Organization,
+                        as: 'organization',
+                        attributes: ['public_code', 'name', 'slug']
+                    }
+                ]
+            }
         ]
     });
     
