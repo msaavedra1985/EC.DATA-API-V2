@@ -170,6 +170,12 @@ export const toPublicUserDto = (user, options = {}) => {
         dto.email = user.email;
         dto.email_verified = !!user.email_verified_at;
         dto.last_login_at = user.last_login_at;
+        
+        // Campos adicionales de perfil (solo para el propio usuario)
+        dto.phone = user.phone || null;
+        dto.language = user.language || 'es';
+        dto.timezone = user.timezone || 'America/Argentina/Buenos_Aires';
+        dto.avatar_url = user.avatar_url || null;
     } else {
         // Ocultar email parcialmente (ej: "j***@example.com")
         const [localPart, domain] = (user.email || '').split('@');
