@@ -11,14 +11,12 @@ La API de usuarios está **100% funcional** con las siguientes capacidades:
 - ✅ CRUD completo de usuarios
 - ✅ Gestión de perfil propio
 - ✅ RBAC (control de acceso basado en roles)
-- ✅ Multi-tenancy (1 usuario = 1 organización primaria)
+- ✅ Multi-tenancy con soporte multi-organización (1 usuario = N organizaciones)
 - ✅ Validación de jerarquía de roles
 - ✅ Cache Redis + invalidación automática
-
-**Lo que NO está disponible todavía:**
-- ❌ Campos: phone, language, timezone, avatar_url
-- ❌ Multi-organización (1 usuario = múltiples organizaciones)
-- ❌ Endpoint de validación de email
+- ✅ **NUEVO:** Campos de perfil adicionales (phone, language, timezone, avatar_url)
+- ✅ **NUEVO:** Endpoint de validación de email en tiempo real (sin autenticación)
+- ✅ **NUEVO:** Multi-organización completa (agregar/remover usuarios a/de organizaciones)
 
 ---
 
@@ -49,6 +47,17 @@ La API de usuarios está **100% funcional** con las siguientes capacidades:
 - `organization_id` (string) - Public code (formato: `ORG-XXXXX-X`)
   - ⚠️ Si eres `org-admin`, **NO envíes este campo** (se fuerza automáticamente a tu organización)
 - `send_invite` (boolean, default: false) - Enviar email de invitación
+- `phone` (string, máx 50 caracteres) - Número de teléfono (ej: "+54 11 1234-5678")
+- `language` (string, enum: 'es' | 'en', default: 'es') - Idioma preferido del usuario
+- `timezone` (string, máx 100 caracteres, default: 'America/Argentina/Buenos_Aires') - Zona horaria IANA
+- `avatar_url` (string, URL válida) - URL del avatar del usuario
+- `organization_memberships` (array, opcional) - Array de organizaciones adicionales:
+  ```json
+  [
+    { "organization_id": "ORG-ABC12-Y", "is_primary": false },
+    { "organization_id": "ORG-DEF34-Z", "is_primary": false }
+  ]
+  ```
 
 ### ⚠️ Validaciones:
 1. **Email:** Único en toda la plataforma (no por organización)
@@ -68,8 +77,13 @@ La API de usuarios está **100% funcional** con las siguientes capacidades:
     "email": "maria@energycompany.com",
     "first_name": "María",
     "last_name": "González",
+    "phone": "+54 11 1234-5678",
+    "language": "es",
+    "timezone": "America/Argentina/Buenos_Aires",
+    "avatar_url": "https://ejemplo.com/avatar.jpg",
+    "email_verified": false,
+    "last_login_at": null,
     "role": {
-      "id": "ROLE-XXXXX-X",
       "name": "user",
       "description": "Usuario estándar con acceso limitado"
     },
@@ -78,6 +92,16 @@ La API de usuarios está **100% funcional** con las siguientes capacidades:
       "name": "Energy Company",
       "slug": "energy-company"
     },
+    "organization_memberships": [
+      {
+        "id": "ORG-00123-X",
+        "slug": "energy-company",
+        "name": "Energy Company",
+        "logo_url": "https://ejemplo.com/logo.png",
+        "is_primary": true,
+        "joined_at": "2025-10-28T12:00:00Z"
+      }
+    ],
     "is_active": true,
     "created_at": "2025-10-28T12:00:00Z",
     "updated_at": "2025-10-28T12:00:00Z"
@@ -324,24 +348,71 @@ La API de usuarios está **100% funcional** con las siguientes capacidades:
 
 ---
 
-## 🚀 Próximas Funcionalidades (NO disponibles HOY)
+## 🆕 Endpoints Nuevos
 
-### Opción 2: Campos Adicionales (Próxima iteración)
-- `phone`, `language`, `timezone`, `avatar_url`
-- Endpoint: `GET /api/v1/users/validate-email?email=...`
+### 7️⃣ POST /api/v1/users/validate-email - Validar Email (SIN autenticación)
 
-### Opción 3: Multi-Organización (Futuro)
-- Campo `organization_memberships[]` en POST
-- Endpoints: `/users/:id/organizations` (CRUD completo)
-- Un usuario puede pertenecer a múltiples organizaciones con diferentes roles
+Endpoint público para validación en tiempo real de email. Útil para formularios de registro/edición.
+
+**Request Body:**
+```json
+{
+  "email": "usuario@ejemplo.com",
+  "exclude_id": "USR-7K9D2-X"  // Opcional: excluir al editar
+}
+```
+
+**Respuesta:**
+```json
+{
+  "ok": true,
+  "data": {
+    "valid": true,
+    "conflict": false
+  }
+}
+```
+
+### 8️⃣ POST /api/v1/users/:id/organizations - Agregar a Organización
+
+Agrega un usuario a una organización adicional (multi-organización). Requiere `org-admin` o superior.
+
+**Request Body:**
+```json
+{
+  "organization_id": "ORG-ABC12-Y",
+  "is_primary": false
+}
+```
+
+**Respuesta (201):**
+```json
+{
+  "ok": true,
+  "message": "User added to organization successfully"
+}
+```
+
+### 9️⃣ DELETE /api/v1/users/:id/organizations/:orgId - Remover de Organización
+
+Remueve un usuario de una organización específica. No permite remover la única organización primaria.
+
+**Respuesta (200):**
+```json
+{
+  "ok": true,
+  "message": "User removed from organization successfully"
+}
+```
 
 ---
 
 ## 📝 Notas Importantes
 
-1. **Campos que NO vienen en las respuestas:**
-   - ❌ `phone`, `language`, `timezone`, `avatar_url` (no existen)
-   - ❌ `email_verified`, `last_login_at` (existen en BD pero no se serializan)
+1. **Nuevos campos disponibles en todas las respuestas:**
+   - ✅ `phone`, `language`, `timezone`, `avatar_url`
+   - ✅ `email_verified`, `last_login_at`
+   - ✅ `organization_memberships[]` (array con todas las organizaciones)
 
 2. **Nombres de campos correctos:**
    - ✅ `role` (NO `role_name`)

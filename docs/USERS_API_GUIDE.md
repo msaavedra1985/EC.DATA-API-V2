@@ -126,7 +126,7 @@ Lista usuarios con paginación y filtros según el scope del usuario autenticado
 }
 ```
 
-**Nota:** La respuesta NO incluye `email_verified`, `last_login_at`, `phone`, `language`, `timezone`, `avatar_url` (campos no disponibles aún). Tampoco incluye `timestamp` ni `locale` en meta.
+**Nota:** La respuesta incluye todos los campos del usuario, incluyendo `phone`, `language`, `timezone`, `avatar_url`, `email_verified`, `last_login_at`, y `organization_memberships[]`.
 
 **Ejemplo de uso (React/Next.js):**
 ```javascript
@@ -191,7 +191,7 @@ Obtiene detalles de un usuario específico.
 }
 ```
 
-**Nota:** La respuesta NO incluye `email_verified`, `last_login_at`, `phone`, `language`, `timezone`, `avatar_url` (campos no disponibles aún).
+**Nota:** La respuesta incluye todos los campos del usuario.
 
 **Ejemplo de uso:**
 ```javascript
@@ -251,8 +251,18 @@ Crea un nuevo usuario. Requiere rol `org-admin` o superior.
   - **Nota:** Si eres `org-admin`, se fuerza automáticamente a tu organización (no envíes este campo)
 - `send_invite` (boolean, default: false) - Enviar email de invitación al usuario
 
-**⚠️ Campos NO disponibles aún (próxima iteración):**
-- `phone`, `language`, `timezone`, `avatar_url` - Planificados para implementación futura
+**Campos adicionales disponibles:**
+- `phone` (string, máx 50 caracteres, opcional) - Número de teléfono
+- `language` (string, enum: 'es' | 'en', default: 'es') - Idioma preferido
+- `timezone` (string, máx 100 caracteres, default: 'America/Argentina/Buenos_Aires') - Zona horaria IANA
+- `avatar_url` (string, URL válida, opcional) - URL del avatar
+- `organization_memberships` (array, opcional) - Array de organizaciones:
+  ```json
+  [
+    { "organization_id": "ORG-ABC12-Y", "is_primary": false },
+    { "organization_id": "ORG-DEF34-Z", "is_primary": false }
+  ]
+  ```
 
 **Response 201:**
 ```json
@@ -347,8 +357,18 @@ Actualiza un usuario existente. Requiere permisos según scope.
 - Email (inmutable - requiere endpoint dedicado)
 - Password (usar PATCH /users/me/password)
 
-**⚠️ Campos NO disponibles aún (próxima iteración):**
-- `phone`, `language`, `timezone`, `avatar_url` - Planificados para implementación futura
+**Campos adicionales disponibles:**
+- `phone` (string, máx 50 caracteres, opcional) - Número de teléfono
+- `language` (string, enum: 'es' | 'en', default: 'es') - Idioma preferido
+- `timezone` (string, máx 100 caracteres, default: 'America/Argentina/Buenos_Aires') - Zona horaria IANA
+- `avatar_url` (string, URL válida, opcional) - URL del avatar
+- `organization_memberships` (array, opcional) - Array de organizaciones:
+  ```json
+  [
+    { "organization_id": "ORG-ABC12-Y", "is_primary": false },
+    { "organization_id": "ORG-DEF34-Z", "is_primary": false }
+  ]
+  ```
 
 **Response 200:**
 ```json
@@ -375,7 +395,7 @@ Actualiza un usuario existente. Requiere permisos según scope.
 }
 ```
 
-**Nota:** La respuesta NO incluye `email_verified`, `last_login_at`, `phone`, `language`, `timezone`, `avatar_url` (campos no disponibles aún).
+**Nota:** La respuesta incluye todos los campos del usuario.
 
 **Ejemplo de uso:**
 ```javascript
@@ -499,7 +519,7 @@ Obtiene el perfil del usuario autenticado actual.
 }
 ```
 
-**Nota:** La respuesta NO incluye `email_verified`, `last_login_at`, `phone`, `language`, `timezone`, `avatar_url` (campos no disponibles aún).
+**Nota:** La respuesta incluye todos los campos del usuario.
 
 **Ejemplo de uso:**
 ```javascript
@@ -540,8 +560,18 @@ Actualiza el perfil del usuario autenticado.
 - Organización (requiere aprobación de administrador)
 - Estado activo (solo administradores)
 
-**⚠️ Campos NO disponibles aún (próxima iteración):**
-- `phone`, `language`, `timezone`, `avatar_url` - Planificados para implementación futura
+**Campos adicionales disponibles:**
+- `phone` (string, máx 50 caracteres, opcional) - Número de teléfono
+- `language` (string, enum: 'es' | 'en', default: 'es') - Idioma preferido
+- `timezone` (string, máx 100 caracteres, default: 'America/Argentina/Buenos_Aires') - Zona horaria IANA
+- `avatar_url` (string, URL válida, opcional) - URL del avatar
+- `organization_memberships` (array, opcional) - Array de organizaciones:
+  ```json
+  [
+    { "organization_id": "ORG-ABC12-Y", "is_primary": false },
+    { "organization_id": "ORG-DEF34-Z", "is_primary": false }
+  ]
+  ```
 
 **Response 200:**
 ```json
@@ -568,7 +598,7 @@ Actualiza el perfil del usuario autenticado.
 }
 ```
 
-**Nota:** La respuesta NO incluye `email_verified`, `last_login_at`, `phone`, `language`, `timezone`, `avatar_url` (campos no disponibles aún).
+**Nota:** La respuesta incluye todos los campos del usuario.
 
 **Ejemplo de uso:**
 ```javascript
