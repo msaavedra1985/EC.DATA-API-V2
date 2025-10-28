@@ -176,6 +176,62 @@ export const createUser = async (userData, actor, metadata = {}) => {
         avatar_url: userData.avatar_url || null
     });
     
+    // Agregar usuario a organizaciones adicionales si se proporcionan
+    if (userData.organization_memberships && userData.organization_memberships.length > 0) {
+        const UserOrganization = (await import('../auth/models/UserOrganization.js')).default;
+        
+        for (const membership of userData.organization_memberships) {
+            // Buscar organización por public_code
+            const org = await Organization.findOne({
+                where: { public_code: membership.organization_id }
+            });
+            
+            if (!org) {
+                userLogger.warn({ organization_id: membership.organization_id }, 'Organization not found for membership');
+                continue; // Saltar esta organización si no existe
+            }
+            
+            // Verificar si ya existe la relación (puede ser la org primaria)
+            const existingRelation = await UserOrganization.findOne({
+                where: {
+                    user_id: userId,
+                    organization_id: org.id
+                }
+            });
+            
+            if (existingRelation) {
+                // Si ya existe y se marca como primaria, actualizar
+                if (membership.is_primary && !existingRelation.is_primary) {
+                    // Desmarcar todas las otras como primaria
+                    await UserOrganization.update(
+                        { is_primary: false },
+                        { where: { user_id: userId } }
+                    );
+                    
+                    existingRelation.is_primary = true;
+                    await existingRelation.save();
+                }
+                continue;
+            }
+            
+            // Si se marca como primaria, desmarcar todas las otras
+            if (membership.is_primary) {
+                await UserOrganization.update(
+                    { is_primary: false },
+                    { where: { user_id: userId } }
+                );
+            }
+            
+            // Crear relación UserOrganization
+            await UserOrganization.create({
+                user_id: userId,
+                organization_id: org.id,
+                is_primary: membership.is_primary || false,
+                joined_at: new Date()
+            });
+        }
+    }
+    
     // Auditar creación
     await auditLog.log({
         entity_type: 'user',
@@ -189,7 +245,8 @@ export const createUser = async (userData, actor, metadata = {}) => {
         },
         metadata: {
             ...metadata,
-            send_invite: userData.send_invite || false
+            send_invite: userData.send_invite || false,
+            organization_memberships_count: userData.organization_memberships?.length || 0
         }
     });
     

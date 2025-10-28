@@ -83,7 +83,29 @@ export const createUserSchema = z.object({
     avatar_url: z.string()
         .url('Avatar URL must be a valid URL')
         .optional()
+        .nullable(),
+    
+    organization_memberships: z.array(
+        z.object({
+            organization_id: z.string()
+                .refine(
+                    (val) => /^ORG-[A-Z0-9]{5}-[A-Z0-9]$/.test(val),
+                    'Invalid organization public code format'
+                ),
+            is_primary: z.boolean().optional().default(false)
+        })
+    )
+        .optional()
         .nullable()
+        .refine(
+            (memberships) => {
+                if (!memberships || memberships.length === 0) return true;
+                // Solo puede haber una organización primaria
+                const primaryCount = memberships.filter(m => m.is_primary).length;
+                return primaryCount <= 1;
+            },
+            'Only one organization can be marked as primary'
+        )
 });
 
 /**

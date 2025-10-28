@@ -56,6 +56,16 @@ export const toPublicUserDto = (user) => {
                 slug: primaryOrgRelation.organization.slug
             };
         }
+        
+        // Incluir todas las organizaciones del usuario (organization_memberships)
+        dto.organization_memberships = user.UserOrganizations.map(uo => ({
+            id: uo.organization.public_code,
+            slug: uo.organization.slug,
+            name: uo.organization.name,
+            logo_url: uo.organization.logo_url,
+            is_primary: uo.is_primary,
+            joined_at: uo.joined_at
+        }));
     }
     
     return dto;
