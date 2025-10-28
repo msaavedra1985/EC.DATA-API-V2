@@ -1094,9 +1094,9 @@ const newUser = await fetch('/api/v1/users', {
     password: 'SecurePass123!',
     first_name: 'Nuevo',
     last_name: 'Usuario',
-    role_name: 'user',
-    primary_organization_id: 'ORG-00123-X',
-    language: 'es'
+    role: 'user',
+    organization_id: 'ORG-00123-X',
+    send_invite: false
   })
 }).then(r => r.json());
 
@@ -1120,8 +1120,7 @@ const updated = await fetch('/api/v1/users/me', {
   },
   body: JSON.stringify({
     first_name: 'Juan Carlos',
-    phone: '+54 11 1234-5678',
-    language: 'en'
+    last_name: 'Pérez'
   })
 }).then(r => r.json());
 
