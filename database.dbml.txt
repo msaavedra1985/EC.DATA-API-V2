@@ -1,4 +1,4 @@
-// Database Schema - Generated on 2025-10-14T17:44:57.691Z
+// Database Schema - Generated on 2025-10-28T13:57:53.140Z
 // Project: EC.DATA API - Enterprise REST API
 // Use this file at https://dbdiagram.io to visualize the schema
 
@@ -168,8 +168,10 @@ Table roles {
   updated_at timestamptz [not null]
 
   Indexes {
+    (is_active) [name: 'roles_is_active_idx']
     (name) [name: 'roles_name', unique]
     (name) [name: 'roles_name_key', unique]
+    (name) [name: 'roles_name_unique', unique]
   }
 }
 
