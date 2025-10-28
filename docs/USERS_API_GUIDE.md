@@ -95,8 +95,8 @@ Lista usuarios con paginación y filtros según el scope del usuario autenticado
         "slug": "acme-corp"
       },
       "is_active": true,
-      "email_verified": true,
-      "created_at": "2025-01-15T10:30:00Z"
+      "created_at": "2025-01-15T10:30:00Z",
+      "updated_at": "2025-10-20T09:15:00Z"
     },
     {
       "id": "USR-7K3D2-P",
@@ -113,20 +113,20 @@ Lista usuarios con paginación y filtros según el scope del usuario autenticado
         "slug": "acme-corp"
       },
       "is_active": true,
-      "email_verified": false,
-      "created_at": "2025-02-10T14:20:00Z"
+      "created_at": "2025-02-10T14:20:00Z",
+      "updated_at": "2025-02-10T14:20:00Z"
     }
   ],
   "meta": {
     "total": 47,
     "limit": 20,
     "offset": 0,
-    "has_more": true,
-    "timestamp": "2025-10-22T19:30:00Z",
-    "locale": "es"
+    "has_more": true
   }
 }
 ```
+
+**Nota:** La respuesta NO incluye `email_verified`, `last_login_at`, `phone`, `language`, `timezone`, `avatar_url` (campos no disponibles aún). Tampoco incluye `timestamp` ni `locale` en meta.
 
 **Ejemplo de uso (React/Next.js):**
 ```javascript
@@ -185,21 +185,13 @@ Obtiene detalles de un usuario específico.
       "slug": "acme-corp"
     },
     "is_active": true,
-    "email_verified": true,
-    "phone": "+54 11 1234-5678",
-    "avatar_url": "https://storage.azure.com/avatars/user-9a2f7.jpg",
-    "language": "es",
-    "timezone": "America/Argentina/Buenos_Aires",
-    "last_login_at": "2025-10-22T18:45:00Z",
     "created_at": "2025-01-15T10:30:00Z",
     "updated_at": "2025-10-20T09:15:00Z"
-  },
-  "meta": {
-    "timestamp": "2025-10-22T19:30:00Z",
-    "locale": "es"
   }
 }
 ```
+
+**Nota:** La respuesta NO incluye `email_verified`, `last_login_at`, `phone`, `language`, `timezone`, `avatar_url` (campos no disponibles aún).
 
 **Ejemplo de uso:**
 ```javascript
@@ -501,21 +493,13 @@ Obtiene el perfil del usuario autenticado actual.
       "slug": "acme-corp"
     },
     "is_active": true,
-    "email_verified": true,
-    "phone": "+54 11 1234-5678",
-    "avatar_url": "https://storage.azure.com/avatars/user-9a2f7.jpg",
-    "language": "es",
-    "timezone": "America/Argentina/Buenos_Aires",
-    "last_login_at": "2025-10-22T18:45:00Z",
     "created_at": "2025-01-15T10:30:00Z",
     "updated_at": "2025-10-20T09:15:00Z"
-  },
-  "meta": {
-    "timestamp": "2025-10-22T19:30:00Z",
-    "locale": "es"
   }
 }
 ```
+
+**Nota:** La respuesta NO incluye `email_verified`, `last_login_at`, `phone`, `language`, `timezone`, `avatar_url` (campos no disponibles aún).
 
 **Ejemplo de uso:**
 ```javascript
