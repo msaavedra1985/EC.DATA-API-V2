@@ -1177,6 +1177,81 @@ await fetch(`/api/v1/users/${userId}/status`, {
 
 ---
 
+## 🚀 Roadmap / Próximas Funcionalidades
+
+El módulo de usuarios está en constante evolución. Aquí están las funcionalidades planificadas para futuras iteraciones:
+
+### 📌 Opción 2: Campos Adicionales de Usuario (Próxima iteración)
+
+**Objetivo:** Enriquecer el perfil de usuario con campos adicionales útiles para aplicaciones empresariales.
+
+**Campos a agregar:**
+- `phone` (string, opcional) - Número de teléfono del usuario
+- `language` (string, default: 'es') - Idioma preferido (es, en)
+- `timezone` (string, default: 'America/Argentina/Buenos_Aires') - Zona horaria del usuario
+- `avatar_url` (string, opcional) - URL del avatar del usuario
+
+**Endpoints afectados:**
+- ✅ POST /api/v1/users - Aceptará estos campos en la creación
+- ✅ PUT /api/v1/users/:id - Permitirá actualizar estos campos
+- ✅ PUT /api/v1/users/me - Permitirá al usuario actualizar su propio perfil
+- ✅ Todas las respuestas incluirán estos campos cuando estén presentes
+
+**Nuevo endpoint:**
+- `GET /api/v1/users/validate-email?email=...` - Validación de email disponible en tiempo real para UX mejorada en formularios
+
+---
+
+### 🏢 Opción 3: Sistema Multi-Organización Completo (Futuro)
+
+**Objetivo:** Permitir que usuarios pertenezcan a múltiples organizaciones con diferentes roles en cada una.
+
+**Funcionalidad principal:**
+- Usuarios pueden tener membresías en múltiples organizaciones
+- Cada membresía tiene su propio rol (un usuario puede ser `org-admin` en una org y `user` en otra)
+- Una organización marcada como primaria (`is_primary: true`)
+
+**Campo nuevo en POST /api/v1/users:**
+```json
+{
+  "email": "usuario@example.com",
+  "password": "SecurePass123!",
+  "first_name": "María",
+  "last_name": "González",
+  "role": "org-admin",
+  "organization_memberships": [
+    {
+      "organization_id": "ORG-00123-X",
+      "role": "org-admin",
+      "is_primary": true
+    },
+    {
+      "organization_id": "ORG-00456-Y",
+      "role": "user",
+      "is_primary": false
+    }
+  ]
+}
+```
+
+**Nuevos endpoints:**
+- `GET /api/v1/users/:id/organizations` - Listar organizaciones del usuario *(Ya existe en docs, pendiente implementación)*
+- `POST /api/v1/users/:id/organizations` - Agregar usuario a organización
+- `PUT /api/v1/users/:id/organizations/:orgId` - Actualizar rol en organización
+- `DELETE /api/v1/users/:id/organizations/:orgId` - Remover usuario de organización
+- `PUT /api/v1/users/:id/primary-organization` - Cambiar organización primaria
+
+**Beneficios:**
+- Usuarios consultores pueden trabajar para múltiples clientes
+- Facilita colaboración inter-organizacional
+- Gestión granular de permisos por organización
+
+---
+
+**Estado actual:** Documentación refleja **solo lo que funciona HOY**. Las funcionalidades de este roadmap están planificadas pero NO disponibles aún.
+
+---
+
 ## 📞 Soporte
 
 Para más información sobre autenticación y manejo de sesiones, ver:
