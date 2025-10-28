@@ -58,14 +58,21 @@ export const toPublicUserDto = (user) => {
         }
         
         // Incluir todas las organizaciones del usuario (organization_memberships)
-        dto.organization_memberships = user.UserOrganizations.map(uo => ({
-            id: uo.organization.public_code,
-            slug: uo.organization.slug,
-            name: uo.organization.name,
-            logo_url: uo.organization.logo_url,
-            is_primary: uo.is_primary,
-            joined_at: uo.joined_at
-        }));
+        // Filtrar solo aquellas que tengan la organización cargada para evitar errores
+        dto.organization_memberships = user.UserOrganizations
+            .filter(uo => uo.organization)
+            .map(uo => ({
+                id: uo.organization.public_code,
+                slug: uo.organization.slug,
+                name: uo.organization.name,
+                logo_url: uo.organization.logo_url,
+                is_primary: uo.is_primary,
+                joined_at: uo.joined_at
+            }));
+    } else {
+        // Siempre incluir organization_memberships, incluso si está vacío
+        // Esto mantiene el contrato de la API consistente
+        dto.organization_memberships = [];
     }
     
     return dto;
