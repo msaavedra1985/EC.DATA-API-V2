@@ -541,28 +541,23 @@ Actualiza el perfil del usuario autenticado.
 ```json
 {
   "first_name": "Juan Carlos",
-  "last_name": "Pérez",
-  "phone": "+54 11 1234-9999",
-  "language": "en",
-  "timezone": "America/New_York",
-  "avatar_url": "https://storage.azure.com/avatars/new-avatar.jpg"
+  "last_name": "Pérez"
 }
 ```
 
 **Campos opcionales (todos):**
-- `first_name` (string)
-- `last_name` (string)
-- `phone` (string)
-- `language` (string) - es, en
-- `timezone` (string)
-- `avatar_url` (string)
+- `first_name` (string, 1-100 caracteres)
+- `last_name` (string, 1-100 caracteres)
 
 **⚠️ NO se puede cambiar desde este endpoint:**
-- Email (inmutable)
+- Email (inmutable - requiere verificación)
 - Password (usar PATCH /users/me/password)
-- Rol (requiere admin)
-- Organización primaria (requiere admin)
-- Estado activo (requiere admin)
+- Rol (solo administradores pueden cambiar roles)
+- Organización (requiere aprobación de administrador)
+- Estado activo (solo administradores)
+
+**⚠️ Campos NO disponibles aún (próxima iteración):**
+- `phone`, `language`, `timezone`, `avatar_url` - Planificados para implementación futura
 
 **Response 200:**
 ```json
@@ -583,18 +578,13 @@ Actualiza el perfil del usuario autenticado.
       "slug": "acme-corp"
     },
     "is_active": true,
-    "email_verified": true,
-    "phone": "+54 11 1234-9999",
-    "language": "en",
-    "timezone": "America/New_York",
+    "created_at": "2025-01-15T10:30:00Z",
     "updated_at": "2025-10-22T19:50:00Z"
-  },
-  "meta": {
-    "timestamp": "2025-10-22T19:50:00Z",
-    "locale": "en"
   }
 }
 ```
+
+**Nota:** La respuesta NO incluye `email_verified`, `last_login_at`, `phone`, `language`, `timezone`, `avatar_url` (campos no disponibles aún).
 
 **Ejemplo de uso:**
 ```javascript
