@@ -241,27 +241,26 @@ Crea un nuevo usuario. Requiere rol `org-admin` o superior.
   "password": "SecurePass123!",
   "first_name": "Carlos",
   "last_name": "Rodríguez",
-  "role_name": "user",
-  "primary_organization_id": "ORG-00123-X",
-  "phone": "+54 11 9876-5432",
-  "language": "es",
-  "timezone": "America/Argentina/Buenos_Aires"
+  "role": "user",
+  "organization_id": "ORG-00123-X",
+  "send_invite": false
 }
 ```
 
 **Campos requeridos:**
-- `email` (string) - Email único, normalizado automáticamente
-- `password` (string, min 8 caracteres) - Hasheado con bcrypt
-- `first_name` (string)
-- `last_name` (string)
-- `role_name` (string) - system-admin, org-admin, org-manager, user, viewer, guest, demo
-- `primary_organization_id` (string) - Public code de la organización
+- `email` (string) - Email único, normalizado automáticamente (trim + toLowerCase)
+- `password` (string, min 8 caracteres, max 255) - Hasheado con bcrypt
+- `first_name` (string, 1-100 caracteres)
+- `last_name` (string, 1-100 caracteres)
+- `role` (string) - Slug del rol: system-admin, org-admin, org-manager, user, viewer, guest, demo
 
 **Campos opcionales:**
-- `phone` (string)
-- `language` (string, default: 'es') - es, en
-- `timezone` (string, default: 'America/Argentina/Buenos_Aires')
-- `avatar_url` (string)
+- `organization_id` (string) - Public code de la organización (formato: ORG-XXXXX-X)
+  - **Nota:** Si eres `org-admin`, se fuerza automáticamente a tu organización (no envíes este campo)
+- `send_invite` (boolean, default: false) - Enviar email de invitación al usuario
+
+**⚠️ Campos NO disponibles aún (próxima iteración):**
+- `phone`, `language`, `timezone`, `avatar_url` - Planificados para implementación futura
 
 **Response 201:**
 ```json
@@ -282,21 +281,20 @@ Crea un nuevo usuario. Requiere rol `org-admin` o superior.
       "slug": "acme-corp"
     },
     "is_active": true,
-    "email_verified": false,
-    "created_at": "2025-10-22T19:35:00Z"
-  },
-  "meta": {
-    "timestamp": "2025-10-22T19:35:00Z",
-    "locale": "es"
+    "created_at": "2025-10-22T19:35:00Z",
+    "updated_at": "2025-10-22T19:35:00Z"
   }
 }
 ```
 
+**Nota:** La respuesta NO incluye `email_verified` ni `last_login_at` (campos internos no serializados).
+
 **Validaciones:**
-- Email debe ser único
-- No puedes asignar un rol superior al tuyo
-- La organización primaria debe existir y estar en tu scope
-- Password debe tener al menos 8 caracteres
+- Email debe ser único en toda la plataforma (no por organización)
+- No puedes asignar un rol superior al tuyo (jerarquía de roles)
+- La organización debe existir (si se proporciona `organization_id`)
+- Password: mínimo 8 caracteres, máximo 255 (sin validación de caracteres especiales)
+- Role debe ser un slug válido existente en la base de datos
 
 **Ejemplo de uso:**
 ```javascript
