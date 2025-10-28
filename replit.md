@@ -1,11 +1,7 @@
 # EC.DATA API - Enterprise REST API
 
 ## Overview
-**EC.DATA** is a technology company specializing in enterprise data solutions and scalable backend infrastructure. This repository contains our flagship REST API, built with Node.js and Express using modern ESM syntax and a feature-based architecture.
-
-The EC.DATA API is designed to support multi-tenant e-commerce platforms with robust observability, security, and scalability. It integrates seamlessly with Next.js frontends via a BFF (Backend for Frontend) pattern, providing services for both public-facing customer interfaces and administrative dashboards.
-
-Our mission at EC.DATA is to deliver highly reliable, secure, and scalable backend solutions capable of handling complex business operations across multiple tenants, with the flexibility to expand into diverse market sectors and use cases.
+EC.DATA is a technology company specializing in enterprise data solutions and scalable backend infrastructure. This repository contains our flagship REST API, built with Node.js and Express, designed to support multi-tenant e-commerce platforms. The API provides robust observability, security, and scalability, integrating seamlessly with Next.js frontends via a BFF (Backend for Frontend) pattern. Our mission is to deliver highly reliable and secure backend solutions capable of handling complex business operations across multiple tenants and diverse market sectors.
 
 ## User Preferences
 
@@ -28,18 +24,7 @@ Preferred communication style: Simple, everyday language.
 **Error Logging Standards (MANDATORY):**
 - **Winston-powered error logging system** with dual transports: PostgreSQL (`error_logs` table) + rotating daily files (`logs/errors-YYYY-MM-DD.log`)
 - **ALL API errors (4xx, 5xx) are automatically logged via global middleware** - Zero configuration required
-- **Custom SqlTransport** for Winston writes errors directly to PostgreSQL with full context
-- **Rotating file transport** creates daily JSON log files with 30-day retention for redundancy and historical analysis
-- Backend errors: Logged automatically by `errorHandler` middleware using Winston - developers don't need to manually log
-- Frontend errors: Use the public `POST /api/v1/error-logs` endpoint (no authentication required)
-- Frontend can optionally include JWT Bearer token to associate errors with users
-- Error logs include: source (frontend/backend), level (error/warning/critical), error_code, message, stack_trace, endpoint, user context, IP, user-agent
 - **Correlation tracking:** Both `error_logs` and `audit_logs` support `correlation_id` field to link related errors and audit actions
-- Use `correlation_id` to trace error → audit action relationships for operational debugging and incident analysis
-- The `error_logs` table is separate from `audit_logs` - different purposes, volumes, and retention policies (30-90 days vs 2 years)
-- Use the `winstonLogger.logError()` helper for manual backend error logging (rare - only for custom scenarios)
-- Pino logger remains for general/console logging; Winston handles structured error persistence
-- Error logs enable platform-wide observability, debugging, and proactive issue detection
 
 **Development Approach:**
 - **CRITICAL DEVELOPMENT DIRECTIVE**: "What works, don't touch" - Do NOT modify working files unless absolutely necessary. If changes to working code are required, perform deep impact analysis first to assess platform-wide effects.
@@ -68,69 +53,49 @@ Preferred communication style: Simple, everyday language.
 
 ### Technology Stack
 - **Core:** Express.js 4.x, Node.js 20+ (ESM modules), API versioning (`/api/v1`).
-- **Data:** Sequelize ORM (mandatory) for PostgreSQL, Redis for caching/sessions. Snake_case in SQL, camelCase in JSON.
-- **Security:** JWT (Bearer tokens, scopes), Zod for validation, Helmet, bcrypt for hashing, dynamic CORS origins.
-- **Observability:** Pino (structured JSON logging), Prometheus metrics (`/metrics`), database audit logging, request/response logging.
+- **Data:** Sequelize ORM for PostgreSQL, Redis for caching/sessions.
+- **Security:** JWT (Bearer tokens, scopes), Zod for validation, Helmet, bcrypt.
+- **Observability:** Pino, Prometheus metrics, database audit logging, request/response logging.
 - **Documentation:** Swagger/OpenAPI (`/docs`) via swagger-jsdoc and swagger-ui-express.
 
 ### Architectural Patterns
-- **Layered Architecture:** Strict separation into Routes, Services, Repositories, and Database layers. No layer skipping.
-- **Feature-Based Organization:** Code structured by domain (auth, tenants) with `index.js`, `dtos/`, `models/`, `services.js`, `repository.js` per feature.
-- **Response Envelope Pattern:** Consistent `{ ok: true/false, data/error, meta }` structure for all API responses.
-- **Configuration Management:** Centralized `src/config/env.js` for environment variables with validation, type coercion, and defaults.
+- **Layered Architecture:** Strict separation into Routes, Services, Repositories, and Database layers.
+- **Feature-Based Organization:** Code structured by domain (auth, tenants) with dedicated files per feature.
+- **Response Envelope Pattern:** Consistent `{ ok: true/false, data/error, meta }` structure.
+- **Configuration Management:** Centralized `src/config/env.js` for environment variables.
 
 ### Performance & Scalability
-- **Caching:** Redis-based caching with configurable TTLs, ETag generation for 304 responses.
-  - **Organizations Cache:** Org details (30 min), hierarchy (30 min), permissions (15 min), paginated lists (5 min)
-  - **Roles Cache:** Role lookups by name (30 min) - improves RBAC performance
-  - **Auth Cache:** User data (15 min), session context (15 min), session versions
-  - **Automatic Invalidation:** Caches invalidate on CUD operations (create/update/delete)
+- **Caching:** Redis-based caching with configurable TTLs and automatic invalidation on CUD operations.
 - **Compression:** Brotli/gzip compression middleware.
-- **Rate Limiting:** "Observe mode" with `X-RateLimit-*` headers, configurable.
+- **Rate Limiting:** Redis-powered intelligent rate limiting with role-based limits and dual modes.
 - **Pagination:** Mandatory offset-based pagination (`limit`, `offset`) for list endpoints.
 
-### Internationalization
-- **Multi-language Design:** Support for multiple languages using separate translation tables and selection based on user language.
-
 ### Extensibility & Robustness
-- **WebSocket Preparation:** HTTP server initialization isolated for easy Socket.io integration.
-- **Graceful Shutdown:** Proper cleanup on SIGINT/SIGTERM for Redis, Sequelize, and in-flight requests.
-- **Identifier System:** UUID v7, human_id (scoped incremental ID), and public_code (opaque, Hashids + Luhn checksum) for entities.
-- **Public API Identifier Policy (CRITICAL SECURITY):** 
-  - **NEVER expose UUIDs or human_id in public API responses** - Prevents enumeration attacks and data leakage
-  - **Public APIs ALWAYS use `public_code` as `id`** - All responses return `{ id: "ORG-7K9D2-X", ... }` where id is the public_code
-  - **Internal operations use UUID** - Database queries, scope calculations, and relationships use UUID internally
-  - **DTO Serialization Layer:** All repository functions return DTOs via `toPublicOrganizationDto()` and `toPublicUserDto()` serializers
-  - **Dual req.organization pattern:** Middleware sets both `req.organization` (public DTO) and `req.organizationInternal` (UUID model)
-  - **Admin endpoints exception:** System-admin endpoints may use `toAdminOrganizationDto()` to include internal IDs for support/debugging
-  - **Relationships:** Parent-child relationships returned as objects `{ parent: { id, slug, name } }`, not `parent_id` UUIDs
-  - **This policy applies to ALL entities:** Organizations, users, products, orders, etc. - No exceptions
-- **Authentication:** Comprehensive JWT-based system with access/refresh tokens, token rotation, theft detection, and role-based access control (RBAC). Refresh tokens are database-persisted and SHA-256 hashed. JWT includes standard claims (`iss`, `aud`, `sub`, `iat`, `exp`, `jti`, `activeOrgId`, `primaryOrgId`, `canAccessAllOrgs`, `sessionVersion`, `tokenType`).
-- **RBAC:** Flexible, database-driven RBAC with 7 predefined roles (`system-admin`, `org-admin`, `org-manager`, `user`, `viewer`, `guest`, `demo`). Implemented with `User.belongsTo(Role)`, `User.prototype.hasRole()`, `authenticate` and `requireRole` middleware. Role data is cached in Redis and included in JWT.
-- **Multi-Tenant Organizations:** Hierarchical organization system with many-to-many user-organization relationships. Users can belong to multiple organizations with one marked as primary. Supports organizational scope with role-based access inheritance (system-admin: all orgs, org-admin: org + descendants, org-manager: org + direct children, user/viewer/guest/demo: direct orgs only). EC.DATA is the root organization.
-- **Organization Scope Service:** Redis-cached organizational scope calculation (TTL: 15min) with hierarchical access control. Includes endpoints: `GET /auth/organizations` (list available orgs), `POST /auth/switch-org` (change active org with new JWT generation).
-- **Organization Validation Endpoint:** Public endpoint `POST /api/v1/organizations/validate` for real-time validation of organization name/slug availability. No authentication required for better UX in forms. Supports `exclude_id` parameter to allow editing scenarios (validates uniqueness excluding the current organization). Returns `{ valid: boolean, conflicts: { name: boolean, slug: boolean } }`. Case-insensitive validation prevents bypass attempts.
-- **Logout System:** Endpoints for `/logout` and `/logout-all` to invalidate sessions by incrementing `sessionVersion` and clearing user cache. Supports revoking specific refresh tokens.
-- **"Remember Me" Feature:** Extends session duration for login with `remember_me` flag, dynamically adjusting token expiration and idle timeouts.
-- **Session Context Caching:** **CRITICAL RULE: Frontend NEVER decodes JWT.** All session context (activeOrgId, primaryOrgId, role, canAccessAllOrgs, user info) is cached in Redis with 15-min TTL and returned via API responses (`/auth/login`, `/auth/me`, `/auth/switch-org`, `/auth/session-context`). This eliminates frontend JWT decoding, improves performance, and maintains security. The `session_context` object is the single source of truth for frontend state.
-- **Global Audit Logging:** **MANDATORY: Every CUD operation (Create, Update, Delete) MUST be logged to the global `audit_logs` table.** Centralized audit trail with `entity_type`, `entity_id`, `action`, `performed_by`, `changes` (JSONB), `metadata` (JSONB), `ip_address`, and `user_agent`. This table tracks ALL platform activity across modules (organizations, users, products, orders, etc.) for compliance, security audits, and operational visibility. Always use the `auditLog` helper to record actions. Structure: `{ entity_type, entity_id, action, performed_by, changes, metadata }`. Indexed by entity, user, date, and action for fast queries. Retention policy: 2 years minimum for compliance.
+- **Identifier System:** UUID v7, human_id, and public_code (opaque, Hashids + Luhn checksum).
+- **Public API Identifier Policy (CRITICAL SECURITY):** Public APIs MUST always use `public_code` as `id` in responses; UUIDs or `human_id` are never exposed. Internal operations use UUID. This applies to ALL entities.
+- **Authentication:** Comprehensive JWT-based system with access/refresh tokens, token rotation, theft detection, and RBAC. Refresh tokens are database-persisted and SHA-256 hashed.
+- **RBAC:** Flexible, database-driven RBAC with 7 predefined roles and middleware for access control.
+- **Multi-Tenant Organizations:** Hierarchical organization system with many-to-many user-organization relationships and Redis-cached scope calculation.
+- **Session Context Caching:** Frontend NEVER decodes JWT; all session context is cached in Redis and returned via API responses, acting as the single source of truth for frontend state.
+- **Global Audit Logging:** Every CUD operation MUST be logged to the `audit_logs` table using the `auditLog` helper.
 
 ## External Dependencies
 
 ### Core Services
-- **PostgreSQL Database:** Managed via Sequelize ORM, automatic migrations, connection pooling.
-- **Redis Cache:** For CORS origins, session storage, application caching.
-- **Frontend Integration:** Next.js BFF consumes API, CORS configured for development and production.
+- **PostgreSQL Database:** Managed via Sequelize ORM.
+- **Redis Cache:** For CORS origins, session storage, and application caching.
+- **Next.js Frontend:** Consumes API via BFF pattern.
+
+### Testing & Quality Assurance
+- **Testing Framework:** Vitest for unit and integration tests.
+- **Test Coverage:** V8 coverage provider with HTML/JSON reports.
+- **Test Helpers:** `testServer.js`, `fixtures.js`, `cleanupDB.js`.
 
 ### NPM Dependencies
-- **Production:** `express`, `sequelize`, `pg`, `redis`, `jsonwebtoken`, `bcrypt`, `zod`, `cors`, `helmet`, `compression`, `pino` (and related), `prom-client`, `swagger-jsdoc`, `swagger-ui-express`, `dotenv`.
+- **Production:** `express`, `sequelize`, `pg`, `redis`, `jsonwebtoken`, `bcrypt`, `zod`, `cors`, `helmet`, `compression`, `pino`, `prom-client`, `swagger-jsdoc`, `swagger-ui-express`, `dotenv`.
 - **Development:** `eslint`, `vitest`, `supertest`, `nodemon`.
 
 ### Monitoring & Observability
-- **Metrics (Prometheus):** HTTP request duration, counts, active connections, custom metrics.
-- **Logging:** 
-  - **Pino:** Structured JSON console logging for general application logs (service: `ecdata-api`), request/response logging
-  - **Winston:** Structured error persistence with custom SqlTransport (PostgreSQL) + rotating daily files (30-day retention)
-  - **Audit Trail:** Database-backed audit logging (`audit_logs` table) with 2-year retention
-  - **Correlation System:** `correlation_id` field links errors with audit actions for operational tracing
-- **Health Checks:** Basic endpoint at `/api/v1/health` for service status.
+- **Metrics:** Prometheus for HTTP request duration, counts, active connections, and custom metrics.
+- **Logging:** Pino for general application logs; Winston for structured error persistence to PostgreSQL and rotating files; database-backed audit logging (`audit_logs` table); correlation system using `correlation_id`.
+- **Health Checks:** Basic endpoint at `/api/v1/health`.
