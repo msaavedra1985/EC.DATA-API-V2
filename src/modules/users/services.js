@@ -168,7 +168,12 @@ export const createUser = async (userData, actor, metadata = {}) => {
         last_name: userData.last_name,
         role_id: role.id,
         organization_id: organizationId,
-        is_active: true
+        is_active: true,
+        // Campos opcionales de perfil
+        phone: userData.phone || null,
+        language: userData.language || 'es',
+        timezone: userData.timezone || 'America/Argentina/Buenos_Aires',
+        avatar_url: userData.avatar_url || null
     });
     
     // Auditar creación
@@ -292,6 +297,30 @@ export const updateUser = async (targetUserId, updateData, actor, metadata = {})
     if (updateData.is_active !== undefined && updateData.is_active !== targetUser.is_active) {
         changes.is_active = { old: targetUser.is_active, new: updateData.is_active };
         dataToUpdate.is_active = updateData.is_active;
+    }
+    
+    // Actualizar phone
+    if (updateData.phone !== undefined && updateData.phone !== targetUser.phone) {
+        changes.phone = { old: targetUser.phone, new: updateData.phone };
+        dataToUpdate.phone = updateData.phone;
+    }
+    
+    // Actualizar language
+    if (updateData.language !== undefined && updateData.language !== targetUser.language) {
+        changes.language = { old: targetUser.language, new: updateData.language };
+        dataToUpdate.language = updateData.language;
+    }
+    
+    // Actualizar timezone
+    if (updateData.timezone !== undefined && updateData.timezone !== targetUser.timezone) {
+        changes.timezone = { old: targetUser.timezone, new: updateData.timezone };
+        dataToUpdate.timezone = updateData.timezone;
+    }
+    
+    // Actualizar avatar_url
+    if (updateData.avatar_url !== undefined && updateData.avatar_url !== targetUser.avatar_url) {
+        changes.avatar_url = { old: targetUser.avatar_url, new: updateData.avatar_url };
+        dataToUpdate.avatar_url = updateData.avatar_url;
     }
     
     // Si no hay cambios, retornar usuario actual
