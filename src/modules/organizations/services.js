@@ -1,3 +1,4 @@
+import { Op } from 'sequelize';
 import UserOrganization from '../auth/models/UserOrganization.js';
 import User from '../auth/models/User.js';
 import Role from '../auth/models/Role.js';
@@ -325,4 +326,137 @@ export const validateOrganization = async ({ name, slug, excludePublicCode }) =>
         slug, 
         excludePublicCode 
     });
+};
+
+/**
+ * Agregar un usuario a una organización
+ * Crea una relación en UserOrganization
+ * 
+ * @param {string} userId - UUID del usuario
+ * @param {string} organizationId - UUID de la organización
+ * @param {boolean} isPrimary - Si esta será la organización primaria (default: false)
+ * @returns {Promise<Object>} - Relación creada
+ */
+export const addUserToOrganization = async (userId, organizationId, isPrimary = false) => {
+    // Verificar si el usuario ya pertenece a la organización
+    const existingRelation = await UserOrganization.findOne({
+        where: {
+            user_id: userId,
+            organization_id: organizationId
+        }
+    });
+    
+    if (existingRelation) {
+        const error = new Error('User already belongs to this organization');
+        error.status = 409;
+        error.code = 'USER_ALREADY_IN_ORGANIZATION';
+        throw error;
+    }
+    
+    // Si se marca como primaria, usar transacción para garantizar consistencia
+    if (isPrimary) {
+        const { sequelize } = UserOrganization;
+        const transaction = await sequelize.transaction();
+        
+        try {
+            // Remover is_primary de todas las organizaciones del usuario
+            await UserOrganization.update(
+                { is_primary: false },
+                { 
+                    where: { user_id: userId },
+                    transaction
+                }
+            );
+            
+            // Crear nueva relación como primaria
+            const userOrg = await UserOrganization.create({
+                user_id: userId,
+                organization_id: organizationId,
+                is_primary: true,
+                joined_at: new Date()
+            }, { transaction });
+            
+            await transaction.commit();
+            
+            // Invalidar cache de scope organizacional
+            await invalidateUserOrgScope(userId);
+            
+            return userOrg;
+        } catch (error) {
+            await transaction.rollback();
+            throw error;
+        }
+    } else {
+        // Crear relación sin afectar la organización primaria
+        const userOrg = await UserOrganization.create({
+            user_id: userId,
+            organization_id: organizationId,
+            is_primary: false,
+            joined_at: new Date()
+        });
+        
+        // Invalidar cache de scope organizacional
+        await invalidateUserOrgScope(userId);
+        
+        return userOrg;
+    }
+};
+
+/**
+ * Remover un usuario de una organización
+ * Elimina la relación en UserOrganization (soft delete)
+ * 
+ * @param {string} userId - UUID del usuario
+ * @param {string} organizationId - UUID de la organización
+ * @returns {Promise<boolean>} - true si se removió correctamente
+ */
+export const removeUserFromOrganization = async (userId, organizationId) => {
+    // Buscar la relación
+    const userOrg = await UserOrganization.findOne({
+        where: {
+            user_id: userId,
+            organization_id: organizationId
+        }
+    });
+    
+    if (!userOrg) {
+        const error = new Error('User is not a member of this organization');
+        error.status = 404;
+        error.code = 'USER_NOT_IN_ORGANIZATION';
+        throw error;
+    }
+    
+    // No permitir remover la organización primaria si es la única
+    if (userOrg.is_primary) {
+        const totalOrgs = await UserOrganization.count({
+            where: { user_id: userId }
+        });
+        
+        if (totalOrgs === 1) {
+            const error = new Error('Cannot remove primary organization when it is the only one');
+            error.status = 400;
+            error.code = 'CANNOT_REMOVE_ONLY_PRIMARY_ORG';
+            throw error;
+        }
+        
+        // Si hay otras organizaciones, primero cambiar la primaria a otra
+        const otherOrg = await UserOrganization.findOne({
+            where: {
+                user_id: userId,
+                organization_id: { [Op.ne]: organizationId }
+            }
+        });
+        
+        if (otherOrg) {
+            await switchPrimaryOrganization(userId, otherOrg.organization_id);
+        }
+    }
+    
+    // Soft delete de la relación
+    await userOrg.destroy();
+    
+    // Invalidar cache de scope organizacional
+    await invalidateUserOrgScope(userId);
+    
+    return true;
 };

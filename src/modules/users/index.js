@@ -387,6 +387,133 @@ router.get('/:id/organizations', authenticate, async (req, res, next) => {
 });
 
 /**
+ * POST /api/v1/users/:id/organizations
+ * Agregar un usuario a una organización adicional
+ * Requiere rol system-admin u org-admin
+ */
+router.post('/:id/organizations', authenticate, requireRole(['system-admin', 'org-admin']), async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        const { organization_id, is_primary = false } = req.body;
+        
+        if (!organization_id) {
+            return errorResponse(res, 'organization_id is required', 400, 'VALIDATION_ERROR');
+        }
+        
+        // Obtener modelo para UUID del usuario
+        const userModel = await userRepository.getUserModelById(id, false);
+        if (!userModel) {
+            return errorResponse(res, 'User not found', 404, 'USER_NOT_FOUND');
+        }
+        
+        // Verificar scope (excepto system-admin)
+        if (req.user.role !== 'system-admin') {
+            const scope = await userServices.getUserScope(req.user.userId, req.user.role);
+            if (!scope.canAccessAll && !scope.userIds.includes(userModel.id)) {
+                return errorResponse(res, 'User not in your organization scope', 403, 'SCOPE_VIOLATION');
+            }
+        }
+        
+        // Convertir organization_id (public_code) a UUID
+        const Organization = (await import('../organizations/models/Organization.js')).default;
+        const org = await Organization.findOne({ where: { public_code: organization_id } });
+        
+        if (!org) {
+            return errorResponse(res, 'Organization not found', 404, 'ORGANIZATION_NOT_FOUND');
+        }
+        
+        // Agregar usuario a la organización
+        const organizationService = await import('../organizations/services.js');
+        await organizationService.addUserToOrganization(userModel.id, org.id, is_primary);
+        
+        // Auditar acción
+        const auditLog = (await import('../../helpers/auditLog.js')).default;
+        await auditLog.log({
+            entity_type: 'user_organization',
+            entity_id: userModel.id,
+            action: 'add_organization',
+            performed_by: req.user.userId,
+            changes: {
+                organization_id: { old: null, new: org.id },
+                is_primary: { old: null, new: is_primary }
+            },
+            metadata: { 
+                ip_address: req.ip, 
+                user_agent: req.get('user-agent'),
+                organization_public_code: organization_id
+            }
+        });
+        
+        return res.status(201).json({
+            ok: true,
+            message: 'User added to organization successfully'
+        });
+    } catch (error) {
+        userLogger.error({ err: error, userId: req.params.id }, 'Error adding user to organization');
+        next(error);
+    }
+});
+
+/**
+ * DELETE /api/v1/users/:id/organizations/:orgId
+ * Remover un usuario de una organización
+ * Requiere rol system-admin u org-admin
+ */
+router.delete('/:id/organizations/:orgId', authenticate, requireRole(['system-admin', 'org-admin']), async (req, res, next) => {
+    try {
+        const { id, orgId } = req.params;
+        
+        // Obtener modelo para UUID del usuario
+        const userModel = await userRepository.getUserModelById(id, false);
+        if (!userModel) {
+            return errorResponse(res, 'User not found', 404, 'USER_NOT_FOUND');
+        }
+        
+        // Verificar scope (excepto system-admin)
+        if (req.user.role !== 'system-admin') {
+            const scope = await userServices.getUserScope(req.user.userId, req.user.role);
+            if (!scope.canAccessAll && !scope.userIds.includes(userModel.id)) {
+                return errorResponse(res, 'User not in your organization scope', 403, 'SCOPE_VIOLATION');
+            }
+        }
+        
+        // Convertir orgId (public_code) a UUID
+        const Organization = (await import('../organizations/models/Organization.js')).default;
+        const org = await Organization.findOne({ where: { public_code: orgId } });
+        
+        if (!org) {
+            return errorResponse(res, 'Organization not found', 404, 'ORGANIZATION_NOT_FOUND');
+        }
+        
+        // Remover usuario de la organización
+        const organizationService = await import('../organizations/services.js');
+        await organizationService.removeUserFromOrganization(userModel.id, org.id);
+        
+        // Auditar acción
+        const auditLog = (await import('../../helpers/auditLog.js')).default;
+        await auditLog.log({
+            entity_type: 'user_organization',
+            entity_id: userModel.id,
+            action: 'remove_organization',
+            performed_by: req.user.userId,
+            changes: {
+                organization_id: { old: org.id, new: null }
+            },
+            metadata: { 
+                ip_address: req.ip, 
+                user_agent: req.get('user-agent'),
+                organization_public_code: orgId
+            }
+        });
+        
+        return res.status(204).send();
+    } catch (error) {
+        userLogger.error({ err: error, userId: req.params.id }, 'Error removing user from organization');
+        next(error);
+    }
+});
+
+/**
  * GET /api/v1/users/:id/audit-logs
  * Obtener historial de auditoría del usuario (acciones realizadas por él)
  */
