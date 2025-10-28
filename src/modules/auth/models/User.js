@@ -22,6 +22,10 @@ import Organization from '../../organizations/models/Organization.js';
  * - is_active: Habilitar/deshabilitar usuarios sin eliminar
  * - last_login_at: Tracking de actividad
  * - email_verified_at: Verificación de email
+ * - phone: Número de teléfono (opcional)
+ * - language: Idioma preferido (es, en - default: es)
+ * - timezone: Zona horaria (IANA - default: America/Argentina/Buenos_Aires)
+ * - avatar_url: URL del avatar (opcional)
  */
 const User = sequelize.define(
     'User',
@@ -105,6 +109,28 @@ const User = sequelize.define(
             type: DataTypes.DATE,
             allowNull: true,
             comment: 'Fecha de verificación de email (null = no verificado)'
+        },
+        phone: {
+            type: DataTypes.STRING(50),
+            allowNull: true,
+            comment: 'Número de teléfono del usuario (formato internacional)'
+        },
+        language: {
+            type: DataTypes.STRING(5),
+            allowNull: true,
+            defaultValue: 'es',
+            comment: 'Idioma preferido del usuario (es, en)'
+        },
+        timezone: {
+            type: DataTypes.STRING(100),
+            allowNull: true,
+            defaultValue: 'America/Argentina/Buenos_Aires',
+            comment: 'Zona horaria del usuario (formato IANA)'
+        },
+        avatar_url: {
+            type: DataTypes.TEXT,
+            allowNull: true,
+            comment: 'URL del avatar del usuario (puede ser URL larga de storage)'
         }
     },
     {
