@@ -338,28 +338,25 @@ Actualiza un usuario existente. Requiere permisos según scope.
 {
   "first_name": "Carlos Alberto",
   "last_name": "Rodríguez",
-  "role_name": "org-manager",
-  "primary_organization_id": "ORG-00456-Y",
-  "phone": "+54 11 9876-5432",
-  "language": "en",
-  "timezone": "America/New_York"
+  "role": "org-manager",
+  "organization_id": "ORG-00456-Y",
+  "is_active": true
 }
 ```
 
 **Campos opcionales (todos):**
-- `first_name` (string)
-- `last_name` (string)
-- `role_name` (string) - No puedes asignar rol superior al tuyo
-- `primary_organization_id` (string) - Public code
-- `phone` (string)
-- `language` (string) - es, en
-- `timezone` (string)
-- `avatar_url` (string)
+- `first_name` (string, 1-100 caracteres)
+- `last_name` (string, 1-100 caracteres)
+- `role` (string) - Slug del rol. No puedes asignar rol superior al tuyo (jerarquía de roles)
+- `organization_id` (string) - Public code de la organización (formato: ORG-XXXXX-X)
+- `is_active` (boolean) - Activar/desactivar usuario
 
 **⚠️ NO se puede cambiar:**
-- Email (inmutable)
-- Password (usar PATCH /users/:id/password)
-- Estado activo/inactivo (usar PATCH /users/:id/status)
+- Email (inmutable - requiere endpoint dedicado)
+- Password (usar PATCH /users/me/password)
+
+**⚠️ Campos NO disponibles aún (próxima iteración):**
+- `phone`, `language`, `timezone`, `avatar_url` - Planificados para implementación futura
 
 **Response 200:**
 ```json
@@ -380,18 +377,13 @@ Actualiza un usuario existente. Requiere permisos según scope.
       "slug": "acme-sub"
     },
     "is_active": true,
-    "email_verified": false,
-    "phone": "+54 11 9876-5432",
-    "language": "en",
-    "timezone": "America/New_York",
+    "created_at": "2025-10-22T19:35:00Z",
     "updated_at": "2025-10-22T19:40:00Z"
-  },
-  "meta": {
-    "timestamp": "2025-10-22T19:40:00Z",
-    "locale": "es"
   }
 }
 ```
+
+**Nota:** La respuesta NO incluye `email_verified`, `last_login_at`, `phone`, `language`, `timezone`, `avatar_url` (campos no disponibles aún).
 
 **Ejemplo de uso:**
 ```javascript
