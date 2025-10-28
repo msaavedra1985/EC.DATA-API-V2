@@ -86,7 +86,11 @@ const getRateLimitConfig = (req) => {
  * @returns {string} Clave de Redis
  */
 const getRedisKey = (req, identifier) => {
-    const path = req.path.replace(/\/\d+/g, '/:id'); // Normalizar IDs en path
+    // Normalizar IDs numéricos y UUIDs en path para prevenir bypass
+    const path = req.path
+        .replace(/\/\d+/g, '/:id') // Normalizar IDs numéricos
+        .replace(/\/[\w-]{36}/g, '/:uuid') // Normalizar UUIDs v4
+        .replace(/\/[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/gi, '/:uuid7'); // Normalizar UUIDs v7
     return `ratelimit:${identifier}:${path}`;
 };
 

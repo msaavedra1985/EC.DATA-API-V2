@@ -3,7 +3,7 @@
 
 import { beforeAll, afterAll } from 'vitest';
 import sequelize from '../src/db/sql/sequelize.js';
-import redis from '../src/db/redis.js';
+import redisClient from '../src/db/redis/client.js';
 import '../src/db/models.js'; // Cargar todos los modelos
 
 /**
@@ -15,8 +15,10 @@ beforeAll(async () => {
         // Autenticar con PostgreSQL
         await sequelize.authenticate();
         
-        // Conectar con Redis
-        await redis.ping();
+        // Conectar con Redis (si está disponible)
+        if (redisClient) {
+            await redisClient.ping();
+        }
         
         console.log('✅ Test environment: DB connections established');
     } catch (error) {
@@ -33,7 +35,9 @@ afterAll(async () => {
     try {
         // Cerrar conexiones
         await sequelize.close();
-        await redis.quit();
+        if (redisClient) {
+            await redisClient.quit();
+        }
         
         console.log('✅ Test environment: DB connections closed');
     } catch (error) {

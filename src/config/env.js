@@ -65,7 +65,7 @@ export const config = {
         windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '60000', 10), // 1 minuto
         maxRequests: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100', 10),
         // Modo observación: solo logea sin bloquear (false = activo, bloquea requests)
-        observeOnly: process.env.RATE_LIMIT_OBSERVE_MODE === 'true' || process.env.RATE_LIMIT_OBSERVE_MODE === '1' || true, // Default: true
+        observeOnly: process.env.RATE_LIMIT_OBSERVE_MODE !== 'false' && process.env.RATE_LIMIT_OBSERVE_MODE !== '0', // Default: true (solo false/0 desactiva)
     },
 
     // CORS dinámico (cache TTL en Redis)
