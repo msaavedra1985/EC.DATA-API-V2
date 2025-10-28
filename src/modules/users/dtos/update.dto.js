@@ -15,6 +15,10 @@ import { z } from 'zod';
  * - role: Cambiar rol (con validación de jerarquía)
  * - organization_id: Cambiar organización (solo system-admin)
  * - is_active: Activar/desactivar usuario
+ * - phone: Número de teléfono
+ * - language: Idioma preferido (es, en)
+ * - timezone: Zona horaria IANA
+ * - avatar_url: URL del avatar
  * 
  * Campos NO permitidos aquí:
  * - email: Requiere endpoint dedicado (evitar conflictos)
@@ -47,7 +51,30 @@ export const updateUserSchema = z.object({
         .nullable(),
     
     is_active: z.boolean()
+        .optional(),
+    
+    phone: z.string()
+        .max(50, 'Phone must be at most 50 characters')
+        .trim()
         .optional()
+        .nullable(),
+    
+    language: z.enum(['es', 'en'], {
+        errorMap: () => ({ message: 'Language must be either "es" or "en"' })
+    })
+        .optional()
+        .nullable(),
+    
+    timezone: z.string()
+        .max(100, 'Timezone must be at most 100 characters')
+        .trim()
+        .optional()
+        .nullable(),
+    
+    avatar_url: z.string()
+        .url('Avatar URL must be a valid URL')
+        .optional()
+        .nullable()
 }).strict(); // No permitir campos extra
 
 /**

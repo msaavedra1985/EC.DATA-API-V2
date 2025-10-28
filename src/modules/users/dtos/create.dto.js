@@ -17,6 +17,10 @@ import { z } from 'zod';
  * Campos opcionales:
  * - organization_id: ID público de organización (solo system-admin puede asignar)
  * - send_invite: Enviar email de invitación (default: false)
+ * - phone: Número de teléfono (formato internacional)
+ * - language: Idioma preferido (es, en - default: es)
+ * - timezone: Zona horaria IANA (default: America/Argentina/Buenos_Aires)
+ * - avatar_url: URL del avatar del usuario
  */
 export const createUserSchema = z.object({
     email: z.string()
@@ -54,7 +58,32 @@ export const createUserSchema = z.object({
     
     send_invite: z.boolean()
         .optional()
-        .default(false)
+        .default(false),
+    
+    phone: z.string()
+        .max(50, 'Phone must be at most 50 characters')
+        .trim()
+        .optional()
+        .nullable(),
+    
+    language: z.enum(['es', 'en'], {
+        errorMap: () => ({ message: 'Language must be either "es" or "en"' })
+    })
+        .optional()
+        .nullable()
+        .default('es'),
+    
+    timezone: z.string()
+        .max(100, 'Timezone must be at most 100 characters')
+        .trim()
+        .optional()
+        .nullable()
+        .default('America/Argentina/Buenos_Aires'),
+    
+    avatar_url: z.string()
+        .url('Avatar URL must be a valid URL')
+        .optional()
+        .nullable()
 });
 
 /**

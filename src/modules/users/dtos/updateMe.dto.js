@@ -10,6 +10,10 @@ import { z } from 'zod';
  * Campos permitidos (opcionales):
  * - first_name: Nombre
  * - last_name: Apellido
+ * - phone: Número de teléfono
+ * - language: Idioma preferido (es, en)
+ * - timezone: Zona horaria IANA
+ * - avatar_url: URL del avatar
  * 
  * Campos NO permitidos (requieren admin o endpoints dedicados):
  * - email: Cambio de email requiere verificación
@@ -29,7 +33,30 @@ export const updateMeSchema = z.object({
         .min(1, 'Last name cannot be empty')
         .max(100, 'Last name must be at most 100 characters')
         .trim()
+        .optional(),
+    
+    phone: z.string()
+        .max(50, 'Phone must be at most 50 characters')
+        .trim()
         .optional()
+        .nullable(),
+    
+    language: z.enum(['es', 'en'], {
+        errorMap: () => ({ message: 'Language must be either "es" or "en"' })
+    })
+        .optional()
+        .nullable(),
+    
+    timezone: z.string()
+        .max(100, 'Timezone must be at most 100 characters')
+        .trim()
+        .optional()
+        .nullable(),
+    
+    avatar_url: z.string()
+        .url('Avatar URL must be a valid URL')
+        .optional()
+        .nullable()
 }).strict(); // No permitir campos extra para seguridad
 
 /**
