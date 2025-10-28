@@ -77,8 +77,122 @@ router.get('/', authenticate, requireRole(['system-admin', 'org-admin', 'org-man
 });
 
 /**
- * POST /api/v1/users
- * Crear nuevo usuario
+ * @swagger
+ * /api/v1/users:
+ *   post:
+ *     summary: Crear nuevo usuario
+ *     description: Crea un nuevo usuario en el sistema. system-admin puede asignar a cualquier organización, org-admin solo a su organización. Soporta multi-organización mediante organization_memberships[].
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - first_name
+ *               - last_name
+ *               - password
+ *               - role
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 description: Email del usuario (debe ser único)
+ *                 example: "usuario@ejemplo.com"
+ *               first_name:
+ *                 type: string
+ *                 minLength: 1
+ *                 maxLength: 100
+ *                 description: Nombre del usuario
+ *                 example: "Juan"
+ *               last_name:
+ *                 type: string
+ *                 minLength: 1
+ *                 maxLength: 100
+ *                 description: Apellido del usuario
+ *                 example: "Pérez"
+ *               password:
+ *                 type: string
+ *                 minLength: 8
+ *                 description: Contraseña del usuario
+ *                 example: "password123"
+ *               role:
+ *                 type: string
+ *                 description: Slug del rol del usuario
+ *                 example: "user"
+ *                 enum: [system-admin, org-admin, org-manager, user, viewer, guest, demo]
+ *               organization_id:
+ *                 type: string
+ *                 description: Public code de la organización primaria (solo system-admin)
+ *                 example: "ORG-7K9D2-X"
+ *               phone:
+ *                 type: string
+ *                 maxLength: 50
+ *                 description: Número de teléfono del usuario
+ *                 example: "+54 11 1234-5678"
+ *               language:
+ *                 type: string
+ *                 enum: [es, en]
+ *                 default: es
+ *                 description: Idioma preferido del usuario
+ *                 example: "es"
+ *               timezone:
+ *                 type: string
+ *                 maxLength: 100
+ *                 default: "America/Argentina/Buenos_Aires"
+ *                 description: Zona horaria IANA del usuario
+ *                 example: "America/Argentina/Buenos_Aires"
+ *               avatar_url:
+ *                 type: string
+ *                 format: uri
+ *                 description: URL del avatar del usuario
+ *                 example: "https://ejemplo.com/avatar.jpg"
+ *               organization_memberships:
+ *                 type: array
+ *                 description: Array de organizaciones a las que pertenecerá el usuario (multi-organización)
+ *                 items:
+ *                   type: object
+ *                   required:
+ *                     - organization_id
+ *                   properties:
+ *                     organization_id:
+ *                       type: string
+ *                       description: Public code de la organización
+ *                       example: "ORG-ABC12-Y"
+ *                     is_primary:
+ *                       type: boolean
+ *                       default: false
+ *                       description: Marcar como organización primaria
+ *                       example: false
+ *               send_invite:
+ *                 type: boolean
+ *                 default: false
+ *                 description: Enviar email de invitación al usuario
+ *                 example: false
+ *     responses:
+ *       201:
+ *         description: Usuario creado exitosamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   description: Datos del usuario creado
+ *       400:
+ *         description: Datos inválidos
+ *       403:
+ *         description: Sin permisos para crear usuario o asignar rol
+ *       409:
+ *         description: Email ya existe
  */
 router.post('/', authenticate, requireRole(['system-admin', 'org-admin']), async (req, res, next) => {
     try {
@@ -387,9 +501,60 @@ router.get('/:id/organizations', authenticate, async (req, res, next) => {
 });
 
 /**
- * POST /api/v1/users/:id/organizations
- * Agregar un usuario a una organización adicional
- * Requiere rol system-admin u org-admin
+ * @swagger
+ * /api/v1/users/{id}/organizations:
+ *   post:
+ *     summary: Agregar usuario a una organización adicional
+ *     description: Agrega un usuario existente a una organización adicional. Permite multi-organización. Requiere rol system-admin u org-admin.
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Public code del usuario
+ *         example: "USR-7K9D2-X"
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - organization_id
+ *             properties:
+ *               organization_id:
+ *                 type: string
+ *                 description: Public code de la organización
+ *                 example: "ORG-ABC12-Y"
+ *               is_primary:
+ *                 type: boolean
+ *                 description: Marcar como organización primaria del usuario
+ *                 example: false
+ *                 default: false
+ *     responses:
+ *       201:
+ *         description: Usuario agregado a la organización exitosamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "User added to organization successfully"
+ *       400:
+ *         description: Datos inválidos o el usuario ya pertenece a la organización
+ *       403:
+ *         description: Sin permisos para acceder a este usuario u organización
+ *       404:
+ *         description: Usuario u organización no encontrados
  */
 router.post('/:id/organizations', authenticate, requireRole(['system-admin', 'org-admin']), async (req, res, next) => {
     try {
@@ -455,9 +620,49 @@ router.post('/:id/organizations', authenticate, requireRole(['system-admin', 'or
 });
 
 /**
- * DELETE /api/v1/users/:id/organizations/:orgId
- * Remover un usuario de una organización
- * Requiere rol system-admin u org-admin
+ * @swagger
+ * /api/v1/users/{id}/organizations/{orgId}:
+ *   delete:
+ *     summary: Remover usuario de una organización
+ *     description: Elimina la membresía de un usuario en una organización específica. No permite eliminar la única organización primaria del usuario. Requiere rol system-admin u org-admin.
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Public code del usuario
+ *         example: "USR-7K9D2-X"
+ *       - in: path
+ *         name: orgId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Public code de la organización
+ *         example: "ORG-ABC12-Y"
+ *     responses:
+ *       200:
+ *         description: Usuario removido de la organización exitosamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "User removed from organization successfully"
+ *       400:
+ *         description: No se puede remover la única organización primaria del usuario
+ *       403:
+ *         description: Sin permisos para acceder a este usuario u organización
+ *       404:
+ *         description: Usuario u organización no encontrados
  */
 router.delete('/:id/organizations/:orgId', authenticate, requireRole(['system-admin', 'org-admin']), async (req, res, next) => {
     try {
