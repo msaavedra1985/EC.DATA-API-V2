@@ -534,3 +534,19 @@ export const toggleUserStatus = async (targetUserId, isActive, actor, metadata =
     return updatedUser;
 };
 
+/**
+ * Validar disponibilidad de email de usuario
+ * Endpoint público para validación en tiempo real en formularios
+ * 
+ * @param {Object} options - Opciones de validación
+ * @param {string} options.email - Email a validar
+ * @param {string} [options.excludePublicCode] - Public code del usuario a excluir (para edición)
+ * @returns {Promise<Object>} - { valid: boolean, conflict: boolean }
+ */
+export const validateEmail = async ({ email, excludePublicCode }) => {
+    return await userRepository.validateEmailUniqueness({ 
+        email, 
+        excludePublicCode 
+    });
+};
+

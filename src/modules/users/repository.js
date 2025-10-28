@@ -407,3 +407,37 @@ export const getUserModelsByOrganizations = async (organizationIds) => {
         attributes: ['id']
     });
 };
+
+/**
+ * Validar unicidad de email de usuario
+ * Verifica si el email ya está en uso por otro usuario
+ * 
+ * @param {Object} options - Opciones de validación
+ * @param {string} options.email - Email a validar
+ * @param {string} [options.excludePublicCode] - Public code del usuario a excluir (para edición)
+ * @returns {Promise<Object>} - { valid: boolean, conflict: boolean }
+ */
+export const validateEmailUniqueness = async ({ email, excludePublicCode }) => {
+    // Buscar usuario con el email proporcionado (case-insensitive)
+    const where = {
+        email: { [Op.iLike]: email }
+    };
+    
+    // Excluir usuario actual si se proporciona excludePublicCode
+    if (excludePublicCode) {
+        where.public_code = { [Op.ne]: excludePublicCode };
+    }
+    
+    const existingUser = await User.findOne({
+        where,
+        attributes: ['email']
+    });
+    
+    // Si existe un usuario con ese email, hay conflicto
+    const conflict = existingUser !== null;
+    
+    return {
+        valid: !conflict,
+        conflict
+    };
+};

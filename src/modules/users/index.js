@@ -10,6 +10,7 @@ import { validateUpdateUser } from './dtos/update.dto.js';
 import { validateUpdateMe } from './dtos/updateMe.dto.js';
 import { validateChangePassword } from './dtos/changePassword.dto.js';
 import { validateToggleStatus } from './dtos/toggleStatus.dto.js';
+import { validateEmailValidation } from './dtos/validate.dto.js';
 import { successResponse, errorResponse } from '../../utils/response.js';
 import pino from 'pino';
 
@@ -95,6 +96,88 @@ router.post('/', authenticate, requireRole(['system-admin', 'org-admin']), async
         return res.status(201).json({ ok: true, data: newUser });
     } catch (error) {
         userLogger.error({ err: error }, 'Error creating user');
+        next(error);
+    }
+});
+
+/**
+ * @swagger
+ * /api/v1/users/validate-email:
+ *   post:
+ *     summary: Validar disponibilidad de email de usuario
+ *     description: Verifica si el email ya está en uso. Útil para validación en tiempo real en formularios. No requiere autenticación.
+ *     tags: [Users]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 description: Email a validar
+ *                 example: "usuario@ejemplo.com"
+ *               exclude_id:
+ *                 type: string
+ *                 description: Public code del usuario a excluir de la validación (útil al editar un usuario existente)
+ *                 example: "USR-7K9D2-X"
+ *     responses:
+ *       200:
+ *         description: Resultado de validación
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     valid:
+ *                       type: boolean
+ *                       description: true si el email está disponible, false si ya está en uso
+ *                       example: true
+ *                     conflict:
+ *                       type: boolean
+ *                       description: true si el email ya existe, false si está disponible
+ *                       example: false
+ *       400:
+ *         description: Datos de validación inválidos
+ */
+router.post('/validate-email', async (req, res, next) => {
+    try {
+        // Validar datos del request
+        const validatedData = validateEmailValidation(req.body);
+        
+        // Llamar al servicio de validación
+        const result = await userServices.validateEmail({
+            email: validatedData.email,
+            excludePublicCode: validatedData.exclude_id || null
+        });
+        
+        return res.json({
+            ok: true,
+            data: result
+        });
+    } catch (error) {
+        if (error.name === 'ZodError') {
+            return res.status(400).json({
+                ok: false,
+                error: {
+                    code: 'VALIDATION_ERROR',
+                    message: 'Invalid data',
+                    details: error.errors
+                }
+            });
+        }
+        
+        userLogger.error({ err: error }, 'Error validating email');
         next(error);
     }
 });
