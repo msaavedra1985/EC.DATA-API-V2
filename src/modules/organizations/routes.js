@@ -10,7 +10,7 @@ import { validateCreateOrganization } from './dtos/create.dto.js';
 import { validateUpdateOrganization } from './dtos/update.dto.js';
 import { validateBatchDelete, validateGenerateUploadUrl, validateSlug } from './dtos/batchDelete.dto.js';
 import { getDeletePreview, cascadeDelete } from './helpers/cascadeDelete.js';
-import { getChildren, getDescendants, getHierarchyTree, wouldCreateCycle, getDepth } from './helpers/hierarchy.js';
+import { getChildren, getDescendants, getHierarchyTree, wouldCreateCycle, getDepth, getTreeLevels } from './helpers/hierarchy.js';
 import { generatePresignedUploadUrl } from '../../helpers/azureBlobStorage.js';
 import { logAuditAction } from '../../helpers/auditLog.js';
 import { 
@@ -1787,8 +1787,8 @@ router.get('/hierarchy', authenticate, async (req, res) => {
  * @swagger
  * /api/v1/organizations/{id}/children:
  *   get:
- *     summary: Obtener hijos directos de una organización
- *     description: Obtiene solo los hijos de primer nivel (no recursivo) de una organización específica.
+ *     summary: Obtener hijos directos de una organización con lazy loading
+ *     description: Obtiene los hijos de una organización con soporte de lazy loading. Por defecto carga 2 niveles e incluye flag hasChildren para saber si cada nodo tiene descendientes.
  *     tags: [Organizations]
  *     security:
  *       - bearerAuth: []
@@ -1800,9 +1800,23 @@ router.get('/hierarchy', authenticate, async (req, res) => {
  *         schema:
  *           type: string
  *           example: "ORG-1A2B3C"
+ *       - in: query
+ *         name: levels
+ *         description: Número de niveles a cargar (default 2)
+ *         schema:
+ *           type: integer
+ *           default: 2
+ *           minimum: 1
+ *           maximum: 5
+ *       - in: query
+ *         name: active_only
+ *         description: Solo organizaciones activas
+ *         schema:
+ *           type: boolean
+ *           default: true
  *     responses:
  *       200:
- *         description: Lista de hijos obtenida exitosamente
+ *         description: Hijos obtenidos exitosamente con hasChildren flag
  *         content:
  *           application/json:
  *             schema:
@@ -1917,12 +1931,19 @@ router.get('/hierarchy', authenticate, async (req, res) => {
  */
 router.get('/:id/children', authenticate, requireOrgPermission('view'), async (req, res) => {
     try {
-        const organization = req.organization;
-        const children = await getChildren(req.organizationInternal.id); // UUID interno
+        const { levels = '2', active_only = 'true' } = req.query;
+        
+        // Obtener hijos con N niveles de profundidad y hasChildren flag
+        const tree = await getTreeLevels(
+            req.organizationInternal.id,
+            parseInt(levels),
+            active_only === 'true'
+        );
 
+        // Retornar solo los hijos (children del nodo raíz)
         res.json({
             ok: true,
-            data: children
+            data: tree?.children || []
         });
     } catch (error) {
         orgLogger.error({ err: error }, 'Error getting children');
@@ -2106,6 +2127,100 @@ router.get('/:id/descendants', authenticate, requireOrgPermission('view'), async
             error: {
                 code: 'INTERNAL_ERROR',
                 message: 'Error getting descendants'
+            }
+        });
+    }
+});
+
+/**
+ * @swagger
+ * /api/v1/organizations/{id}/subtree:
+ *   get:
+ *     summary: Obtener árbol completo de organización y descendientes
+ *     description: Obtiene el árbol jerárquico completo desde una organización específica hacia abajo. Soporta lazy loading con niveles configurables.
+ *     tags: [Organizations]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         description: Public code de la organización raíz
+ *         schema:
+ *           type: string
+ *           example: "ORG-1A2B3C"
+ *       - in: query
+ *         name: levels
+ *         description: Número de niveles a cargar (lazy loading, default 2). Use 0 para solo el nodo actual.
+ *         schema:
+ *           type: integer
+ *           default: 2
+ *           minimum: 0
+ *           maximum: 10
+ *       - in: query
+ *         name: active_only
+ *         description: Solo organizaciones activas
+ *         schema:
+ *           type: boolean
+ *           default: true
+ *     responses:
+ *       200:
+ *         description: Árbol obtenido exitosamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                       example: "ORG-1A2B3C"
+ *                     name:
+ *                       type: string
+ *                       example: "EC.DATA"
+ *                     hasChildren:
+ *                       type: boolean
+ *                       example: true
+ *                     children:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *       401:
+ *         description: No autenticado
+ *       403:
+ *         description: Sin permisos
+ *       404:
+ *         description: Organización no encontrada
+ *       500:
+ *         description: Error interno del servidor
+ */
+router.get('/:id/subtree', authenticate, requireOrgPermission('view'), async (req, res) => {
+    try {
+        const { levels = '2', active_only = 'true' } = req.query;
+        
+        // Obtener árbol con N niveles
+        const tree = await getTreeLevels(
+            req.organizationInternal.id, 
+            parseInt(levels), 
+            active_only === 'true'
+        );
+
+        res.json({
+            ok: true,
+            data: tree
+        });
+    } catch (error) {
+        orgLogger.error({ err: error }, 'Error getting subtree');
+        res.status(500).json({
+            ok: false,
+            error: {
+                code: 'INTERNAL_ERROR',
+                message: 'Error getting subtree'
             }
         });
     }
