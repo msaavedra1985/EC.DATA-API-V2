@@ -79,6 +79,39 @@ Preferred communication style: Simple, everyday language.
 - **Session Context Caching:** Frontend NEVER decodes JWT; all session context is cached in Redis and returned via API responses, acting as the single source of truth for frontend state.
 - **Global Audit Logging:** Every CUD operation MUST be logged to the `audit_logs` table using the `auditLog` helper.
 
+### Organization Hierarchy & Hybrid Role System
+
+**Organization Hierarchy:**
+- **Unlimited Depth:** Organizations can have infinite levels of sub-organizations via self-referencing `parent_id` field
+- **Root Organization:** EC.DATA is the root organization (`parent_id = null`)
+- **Tree Navigation:** Helper functions for tree operations (getChildren, getDescendants, getAncestors, buildTree, getTreeLevels)
+- **Lazy Loading:** API endpoints support configurable levels (default 2) with `hasChildren` flag for efficient tree rendering
+- **Cycle Prevention:** Moving organizations validates against creating circular references
+
+**Hybrid Role System:**
+- **Global Roles (users.role_id):** System-wide role defining base permissions (system-admin, org-admin, org-manager, user, viewer, guest, demo)
+- **Organization Roles (user_organizations.role_in_org):** Per-organization role defining access within that org (admin, member, viewer)
+- **Permission Matrix:**
+  - `system-admin`: Full access to all organizations regardless of membership
+  - `org-admin` + `role_in_org=admin`: Access to assigned org + all descendants
+  - `org-admin` + `role_in_org=member`: Access only to assigned org
+  - `user` + `role_in_org=admin`: Access to assigned org + all descendants
+  - `user` + `role_in_org=member/viewer`: Access only to assigned org
+- **Automatic Filtering:** All organization endpoints automatically filter results based on user's hybrid permissions
+- **Helper Module:** `src/modules/organizations/helpers/permissions.js` calculates accessible organizations
+
+**Key Endpoints:**
+- `GET /organizations/hierarchy` - Full tree from root (cached)
+- `GET /organizations/:id/subtree` - Tree from specific node with configurable depth
+- `GET /organizations/:id/children` - Lazy loading with 2 levels + hasChildren flag
+- `GET /organizations/:id/descendants` - Flat list of all descendants
+- `GET /organizations/:id/path` - Breadcrumb path from root to node
+
+**Frontend Integration:**
+- Complete guide at `docs/ORGANIZATION_HIERARCHY_FRONTEND.md`
+- Lazy loading patterns, search strategies, and tree rendering examples
+- Recommended libraries and performance optimization tips
+
 ## External Dependencies
 
 ### Core Services
