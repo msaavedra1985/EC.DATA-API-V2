@@ -254,6 +254,162 @@ export const countOrganizationsInTree = async (organizationId) => {
     }
 };
 
+/**
+ * Obtiene el path completo de una organización (breadcrumb)
+ * Ejemplo: "EC.DATA / Ventas / LATAM / Chile"
+ * 
+ * @param {string} organizationId - UUID de la organización
+ * @param {string} separator - Separador entre niveles (default: ' / ')
+ * @returns {Promise<string>} Path completo desde la raíz hasta la org
+ */
+export const getOrganizationPath = async (organizationId, separator = ' / ') => {
+    try {
+        const organization = await Organization.findByPk(organizationId);
+        if (!organization) {
+            throw new Error(`Organization ${organizationId} not found`);
+        }
+
+        const ancestors = await getAncestors(organizationId, false);
+        
+        // Invertir para tener desde raíz hasta la org actual
+        const path = [...ancestors.reverse(), organization]
+            .map(org => org.name)
+            .join(separator);
+
+        return path;
+    } catch (error) {
+        orgLogger.error({ err: error, organizationId }, 'Error getting organization path');
+        throw error;
+    }
+};
+
+/**
+ * Construye un árbol jerárquico desde una lista plana de organizaciones
+ * 
+ * @param {Array} organizations - Lista plana de organizaciones
+ * @returns {Array} Array de organizaciones raíz con sus children anidados
+ */
+export const buildTree = (organizations) => {
+    const orgMap = {};
+    const roots = [];
+
+    // Crear mapa de organizaciones por ID
+    organizations.forEach(org => {
+        orgMap[org.id] = { ...org.toJSON(), children: [] };
+    });
+
+    // Construir árbol
+    organizations.forEach(org => {
+        const orgNode = orgMap[org.id];
+        
+        if (!org.parent_id) {
+            // Es una raíz
+            roots.push(orgNode);
+        } else if (orgMap[org.parent_id]) {
+            // Agregar como hijo de su padre
+            orgMap[org.parent_id].children.push(orgNode);
+        }
+    });
+
+    return roots;
+};
+
+/**
+ * Obtiene los hijos directos con información de si tienen más descendientes
+ * Útil para lazy loading de árbol (cargar 2 niveles a la vez)
+ * 
+ * @param {string} organizationId - UUID de la organización padre
+ * @param {boolean} activeOnly - Solo organizaciones activas (default: true)
+ * @returns {Promise<Array>} Array de hijos con campo hasChildren
+ */
+export const getChildrenWithHasChildren = async (organizationId, activeOnly = true) => {
+    try {
+        const children = await getChildren(organizationId, activeOnly);
+        
+        // Para cada hijo, verificar si tiene hijos propios
+        const childrenWithFlag = await Promise.all(
+            children.map(async (child) => {
+                const grandchildren = await getChildren(child.id, activeOnly);
+                
+                return {
+                    id: child.id,
+                    public_code: child.public_code,
+                    slug: child.slug,
+                    name: child.name,
+                    parent_id: child.parent_id,
+                    logo_url: child.logo_url,
+                    is_active: child.is_active,
+                    hasChildren: grandchildren.length > 0
+                };
+            })
+        );
+
+        return childrenWithFlag;
+    } catch (error) {
+        orgLogger.error({ err: error, organizationId }, 'Error getting children with hasChildren flag');
+        throw error;
+    }
+};
+
+/**
+ * Obtiene N niveles del árbol desde una organización (lazy loading)
+ * 
+ * @param {string} organizationId - UUID de la organización raíz
+ * @param {number} levels - Número de niveles a cargar (default: 2)
+ * @param {boolean} activeOnly - Solo organizaciones activas (default: true)
+ * @returns {Promise<Object>} Árbol con N niveles cargados + hasChildren flag
+ */
+export const getTreeLevels = async (organizationId, levels = 2, activeOnly = true) => {
+    try {
+        const organization = await Organization.findByPk(organizationId);
+        
+        if (!organization) {
+            throw new Error(`Organization ${organizationId} not found`);
+        }
+
+        if (activeOnly && !organization.is_active) {
+            return null;
+        }
+
+        // Si solo queremos 0 niveles, devolver solo la org sin children
+        if (levels === 0) {
+            const childrenCount = await getChildren(organizationId, activeOnly);
+            return {
+                id: organization.id,
+                public_code: organization.public_code,
+                slug: organization.slug,
+                name: organization.name,
+                parent_id: organization.parent_id,
+                logo_url: organization.logo_url,
+                is_active: organization.is_active,
+                hasChildren: childrenCount.length > 0,
+                children: []
+            };
+        }
+
+        // Cargar children recursivamente hasta el nivel especificado
+        const children = await getChildren(organizationId, activeOnly);
+        const childrenTrees = await Promise.all(
+            children.map(child => getTreeLevels(child.id, levels - 1, activeOnly))
+        );
+
+        return {
+            id: organization.id,
+            public_code: organization.public_code,
+            slug: organization.slug,
+            name: organization.name,
+            parent_id: organization.parent_id,
+            logo_url: organization.logo_url,
+            is_active: organization.is_active,
+            hasChildren: children.length > 0,
+            children: childrenTrees.filter(Boolean)
+        };
+    } catch (error) {
+        orgLogger.error({ err: error, organizationId, levels }, 'Error getting tree levels');
+        throw error;
+    }
+};
+
 export default {
     getChildren,
     getDescendants,
@@ -263,5 +419,9 @@ export default {
     getDepth,
     canHaveChild,
     getRootOrganization,
-    countOrganizationsInTree
+    countOrganizationsInTree,
+    getOrganizationPath,
+    buildTree,
+    getChildrenWithHasChildren,
+    getTreeLevels
 };
