@@ -42,6 +42,7 @@ const runSeeders = async () => {
         dbLogger.info('👤 Ejecutando seeder de usuarios...');
         const usersResult = await seedUsers();
         dbLogger.info(`✅ ${usersResult.usersCreated} usuarios creados`);
+        dbLogger.info(`✅ ${usersResult.membershipsCreated} membresías creadas`);
 
         dbLogger.info('🎉 Seeders completados exitosamente');
         dbLogger.info('');
@@ -50,6 +51,7 @@ const runSeeders = async () => {
         dbLogger.info(`   - Países: ${countriesResult.countriesCreated} creados`);
         dbLogger.info(`   - Organizaciones: ${orgsResult.organizationsCreated} creadas`);
         dbLogger.info(`   - Usuarios: ${usersResult.usersCreated} creados`);
+        dbLogger.info(`   - Membresías: ${usersResult.membershipsCreated} creadas`);
         dbLogger.info('');
         dbLogger.info('🔑 Credenciales de prueba:');
         dbLogger.info('   Password universal: TestPassword123!');
