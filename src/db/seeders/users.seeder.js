@@ -39,10 +39,12 @@ export const seedUsers = async () => {
 
         dbLogger.info('✅ Roles cargados:', Object.keys(roleMap));
 
-        // Obtener organizaciones para asignar a usuarios
+        // Obtener organizaciones específicas por slug
         const organizations = await Organization.findAll({
-            attributes: ['id', 'slug'],
-            limit: 3
+            where: {
+                slug: ['ec-data', 'acme-corp', 'techsolutions-ar', 'global-enterprises']
+            },
+            attributes: ['id', 'slug']
         });
 
         // Mapear organizaciones
