@@ -1196,6 +1196,400 @@ router.put('/:id', authenticate, requireOrgPermission('edit'), async (req, res) 
 
 /**
  * @swagger
+ * /api/v1/organizations/{id}/move:
+ *   patch:
+ *     summary: Mover organización en la jerarquía
+ *     description: Cambia el padre de una organización. Valida que no se creen ciclos y respeta límites de profundidad. Requiere permisos de edición.
+ *     tags: [Organizations]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         description: Public code de la organización a mover
+ *         schema:
+ *           type: string
+ *           example: "ORG-4D5E6F"
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - parent_id
+ *             properties:
+ *               parent_id:
+ *                 type: string
+ *                 nullable: true
+ *                 description: Public code del nuevo padre, o null para convertir en raíz
+ *                 example: "ORG-1A2B3C"
+ *     responses:
+ *       200:
+ *         description: Organización movida exitosamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                       example: "ORG-4D5E6F"
+ *                     name:
+ *                       type: string
+ *                       example: "ACME Corporation"
+ *                     parent_id:
+ *                       type: string
+ *                       example: "ORG-1A2B3C"
+ *                     old_parent_id:
+ *                       type: string
+ *                       nullable: true
+ *                       example: "ORG-7G8H9J"
+ *       400:
+ *         description: Error de validación
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: object
+ *                   properties:
+ *                     code:
+ *                       type: string
+ *                       example: "VALIDATION_ERROR"
+ *                     message:
+ *                       type: string
+ *                       example: "Invalid data"
+ *       401:
+ *         description: No autenticado
+ *       403:
+ *         description: Sin permisos para mover esta organización
+ *       404:
+ *         description: Organización o padre no encontrado
+ *       422:
+ *         description: Ciclo detectado o profundidad máxima excedida
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: object
+ *                   properties:
+ *                     code:
+ *                       type: string
+ *                       example: "CYCLE_DETECTED"
+ *                     message:
+ *                       type: string
+ *                       example: "Cannot create circular hierarchy"
+ *       500:
+ *         description: Error interno del servidor
+ */
+router.patch('/:id/move', authenticate, requireOrgPermission('edit'), async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { validateMoveOrganization } = await import('./dtos/move.dto.js');
+        const validatedData = validateMoveOrganization(req.body);
+
+        // Obtener organización actual (usa req.organizationInternal del middleware)
+        const organization = await orgRepository.findOrganizationByPublicCode(id);
+        if (!organization) {
+            return res.status(404).json({
+                ok: false,
+                error: {
+                    code: 'NOT_FOUND',
+                    message: 'Organization not found'
+                }
+            });
+        }
+
+        const oldParentId = organization.parent_id;
+        let newParentUuid = null;
+
+        // Validar nuevo padre si se proporciona
+        if (validatedData.parent_id) {
+            const newParent = await orgRepository.findOrganizationByPublicCodeInternal(validatedData.parent_id);
+            if (!newParent) {
+                return res.status(404).json({
+                    ok: false,
+                    error: {
+                        code: 'PARENT_NOT_FOUND',
+                        message: 'Parent organization not found'
+                    }
+                });
+            }
+
+            // Detectar ciclos
+            const hasCycle = await wouldCreateCycle(req.organizationInternal.id, newParent.id);
+            if (hasCycle) {
+                return res.status(422).json({
+                    ok: false,
+                    error: {
+                        code: 'CYCLE_DETECTED',
+                        message: 'Cannot create circular hierarchy'
+                    }
+                });
+            }
+
+            // Verificar profundidad
+            const newParentDepth = await getDepth(newParent.id);
+            if (newParentDepth >= 5) {
+                return res.status(422).json({
+                    ok: false,
+                    error: {
+                        code: 'MAX_DEPTH_EXCEEDED',
+                        message: 'Maximum organization depth (5 levels) exceeded'
+                    }
+                });
+            }
+
+            newParentUuid = newParent.id;
+        }
+
+        // Actualizar parent_id (usa UUID interno)
+        const updated = await orgRepository.updateOrganization(req.organizationInternal.id, {
+            parent_id: newParentUuid
+        });
+
+        // Auditoría
+        await logAuditAction({
+            entityType: 'organization',
+            entityId: req.organizationInternal.id,
+            action: 'move',
+            performedBy: req.user.userId,
+            changes: {
+                old: { parent_id: oldParentId },
+                new: { parent_id: validatedData.parent_id }
+            },
+            ipAddress: req.ip,
+            userAgent: req.get('user-agent')
+        });
+
+        // Invalidar caché del padre anterior y nuevo
+        if (oldParentId) {
+            await invalidateOrganizationCache(oldParentId);
+        }
+        if (validatedData.parent_id) {
+            await invalidateOrganizationCache(validatedData.parent_id);
+        }
+
+        orgLogger.info({ orgId: id, oldParent: oldParentId, newParent: validatedData.parent_id }, 'Organization moved');
+
+        res.json({
+            ok: true,
+            data: {
+                ...updated,
+                old_parent_id: oldParentId
+            }
+        });
+    } catch (error) {
+        if (error.name === 'ZodError') {
+            return res.status(400).json({
+                ok: false,
+                error: {
+                    code: 'VALIDATION_ERROR',
+                    message: 'Invalid data',
+                    details: error.errors
+                }
+            });
+        }
+
+        orgLogger.error({ err: error }, 'Error moving organization');
+        res.status(500).json({
+            ok: false,
+            error: {
+                code: 'INTERNAL_ERROR',
+                message: 'Error moving organization'
+            }
+        });
+    }
+});
+
+/**
+ * @swagger
+ * /api/v1/organizations/{id}:
+ *   delete:
+ *     summary: Eliminar organización (soft delete)
+ *     description: Marca organización como eliminada. Valida que no tenga hijos activos. Los usuarios se mantienen y se les quita la membresía. Requiere permisos de eliminación.
+ *     tags: [Organizations]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         description: Public code de la organización a eliminar
+ *         schema:
+ *           type: string
+ *           example: "ORG-4D5E6F"
+ *     responses:
+ *       200:
+ *         description: Organización eliminada exitosamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     deleted:
+ *                       type: boolean
+ *                       example: true
+ *                     organization_id:
+ *                       type: string
+ *                       example: "ORG-4D5E6F"
+ *                     memberships_removed:
+ *                       type: integer
+ *                       example: 5
+ *       400:
+ *         description: Organización tiene hijos activos
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: object
+ *                   properties:
+ *                     code:
+ *                       type: string
+ *                       example: "HAS_ACTIVE_CHILDREN"
+ *                     message:
+ *                       type: string
+ *                       example: "Cannot delete organization with active children"
+ *                     details:
+ *                       type: object
+ *                       properties:
+ *                         children_count:
+ *                           type: integer
+ *                           example: 3
+ *       401:
+ *         description: No autenticado
+ *       403:
+ *         description: Sin permisos para eliminar esta organización
+ *       404:
+ *         description: Organización no encontrada
+ *       500:
+ *         description: Error interno del servidor
+ */
+router.delete('/:id', authenticate, requireOrgPermission('delete'), async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        // Obtener organización (usa req.organizationInternal del middleware)
+        const organization = await orgRepository.findOrganizationByPublicCode(id);
+        if (!organization) {
+            return res.status(404).json({
+                ok: false,
+                error: {
+                    code: 'NOT_FOUND',
+                    message: 'Organization not found'
+                }
+            });
+        }
+
+        // Verificar que no tenga hijos activos
+        const children = await getChildren(req.organizationInternal.id);
+        if (children.length > 0) {
+            return res.status(400).json({
+                ok: false,
+                error: {
+                    code: 'HAS_ACTIVE_CHILDREN',
+                    message: 'Cannot delete organization with active children',
+                    details: {
+                        children_count: children.length
+                    }
+                }
+            });
+        }
+
+        // Eliminar membresías de usuarios
+        const memberships = await UserOrganization.findAll({
+            where: { organization_id: req.organizationInternal.id }
+        });
+
+        const membershipsCount = memberships.length;
+
+        // Soft delete de las membresías
+        for (const membership of memberships) {
+            await membership.destroy();
+        }
+
+        // Soft delete de la organización
+        const deleted = await orgRepository.deleteOrganization(req.organizationInternal.id);
+
+        if (!deleted) {
+            return res.status(500).json({
+                ok: false,
+                error: {
+                    code: 'DELETE_FAILED',
+                    message: 'Failed to delete organization'
+                }
+            });
+        }
+
+        // Auditoría
+        await logAuditAction({
+            entityType: 'organization',
+            entityId: req.organizationInternal.id,
+            action: 'delete',
+            performedBy: req.user.userId,
+            changes: {
+                deleted: true,
+                memberships_removed: membershipsCount
+            },
+            ipAddress: req.ip,
+            userAgent: req.get('user-agent')
+        });
+
+        // Invalidar caché
+        await invalidateOrganizationCache(id, organization.parent_id);
+
+        orgLogger.info({ orgId: id, membershipsRemoved: membershipsCount }, 'Organization deleted');
+
+        res.json({
+            ok: true,
+            data: {
+                deleted: true,
+                organization_id: id,
+                memberships_removed: membershipsCount
+            }
+        });
+    } catch (error) {
+        orgLogger.error({ err: error }, 'Error deleting organization');
+        res.status(500).json({
+            ok: false,
+            error: {
+                code: 'INTERNAL_ERROR',
+                message: 'Error deleting organization'
+            }
+        });
+    }
+});
+
+/**
+ * @swagger
  * /api/v1/organizations/batch-delete:
  *   post:
  *     summary: Eliminar múltiples organizaciones con cascade
