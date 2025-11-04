@@ -378,14 +378,18 @@ router.get('/hierarchy', authenticate, async (req, res) => {
     try {
         const { root_id, active_only = 'true' } = req.query;
 
-        let rootOrg;
+        let rootOrgInternal;
         if (root_id) {
-            rootOrg = await orgRepository.findOrganizationByPublicCode(root_id);
+            rootOrgInternal = await orgRepository.findOrganizationByPublicCodeInternal(root_id);
         } else {
-            rootOrg = await orgRepository.getRootOrganization();
+            const rootOrg = await orgRepository.getRootOrganization();
+            if (rootOrg) {
+                // getRootOrganization retorna DTO público, necesitamos el interno
+                rootOrgInternal = await orgRepository.findOrganizationByPublicCodeInternal(rootOrg.id);
+            }
         }
 
-        if (!rootOrg) {
+        if (!rootOrgInternal) {
             return res.status(404).json({
                 ok: false,
                 error: {
@@ -395,15 +399,15 @@ router.get('/hierarchy', authenticate, async (req, res) => {
             });
         }
 
-        // Intentar obtener del caché
-        let tree = await getCachedOrganizationHierarchy(rootOrg.public_code);
+        // Intentar obtener del caché usando public_code
+        let tree = await getCachedOrganizationHierarchy(rootOrgInternal.public_code);
 
         if (!tree) {
-            // Construir árbol
-            tree = await getHierarchyTree(rootOrg.id, active_only === 'true');
+            // Construir árbol usando el UUID interno real
+            tree = await getHierarchyTree(rootOrgInternal.id, active_only === 'true');
             
             // Guardar en caché
-            await cacheOrganizationHierarchy(rootOrg.public_code, tree);
+            await cacheOrganizationHierarchy(rootOrgInternal.public_code, tree);
         }
 
         res.json({
