@@ -185,6 +185,8 @@ export const revokeSessionSchema = z.object({
 /**
  * Schema para cambiar organización activa
  * POST /auth/switch-org
+ * 
+ * Acepta public_code de la organización (ej: "ORG-xyz123-1")
  */
 export const switchOrgSchema = z.object({
     body: z.object({
@@ -192,6 +194,6 @@ export const switchOrgSchema = z.object({
             .string({
                 required_error: 'organization_id es requerido'
             })
-            .uuid('organization_id debe ser un UUID válido')
+            .min(1, 'organization_id no puede estar vacío')
     })
 });

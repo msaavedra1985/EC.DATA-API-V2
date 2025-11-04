@@ -18,6 +18,7 @@ import { successResponse, errorResponse } from '../../utils/response.js';
 import * as authRepository from './repository.js';
 import * as sessionContextCache from './sessionContextCache.js';
 import * as organizationService from '../organizations/services.js';
+import * as organizationRepository from '../organizations/repository.js';
 
 const router = express.Router();
 
@@ -961,16 +962,30 @@ router.post('/switch-org', authenticate, validate(switchOrgSchema), async (req, 
         const userId = req.user.userId;
         const { organization_id } = req.body;
         
+        // Convertir public_code a UUID interno si es necesario
+        let organizationUuid = organization_id;
+        if (!organization_id.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+            // Es public_code, necesitamos obtener el UUID interno
+            const org = await organizationRepository.findOrganizationByPublicCodeInternal(organization_id);
+            if (!org) {
+                const error = new Error('Organización no encontrada');
+                error.status = 404;
+                error.code = 'ORGANIZATION_NOT_FOUND';
+                throw error;
+            }
+            organizationUuid = org.id;
+        }
+        
         // Extraer datos de sesión para auditoría
         const sessionData = {
             userAgent: req.headers['user-agent'],
             ipAddress: req.ip || req.connection.remoteAddress
         };
         
-        const result = await authServices.switchOrganization(userId, organization_id, sessionData);
+        const result = await authServices.switchOrganization(userId, organizationUuid, sessionData);
         
-        // Actualizar session_context en Redis con la nueva activeOrgId
-        const updatedContext = await sessionContextCache.updateActiveOrg(userId, organization_id);
+        // Actualizar session_context en Redis con la nueva activeOrgId (usar UUID interno)
+        const updatedContext = await sessionContextCache.updateActiveOrg(userId, organizationUuid);
         
         return successResponse(res, {
             ...result,
