@@ -232,6 +232,341 @@ router.get('/', authenticate, async (req, res) => {
 
 /**
  * @swagger
+ * /api/v1/organizations/hierarchy:
+ *   get:
+ *     summary: Obtener árbol jerárquico completo
+ *     description: Obtiene estructura de árbol de organizaciones desde la raíz. Incluye todas las organizaciones hijas recursivamente. Usa caché de Redis.
+ *     tags: [Organizations]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: root_id
+ *         description: Public code de la organización raíz (opcional, por defecto EC.DATA)
+ *         schema:
+ *           type: string
+ *           example: "ORG-1A2B3C"
+ *       - in: query
+ *         name: active_only
+ *         description: Solo incluir organizaciones activas
+ *         schema:
+ *           type: boolean
+ *           default: true
+ *     responses:
+ *       200:
+ *         description: Árbol jerárquico obtenido exitosamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   description: Nodo raíz con children recursivos
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                     public_code:
+ *                       type: string
+ *                     name:
+ *                       type: string
+ *                     slug:
+ *                       type: string
+ *                     children:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         description: Mismo esquema recursivamente
+ *                   example:
+ *                     id: "ORG-1A2B3C"
+ *                     human_id: 1
+ *                     name: "EC.DATA"
+ *                     slug: "ecdata"
+ *                     parent_id: null
+ *                     is_active: true
+ *                     children:
+ *                       - id: "ORG-4D5E6F"
+ *                         human_id: 2
+ *                         name: "ACME Corporation"
+ *                         slug: "acme-corp"
+ *                         parent_id: "ORG-1A2B3C"
+ *                         is_active: true
+ *                         children:
+ *                           - id: "ORG-7G8H9J"
+ *                             human_id: 5
+ *                             name: "ACME North Division"
+ *                             slug: "acme-north"
+ *                             parent_id: "ORG-4D5E6F"
+ *                             is_active: true
+ *                             children: []
+ *                           - id: "ORG-2K3L4M"
+ *                             human_id: 6
+ *                             name: "ACME South Division"
+ *                             slug: "acme-south"
+ *                             parent_id: "ORG-4D5E6F"
+ *                             is_active: true
+ *                             children: []
+ *                       - id: "ORG-5N6P7Q"
+ *                         human_id: 3
+ *                         name: "TechStart Inc"
+ *                         slug: "techstart"
+ *                         parent_id: "ORG-1A2B3C"
+ *                         is_active: true
+ *                         children: []
+ *       401:
+ *         description: No autenticado - Token JWT faltante o inválido
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: object
+ *                   properties:
+ *                     code:
+ *                       type: string
+ *                       example: "UNAUTHORIZED"
+ *                     message:
+ *                       type: string
+ *                       example: "Authentication required"
+ *       404:
+ *         description: Organización raíz no encontrada
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: object
+ *                   properties:
+ *                     code:
+ *                       type: string
+ *                       example: "ROOT_NOT_FOUND"
+ *                     message:
+ *                       type: string
+ *                       example: "Root organization not found"
+ *       500:
+ *         description: Error interno del servidor
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: object
+ *                   properties:
+ *                     code:
+ *                       type: string
+ *                       example: "INTERNAL_ERROR"
+ *                     message:
+ *                       type: string
+ *                       example: "Error getting hierarchy"
+ */
+router.get('/hierarchy', authenticate, async (req, res) => {
+    try {
+        const { root_id, active_only = 'true' } = req.query;
+
+        let rootOrg;
+        if (root_id) {
+            rootOrg = await orgRepository.findOrganizationByPublicCode(root_id);
+        } else {
+            rootOrg = await orgRepository.getRootOrganization();
+        }
+
+        if (!rootOrg) {
+            return res.status(404).json({
+                ok: false,
+                error: {
+                    code: 'ROOT_NOT_FOUND',
+                    message: 'Root organization not found'
+                }
+            });
+        }
+
+        // Intentar obtener del caché
+        let tree = await getCachedOrganizationHierarchy(rootOrg.public_code);
+
+        if (!tree) {
+            // Construir árbol
+            tree = await getHierarchyTree(rootOrg.id, active_only === 'true');
+            
+            // Guardar en caché
+            await cacheOrganizationHierarchy(rootOrg.public_code, tree);
+        }
+
+        res.json({
+            ok: true,
+            data: tree
+        });
+    } catch (error) {
+        orgLogger.error({ err: error }, 'Error getting hierarchy');
+        res.status(500).json({
+            ok: false,
+            error: {
+                code: 'INTERNAL_ERROR',
+                message: 'Error getting hierarchy'
+            }
+        });
+    }
+});
+
+/**
+ * @swagger
+ * /api/v1/organizations/validate-slug:
+ *   get:
+ *     summary: Validar disponibilidad de slug
+ *     description: Verifica si un slug está disponible para uso. Útil para validación en tiempo real en formularios.
+ *     tags: [Organizations]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: slug
+ *         required: true
+ *         description: Slug a validar
+ *         schema:
+ *           type: string
+ *           example: "acme-corp"
+ *     responses:
+ *       200:
+ *         description: Validación exitosa
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     slug:
+ *                       type: string
+ *                       example: "acme-corp"
+ *                     available:
+ *                       type: boolean
+ *                       example: true
+ *       400:
+ *         description: Slug faltante o inválido
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: object
+ *                   properties:
+ *                     code:
+ *                       type: string
+ *                       example: "MISSING_SLUG"
+ *                     message:
+ *                       type: string
+ *                       example: "Slug parameter is required"
+ *       401:
+ *         description: No autenticado
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: object
+ *                   properties:
+ *                     code:
+ *                       type: string
+ *                       example: "UNAUTHORIZED"
+ *                     message:
+ *                       type: string
+ *                       example: "Authentication required"
+ *       500:
+ *         description: Error interno del servidor
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: object
+ *                   properties:
+ *                     code:
+ *                       type: string
+ *                       example: "INTERNAL_ERROR"
+ *                     message:
+ *                       type: string
+ *                       example: "Error validating slug"
+ */
+router.get('/validate-slug', authenticate, async (req, res) => {
+    try {
+        const { slug } = req.query;
+        
+        if (!slug) {
+            return res.status(400).json({
+                ok: false,
+                error: {
+                    code: 'MISSING_SLUG',
+                    message: 'Slug parameter is required'
+                }
+            });
+        }
+
+        validateSlug({ slug });
+
+        const existing = await orgRepository.findOrganizationBySlug(slug);
+
+        res.json({
+            ok: true,
+            data: {
+                slug,
+                available: !existing
+            }
+        });
+    } catch (error) {
+        if (error.name === 'ZodError') {
+            return res.status(400).json({
+                ok: false,
+                error: {
+                    code: 'VALIDATION_ERROR',
+                    message: 'Invalid slug format',
+                    details: error.errors
+                }
+            });
+        }
+
+        orgLogger.error({ err: error }, 'Error validating slug');
+        res.status(500).json({
+            ok: false,
+            error: {
+                code: 'INTERNAL_ERROR',
+                message: 'Error validating slug'
+            }
+        });
+    }
+});
+
+/**
+ * @swagger
  * /api/v1/organizations/{id}:
  *   get:
  *     summary: Obtener detalles de una organización
@@ -1980,198 +2315,6 @@ router.post('/upload-url', authenticate, async (req, res) => {
             error: {
                 code: 'INTERNAL_ERROR',
                 message: 'Error generating upload URL'
-            }
-        });
-    }
-});
-
-/**
- * @swagger
- * /api/v1/organizations/hierarchy:
- *   get:
- *     summary: Obtener árbol jerárquico completo
- *     description: Obtiene estructura de árbol de organizaciones desde la raíz. Incluye todas las organizaciones hijas recursivamente. Usa caché de Redis.
- *     tags: [Organizations]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: query
- *         name: root_id
- *         description: Public code de la organización raíz (opcional, por defecto EC.DATA)
- *         schema:
- *           type: string
- *           example: "ORG-1A2B3C"
- *       - in: query
- *         name: active_only
- *         description: Solo incluir organizaciones activas
- *         schema:
- *           type: boolean
- *           default: true
- *     responses:
- *       200:
- *         description: Árbol jerárquico obtenido exitosamente
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 ok:
- *                   type: boolean
- *                   example: true
- *                 data:
- *                   type: object
- *                   description: Nodo raíz con children recursivos
- *                   properties:
- *                     id:
- *                       type: string
- *                     public_code:
- *                       type: string
- *                     name:
- *                       type: string
- *                     slug:
- *                       type: string
- *                     children:
- *                       type: array
- *                       items:
- *                         type: object
- *                         description: Mismo esquema recursivamente
- *                   example:
- *                     id: "ORG-1A2B3C"
- *                     human_id: 1
- *                     name: "EC.DATA"
- *                     slug: "ecdata"
- *                     parent_id: null
- *                     is_active: true
- *                     children:
- *                       - id: "ORG-4D5E6F"
- *                         human_id: 2
- *                         name: "ACME Corporation"
- *                         slug: "acme-corp"
- *                         parent_id: "ORG-1A2B3C"
- *                         is_active: true
- *                         children:
- *                           - id: "ORG-7G8H9J"
- *                             human_id: 5
- *                             name: "ACME North Division"
- *                             slug: "acme-north"
- *                             parent_id: "ORG-4D5E6F"
- *                             is_active: true
- *                             children: []
- *                           - id: "ORG-2K3L4M"
- *                             human_id: 6
- *                             name: "ACME South Division"
- *                             slug: "acme-south"
- *                             parent_id: "ORG-4D5E6F"
- *                             is_active: true
- *                             children: []
- *                       - id: "ORG-5N6P7Q"
- *                         human_id: 3
- *                         name: "TechStart Inc"
- *                         slug: "techstart"
- *                         parent_id: "ORG-1A2B3C"
- *                         is_active: true
- *                         children: []
- *       401:
- *         description: No autenticado - Token JWT faltante o inválido
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 ok:
- *                   type: boolean
- *                   example: false
- *                 error:
- *                   type: object
- *                   properties:
- *                     code:
- *                       type: string
- *                       example: "UNAUTHORIZED"
- *                     message:
- *                       type: string
- *                       example: "Authentication required"
- *       404:
- *         description: Organización raíz no encontrada
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 ok:
- *                   type: boolean
- *                   example: false
- *                 error:
- *                   type: object
- *                   properties:
- *                     code:
- *                       type: string
- *                       example: "ROOT_NOT_FOUND"
- *                     message:
- *                       type: string
- *                       example: "Root organization not found"
- *       500:
- *         description: Error interno del servidor
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 ok:
- *                   type: boolean
- *                   example: false
- *                 error:
- *                   type: object
- *                   properties:
- *                     code:
- *                       type: string
- *                       example: "INTERNAL_ERROR"
- *                     message:
- *                       type: string
- *                       example: "Error getting hierarchy"
- */
-router.get('/hierarchy', authenticate, async (req, res) => {
-    try {
-        const { root_id, active_only = 'true' } = req.query;
-
-        let rootOrg;
-        if (root_id) {
-            rootOrg = await orgRepository.findOrganizationByPublicCode(root_id);
-        } else {
-            rootOrg = await orgRepository.getRootOrganization();
-        }
-
-        if (!rootOrg) {
-            return res.status(404).json({
-                ok: false,
-                error: {
-                    code: 'ROOT_NOT_FOUND',
-                    message: 'Root organization not found'
-                }
-            });
-        }
-
-        // Intentar obtener del caché
-        let tree = await getCachedOrganizationHierarchy(rootOrg.public_code);
-
-        if (!tree) {
-            // Construir árbol
-            tree = await getHierarchyTree(rootOrg.id, active_only === 'true');
-            
-            // Guardar en caché
-            await cacheOrganizationHierarchy(rootOrg.public_code, tree);
-        }
-
-        res.json({
-            ok: true,
-            data: tree
-        });
-    } catch (error) {
-        orgLogger.error({ err: error }, 'Error getting hierarchy');
-        res.status(500).json({
-            ok: false,
-            error: {
-                code: 'INTERNAL_ERROR',
-                message: 'Error getting hierarchy'
             }
         });
     }
