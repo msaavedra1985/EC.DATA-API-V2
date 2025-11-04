@@ -101,11 +101,25 @@ Preferred communication style: Simple, everyday language.
 - **Helper Module:** `src/modules/organizations/helpers/permissions.js` calculates accessible organizations
 
 **Key Endpoints:**
+
+*Hierarchy Navigation:*
 - `GET /organizations/hierarchy` - Full tree from root (cached)
 - `GET /organizations/:id/subtree` - Tree from specific node with configurable depth
 - `GET /organizations/:id/children` - Lazy loading with 2 levels + hasChildren flag
 - `GET /organizations/:id/descendants` - Flat list of all descendants
 - `GET /organizations/:id/path` - Breadcrumb path from root to node
+
+*CRUD Operations:*
+- `POST /organizations` - Create new organization (validates parent, depth ≤5 levels, unique slug)
+- `PUT /organizations/:id` - Update organization (can change parent_id, validates cycles)
+- `PATCH /organizations/:id/move` - Dedicated endpoint to move organization in hierarchy
+- `DELETE /organizations/:id` - Soft delete organization (validates no active children, removes memberships)
+
+All CRUD operations include:
+- Automatic audit logging (`audit_logs` table)
+- Redis cache invalidation (organization + parent hierarchy)
+- Permission-based access control via middleware
+- Full Swagger/OpenAPI documentation
 
 **Frontend Integration:**
 - Complete guide at `docs/ORGANIZATION_HIERARCHY_FRONTEND.md`
