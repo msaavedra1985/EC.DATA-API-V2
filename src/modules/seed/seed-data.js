@@ -395,3 +395,81 @@ export const users = [
         org_slug: null, // Sin organización
     },
 ];
+
+/**
+ * Sites - Locaciones físicas de organizaciones
+ * org_slug: slug de la organización padre
+ * country_id: ID del país (índice basado en 1)
+ */
+export const sites = [
+    {
+        name: 'EC.DATA Headquarters',
+        description: 'Oficina central de EC.DATA en San Francisco',
+        org_slug: 'ec-data',
+        country_id: 14, // USA
+        latitude: 37.7749,
+        longitude: -122.4194,
+        address: '1 Platform Way',
+        street_number: '1',
+        city: 'San Francisco',
+        state_province: 'California',
+        postal_code: '94105',
+        timezone: 'America/Los_Angeles',
+    },
+    {
+        name: 'ACME New York Office',
+        description: 'Oficina principal de ACME en Nueva York',
+        org_slug: 'acme-corp',
+        country_id: 14, // USA
+        latitude: 40.7128,
+        longitude: -74.0060,
+        address: '123 Main St',
+        street_number: '123',
+        city: 'New York',
+        state_province: 'New York',
+        postal_code: '10001',
+        timezone: 'America/New_York',
+    },
+    {
+        name: 'TechSolutions Buenos Aires HQ',
+        description: 'Sede central de TechSolutions en Buenos Aires',
+        org_slug: 'techsolutions-ar',
+        country_id: 1, // Argentina
+        latitude: -34.6037,
+        longitude: -58.3816,
+        address: 'Av. Corrientes',
+        street_number: '1500',
+        city: 'Buenos Aires',
+        state_province: 'Ciudad Autónoma de Buenos Aires',
+        postal_code: 'C1043',
+        timezone: 'America/Argentina/Buenos_Aires',
+    },
+    {
+        name: 'Global Enterprises Madrid Office',
+        description: 'Oficina de Global Enterprises en Madrid',
+        org_slug: 'global-enterprises',
+        country_id: 16, // España
+        latitude: 40.4168,
+        longitude: -3.7038,
+        address: 'Gran Vía',
+        street_number: '28',
+        city: 'Madrid',
+        state_province: 'Madrid',
+        postal_code: '28013',
+        timezone: 'Europe/Madrid',
+    },
+    {
+        name: 'ACME Los Angeles Branch',
+        description: 'Sucursal de ACME en Los Angeles',
+        org_slug: 'acme-corp',
+        country_id: 14, // USA
+        latitude: 34.0522,
+        longitude: -118.2437,
+        address: 'Sunset Boulevard',
+        street_number: '456',
+        city: 'Los Angeles',
+        state_province: 'California',
+        postal_code: '90028',
+        timezone: 'America/Los_Angeles',
+    },
+];

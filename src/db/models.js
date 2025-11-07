@@ -11,6 +11,9 @@ import Role from '../modules/auth/models/Role.js';
 // Modelos con dependencia a Countries
 import Organization from '../modules/organizations/models/Organization.js';
 
+// Modelos con dependencia a Organizations y Countries
+import Site from '../modules/sites/models/Site.js';
+
 // Modelos con dependencia a Organizations y Roles
 import User from '../modules/auth/models/User.js';
 import UserOrganization from '../modules/auth/models/UserOrganization.js';
@@ -34,6 +37,7 @@ export const models = [
     CountryTranslation,
     Role,
     Organization,
+    Site,
     User,
     UserOrganization,
     RefreshToken
@@ -44,6 +48,7 @@ export default {
     CountryTranslation,
     Role,
     Organization,
+    Site,
     User,
     UserOrganization,
     RefreshToken

@@ -12,7 +12,7 @@ import {
     getSiteSchema,
     deleteSiteSchema
 } from './dtos/index.js';
-import logger from '../../config/logger.js';
+import logger from '../../utils/logger.js';
 
 const router = express.Router();
 const siteLogger = logger.child({ component: 'sites' });

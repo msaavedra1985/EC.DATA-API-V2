@@ -126,6 +126,73 @@ All CRUD operations include:
 - Lazy loading patterns, search strategies, and tree rendering examples
 - Recommended libraries and performance optimization tips
 
+### Sites Module - Physical Locations
+
+**Purpose:**
+Sites represent physical locations (offices, branches, warehouses, stores) associated with organizations. Each site contains geolocation data (latitude/longitude) and address information, enabling contextual features like timezone detection, currency localization, weather integration, and location-based business logic.
+
+**Data Model:**
+- **Triple Identifier:** UUID v7 (internal), human_id (sequential), public_code (SITE-XXXXX-X format with Luhn checksum)
+- **Relations:** 
+  - `belongsTo Organization` (many-to-one) - Each site belongs to exactly one organization
+  - `belongsTo Country` (many-to-one) - Each site is located in one country
+- **Geolocation Fields:** latitude, longitude (decimal degrees)
+- **Address Fields:** address, street_number, city, state_province, postal_code
+- **Metadata:** timezone (IANA timezone identifier), is_active (boolean), soft delete support
+
+**Key Endpoints:**
+
+*CRUD Operations:*
+- `POST /sites` - Create new site (requires organization membership, validates lat/lng range, country exists)
+- `GET /sites` - List sites with pagination and filters (organization_id, city, country_id, is_active)
+- `GET /sites/:id` - Get site details by public_code
+- `PUT /sites/:id` - Update site (partial updates supported, validates permissions)
+- `DELETE /sites/:id` - Soft delete site (sets deleted_at timestamp)
+
+**Security & Permissions:**
+- All endpoints require JWT authentication
+- Users can only access sites belonging to organizations they have access to
+- system-admin can access all sites across all organizations
+- org-admin can access sites in their organization hierarchy
+
+**Response Format:**
+- **Public Code Policy:** Sites are exposed using `public_code` as `id` (e.g., `SITE-61D4Vc4Oo9R-4`)
+- **Nested Data:** Responses include embedded organization and country objects
+- **Example Response:**
+```json
+{
+  "id": "SITE-61D4Vc4Oo9R-4",
+  "name": "EC.DATA Headquarters",
+  "latitude": 37.7749,
+  "longitude": -122.4194,
+  "city": "San Francisco",
+  "timezone": "America/Los_Angeles",
+  "organization": {
+    "id": "ORG-yOM9ewfqOeWa-4",
+    "name": "EC.DATA",
+    "slug": "ec-data"
+  },
+  "country": {
+    "id": 399,
+    "iso_alpha2": "US",
+    "iso_alpha3": "USA"
+  }
+}
+```
+
+**Audit Logging:**
+- All CUD operations (Create, Update, Delete) automatically log to `audit_logs` table
+- Includes: entity_type='site', entity_id=public_code, action, performed_by, changes, IP address, user agent
+
+**Caching:**
+- Site lists are cached in Redis (TTL: 10 minutes)
+- Cache is automatically invalidated on any CUD operation
+- Cache key pattern: `ec:sites:list:{orgId}:{filters}`
+
+**Swagger Documentation:**
+- Full OpenAPI 3.0 annotations available at `/docs`
+- Interactive API explorer with request/response examples
+
 ## External Dependencies
 
 ### Core Services

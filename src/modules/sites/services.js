@@ -2,33 +2,14 @@
 // Lógica de negocio para Sites
 
 import { v7 as uuidv7 } from 'uuid';
-import Hashids from 'hashids';
 import * as siteRepository from './repository.js';
 import * as organizationRepository from '../organizations/repository.js';
 import * as countryRepository from '../countries/repository.js';
 import { cacheSiteList, getCachedSiteList, invalidateSiteCache } from './cache.js';
-import { auditLog } from '../../helpers/audit.js';
-import logger from '../../config/logger.js';
-
-const hashids = new Hashids('ec-site-salt', 10);
-
-/**
- * Generar identificadores para un nuevo site
- * @param {number} humanId - ID incremental del site
- * @returns {Object} - { id: UUID, human_id, public_code }
- */
-const generateSiteIdentifiers = (humanId) => {
-    const uuid = uuidv7();
-    const hash = hashids.encode(humanId);
-    const checksum = humanId % 10;
-    const publicCode = `SITE-${hash}-${checksum}`;
-    
-    return {
-        id: uuid,
-        human_id: humanId,
-        public_code: publicCode
-    };
-};
+import { logAuditAction } from '../../helpers/auditLog.js';
+import { generateHumanId, generatePublicCode } from '../../utils/identifiers.js';
+import Site from './models/Site.js';
+import logger from '../../utils/logger.js';
 
 /**
  * Crear un nuevo site
@@ -61,12 +42,16 @@ export const createSite = async (siteData, userId, ipAddress, userAgent) => {
         throw error;
     }
     
-    // Generar human_id secuencial (esto requiere una secuencia o contador)
-    // Por simplicidad, usamos timestamp + random
-    const humanId = Date.now() % 1000000000;
+    // Generar identificadores usando el helper centralizado
+    const uuid = uuidv7();
+    const humanId = await generateHumanId(Site, null, null);
+    const publicCode = generatePublicCode('SITE', uuid);
     
-    // Generar identificadores
-    const identifiers = generateSiteIdentifiers(humanId);
+    const identifiers = {
+        id: uuid,
+        human_id: humanId,
+        public_code: publicCode
+    };
     
     // Crear site
     const site = await siteRepository.createSite({
@@ -76,18 +61,18 @@ export const createSite = async (siteData, userId, ipAddress, userAgent) => {
     });
     
     // Audit log
-    await auditLog({
-        entity_type: 'site',
-        entity_id: site.id,
+    await logAuditAction({
+        entityType: 'site',
+        entityId: site.id,
         action: 'create',
-        performed_by: userId,
+        performedBy: userId,
         changes: { new: site },
         metadata: {
             organization_id: organizationUuid,
             country_id: siteData.country_id
         },
-        ip_address: ipAddress,
-        user_agent: userAgent
+        ipAddress: ipAddress,
+        userAgent: userAgent
     });
     
     // Invalidar cache
@@ -207,17 +192,17 @@ export const updateSite = async (publicCode, updateData, userId, ipAddress, user
         }
     });
     
-    await auditLog({
-        entity_type: 'site',
-        entity_id: updatedSite.id,
+    await logAuditAction({
+        entityType: 'site',
+        entityId: updatedSite.id,
         action: 'update',
-        performed_by: userId,
+        performedBy: userId,
         changes,
         metadata: {
             organization_id: siteInternal.organization_id
         },
-        ip_address: ipAddress,
-        user_agent: userAgent
+        ipAddress: ipAddress,
+        userAgent: userAgent
     });
     
     // Invalidar cache
@@ -252,11 +237,11 @@ export const deleteSite = async (publicCode, userId, ipAddress, userAgent) => {
     
     if (deleted) {
         // Audit log
-        await auditLog({
-            entity_type: 'site',
-            entity_id: siteInternal.id,
+        await logAuditAction({
+            entityType: 'site',
+            entityId: siteInternal.id,
             action: 'delete',
-            performed_by: userId,
+            performedBy: userId,
             changes: {
                 deleted_at: {
                     old: null,
@@ -266,8 +251,8 @@ export const deleteSite = async (publicCode, userId, ipAddress, userAgent) => {
             metadata: {
                 organization_id: siteInternal.organization_id
             },
-            ip_address: ipAddress,
-            user_agent: userAgent
+            ipAddress: ipAddress,
+            userAgent: userAgent
         });
         
         // Invalidar cache

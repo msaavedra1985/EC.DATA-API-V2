@@ -2,7 +2,7 @@
 // Gestión de cache Redis para Sites
 
 import { getCache, setCache, deleteCache } from '../../db/redis/client.js';
-import logger from '../../config/logger.js';
+import logger from '../../utils/logger.js';
 
 const SITE_LIST_CACHE_PREFIX = 'ec:sites:list:';
 const SITE_LIST_CACHE_TTL = 600; // 10 minutos
