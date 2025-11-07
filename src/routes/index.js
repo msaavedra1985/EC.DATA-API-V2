@@ -8,6 +8,7 @@ import usersRouter from '../modules/users/index.js';
 import rolesRouter from '../modules/roles/index.js';
 import errorLogsRouter from '../modules/error-logs/index.js';
 import countriesRouter from '../modules/countries/index.js';
+import sitesRouter from '../modules/sites/index.js';
 
 const router = express.Router();
 
@@ -37,14 +38,14 @@ router.use('/countries', countriesRouter);
 // Error Logs (público - sin autenticación requerida)
 router.use('/error-logs', errorLogsRouter);
 
+// Sites (locaciones físicas de organizaciones)
+router.use('/sites', sitesRouter);
+
 // Seeding (Testing/Development)
 router.use('/seed', seedRouter);
 
 // Tenants (Fase 3+)
 // router.use('/tenants', tenantsRouter);
-
-// Sites (Fase 3+)
-// router.use('/sites', sitesRouter);
 
 // Bills (Fase 3+)
 // router.use('/bills', billsRouter);

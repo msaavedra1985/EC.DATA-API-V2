@@ -7,6 +7,15 @@ import CountryTranslation from './models/CountryTranslation.js';
  */
 
 /**
+ * Buscar país por ID
+ * @param {number} id - ID del país
+ * @returns {Promise<Country|null>} - País encontrado o null
+ */
+export const findCountryById = async (id) => {
+    return await Country.findByPk(id);
+};
+
+/**
  * Obtener todos los países activos con traducciones en un idioma específico
  * 
  * @param {string} lang - Código de idioma (es, en, etc.)
