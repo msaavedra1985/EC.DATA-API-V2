@@ -104,7 +104,7 @@ INSERT INTO users (id, email, password_hash, first_name, last_name, role_id, org
 SELECT 
     gen_random_uuid(),
     'admin@ecdata.com',
-    '$2b$10$GA4USD.r9szt0wNl5jwOr.EwsHgTBeK5ZNJmcMy1g.XLBnm/2bHJ.',
+    '$2b$10$rqiIXHdMs3y8k/A7zZOvK.8CjP3bJ0xH4n7F0YzL5vZ7qMGnJ8eVK',
     'System',
     'Administrator',
     (SELECT id FROM roles WHERE name = 'system-admin'),
