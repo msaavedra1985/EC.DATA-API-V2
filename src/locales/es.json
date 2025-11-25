@@ -107,5 +107,6 @@
     "notNull Violation: Organization.human_id cannot be null,\nnotNull Violation: Organization.public_code cannot be null": "notNull Violation: Organization.human_id cannot be null,\nnotNull Violation: Organization.public_code cannot be null",
     "notNull Violation: User.human_id cannot be null,\nnotNull Violation: User.public_code cannot be null": "notNull Violation: User.human_id cannot be null,\nnotNull Violation: User.public_code cannot be null",
     "column User.phone does not exist": "column User.phone does not exist",
-    "organizationService.getOrganizationByPublicCode is not a function": "organizationService.getOrganizationByPublicCode is not a function"
+    "organizationService.getOrganizationByPublicCode is not a function": "organizationService.getOrganizationByPublicCode is not a function",
+    "uuidV7.replace is not a function": "uuidV7.replace is not a function"
 }

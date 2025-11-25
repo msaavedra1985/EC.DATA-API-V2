@@ -4,7 +4,7 @@ import * as repository from './repository.js';
 import * as orgRepository from '../organizations/repository.js';
 import { FILE_CATEGORY_CONFIG } from './dtos/index.js';
 import { toPublicFileDto, toUploadUrlDto, toUploadConfirmDto, toPublicFileListDto } from './helpers/serializers.js';
-import { logAuditAction } from '../../shared/services/auditLog.js';
+import { logAuditAction } from '../../helpers/auditLog.js';
 import pino from 'pino';
 import { v7 as uuidv7 } from 'uuid';
 

@@ -2,8 +2,7 @@
 // Rutas HTTP para el módulo de files
 import { Router } from 'express';
 import * as fileServices from './services.js';
-import { authenticate } from '../../middleware/auth.js';
-import { requireRole } from '../../middleware/authorization.js';
+import { authenticate, requireRole } from '../../middleware/auth.js';
 import { validate } from '../../middleware/validate.js';
 import {
     requestUploadUrlSchema,

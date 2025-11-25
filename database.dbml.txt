@@ -1,4 +1,4 @@
-// Database Schema - Generated on 2025-11-25T14:05:19.637Z
+// Database Schema - Generated on 2025-11-25T17:20:35.962Z
 // Project: EC.DATA API - Enterprise REST API
 // Use this file at https://dbdiagram.io to visualize the schema
 
@@ -176,6 +176,56 @@ Table error_logs {
     (source) [name: 'idx_error_logs_source']
     (status_code) [name: 'idx_error_logs_status_code']
     (user_id) [name: 'idx_error_logs_user_id']
+  }
+}
+
+Table file_uploads {
+  id uuid [pk, not null] // UUID v7 - clave primaria time-ordered
+  human_id integer [unique, not null] // ID incremental global para uso interno/soporte
+  public_code varchar(50) [unique, not null] // ID público opaco (ej: FILE-7K9D2-X) - previene enumeración
+  organization_id uuid [not null] // FK a organizations - organización propietaria del archivo
+  blob_path varchar(500) [not null] // Ruta completa en Azure Blob Storage (ej: ORG-XXX/logos/uuid_name.png)
+  blob_url varchar(1000) // URL pública o firmada del archivo en Azure Blob Storage
+  original_name varchar(255) [not null] // Nombre original del archivo subido por el usuario
+  file_name varchar(255) [not null] // Nombre del archivo almacenado (sanitizado, con UUID)
+  mime_type varchar(100) [not null] // Tipo MIME del archivo (ej: image/png, application/pdf)
+  extension varchar(20) [not null] // Extensión del archivo sin punto (ej: png, pdf, xlsx)
+  size_bytes bigint [not null] // Tamaño del archivo en bytes
+  checksum_sha256 varchar(64) // Checksum SHA-256 del archivo para verificación de integridad
+  category enum_file_uploads_category [not null] // Categoría del archivo: logo, image, document, firmware, backup, export, import, attachment, other
+  owner_type varchar(50) // Tipo de entidad propietaria (ej: organization, site, device, user)
+  owner_id varchar(50) // Public code de la entidad propietaria
+  status enum_file_uploads_status [not null] // Estado del archivo: pending (esperando upload), uploaded (subido), linked (vinculado a entidad), deleted (marcado para eliminar)
+  uploaded_by uuid // FK a users - usuario que subió el archivo
+  uploaded_at timestamptz // Fecha y hora en que se completó el upload
+  expires_at timestamptz // Fecha de expiración para archivos temporales o pending
+  metadata jsonb // Metadatos adicionales (dimensiones de imagen, duración de audio, etc.)
+  is_public boolean [not null, default: false] // Indica si el archivo es accesible públicamente sin autenticación
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+  deleted_at timestamptz // Soft delete timestamp
+
+  Indexes {
+    (category) [name: 'file_uploads_category']
+    (category) [name: 'file_uploads_category_idx']
+    (checksum_sha256) [name: 'file_uploads_checksum_idx']
+    (checksum_sha256) [name: 'file_uploads_checksum_sha256']
+    (deleted_at) [name: 'file_uploads_deleted_at_idx']
+    (expires_at) [name: 'file_uploads_expires_at']
+    (expires_at) [name: 'file_uploads_expires_at_idx']
+    (human_id) [name: 'file_uploads_human_id_key', unique]
+    (mime_type) [name: 'file_uploads_mime_type']
+    (mime_type) [name: 'file_uploads_mime_type_idx']
+    (organization_id) [name: 'file_uploads_organization_id']
+    (organization_id) [name: 'file_uploads_organization_id_idx']
+    (owner_type, owner_id) [name: 'file_uploads_owner_idx']
+    (owner_type, owner_id) [name: 'file_uploads_owner_type_owner_id']
+    (status, expires_at) [name: 'file_uploads_pending_expired_idx']
+    (public_code) [name: 'file_uploads_public_code_key', unique]
+    (status) [name: 'file_uploads_status']
+    (status) [name: 'file_uploads_status_idx']
+    (uploaded_by) [name: 'file_uploads_uploaded_by']
+    (uploaded_by) [name: 'file_uploads_uploaded_by_idx']
   }
 }
 
@@ -365,16 +415,18 @@ Table users {
 
 // Foreign Key References
 Ref: audit_logs.performed_by > users.id [update: cascade, delete: set null]
-Ref: channels.device_id > devices.organization_id [update: cascade, delete: restrict]
 Ref: channels.device_id > devices.id [update: cascade, delete: restrict]
-Ref: channels.organization_id > devices.id [update: cascade, delete: restrict]
-Ref: channels.organization_id > devices.organization_id [update: cascade, delete: restrict]
+Ref: channels.device_id > devices.organization_id [update: cascade, delete: restrict]
 Ref: channels.organization_id > organizations.id [update: cascade, delete: restrict]
+Ref: channels.organization_id > devices.organization_id [update: cascade, delete: restrict]
+Ref: channels.organization_id > devices.id [update: cascade, delete: restrict]
 Ref: country_translations.country_id > countries.id [update: cascade, delete: cascade]
 Ref: devices.organization_id > organizations.id [update: cascade, delete: restrict]
 Ref: devices.site_id > sites.id [update: cascade, delete: set null]
 Ref: error_logs.organization_id > organizations.id [update: cascade, delete: set null]
 Ref: error_logs.user_id > users.id [update: cascade, delete: set null]
+Ref: file_uploads.organization_id > organizations.id [update: cascade, delete: restrict]
+Ref: file_uploads.uploaded_by > users.id [update: cascade, delete: set null]
 Ref: organizations.country_id > countries.id [update: cascade, delete: restrict]
 Ref: organizations.parent_id > organizations.id [update: cascade, delete: restrict]
 Ref: refresh_tokens.user_id > users.id [update: cascade, delete: cascade]

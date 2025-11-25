@@ -6,6 +6,31 @@ import Organization from '../organizations/models/Organization.js';
 import User from '../auth/models/User.js';
 import { generateUuidV7, generateHumanId, generatePublicCode } from '../../utils/identifiers.js';
 
+// Definir asociaciones de FileUpload
+// FileUpload pertenece a Organization
+FileUpload.belongsTo(Organization, {
+    foreignKey: 'organization_id',
+    as: 'organization'
+});
+
+// FileUpload pertenece a User (quien lo subió)
+FileUpload.belongsTo(User, {
+    foreignKey: 'uploaded_by',
+    as: 'uploader'
+});
+
+// Organization tiene muchos FileUploads
+Organization.hasMany(FileUpload, {
+    foreignKey: 'organization_id',
+    as: 'files'
+});
+
+// User tiene muchos FileUploads
+User.hasMany(FileUpload, {
+    foreignKey: 'uploaded_by',
+    as: 'uploadedFiles'
+});
+
 /**
  * Crear un nuevo registro de archivo (estado pending)
  * Genera automáticamente: UUID v7, human_id incremental, public_code
@@ -30,7 +55,7 @@ export const createFileUpload = async (fileData) => {
     // Generar identificadores únicos
     const id = generateUuidV7();
     const human_id = await generateHumanId(FileUpload, null, null);
-    const public_code = generatePublicCode('FILE', human_id);
+    const public_code = generatePublicCode('FILE', id);
 
     const file = await FileUpload.create({
         id,
