@@ -38,7 +38,7 @@ const getTables = async () => {
     const [tables] = await sequelize.query(`
         SELECT 
             table_name,
-            obj_description((table_schema||'.'||table_name)::regclass, 'pg_class') as table_comment
+            obj_description(('"' || table_schema || '"."' || table_name || '"')::regclass, 'pg_class') as table_comment
         FROM information_schema.tables
         WHERE table_schema = 'public'
         AND table_type = 'BASE TABLE'
