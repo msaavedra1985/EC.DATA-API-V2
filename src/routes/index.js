@@ -9,6 +9,7 @@ import rolesRouter from '../modules/roles/index.js';
 import errorLogsRouter from '../modules/error-logs/index.js';
 import countriesRouter from '../modules/countries/index.js';
 import sitesRouter from '../modules/sites/index.js';
+import devicesRouter from '../modules/devices/index.js';
 
 const router = express.Router();
 
@@ -40,6 +41,9 @@ router.use('/error-logs', errorLogsRouter);
 
 // Sites (locaciones físicas de organizaciones)
 router.use('/sites', sitesRouter);
+
+// Devices (dispositivos IoT/Edge)
+router.use('/devices', devicesRouter);
 
 // Seeding (Testing/Development)
 router.use('/seed', seedRouter);

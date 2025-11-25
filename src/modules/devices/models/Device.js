@@ -1,4 +1,4 @@
-import { DataTypes } from 'sequelize';
+import { DataTypes, Op } from 'sequelize';
 import sequelize from '../../../db/sql/sequelize.js';
 
 /**
@@ -138,7 +138,7 @@ const Device = sequelize.define('Device', {
             fields: ['serial_number'],
             unique: true,
             where: {
-                serial_number: { [sequelize.Op.ne]: null },
+                serial_number: { [Op.ne]: null },
                 deleted_at: null
             }
         },

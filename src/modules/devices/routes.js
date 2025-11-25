@@ -1,0 +1,485 @@
+// modules/devices/routes.js
+// Rutas REST para el módulo de Devices (Dispositivos IoT/Edge)
+
+import express from 'express';
+import { authenticate, requireRole } from '../../middleware/auth.js';
+import { validate } from '../../middleware/validate.js';
+import * as deviceServices from './services.js';
+import {
+    createDeviceSchema,
+    updateDeviceSchema,
+    getDevicesSchema,
+    getDeviceByIdSchema,
+    deleteDeviceSchema
+} from './dtos/index.js';
+import logger from '../../utils/logger.js';
+
+const router = express.Router();
+const deviceLogger = logger.child({ component: 'devices' });
+
+/**
+ * @swagger
+ * /api/v1/devices:
+ *   post:
+ *     summary: Crear un nuevo device (dispositivo IoT/Edge)
+ *     description: Crea un device perteneciente a una organización y opcionalmente a un site. Solo system-admin y org-admin pueden crear devices.
+ *     tags: [Devices]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - organization_id
+ *               - name
+ *               - device_type
+ *             properties:
+ *               organization_id:
+ *                 type: string
+ *                 description: Public code de la organización (ej ORG-abc123-1)
+ *                 example: "ORG-yOM9ewfqOeWa-4"
+ *               site_id:
+ *                 type: string
+ *                 description: Public code del site (opcional)
+ *                 example: "SITE-abc123xyz-1"
+ *               name:
+ *                 type: string
+ *                 description: Nombre del device
+ *                 example: "Sensor Temperatura Sala 1"
+ *               description:
+ *                 type: string
+ *                 description: Descripción del device
+ *                 example: "Sensor de temperatura y humedad en sala principal"
+ *               device_type:
+ *                 type: string
+ *                 enum: [sensor, gateway, controller, edge, virtual, other]
+ *                 description: Tipo de dispositivo
+ *                 example: "sensor"
+ *               status:
+ *                 type: string
+ *                 enum: [active, inactive, maintenance, decommissioned]
+ *                 description: Estado del dispositivo
+ *                 default: active
+ *                 example: "active"
+ *               firmware_version:
+ *                 type: string
+ *                 description: Versión del firmware
+ *                 example: "v2.5.1"
+ *               serial_number:
+ *                 type: string
+ *                 description: Número de serie del dispositivo
+ *                 example: "SN-2024-001234"
+ *               ip_address:
+ *                 type: string
+ *                 description: Dirección IP del dispositivo
+ *                 example: "192.168.1.100"
+ *               mac_address:
+ *                 type: string
+ *                 description: Dirección MAC del dispositivo
+ *                 example: "00:1A:2B:3C:4D:5E"
+ *               location_hint:
+ *                 type: string
+ *                 description: Pista de ubicación física
+ *                 example: "Rack 3, Slot 5"
+ *               metadata:
+ *                 type: object
+ *                 description: Metadatos adicionales en formato JSON
+ *                 example: { "manufacturer": "Acme Corp", "model": "TH-100" }
+ *               is_active:
+ *                 type: boolean
+ *                 description: Si el device está activo
+ *                 default: true
+ *     responses:
+ *       201:
+ *         description: Device creado exitosamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                       example: "DEV-abc123xyz-1"
+ *                     name:
+ *                       type: string
+ *                       example: "Sensor Temperatura Sala 1"
+ *                     device_type:
+ *                       type: string
+ *                       example: "sensor"
+ *                     status:
+ *                       type: string
+ *                       example: "active"
+ *                     organization:
+ *                       type: object
+ *                       properties:
+ *                         id:
+ *                           type: string
+ *                           example: "ORG-yOM9ewfqOeWa-4"
+ *                         name:
+ *                           type: string
+ *                           example: "EC.DATA"
+ *                     site:
+ *                       type: object
+ *                       nullable: true
+ *                       properties:
+ *                         id:
+ *                           type: string
+ *                           example: "SITE-abc123xyz-1"
+ *                         name:
+ *                           type: string
+ *                           example: "Sucursal Centro"
+ *       400:
+ *         description: Error de validación
+ *       401:
+ *         description: No autenticado
+ *       403:
+ *         description: Sin permisos
+ *       404:
+ *         description: Organización o site no encontrado
+ */
+router.post('/', authenticate, requireRole(['system-admin', 'org-admin']), validate(createDeviceSchema), async (req, res, next) => {
+    try {
+        const userId = req.user.userId;
+        const ipAddress = req.ip || req.connection.remoteAddress;
+        const userAgent = req.headers['user-agent'];
+        
+        const device = await deviceServices.createDevice(req.body, userId, ipAddress, userAgent);
+        
+        res.status(201).json({
+            ok: true,
+            data: device,
+            meta: {
+                timestamp: new Date().toISOString(),
+                locale: req.locale
+            }
+        });
+    } catch (error) {
+        next(error);
+    }
+});
+
+/**
+ * @swagger
+ * /api/v1/devices:
+ *   get:
+ *     summary: Listar devices con paginación y filtros
+ *     description: Obtiene lista de devices con filtros opcionales
+ *     tags: [Devices]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: organization_id
+ *         description: Filtrar por organización (public_code)
+ *         schema:
+ *           type: string
+ *           example: "ORG-yOM9ewfqOeWa-4"
+ *       - in: query
+ *         name: site_id
+ *         description: Filtrar por site (public_code)
+ *         schema:
+ *           type: string
+ *           example: "SITE-abc123xyz-1"
+ *       - in: query
+ *         name: device_type
+ *         description: Filtrar por tipo de dispositivo
+ *         schema:
+ *           type: string
+ *           enum: [sensor, gateway, controller, edge, virtual, other]
+ *           example: "sensor"
+ *       - in: query
+ *         name: status
+ *         description: Filtrar por estado del dispositivo
+ *         schema:
+ *           type: string
+ *           enum: [active, inactive, maintenance, decommissioned]
+ *           example: "active"
+ *       - in: query
+ *         name: search
+ *         description: Buscar por nombre o serial_number
+ *         schema:
+ *           type: string
+ *           example: "Sensor"
+ *       - in: query
+ *         name: limit
+ *         description: Número máximo de resultados
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *           minimum: 1
+ *           maximum: 100
+ *       - in: query
+ *         name: offset
+ *         description: Número de registros a saltar
+ *         schema:
+ *           type: integer
+ *           default: 0
+ *           minimum: 0
+ *     responses:
+ *       200:
+ *         description: Lista de devices obtenida exitosamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     devices:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                     total:
+ *                       type: integer
+ *                       example: 15
+ *                     page:
+ *                       type: integer
+ *                       example: 1
+ *                     limit:
+ *                       type: integer
+ *                       example: 20
+ *       401:
+ *         description: No autenticado
+ */
+router.get('/', authenticate, validate(getDevicesSchema), async (req, res, next) => {
+    try {
+        const result = await deviceServices.listDevices(req.query);
+        
+        res.json({
+            ok: true,
+            data: result,
+            meta: {
+                timestamp: new Date().toISOString(),
+                locale: req.locale
+            }
+        });
+    } catch (error) {
+        next(error);
+    }
+});
+
+/**
+ * @swagger
+ * /api/v1/devices/{id}:
+ *   get:
+ *     summary: Obtener un device por ID
+ *     description: Obtiene los detalles de un device específico por su public_code
+ *     tags: [Devices]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         description: Public code del device (ej DEV-abc123-1)
+ *         schema:
+ *           type: string
+ *           example: "DEV-abc123xyz-1"
+ *     responses:
+ *       200:
+ *         description: Device obtenido exitosamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *       404:
+ *         description: Device no encontrado
+ *       401:
+ *         description: No autenticado
+ */
+router.get('/:id', authenticate, validate(getDeviceByIdSchema), async (req, res, next) => {
+    try {
+        const device = await deviceServices.getDeviceByPublicCode(req.params.id);
+        
+        res.json({
+            ok: true,
+            data: device,
+            meta: {
+                timestamp: new Date().toISOString(),
+                locale: req.locale
+            }
+        });
+    } catch (error) {
+        next(error);
+    }
+});
+
+/**
+ * @swagger
+ * /api/v1/devices/{id}:
+ *   put:
+ *     summary: Actualizar un device
+ *     description: Actualiza los datos de un device existente. Solo system-admin y org-admin pueden actualizar.
+ *     tags: [Devices]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         description: Public code del device
+ *         schema:
+ *           type: string
+ *           example: "DEV-abc123xyz-1"
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               site_id:
+ *                 type: string
+ *                 example: "SITE-abc123xyz-1"
+ *               name:
+ *                 type: string
+ *                 example: "Sensor Temperatura Sala 1 - Actualizado"
+ *               description:
+ *                 type: string
+ *               device_type:
+ *                 type: string
+ *                 enum: [sensor, gateway, controller, edge, virtual, other]
+ *               status:
+ *                 type: string
+ *                 enum: [active, inactive, maintenance, decommissioned]
+ *               firmware_version:
+ *                 type: string
+ *               serial_number:
+ *                 type: string
+ *               ip_address:
+ *                 type: string
+ *               mac_address:
+ *                 type: string
+ *               location_hint:
+ *                 type: string
+ *               metadata:
+ *                 type: object
+ *               is_active:
+ *                 type: boolean
+ *     responses:
+ *       200:
+ *         description: Device actualizado exitosamente
+ *       400:
+ *         description: Error de validación
+ *       401:
+ *         description: No autenticado
+ *       403:
+ *         description: Sin permisos
+ *       404:
+ *         description: Device no encontrado
+ */
+router.put('/:id', authenticate, requireRole(['system-admin', 'org-admin']), validate(updateDeviceSchema), async (req, res, next) => {
+    try {
+        const userId = req.user.userId;
+        const ipAddress = req.ip || req.connection.remoteAddress;
+        const userAgent = req.headers['user-agent'];
+        
+        const device = await deviceServices.updateDevice(req.params.id, req.body, userId, ipAddress, userAgent);
+        
+        res.json({
+            ok: true,
+            data: device,
+            meta: {
+                timestamp: new Date().toISOString(),
+                locale: req.locale
+            }
+        });
+    } catch (error) {
+        next(error);
+    }
+});
+
+/**
+ * @swagger
+ * /api/v1/devices/{id}:
+ *   delete:
+ *     summary: Eliminar un device (soft delete)
+ *     description: Elimina lógicamente un device. Solo system-admin puede eliminar.
+ *     tags: [Devices]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         description: Public code del device
+ *         schema:
+ *           type: string
+ *           example: "DEV-abc123xyz-1"
+ *     responses:
+ *       200:
+ *         description: Device eliminado exitosamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     message:
+ *                       type: string
+ *                       example: "Device eliminado exitosamente"
+ *       401:
+ *         description: No autenticado
+ *       403:
+ *         description: Sin permisos
+ *       404:
+ *         description: Device no encontrado
+ */
+router.delete('/:id', authenticate, requireRole(['system-admin']), validate(deleteDeviceSchema), async (req, res, next) => {
+    try {
+        const userId = req.user.userId;
+        const ipAddress = req.ip || req.connection.remoteAddress;
+        const userAgent = req.headers['user-agent'];
+        
+        const deleted = await deviceServices.deleteDevice(req.params.id, userId, ipAddress, userAgent);
+        
+        if (!deleted) {
+            return res.status(404).json({
+                ok: false,
+                error: {
+                    code: 'DEVICE_NOT_FOUND',
+                    message: 'Device no encontrado'
+                }
+            });
+        }
+        
+        res.json({
+            ok: true,
+            data: {
+                message: 'Device eliminado exitosamente'
+            },
+            meta: {
+                timestamp: new Date().toISOString(),
+                locale: req.locale
+            }
+        });
+    } catch (error) {
+        next(error);
+    }
+});
+
+export default router;
