@@ -79,14 +79,22 @@ export const toPublicFileDtoList = (files) => {
  * @returns {Object} - DTO para respuesta de upload URL
  */
 export const toUploadUrlDto = (uploadData) => {
-    return {
+    const dto = {
         file_id: uploadData.public_code, // Public code del registro creado
         upload_url: uploadData.upload_url, // SAS URL para subir archivo
         blob_path: uploadData.blob_path, // Ruta donde se guardará
         expires_at: uploadData.expires_at, // Cuándo expira la SAS URL
         max_size_bytes: uploadData.max_size_bytes, // Tamaño máximo permitido
-        allowed_mime_types: uploadData.allowed_mime_types // Tipos MIME permitidos
+        allowed_mime_types: uploadData.allowed_mime_types, // Tipos MIME permitidos
+        is_public: uploadData.is_public || false // Si el archivo es público
     };
+
+    // Incluir URL pública solo si es archivo público
+    if (uploadData.is_public && uploadData.public_url) {
+        dto.public_url = uploadData.public_url;
+    }
+
+    return dto;
 };
 
 /**

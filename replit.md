@@ -94,6 +94,13 @@ Preferred communication style: Simple, everyday language.
 - **Sites Module:** Manages physical locations (offices, branches, warehouses) linked to organizations, including geolocation and address. Uses triple identifiers and `public_code` for exposure.
 - **Devices Module:** Manages IoT/Edge devices (sensors, gateways, controllers) associated with organizations and sites. Features triple identifiers (`public_code`: `DEV-XXXXX-X`), various device types, status tracking, firmware management, and network info. Supports soft-delete with channel cascade.
 - **Channels Module:** Manages communication channels (MQTT, HTTP, WebSocket) for devices. Features triple identifiers (`public_code`: `CHN-XXXXX-X`), composite foreign key for cross-tenant integrity, various channel types, protocols, direction, status, endpoint URLs, and configuration. Supports soft-delete.
+- **Files Module:** Centralized file upload management via Azure Blob Storage with SAS URLs. Features:
+  - **Dual Containers:** Public (direct access for logos, favicons) and Private (SAS-protected for sensitive documents)
+  - **Blob Path Format:** `{owner_type}/{owner_id}/{uuid}_{filename}` (e.g., `site/SITE-XXX/abc123_doc.pdf`)
+  - **Flow:** API generates SAS URL → BFF uploads to Azure → BFF confirms → API persists metadata
+  - **Categories:** logo, image, document, firmware, backup, export, import, attachment, other (each with size/MIME limits)
+  - **Triple Identifiers:** `public_code` format `FILE-XXXXX-X`
+  - **Audit Logging:** All operations (request_upload_url, confirm_upload, delete) are logged
 
 ### Database Migrations - Sequelize CLI
 - **Purpose:** Ensures reproducible schema changes across environments.
@@ -106,6 +113,7 @@ Preferred communication style: Simple, everyday language.
 ### Core Services
 - **PostgreSQL Database:** Managed via Sequelize ORM.
 - **Redis Cache:** For CORS origins, session storage, and application caching.
+- **Azure Blob Storage:** File storage with dual containers (public/private) and SAS URL generation.
 - **Next.js Frontend:** Consumes API via BFF pattern.
 
 ### Testing & Quality Assurance

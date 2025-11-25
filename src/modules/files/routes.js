@@ -99,16 +99,16 @@ const router = Router();
  *           example: "FILE-7K9D2-X"
  *         upload_url:
  *           type: string
- *           description: URL pre-firmada (SAS) para subir el archivo
- *           example: "https://storage.blob.core.windows.net/files/...?sv=2020-08-04&sig=..."
+ *           description: URL pre-firmada (SAS) para subir el archivo a Azure Blob Storage
+ *           example: "https://ecblob.blob.core.windows.net/ecdatav2-private/site/SITE-XXX/abc123_file.pdf?sv=2025-07-05&sig=..."
  *         blob_path:
  *           type: string
- *           description: Ruta donde se guardará el archivo
- *           example: "ORG-7K9D2-X/logos/abc123_logo.png"
+ *           description: Ruta donde se guardará el archivo (owner_type/owner_id/uuid_filename)
+ *           example: "site/SITE-7K9D2-X/abc123_documento.pdf"
  *         expires_at:
  *           type: string
  *           format: date-time
- *           description: Cuándo expira la URL de carga
+ *           description: Cuándo expira la URL de carga (15 minutos por defecto)
  *         max_size_bytes:
  *           type: integer
  *           description: Tamaño máximo permitido para esta categoría
@@ -119,6 +119,14 @@ const router = Router();
  *             type: string
  *           description: Tipos MIME permitidos
  *           example: ["image/png", "image/jpeg"]
+ *         is_public:
+ *           type: boolean
+ *           description: Si el archivo está en contenedor público
+ *           example: false
+ *         public_url:
+ *           type: string
+ *           description: URL pública directa (solo si is_public=true, sin SAS)
+ *           example: "https://ecblob.blob.core.windows.net/ecdatav2-public/organization/ORG-XXX/logo.png"
  */
 
 /**
@@ -175,12 +183,17 @@ const router = Router();
  *                 example: "logo"
  *               owner_type:
  *                 type: string
- *                 description: Tipo de entidad propietaria (opcional)
- *                 example: "organization"
+ *                 description: Tipo de entidad propietaria (site, device, user, etc.)
+ *                 example: "site"
  *               owner_id:
  *                 type: string
- *                 description: Public code de la entidad propietaria (opcional)
- *                 example: "ORG-7K9D2-X"
+ *                 description: Public code de la entidad propietaria
+ *                 example: "SITE-7K9D2-X"
+ *               is_public:
+ *                 type: boolean
+ *                 description: Si true, archivo va al contenedor público (acceso directo sin SAS)
+ *                 default: false
+ *                 example: false
  *               metadata:
  *                 type: object
  *                 description: Metadatos adicionales

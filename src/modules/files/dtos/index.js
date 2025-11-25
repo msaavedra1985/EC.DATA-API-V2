@@ -138,11 +138,15 @@ export const requestUploadUrlSchema = z.object({
         owner_type: z.string()
             .max(50)
             .optional()
-            .describe('Tipo de entidad propietaria'),
+            .describe('Tipo de entidad propietaria (site, device, user, etc.)'),
         owner_id: z.string()
             .max(50)
             .optional()
             .describe('Public code de la entidad propietaria'),
+        is_public: z.boolean()
+            .optional()
+            .default(false)
+            .describe('Si true, el archivo se guarda en contenedor público (acceso directo sin SAS)'),
         metadata: z.record(z.any())
             .optional()
             .describe('Metadatos adicionales')

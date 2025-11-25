@@ -5,11 +5,31 @@ import * as orgRepository from '../organizations/repository.js';
 import { FILE_CATEGORY_CONFIG } from './dtos/index.js';
 import { toPublicFileDto, toUploadUrlDto, toUploadConfirmDto, toPublicFileListDto } from './helpers/serializers.js';
 import { logAuditAction } from '../../helpers/auditLog.js';
+import * as azureBlob from '../../services/azureBlob.js';
 import pino from 'pino';
 import { v7 as uuidv7 } from 'uuid';
 
 // Logger específico para el módulo de files
 const logger = pino({ name: 'files-service' });
+
+/**
+ * Tipos de propietario válidos para archivos
+ * Define las entidades que pueden ser dueñas de un archivo
+ * Esto determina la estructura del blob_path en Azure
+ */
+const VALID_OWNER_TYPES = ['organization', 'site', 'device', 'channel', 'user'];
+
+/**
+ * Validar que el owner_type sea uno de los valores permitidos
+ * 
+ * @param {string} ownerType - Tipo de propietario a validar
+ * @throws {Error} - Si el tipo no es válido
+ */
+const validateOwnerType = (ownerType) => {
+    if (!VALID_OWNER_TYPES.includes(ownerType)) {
+        throw new Error(`owner_type inválido: ${ownerType}. Valores permitidos: ${VALID_OWNER_TYPES.join(', ')}`);
+    }
+};
 
 /**
  * Sanitizar nombre de archivo
@@ -83,16 +103,17 @@ const validateFileForCategory = (category, mimeType, sizeBytes, extension) => {
 
 /**
  * Generar ruta de blob en Azure
- * Formato: {org_public_code}/{category}/{uuid}_{sanitized_name}
+ * Formato: {owner_type}/{owner_id}/{uuid}_{sanitized_name}
+ * Si no hay owner, usa: organization/{org_public_code}/{uuid}_{sanitized_name}
  * 
- * @param {string} orgPublicCode - Public code de la organización
- * @param {string} category - Categoría del archivo
+ * @param {string} ownerType - Tipo de propietario (site, device, user, organization)
+ * @param {string} ownerId - Public code del propietario
  * @param {string} sanitizedName - Nombre sanitizado del archivo
  * @returns {string} - Ruta del blob
  */
-const generateBlobPath = (orgPublicCode, category, sanitizedName) => {
+const generateBlobPath = (ownerType, ownerId, sanitizedName) => {
     const uuid = uuidv7().split('-')[0]; // Usar solo primeros 8 caracteres del UUID
-    return `${orgPublicCode}/${category}/${uuid}_${sanitizedName}`;
+    return `${ownerType}/${ownerId}/${uuid}_${sanitizedName}`;
 };
 
 /**
@@ -105,8 +126,9 @@ const generateBlobPath = (orgPublicCode, category, sanitizedName) => {
  * @param {string} data.mime_type - Tipo MIME
  * @param {number} data.size_bytes - Tamaño en bytes
  * @param {string} data.category - Categoría del archivo
- * @param {string} [data.owner_type] - Tipo de propietario
- * @param {string} [data.owner_id] - ID del propietario
+ * @param {string} [data.owner_type] - Tipo de propietario (site, device, user, etc.)
+ * @param {string} [data.owner_id] - Public code del propietario
+ * @param {boolean} [data.is_public] - Si el archivo va al contenedor público
  * @param {Object} [data.metadata] - Metadatos adicionales
  * @param {string} userId - UUID del usuario que solicita
  * @param {string} ipAddress - IP del solicitante
@@ -129,27 +151,66 @@ export const requestUploadUrl = async (data, userId, ipAddress, userAgent) => {
     // Validar archivo según categoría
     validateFileForCategory(data.category, data.mime_type, data.size_bytes, extension);
 
-    // Generar ruta del blob
-    const blobPath = generateBlobPath(organization.public_code, data.category, sanitizedName);
+    // Validar coherencia de owner_type y owner_id
+    // Si se proporciona uno, se deben proporcionar ambos; si no, usar organization como default
+    let ownerType;
+    let ownerId;
+    
+    if (data.owner_type && data.owner_id) {
+        // Ambos proporcionados - validar y usar valores del request
+        validateOwnerType(data.owner_type);
+        ownerType = data.owner_type;
+        ownerId = data.owner_id;
+    } else if (!data.owner_type && !data.owner_id) {
+        // Ninguno proporcionado - usar organization como default
+        ownerType = 'organization';
+        ownerId = organization.public_code;
+    } else {
+        // Solo uno proporcionado - error de validación
+        throw new Error('owner_type y owner_id deben proporcionarse juntos o ninguno');
+    }
 
-    // Calcular fecha de expiración (15 minutos)
-    const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+    // Generar ruta del blob: owner_type/owner_id/uuid_filename
+    const blobPath = generateBlobPath(ownerType, ownerId, sanitizedName);
 
-    // Crear registro en estado pending
+    // Determinar si es público o privado
+    const isPublic = data.is_public || false;
+
+    // Generar SAS URL según el tipo de contenedor
+    let sasResult;
+    let blobUrl; // URL final del archivo después del upload
+    
+    if (isPublic) {
+        // Archivo público: SAS URL temporal para subir, luego URL directa
+        sasResult = azureBlob.generatePublicUploadSasUrl(blobPath);
+        blobUrl = sasResult.publicUrl; // URL pública directa
+    } else {
+        // Archivo privado: SAS URL para subir
+        sasResult = azureBlob.generateUploadSasUrl(blobPath);
+        // Para archivos privados, la URL se genera bajo demanda con SAS
+        const baseUrl = azureBlob.getStorageBaseUrl();
+        const { config: appConfig } = await import('../../config/env.js');
+        blobUrl = `${baseUrl}/${appConfig.azure.containerPrivate}/${blobPath}`;
+    }
+
+    // Crear registro en estado pending con blob_url pre-calculada
+    // Usar valores resueltos de ownerType/ownerId (no los originales del request)
     const file = await repository.createFileUpload({
         organization_id: organization.id,
         blob_path: blobPath,
+        blob_url: blobUrl, // Guardar URL para uso en confirmUpload
         original_name: data.original_name,
         file_name: sanitizedName,
         mime_type: data.mime_type,
         extension,
         size_bytes: data.size_bytes,
         category: data.category,
-        owner_type: data.owner_type,
-        owner_id: data.owner_id,
+        owner_type: ownerType, // Valor resuelto (default: 'organization')
+        owner_id: ownerId, // Valor resuelto (default: organization.public_code)
         uploaded_by: userId,
-        expires_at: expiresAt,
-        metadata: data.metadata
+        expires_at: sasResult.expiresAt,
+        metadata: data.metadata,
+        is_public: isPublic
     });
 
     // Auditoría
@@ -164,27 +225,29 @@ export const requestUploadUrl = async (data, userId, ipAddress, userAgent) => {
                 blob_path: blobPath,
                 original_name: data.original_name,
                 category: data.category,
-                size_bytes: data.size_bytes
+                size_bytes: data.size_bytes,
+                is_public: isPublic
             }
         },
         ipAddress,
         userAgent
     });
 
-    logger.info({ fileId: file.public_code, blobPath }, 'URL de carga solicitada exitosamente');
+    logger.info({ fileId: file.public_code, blobPath, isPublic }, 'URL de carga solicitada exitosamente');
 
     // Obtener configuración de categoría para respuesta
     const categoryConfig = FILE_CATEGORY_CONFIG[data.category];
 
     // Retornar DTO con información para el BFF
-    // NOTA: La URL real de Azure se generará cuando se integre Azure Blob Storage
     return toUploadUrlDto({
         public_code: file.public_code,
-        upload_url: `[AZURE_SAS_URL_PLACEHOLDER]/${blobPath}`, // TODO: Generar SAS URL real
+        upload_url: sasResult.sasUrl,
         blob_path: blobPath,
-        expires_at: expiresAt,
+        expires_at: sasResult.expiresAt,
         max_size_bytes: categoryConfig.maxSizeBytes,
-        allowed_mime_types: categoryConfig.mimeTypes
+        allowed_mime_types: categoryConfig.mimeTypes,
+        is_public: isPublic,
+        public_url: isPublic ? sasResult.publicUrl : null
     });
 };
 
@@ -195,7 +258,6 @@ export const requestUploadUrl = async (data, userId, ipAddress, userAgent) => {
  * @param {string} publicCode - Public code del archivo
  * @param {Object} confirmData - Datos de confirmación
  * @param {string} [confirmData.checksum_sha256] - Checksum del archivo
- * @param {string} [confirmData.blob_url] - URL del archivo en Azure
  * @param {Object} [confirmData.metadata] - Metadatos adicionales
  * @param {string} userId - UUID del usuario
  * @param {string} ipAddress - IP del solicitante
@@ -221,13 +283,13 @@ export const confirmUpload = async (publicCode, confirmData, userId, ipAddress, 
         throw new Error('La URL de carga ha expirado');
     }
 
-    // Generar URL del blob (temporal hasta integrar Azure)
-    // TODO: Obtener URL real de Azure Blob Storage
-    const blobUrl = `https://[AZURE_STORAGE_ACCOUNT].blob.core.windows.net/[CONTAINER]/${file.blob_path}`;
+    // El blob_url ya fue calculado y guardado en requestUploadUrl
+    // Usamos ese valor directamente para consistencia
+    const blobUrl = file.blob_url;
 
     // Actualizar archivo
     const updatedFile = await repository.confirmUpload(file.id, {
-        blob_url: confirmData.blob_url || blobUrl,
+        blob_url: blobUrl,
         checksum_sha256: confirmData.checksum_sha256,
         metadata: confirmData.metadata
     });

@@ -75,10 +75,14 @@ export const config = {
 
     // Azure Blob Storage para archivos (logos, imágenes, documentos)
     azure: {
-        storageAccountName: process.env.AZURE_STORAGE_ACCOUNT_NAME || null,
-        storageAccountKey: process.env.AZURE_STORAGE_ACCOUNT_KEY || null,
-        storageContainerName: process.env.AZURE_STORAGE_CONTAINER_NAME || 'organization-logos',
-        sasExpiryMinutes: parseInt(process.env.AZURE_STORAGE_SAS_EXPIRY || '60', 10), // 1 hora
+        // Connection string contiene account name, key y endpoint
+        connectionString: process.env.AZURE_STORAGE_CONNECTION_STRING || null,
+        // Contenedor público (acceso anónimo directo para logos, favicons, etc.)
+        containerPublic: process.env.AZURE_STORAGE_CONTAINER_PUBLIC || 'public',
+        // Contenedor privado (requiere SAS URL para documentos sensibles)
+        containerPrivate: process.env.AZURE_STORAGE_CONTAINER_PRIVATE || 'private',
+        // Tiempo de expiración del SAS URL en minutos
+        sasExpiryMinutes: parseInt(process.env.AZURE_STORAGE_SAS_EXPIRY || '15', 10),
     },
 };
 
