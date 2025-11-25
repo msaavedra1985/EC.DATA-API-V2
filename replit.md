@@ -1,7 +1,7 @@
 # EC.DATA API - Enterprise REST API
 
 ## Overview
-EC.DATA is a technology company specializing in enterprise data solutions and scalable backend infrastructure. This repository contains our flagship REST API, built with Node.js and Express, designed to support multi-tenant e-commerce platforms. The API provides robust observability, security, and scalability, integrating seamlessly with Next.js frontends via a BFF (Backend for Frontend) pattern. Our mission is to deliver highly reliable and secure backend solutions capable of handling complex business operations across multiple tenants and diverse market sectors.
+EC.DATA is a technology company specializing in enterprise data solutions. This repository contains our flagship REST API, built with Node.js and Express, designed to support multi-tenant e-commerce platforms. The API provides robust observability, security, and scalability, integrating seamlessly with Next.js frontends via a BFF (Backend for Frontend) pattern. Our mission is to deliver highly reliable and secure backend solutions capable of handling complex business operations across multiple tenants and diverse market sectors.
 
 ## User Preferences
 
@@ -44,6 +44,14 @@ Preferred communication style: Simple, everyday language.
 - **JSDoc Format**: Use OpenAPI 3.0 specification format in comments (schemas, responses, security, examples)
 - **Schema Sync**: The `database.dbml.txt` file must always reflect the current production schema state
 
+**Database Migration Standards (MANDATORY):**
+- **Use Sequelize CLI migrations** for all schema changes to ensure reproducibility across environments
+- **Never modify database schema manually** without creating a corresponding migration file
+- **Always test migrations**: Run `npm run db:migrate` (up) and `npm run db:migrate:undo` (down) before committing
+- **Migration files** are located in `src/db/migrations/` and use CommonJS format
+- **Naming convention**: Timestamp-based (auto-generated) followed by descriptive name (e.g., `20251125131324-add-extended-fields-to-sites.js`)
+- **Configuration**: `.sequelizerc` defines project structure; `src/config/database.cjs` contains database connection settings (CommonJS for CLI compatibility)
+
 **Communication:**
 - Explain architectural decisions and tradeoffs clearly
 - Propose the simplest, most practical solutions for connecting with the Next.js frontend
@@ -72,141 +80,84 @@ Preferred communication style: Simple, everyday language.
 
 ### Extensibility & Robustness
 - **Identifier System:** UUID v7, human_id, and public_code (opaque, Hashids + Luhn checksum).
-- **Public API Identifier Policy (CRITICAL SECURITY):** Public APIs MUST always use `public_code` as `id` in responses; UUIDs or `human_id` are never exposed. Internal operations use UUID. This applies to ALL entities.
+- **Public API Identifier Policy:** Public APIs MUST always use `public_code` as `id` in responses; UUIDs or `human_id` are never exposed.
 - **Authentication:** Comprehensive JWT-based system with access/refresh tokens, token rotation, theft detection, and RBAC. Refresh tokens are database-persisted and SHA-256 hashed.
 - **RBAC:** Flexible, database-driven RBAC with 7 predefined roles and middleware for access control.
 - **Multi-Tenant Organizations:** Hierarchical organization system with many-to-many user-organization relationships and Redis-cached scope calculation.
-- **Session Context Caching:** Frontend NEVER decodes JWT; all session context is cached in Redis and returned via API responses, acting as the single source of truth for frontend state.
+- **Session Context Caching:** All session context is cached in Redis and returned via API responses, acting as the single source of truth for frontend state.
 - **Global Audit Logging:** Every CUD operation MUST be logged to the `audit_logs` table using the `auditLog` helper.
 
 ### Organization Hierarchy & Hybrid Role System
-
-**Organization Hierarchy:**
-- **Unlimited Depth:** Organizations can have infinite levels of sub-organizations via self-referencing `parent_id` field
-- **Root Organization:** EC.DATA is the root organization (`parent_id = null`)
-- **Tree Navigation:** Helper functions for tree operations (getChildren, getDescendants, getAncestors, buildTree, getTreeLevels)
-- **Lazy Loading:** API endpoints support configurable levels (default 2) with `hasChildren` flag for efficient tree rendering
-- **Cycle Prevention:** Moving organizations validates against creating circular references
-
-**Hybrid Role System:**
-- **Global Roles (users.role_id):** System-wide role defining base permissions (system-admin, org-admin, org-manager, user, viewer, guest, demo)
-- **Organization Roles (user_organizations.role_in_org):** Per-organization role defining access within that org (admin, member, viewer)
-- **Permission Matrix:**
-  - `system-admin`: Full access to all organizations regardless of membership
-  - `org-admin` + `role_in_org=admin`: Access to assigned org + all descendants
-  - `org-admin` + `role_in_org=member`: Access only to assigned org
-  - `user` + `role_in_org=admin`: Access to assigned org + all descendants
-  - `user` + `role_in_org=member/viewer`: Access only to assigned org
-- **Automatic Filtering:** All organization endpoints automatically filter results based on user's hybrid permissions
-- **Helper Module:** `src/modules/organizations/helpers/permissions.js` calculates accessible organizations
-
-**Key Endpoints:**
-
-*Hierarchy Navigation:*
-- `GET /organizations/hierarchy` - Full tree from root (cached)
-- `GET /organizations/:id/subtree` - Tree from specific node with configurable depth
-- `GET /organizations/:id/children` - Lazy loading with 2 levels + hasChildren flag
-- `GET /organizations/:id/descendants` - Flat list of all descendants
-- `GET /organizations/:id/path` - Breadcrumb path from root to node
-
-*CRUD Operations:*
-- `POST /organizations` - Create new organization (validates parent, depth ≤5 levels, unique slug)
-- `PUT /organizations/:id` - Update organization (can change parent_id, validates cycles)
-- `PATCH /organizations/:id/move` - Dedicated endpoint to move organization in hierarchy
-- `DELETE /organizations/:id` - Soft delete organization (validates no active children, removes memberships)
-
-All CRUD operations include:
-- Automatic audit logging (`audit_logs` table)
-- Redis cache invalidation (organization + parent hierarchy)
-- Permission-based access control via middleware
-- Full Swagger/OpenAPI documentation
-
-**Frontend Integration:**
-- Complete guide at `docs/ORGANIZATION_HIERARCHY_FRONTEND.md`
-- Lazy loading patterns, search strategies, and tree rendering examples
-- Recommended libraries and performance optimization tips
+- **Organization Hierarchy:** Supports unlimited depth, root organization, tree navigation helpers, lazy loading for API endpoints, and cycle prevention.
+- **Hybrid Role System:** Combines Global Roles (`users.role_id`) and Organization Roles (`user_organizations.role_in_org`) to define granular permissions.
+- **Automatic Filtering:** All organization endpoints automatically filter results based on user's hybrid permissions.
 
 ### Sites Module - Physical Locations
+- **Purpose:** Represents physical locations (offices, branches, warehouses) associated with organizations, including geolocation and address information.
+- **Data Model:** Uses triple identifiers (UUID v7, human_id, public_code), `belongsTo Organization` and `belongsTo Country` relations, geolocation, address fields, building characteristics, and contact information.
+- **Public Code Policy:** Sites are exposed using `public_code` as `id`.
+- **Security & Permissions:** Endpoints require JWT authentication, and users can only access sites within their authorized organizations.
+
+### Database Migrations - Sequelize CLI
 
 **Purpose:**
-Sites represent physical locations (offices, branches, warehouses, stores) associated with organizations. Each site contains geolocation data (latitude/longitude) and address information, enabling contextual features like timezone detection, currency localization, weather integration, and location-based business logic.
+The project uses Sequelize CLI for database migrations, ensuring reproducible schema changes across all environments (development, staging, production).
 
-**Data Model:**
-- **Triple Identifier:** UUID v7 (internal), human_id (sequential), public_code (SITE-XXXXX-X format with Luhn checksum)
-- **Relations:** 
-  - `belongsTo Organization` (many-to-one) - Each site belongs to exactly one organization
-  - `belongsTo Country` (many-to-one) - Each site is located in one country
-- **Geolocation Fields:** latitude, longitude (decimal degrees)
-- **Address Fields:** address, street_number, city, state_province, postal_code
-- **Building Characteristics:** building_type (enum: office, warehouse, factory, retail, hospital, school, datacenter, hotel, restaurant, residential, mixed, other), area_m2 (decimal), floors (integer), operating_hours (string), image_url (URL)
-- **Contact Information:** contact_name, contact_phone, contact_email
-- **Metadata:** timezone (IANA timezone identifier), is_active (boolean), soft delete support
+**Configuration Files:**
+- `.sequelizerc` - Defines paths for migrations, models, seeders, and config
+- `src/config/database.cjs` - Database connection settings (CommonJS format for CLI compatibility)
+- `src/db/migrations/` - Migration files directory
 
-**Key Endpoints:**
+**Available Commands:**
+```bash
+# Check migration status
+npm run db:migrate:status
 
-*CRUD Operations:*
-- `POST /sites` - Create new site (requires organization membership, validates lat/lng range, country exists)
-- `GET /sites` - List sites with pagination and filters (organization_id, city, country_id, is_active)
-- `GET /sites/:id` - Get site details by public_code
-- `PUT /sites/:id` - Update site (partial updates supported, validates permissions)
-- `DELETE /sites/:id` - Soft delete site (sets deleted_at timestamp)
+# Run pending migrations
+npm run db:migrate
 
-**Security & Permissions:**
-- All endpoints require JWT authentication
-- Users can only access sites belonging to organizations they have access to
-- system-admin can access all sites across all organizations
-- org-admin can access sites in their organization hierarchy
+# Rollback last migration
+npm run db:migrate:undo
 
-**Response Format:**
-- **Public Code Policy:** Sites are exposed using `public_code` as `id` (e.g., `SITE-61D4Vc4Oo9R-4`)
-- **Nested Data:** Responses include embedded organization and country objects
-- **Example Response:**
-```json
-{
-  "id": "SITE-61D4Vc4Oo9R-4",
-  "name": "EC.DATA Headquarters",
-  "description": "Oficina central de EC.DATA en San Francisco",
-  "latitude": 37.7749,
-  "longitude": -122.4194,
-  "address": "1 Platform Way",
-  "city": "San Francisco",
-  "state_province": "California",
-  "postal_code": "94105",
-  "timezone": "America/Los_Angeles",
-  "building_type": "office",
-  "area_m2": 2500.50,
-  "floors": 12,
-  "operating_hours": "Lun-Vie 9:00-18:00",
-  "image_url": "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab",
-  "contact_name": "Sarah Johnson",
-  "contact_phone": "+1-415-555-0100",
-  "contact_email": "sf.office@ecdata.com",
-  "is_active": true,
-  "organization": {
-    "id": "ORG-yOM9ewfqOeWa-4",
-    "name": "EC.DATA",
-    "slug": "ec-data"
-  },
-  "country": {
-    "id": 399,
-    "iso_alpha2": "US",
-    "iso_alpha3": "USA"
-  }
-}
+# Rollback all migrations
+npm run db:migrate:undo:all
+
+# Create new migration
+npm run db:migration:create -- my-migration-name
 ```
 
-**Audit Logging:**
-- All CUD operations (Create, Update, Delete) automatically log to `audit_logs` table
-- Includes: entity_type='site', entity_id=public_code, action, performed_by, changes, IP address, user agent
+**Workflow for Schema Changes:**
+1. **Create migration:** `npm run db:migration:create -- descriptive-name`
+2. **Edit migration file:** Add `up()` and `down()` logic in `src/db/migrations/XXXXXX-descriptive-name.js`
+3. **Test migration:** Run `npm run db:migrate` to apply, then `npm run db:migrate:undo` to rollback
+4. **Update DBML:** Run `npm run db:dbml` to update database diagram
+5. **Commit changes:** Include migration file in version control
 
-**Caching:**
-- Site lists are cached in Redis (TTL: 10 minutes)
-- Cache is automatically invalidated on any CUD operation
-- Cache key pattern: `ec:sites:list:{orgId}:{filters}`
+**Migration Best Practices:**
+- Always write both `up()` and `down()` methods for reversibility
+- Test rollback before committing to ensure migrations are reversible
+- Use transactions for complex multi-step migrations
+- Never modify existing migrations that have been deployed
+- Include comments explaining the purpose of each migration
+- For ENUM types, use conditional creation (`IF NOT EXISTS`) to avoid errors
 
-**Swagger Documentation:**
-- Full OpenAPI 3.0 annotations available at `/docs`
-- Interactive API explorer with request/response examples
+**Example Migration Structure:**
+```javascript
+module.exports = {
+  async up(queryInterface, Sequelize) {
+    // Add schema changes here
+    await queryInterface.addColumn('table_name', 'column_name', {
+      type: Sequelize.STRING(100),
+      allowNull: true
+    });
+  },
+
+  async down(queryInterface, Sequelize) {
+    // Reverse the changes here
+    await queryInterface.removeColumn('table_name', 'column_name');
+  }
+};
+```
 
 ## External Dependencies
 
@@ -218,11 +169,6 @@ Sites represent physical locations (offices, branches, warehouses, stores) assoc
 ### Testing & Quality Assurance
 - **Testing Framework:** Vitest for unit and integration tests.
 - **Test Coverage:** V8 coverage provider with HTML/JSON reports.
-- **Test Helpers:** `testServer.js`, `fixtures.js`, `cleanupDB.js`.
-
-### NPM Dependencies
-- **Production:** `express`, `sequelize`, `pg`, `redis`, `jsonwebtoken`, `bcrypt`, `zod`, `cors`, `helmet`, `compression`, `pino`, `prom-client`, `swagger-jsdoc`, `swagger-ui-express`, `dotenv`.
-- **Development:** `eslint`, `vitest`, `supertest`, `nodemon`.
 
 ### Monitoring & Observability
 - **Metrics:** Prometheus for HTTP request duration, counts, active connections, and custom metrics.
