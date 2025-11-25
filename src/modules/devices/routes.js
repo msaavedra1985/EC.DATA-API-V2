@@ -413,7 +413,7 @@ router.put('/:id', authenticate, requireRole(['system-admin', 'org-admin']), val
  * /api/v1/devices/{id}:
  *   delete:
  *     summary: Eliminar un device (soft delete)
- *     description: Elimina lógicamente un device. Solo system-admin puede eliminar.
+ *     description: Elimina lógicamente un device y marca sus channels como inactivos. Solo system-admin puede eliminar.
  *     tags: [Devices]
  *     security:
  *       - bearerAuth: []
@@ -427,7 +427,7 @@ router.put('/:id', authenticate, requireRole(['system-admin', 'org-admin']), val
  *           example: "DEV-abc123xyz-1"
  *     responses:
  *       200:
- *         description: Device eliminado exitosamente
+ *         description: Device eliminado exitosamente con cascade a channels
  *         content:
  *           application/json:
  *             schema:
@@ -439,9 +439,39 @@ router.put('/:id', authenticate, requireRole(['system-admin', 'org-admin']), val
  *                 data:
  *                   type: object
  *                   properties:
- *                     message:
+ *                     device:
+ *                       type: object
+ *                       description: Device serializado (sin deleted_at)
+ *                     cascade:
+ *                       type: object
+ *                       properties:
+ *                         channels_affected:
+ *                           type: integer
+ *                           example: 5
+ *                         channel_updates:
+ *                           type: array
+ *                           items:
+ *                             type: object
+ *                     deletion_status:
+ *                       type: object
+ *                       properties:
+ *                         deleted:
+ *                           type: boolean
+ *                           example: true
+ *                         deleted_at:
+ *                           type: string
+ *                           format: date-time
+ *                 meta:
+ *                   type: object
+ *                   properties:
+ *                     timestamp:
  *                       type: string
- *                       example: "Device eliminado exitosamente"
+ *                       format: date-time
+ *                     locale:
+ *                       type: string
+ *                     action:
+ *                       type: string
+ *                       example: "delete"
  *       401:
  *         description: No autenticado
  *       403:
@@ -457,14 +487,14 @@ router.delete('/:id', authenticate, requireRole(['system-admin']), validate(dele
         
         const result = await deviceServices.deleteDevice(req.params.id, userId, ipAddress, userAgent);
         
+        // Respuesta canónica con envelope estándar
         res.json({
             ok: true,
-            data: result,
+            data: result, // { device, cascade, deletion_status }
             meta: {
                 timestamp: new Date().toISOString(),
                 locale: req.locale,
-                action: 'delete',
-                cascade: 'channels_marked_inactive'
+                action: 'delete'
             }
         });
     } catch (error) {

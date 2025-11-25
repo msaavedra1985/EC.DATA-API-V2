@@ -341,6 +341,7 @@ export const deleteDevice = async (publicCode, userId, ipAddress, userAgent) => 
         
         // 3. Soft delete del device usando repository layer
         const deletedDevice = await deviceRepository.softDeleteDevice(deviceInternal.id, transaction);
+        const deletionTimestamp = deletedDevice.deleted_at;
         
         // 4. Audit log para device con información completa del cambio
         await logAuditAction({
@@ -351,7 +352,7 @@ export const deleteDevice = async (publicCode, userId, ipAddress, userAgent) => 
             changes: {
                 deleted_at: {
                     old: null,
-                    new: deletedDevice.deleted_at
+                    new: deletionTimestamp
                 },
                 is_active: {
                     old: true,
@@ -387,13 +388,16 @@ export const deleteDevice = async (publicCode, userId, ipAddress, userAgent) => 
             'Device soft-deleted successfully with cascade to channels'
         );
         
-        // Retornar device serializado + información de cascade
+        // Retornar respuesta canónica: device serializado + deletion_status + cascade
         return {
-            deleted: true,
-            device: deletedDevice, // Device ya serializado por el repository
+            device: deletedDevice, // Serializado sin deleted_at (DTO público estándar)
             cascade: {
                 channels_affected: allChannels.length,
                 channel_updates: channelUpdates
+            },
+            deletion_status: {
+                deleted: true,
+                deleted_at: deletionTimestamp
             }
         };
         
