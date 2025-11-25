@@ -113,7 +113,7 @@ const requestUploadUrl = async (token, fileInfo, filePath) => {
         throw new Error(`Error al solicitar URL: ${JSON.stringify(data)}`);
     }
 
-    log.success(`URL obtenida - public_code: ${data.data.public_code}`);
+    log.success(`URL obtenida - file_id: ${data.data.file_id}`);
     return data.data;
 };
 
@@ -195,11 +195,11 @@ const main = async () => {
                 await uploadToAzure(uploadData.upload_url, filePath);
                 
                 // Confirmar
-                const confirmed = await confirmUpload(token, uploadData.public_code);
+                const confirmed = await confirmUpload(token, uploadData.file_id);
                 
                 results.push({
                     file: fileInfo.file,
-                    public_code: uploadData.public_code,
+                    file_id: uploadData.file_id,
                     owner_type: fileInfo.ownerType || 'organization',
                     is_public: fileInfo.isPublic,
                     blob_url: confirmed.blob_url,
@@ -231,7 +231,7 @@ const main = async () => {
         if (successful.length > 0) {
             console.log('Archivos cargados:');
             successful.forEach(r => {
-                console.log(`  • ${r.public_code} (${r.owner_type}, public: ${r.is_public})`);
+                console.log(`  • ${r.file_id} (${r.owner_type}, public: ${r.is_public})`);
                 console.log(`    URL: ${r.blob_url}`);
             });
         }
