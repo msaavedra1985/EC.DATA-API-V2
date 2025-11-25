@@ -46,9 +46,11 @@ localPort = 5000
 externalPort = 80
 
 [[ports]]
-localPort = 34485
-externalPort = 3001
-
-[[ports]]
 localPort = 36571
 externalPort = 3000
+
+[userenv]
+
+[userenv.shared]
+AZURE_STORAGE_CONTAINER_PUBLIC = "ecdatav2-public"
+AZURE_STORAGE_CONTAINER_PRIVATE = "ecdatav2-private"
