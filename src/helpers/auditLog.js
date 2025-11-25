@@ -3,6 +3,7 @@
 
 import AuditLog from '../modules/audit/models/AuditLog.js';
 import logger from '../utils/logger.js';
+import { generateUuidV7 } from '../utils/identifiers.js';
 
 const auditLogger = logger.child({ component: 'audit' });
 
@@ -70,6 +71,7 @@ export const logAuditAction = async ({
 
         // Crear registro de auditoría
         const auditLog = await AuditLog.create({
+            id: generateUuidV7(),
             entity_type: entityType,
             entity_id: entityId,
             action,

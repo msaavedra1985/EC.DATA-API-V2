@@ -1,10 +1,9 @@
 # EC.DATA API - Enterprise REST API
 
 ## Overview
-EC.DATA is a technology company specializing in enterprise data solutions. This repository contains our flagship REST API, built with Node.js and Express, designed to support multi-tenant e-commerce platforms. The API provides robust observability, security, and scalability, integrating seamlessly with Next.js frontends via a BFF (Backend for Frontend) pattern. Our mission is to deliver highly reliable and secure backend solutions capable of handling complex business operations across multiple tenants and diverse market sectors.
+EC.DATA API is a Node.js and Express-based REST API designed for multi-tenant e-commerce platforms. It emphasizes observability, security, and scalability, integrating with Next.js frontends via a BFF pattern. The API aims to provide reliable and secure backend solutions for complex business operations across diverse market sectors.
 
 ## User Preferences
-
 Preferred communication style: Simple, everyday language.
 
 **Code Standards:**
@@ -64,100 +63,43 @@ Preferred communication style: Simple, everyday language.
 - **Data:** Sequelize ORM for PostgreSQL, Redis for caching/sessions.
 - **Security:** JWT (Bearer tokens, scopes), Zod for validation, Helmet, bcrypt.
 - **Observability:** Pino, Prometheus metrics, database audit logging, request/response logging.
-- **Documentation:** Swagger/OpenAPI (`/docs`) via swagger-jsdoc and swagger-ui-express.
+- **Documentation:** Swagger/OpenAPI (`/docs`).
 
 ### Architectural Patterns
 - **Layered Architecture:** Strict separation into Routes, Services, Repositories, and Database layers.
-- **Feature-Based Organization:** Code structured by domain (auth, tenants) with dedicated files per feature.
+- **Feature-Based Organization:** Code structured by domain (auth, tenants).
 - **Response Envelope Pattern:** Consistent `{ ok: true/false, data/error, meta }` structure.
-- **Configuration Management:** Centralized `src/config/env.js` for environment variables.
+- **Configuration Management:** Centralized `src/config/env.js`.
 
 ### Performance & Scalability
-- **Caching:** Redis-based caching with configurable TTLs and automatic invalidation on CUD operations.
-- **Compression:** Brotli/gzip compression middleware.
-- **Rate Limiting:** Redis-powered intelligent rate limiting with role-based limits and dual modes.
+- **Caching:** Redis-based caching with configurable TTLs and automatic invalidation.
+- **Compression:** Brotli/gzip compression.
+- **Rate Limiting:** Redis-powered, intelligent rate limiting with role-based limits.
 - **Pagination:** Mandatory offset-based pagination (`limit`, `offset`) for list endpoints.
 
 ### Extensibility & Robustness
-- **Identifier System:** UUID v7, human_id, and public_code (opaque, Hashids + Luhn checksum).
-- **Public API Identifier Policy:** Public APIs MUST always use `public_code` as `id` in responses; UUIDs or `human_id` are never exposed.
-- **Authentication:** Comprehensive JWT-based system with access/refresh tokens, token rotation, theft detection, and RBAC. Refresh tokens are database-persisted and SHA-256 hashed.
-- **RBAC:** Flexible, database-driven RBAC with 7 predefined roles and middleware for access control.
+- **Identifier System:** UUID v7, human_id, and public_code (opaque, Hashids + Luhn checksum). Public APIs MUST use `public_code`.
+- **Authentication:** JWT-based system with access/refresh tokens, token rotation, theft detection, and RBAC. Refresh tokens are database-persisted and SHA-256 hashed.
+- **RBAC:** Flexible, database-driven RBAC with 7 predefined roles and middleware.
 - **Multi-Tenant Organizations:** Hierarchical organization system with many-to-many user-organization relationships and Redis-cached scope calculation.
-- **Session Context Caching:** All session context is cached in Redis and returned via API responses, acting as the single source of truth for frontend state.
-- **Global Audit Logging:** Every CUD operation MUST be logged to the `audit_logs` table using the `auditLog` helper.
+- **Session Context Caching:** All session context is cached in Redis and returned via API responses.
+- **Global Audit Logging:** Every CUD operation is logged to the `audit_logs` table using the `auditLog` helper.
 
 ### Organization Hierarchy & Hybrid Role System
-- **Organization Hierarchy:** Supports unlimited depth, root organization, tree navigation helpers, lazy loading for API endpoints, and cycle prevention.
-- **Hybrid Role System:** Combines Global Roles (`users.role_id`) and Organization Roles (`user_organizations.role_in_org`) to define granular permissions.
+- **Organization Hierarchy:** Supports unlimited depth, root organization, tree navigation, lazy loading, and cycle prevention.
+- **Hybrid Role System:** Combines Global Roles (`users.role_id`) and Organization Roles (`user_organizations.role_in_org`) for granular permissions.
 - **Automatic Filtering:** All organization endpoints automatically filter results based on user's hybrid permissions.
 
-### Sites Module - Physical Locations
-- **Purpose:** Represents physical locations (offices, branches, warehouses) associated with organizations, including geolocation and address information.
-- **Data Model:** Uses triple identifiers (UUID v7, human_id, public_code), `belongsTo Organization` and `belongsTo Country` relations, geolocation, address fields, building characteristics, and contact information.
-- **Public Code Policy:** Sites are exposed using `public_code` as `id`.
-- **Security & Permissions:** Endpoints require JWT authentication, and users can only access sites within their authorized organizations.
+### Core Modules
+- **Sites Module:** Manages physical locations (offices, branches, warehouses) linked to organizations, including geolocation and address. Uses triple identifiers and `public_code` for exposure.
+- **Devices Module:** Manages IoT/Edge devices (sensors, gateways, controllers) associated with organizations and sites. Features triple identifiers (`public_code`: `DEV-XXXXX-X`), various device types, status tracking, firmware management, and network info. Supports soft-delete with channel cascade.
+- **Channels Module:** Manages communication channels (MQTT, HTTP, WebSocket) for devices. Features triple identifiers (`public_code`: `CHN-XXXXX-X`), composite foreign key for cross-tenant integrity, various channel types, protocols, direction, status, endpoint URLs, and configuration. Supports soft-delete.
 
 ### Database Migrations - Sequelize CLI
-
-**Purpose:**
-The project uses Sequelize CLI for database migrations, ensuring reproducible schema changes across all environments (development, staging, production).
-
-**Configuration Files:**
-- `.sequelizerc` - Defines paths for migrations, models, seeders, and config
-- `src/config/database.cjs` - Database connection settings (CommonJS format for CLI compatibility)
-- `src/db/migrations/` - Migration files directory
-
-**Available Commands:**
-```bash
-# Check migration status
-npm run db:migrate:status
-
-# Run pending migrations
-npm run db:migrate
-
-# Rollback last migration
-npm run db:migrate:undo
-
-# Rollback all migrations
-npm run db:migrate:undo:all
-
-# Create new migration
-npm run db:migration:create -- my-migration-name
-```
-
-**Workflow for Schema Changes:**
-1. **Create migration:** `npm run db:migration:create -- descriptive-name`
-2. **Edit migration file:** Add `up()` and `down()` logic in `src/db/migrations/XXXXXX-descriptive-name.js`
-3. **Test migration:** Run `npm run db:migrate` to apply, then `npm run db:migrate:undo` to rollback
-4. **Update DBML:** Run `npm run db:dbml` to update database diagram
-5. **Commit changes:** Include migration file in version control
-
-**Migration Best Practices:**
-- Always write both `up()` and `down()` methods for reversibility
-- Test rollback before committing to ensure migrations are reversible
-- Use transactions for complex multi-step migrations
-- Never modify existing migrations that have been deployed
-- Include comments explaining the purpose of each migration
-- For ENUM types, use conditional creation (`IF NOT EXISTS`) to avoid errors
-
-**Example Migration Structure:**
-```javascript
-module.exports = {
-  async up(queryInterface, Sequelize) {
-    // Add schema changes here
-    await queryInterface.addColumn('table_name', 'column_name', {
-      type: Sequelize.STRING(100),
-      allowNull: true
-    });
-  },
-
-  async down(queryInterface, Sequelize) {
-    // Reverse the changes here
-    await queryInterface.removeColumn('table_name', 'column_name');
-  }
-};
-```
+- **Purpose:** Ensures reproducible schema changes across environments.
+- **Configuration:** `.sequelizerc` defines paths; `src/config/database.cjs` for connection settings.
+- **Workflow:** Create, edit, test (up/down), and update DBML (`npm run db:dbml`) for schema changes.
+- **Best Practices:** Always write `up()` and `down()` methods, test rollbacks, use transactions, avoid modifying deployed migrations.
 
 ## External Dependencies
 
@@ -168,7 +110,6 @@ module.exports = {
 
 ### Testing & Quality Assurance
 - **Testing Framework:** Vitest for unit and integration tests.
-- **Test Coverage:** V8 coverage provider with HTML/JSON reports.
 
 ### Monitoring & Observability
 - **Metrics:** Prometheus for HTTP request duration, counts, active connections, and custom metrics.

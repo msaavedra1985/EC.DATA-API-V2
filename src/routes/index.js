@@ -10,6 +10,7 @@ import errorLogsRouter from '../modules/error-logs/index.js';
 import countriesRouter from '../modules/countries/index.js';
 import sitesRouter from '../modules/sites/index.js';
 import devicesRouter from '../modules/devices/index.js';
+import channelsRouter from '../modules/channels/index.js';
 
 const router = express.Router();
 
@@ -44,6 +45,9 @@ router.use('/sites', sitesRouter);
 
 // Devices (dispositivos IoT/Edge)
 router.use('/devices', devicesRouter);
+
+// Channels (canales de comunicación de dispositivos)
+router.use('/channels', channelsRouter);
 
 // Seeding (Testing/Development)
 router.use('/seed', seedRouter);

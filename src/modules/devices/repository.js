@@ -142,7 +142,46 @@ export const updateDevice = async (id, updateData) => {
 };
 
 /**
- * Soft delete de device
+ * Soft delete de device (actualiza deleted_at e is_active)
+ * @param {string} id - UUID interno del device
+ * @param {Object} transaction - Transacción de Sequelize (opcional)
+ * @returns {Promise<Object|null>} - Device actualizado con DTO público o null
+ */
+export const softDeleteDevice = async (id, transaction = null) => {
+    const device = await Device.findByPk(id, { transaction });
+    
+    if (!device) {
+        return null;
+    }
+    
+    // Soft delete explícito: setear deleted_at e is_active
+    await device.update({
+        deleted_at: new Date(),
+        is_active: false
+    }, { transaction });
+    
+    // Recargar con relaciones para serializar
+    await device.reload({
+        include: [
+            {
+                model: Organization,
+                as: 'organization',
+                attributes: ['id', 'public_code', 'slug', 'name', 'logo_url']
+            },
+            {
+                model: Site,
+                as: 'site',
+                attributes: ['id', 'public_code', 'name', 'city', 'country_id']
+            }
+        ],
+        transaction
+    });
+    
+    return toPublicDeviceDto(device);
+};
+
+/**
+ * Soft delete de device (legacy method - mantener por compatibilidad)
  * @param {string} id - UUID interno del device
  * @returns {Promise<boolean>} - true si se eliminó
  */

@@ -2,13 +2,17 @@
 // Lógica de negocio para Devices
 
 import { v7 as uuidv7 } from 'uuid';
+import { Op } from 'sequelize';
 import * as deviceRepository from './repository.js';
 import * as organizationRepository from '../organizations/repository.js';
 import * as siteRepository from '../sites/repository.js';
 import { cacheDeviceList, getCachedDeviceList, invalidateDeviceCache } from './cache.js';
+import { invalidateChannelCache } from '../channels/cache.js';
 import { logAuditAction } from '../../helpers/auditLog.js';
 import { generateHumanId, generatePublicCode } from '../../utils/identifiers.js';
 import Device from './models/Device.js';
+import Channel from '../channels/models/Channel.js';
+import sequelize from '../../db/sql/sequelize.js';
 import logger from '../../utils/logger.js';
 
 /**
@@ -256,12 +260,13 @@ export const updateDevice = async (publicCode, updateData, userId, ipAddress, us
 };
 
 /**
- * Eliminar device (soft delete)
+ * Eliminar device (soft delete) con cascade a channels
+ * Al borrar un device, todos sus channels asociados se marcan como inactivos
  * @param {string} publicCode - Public code del device
  * @param {string} userId - ID del usuario que elimina
  * @param {string} ipAddress - IP del usuario
  * @param {string} userAgent - User agent del usuario
- * @returns {Promise<boolean>} - true si se eliminó
+ * @returns {Promise<Object>} - Resultado con device eliminado y channels actualizados
  */
 export const deleteDevice = async (publicCode, userId, ipAddress, userAgent) => {
     // Obtener device actual
@@ -274,11 +279,70 @@ export const deleteDevice = async (publicCode, userId, ipAddress, userAgent) => 
         throw error;
     }
     
-    // Eliminar (soft delete)
-    const deleted = await deviceRepository.deleteDevice(deviceInternal.id);
+    // Iniciar transacción para garantizar consistencia
+    const transaction = await sequelize.transaction();
     
-    if (deleted) {
-        // Audit log
+    try {
+        // 1. Buscar TODOS los channels asociados al device (no solo activos)
+        const allChannels = await Channel.findAll({
+            where: {
+                device_id: deviceInternal.id
+            },
+            transaction
+        });
+        
+        logger.info(
+            { deviceId: deviceInternal.id, channelsCount: allChannels.length },
+            'Found channels to cascade inactivate'
+        );
+        
+        // 2. Marcar TODOS los channels como inactivos (cascade soft-delete)
+        const channelUpdates = [];
+        for (const channel of allChannels) {
+            const oldStatus = channel.status;
+            
+            // Solo actualizar si el status no es ya 'inactive'
+            if (oldStatus !== 'inactive') {
+                await channel.update(
+                    { status: 'inactive' },
+                    { transaction }
+                );
+            }
+            
+            // Audit log para TODOS los channels (incluso si ya estaban inactive)
+            await logAuditAction({
+                entityType: 'channel',
+                entityId: channel.id,
+                action: 'update',
+                performedBy: userId,
+                changes: {
+                    status: {
+                        old: oldStatus,
+                        new: 'inactive'
+                    }
+                },
+                metadata: {
+                    device_id: deviceInternal.id,
+                    organization_id: deviceInternal.organization_id,
+                    cascade_from: 'device_delete',
+                    reason: 'Cascade from device soft-delete'
+                },
+                ipAddress: ipAddress,
+                userAgent: userAgent
+            });
+            
+            channelUpdates.push({
+                id: channel.public_code,
+                name: channel.name,
+                old_status: oldStatus,
+                new_status: 'inactive'
+            });
+        }
+        
+        // 3. Soft delete del device usando repository layer
+        const deletedDevice = await deviceRepository.softDeleteDevice(deviceInternal.id, transaction);
+        
+        // 4. Audit log para device con información completa del cambio
         await logAuditAction({
             entityType: 'device',
             entityId: deviceInternal.id,
@@ -287,21 +351,56 @@ export const deleteDevice = async (publicCode, userId, ipAddress, userAgent) => 
             changes: {
                 deleted_at: {
                     old: null,
-                    new: new Date()
+                    new: deletedDevice.deleted_at
+                },
+                is_active: {
+                    old: true,
+                    new: false
                 }
             },
             metadata: {
-                organization_id: deviceInternal.organization_id
+                organization_id: deviceInternal.organization_id,
+                channels_affected: allChannels.length,
+                channel_updates: channelUpdates,
+                device_name: deviceInternal.name,
+                device_type: deviceInternal.device_type
             },
             ipAddress: ipAddress,
             userAgent: userAgent
         });
         
-        // Invalidar cache
-        await invalidateDeviceCache();
+        // Commit de transacción
+        await transaction.commit();
         
-        logger.info({ deviceId: deviceInternal.id, userId }, 'Device deleted successfully');
+        // Invalidar caches (después del commit)
+        await Promise.all([
+            invalidateDeviceCache(),
+            invalidateChannelCache()
+        ]);
+        
+        logger.info(
+            { 
+                deviceId: deviceInternal.id, 
+                userId,
+                channelsAffected: allChannels.length 
+            }, 
+            'Device soft-deleted successfully with cascade to channels'
+        );
+        
+        // Retornar device serializado + información de cascade
+        return {
+            deleted: true,
+            device: deletedDevice, // Device ya serializado por el repository
+            cascade: {
+                channels_affected: allChannels.length,
+                channel_updates: channelUpdates
+            }
+        };
+        
+    } catch (error) {
+        // Rollback en caso de error
+        await transaction.rollback();
+        logger.error({ error, deviceId: deviceInternal.id }, 'Error deleting device with cascade');
+        throw error;
     }
-    
-    return deleted;
 };

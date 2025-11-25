@@ -455,26 +455,16 @@ router.delete('/:id', authenticate, requireRole(['system-admin']), validate(dele
         const ipAddress = req.ip || req.connection.remoteAddress;
         const userAgent = req.headers['user-agent'];
         
-        const deleted = await deviceServices.deleteDevice(req.params.id, userId, ipAddress, userAgent);
-        
-        if (!deleted) {
-            return res.status(404).json({
-                ok: false,
-                error: {
-                    code: 'DEVICE_NOT_FOUND',
-                    message: 'Device no encontrado'
-                }
-            });
-        }
+        const result = await deviceServices.deleteDevice(req.params.id, userId, ipAddress, userAgent);
         
         res.json({
             ok: true,
-            data: {
-                message: 'Device eliminado exitosamente'
-            },
+            data: result,
             meta: {
                 timestamp: new Date().toISOString(),
-                locale: req.locale
+                locale: req.locale,
+                action: 'delete',
+                cascade: 'channels_marked_inactive'
             }
         });
     } catch (error) {

@@ -6,6 +6,8 @@
  * 3. Organizations (depende de Countries)
  * 4. Users (depende de Roles y Organizations)
  * 5. Sites (depende de Organizations y Countries)
+ * 6. Devices (depende de Organizations y Sites)
+ * 7. Channels (depende de Devices)
  */
 import sequelize from '../sql/sequelize.js';
 import '../models.js'; // Importar modelos
@@ -14,6 +16,7 @@ import { seedCountries } from './countries.seeder.js';
 import { seedOrganizations } from './organizations.seeder.js';
 import { seedUsers } from './users.seeder.js';
 import { seedSites } from './sites.seeder.js';
+import { seedDevicesAndChannels } from './seed-devices-channels.js';
 import { dbLogger } from '../../utils/logger.js';
 
 const runSeeders = async () => {
@@ -51,6 +54,12 @@ const runSeeders = async () => {
         const sitesResult = await seedSites();
         dbLogger.info(`✅ ${sitesResult.sitesCreated} sitios creados`);
 
+        // 6. Ejecutar seeder de devices y channels (depende de organizations, sites y users)
+        dbLogger.info('📱 Ejecutando seeder de devices y channels...');
+        const devicesChannelsResult = await seedDevicesAndChannels();
+        dbLogger.info(`✅ ${devicesChannelsResult.devicesCreated} devices creados`);
+        dbLogger.info(`✅ ${devicesChannelsResult.channelsCreated} channels creados`);
+
         dbLogger.info('🎉 Seeders completados exitosamente');
         dbLogger.info('');
         dbLogger.info('📊 Resumen:');
@@ -60,6 +69,8 @@ const runSeeders = async () => {
         dbLogger.info(`   - Usuarios: ${usersResult.usersCreated} creados`);
         dbLogger.info(`   - Membresías: ${usersResult.membershipsCreated} creadas`);
         dbLogger.info(`   - Sitios: ${sitesResult.sitesCreated} creados`);
+        dbLogger.info(`   - Devices: ${devicesChannelsResult.devicesCreated} creados`);
+        dbLogger.info(`   - Channels: ${devicesChannelsResult.channelsCreated} creados`);
         dbLogger.info('');
         dbLogger.info('🔑 Credenciales de prueba:');
         dbLogger.info('   Password universal: TestPassword123!');
