@@ -65,6 +65,43 @@ export const createSiteSchema = z.object({
             .string()
             .max(100, 'timezone no puede exceder 100 caracteres')
             .optional(),
+        building_type: z
+            .enum(['office', 'warehouse', 'factory', 'retail', 'hospital', 'school', 
+                   'datacenter', 'hotel', 'restaurant', 'residential', 'mixed', 'other'], {
+                errorMap: () => ({ message: 'building_type debe ser un tipo válido' })
+            })
+            .optional(),
+        area_m2: z
+            .number()
+            .positive('area_m2 debe ser un número positivo')
+            .optional(),
+        floors: z
+            .number()
+            .int('floors debe ser un número entero')
+            .positive('floors debe ser un número positivo')
+            .optional(),
+        operating_hours: z
+            .string()
+            .max(200, 'operating_hours no puede exceder 200 caracteres')
+            .optional(),
+        image_url: z
+            .string()
+            .url('image_url debe ser una URL válida')
+            .max(500, 'image_url no puede exceder 500 caracteres')
+            .optional(),
+        contact_name: z
+            .string()
+            .max(100, 'contact_name no puede exceder 100 caracteres')
+            .optional(),
+        contact_phone: z
+            .string()
+            .max(50, 'contact_phone no puede exceder 50 caracteres')
+            .optional(),
+        contact_email: z
+            .string()
+            .email('contact_email debe ser un email válido')
+            .max(100, 'contact_email no puede exceder 100 caracteres')
+            .optional(),
         is_active: z
             .boolean()
             .optional()
@@ -132,6 +169,43 @@ export const updateSiteSchema = z.object({
         timezone: z
             .string()
             .max(100, 'timezone no puede exceder 100 caracteres')
+            .optional(),
+        building_type: z
+            .enum(['office', 'warehouse', 'factory', 'retail', 'hospital', 'school', 
+                   'datacenter', 'hotel', 'restaurant', 'residential', 'mixed', 'other'], {
+                errorMap: () => ({ message: 'building_type debe ser un tipo válido' })
+            })
+            .optional(),
+        area_m2: z
+            .number()
+            .positive('area_m2 debe ser un número positivo')
+            .optional(),
+        floors: z
+            .number()
+            .int('floors debe ser un número entero')
+            .positive('floors debe ser un número positivo')
+            .optional(),
+        operating_hours: z
+            .string()
+            .max(200, 'operating_hours no puede exceder 200 caracteres')
+            .optional(),
+        image_url: z
+            .string()
+            .url('image_url debe ser una URL válida')
+            .max(500, 'image_url no puede exceder 500 caracteres')
+            .optional(),
+        contact_name: z
+            .string()
+            .max(100, 'contact_name no puede exceder 100 caracteres')
+            .optional(),
+        contact_phone: z
+            .string()
+            .max(50, 'contact_phone no puede exceder 50 caracteres')
+            .optional(),
+        contact_email: z
+            .string()
+            .email('contact_email debe ser un email válido')
+            .max(100, 'contact_email no puede exceder 100 caracteres')
             .optional(),
         is_active: z
             .boolean()

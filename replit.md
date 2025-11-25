@@ -138,6 +138,8 @@ Sites represent physical locations (offices, branches, warehouses, stores) assoc
   - `belongsTo Country` (many-to-one) - Each site is located in one country
 - **Geolocation Fields:** latitude, longitude (decimal degrees)
 - **Address Fields:** address, street_number, city, state_province, postal_code
+- **Building Characteristics:** building_type (enum: office, warehouse, factory, retail, hospital, school, datacenter, hotel, restaurant, residential, mixed, other), area_m2 (decimal), floors (integer), operating_hours (string), image_url (URL)
+- **Contact Information:** contact_name, contact_phone, contact_email
 - **Metadata:** timezone (IANA timezone identifier), is_active (boolean), soft delete support
 
 **Key Endpoints:**
@@ -163,10 +165,23 @@ Sites represent physical locations (offices, branches, warehouses, stores) assoc
 {
   "id": "SITE-61D4Vc4Oo9R-4",
   "name": "EC.DATA Headquarters",
+  "description": "Oficina central de EC.DATA en San Francisco",
   "latitude": 37.7749,
   "longitude": -122.4194,
+  "address": "1 Platform Way",
   "city": "San Francisco",
+  "state_province": "California",
+  "postal_code": "94105",
   "timezone": "America/Los_Angeles",
+  "building_type": "office",
+  "area_m2": 2500.50,
+  "floors": 12,
+  "operating_hours": "Lun-Vie 9:00-18:00",
+  "image_url": "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab",
+  "contact_name": "Sarah Johnson",
+  "contact_phone": "+1-415-555-0100",
+  "contact_email": "sf.office@ecdata.com",
+  "is_active": true,
   "organization": {
     "id": "ORG-yOM9ewfqOeWa-4",
     "name": "EC.DATA",

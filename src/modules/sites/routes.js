@@ -85,6 +85,41 @@ const siteLogger = logger.child({ component: 'sites' });
  *                 type: string
  *                 description: Zona horaria
  *                 example: "America/Argentina/Buenos_Aires"
+ *               building_type:
+ *                 type: string
+ *                 enum: [office, warehouse, factory, retail, hospital, school, datacenter, hotel, restaurant, residential, mixed, other]
+ *                 description: Tipo de edificio
+ *                 example: "office"
+ *               area_m2:
+ *                 type: number
+ *                 description: Área en metros cuadrados
+ *                 example: 2500.50
+ *               floors:
+ *                 type: integer
+ *                 description: Número de pisos
+ *                 example: 12
+ *               operating_hours:
+ *                 type: string
+ *                 description: Horario de operación
+ *                 example: "Lun-Vie 9:00-18:00"
+ *               image_url:
+ *                 type: string
+ *                 format: uri
+ *                 description: URL de imagen del site
+ *                 example: "https://example.com/site.jpg"
+ *               contact_name:
+ *                 type: string
+ *                 description: Nombre del contacto
+ *                 example: "Juan Pérez"
+ *               contact_phone:
+ *                 type: string
+ *                 description: Teléfono del contacto
+ *                 example: "+54-11-5555-0300"
+ *               contact_email:
+ *                 type: string
+ *                 format: email
+ *                 description: Email del contacto
+ *                 example: "contacto@site.com"
  *               is_active:
  *                 type: boolean
  *                 description: Si el site está activo

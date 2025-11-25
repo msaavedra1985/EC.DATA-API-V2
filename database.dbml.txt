@@ -1,4 +1,4 @@
-// Database Schema - Generated on 2025-11-07T19:53:46.447Z
+// Database Schema - Generated on 2025-11-25T13:05:23.747Z
 // Project: EC.DATA API - Enterprise REST API
 // Use this file at https://dbdiagram.io to visualize the schema
 
@@ -196,6 +196,14 @@ Table sites {
   created_at timestamptz [not null]
   updated_at timestamptz [not null]
   deleted_at timestamptz
+  building_type enum_sites_building_type
+  area_m2 numeric
+  floors integer
+  operating_hours varchar(200)
+  image_url varchar(500)
+  contact_name varchar(100)
+  contact_phone varchar(50)
+  contact_email varchar(100)
 
   Indexes {
     (city) [name: 'sites_city']

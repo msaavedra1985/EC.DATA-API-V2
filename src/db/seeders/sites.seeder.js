@@ -88,6 +88,14 @@ export const seedSites = async () => {
                     postal_code: siteData.postal_code,
                     country_id: realCountryId,
                     timezone: siteData.timezone,
+                    building_type: siteData.building_type,
+                    area_m2: siteData.area_m2,
+                    floors: siteData.floors,
+                    operating_hours: siteData.operating_hours,
+                    image_url: siteData.image_url,
+                    contact_name: siteData.contact_name,
+                    contact_phone: siteData.contact_phone,
+                    contact_email: siteData.contact_email,
                     is_active: true
                 });
 

@@ -113,6 +113,61 @@ const Site = sequelize.define('Site', {
         allowNull: true,
         comment: 'Zona horaria (ej: America/Argentina/Buenos_Aires)'
     },
+    // Características del edificio
+    building_type: {
+        type: DataTypes.ENUM(
+            'office', 'warehouse', 'factory', 'retail', 
+            'hospital', 'school', 'datacenter', 'hotel', 
+            'restaurant', 'residential', 'mixed', 'other'
+        ),
+        allowNull: true,
+        comment: 'Tipo de edificio o instalación'
+    },
+    area_m2: {
+        type: DataTypes.DECIMAL(10, 2),
+        allowNull: true,
+        validate: {
+            min: 0
+        },
+        comment: 'Área total en metros cuadrados'
+    },
+    floors: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        validate: {
+            min: 0
+        },
+        comment: 'Número de pisos/plantas del edificio'
+    },
+    operating_hours: {
+        type: DataTypes.STRING(200),
+        allowNull: true,
+        comment: 'Horario de operación (ej: "Lun-Vie 8:00-18:00")'
+    },
+    image_url: {
+        type: DataTypes.STRING(500),
+        allowNull: true,
+        comment: 'URL de imagen/foto del site'
+    },
+    // Datos de contacto del site
+    contact_name: {
+        type: DataTypes.STRING(100),
+        allowNull: true,
+        comment: 'Nombre del contacto en el site'
+    },
+    contact_phone: {
+        type: DataTypes.STRING(50),
+        allowNull: true,
+        comment: 'Teléfono de contacto del site'
+    },
+    contact_email: {
+        type: DataTypes.STRING(100),
+        allowNull: true,
+        validate: {
+            isEmail: true
+        },
+        comment: 'Email de contacto del site'
+    },
     is_active: {
         type: DataTypes.BOOLEAN,
         allowNull: false,
