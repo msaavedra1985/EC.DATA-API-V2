@@ -123,3 +123,23 @@ Preferred communication style: Simple, everyday language.
 - **Metrics:** Prometheus for HTTP request duration, counts, active connections, and custom metrics.
 - **Logging:** Pino for general application logs; Winston for structured error persistence to PostgreSQL and rotating files; database-backed audit logging (`audit_logs` table); correlation system using `correlation_id`.
 - **Health Checks:** Basic endpoint at `/api/v1/health`.
+
+## Recent Changes (November 2025)
+
+### Security Fix
+- **Channels Module:** Added `authenticate` middleware to GET endpoints (`GET /api/v1/channels` and `GET /api/v1/channels/:id`). All API endpoints now require JWT authentication - no public endpoints exist.
+
+### API Documentation (Spanish)
+Complete Spanish documentation for frontend team integration:
+- `docs/AUTH_API_GUIDE.md` - Authentication, JWT tokens, RBAC
+- `docs/ORGANIZATIONS_API_GUIDE.md` - Organization hierarchy, user permissions
+- `docs/SITES_API_GUIDE.md` - Sites/locations management
+- `docs/DEVICES_API_GUIDE.md` - IoT device management
+- `docs/CHANNELS_API_GUIDE.md` - Communication channels (MQTT, HTTP, WebSocket)
+- `docs/FILES_API_GUIDE.md` - File upload via Azure Blob Storage with SAS URLs
+
+### Key Integration Notes
+- **All endpoints require Bearer token authentication**
+- **Files API:** No download endpoints exist - use SAS URLs (private) or direct URLs (public)
+- **Test user:** `orgadmin@acme.com` / `TestPassword123!` (organization `ORG-yOM9ewfqOeWa-4`)
+- **/auth/register:** May be disabled in production - check system configuration
