@@ -183,6 +183,8 @@ router.post('/', authenticate, requireRole(['system-admin', 'org-admin']), valid
  *     summary: Listar channels con paginación y filtros
  *     description: Obtiene una lista paginada de channels con filtros opcionales. Incluye información del dispositivo y organización.
  *     tags: [Channels]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: query
  *         name: device_id
@@ -274,7 +276,7 @@ router.post('/', authenticate, requireRole(['system-admin', 'org-admin']), valid
  *       400:
  *         description: Parámetros inválidos
  */
-router.get('/', validate(getChannelsSchema), async (req, res, next) => {
+router.get('/', authenticate, validate(getChannelsSchema), async (req, res, next) => {
     try {
         const { device_id, organization_id, channel_type, status, search, limit, offset } = req.query;
         
@@ -308,6 +310,8 @@ router.get('/', validate(getChannelsSchema), async (req, res, next) => {
  *     summary: Obtener un channel por ID público
  *     description: Obtiene los detalles de un channel específico usando su public_code. Incluye información del dispositivo y organización.
  *     tags: [Channels]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -369,7 +373,7 @@ router.get('/', validate(getChannelsSchema), async (req, res, next) => {
  *       404:
  *         description: Channel no encontrado
  */
-router.get('/:id', validate(getChannelByIdSchema), async (req, res, next) => {
+router.get('/:id', authenticate, validate(getChannelByIdSchema), async (req, res, next) => {
     try {
         const { id } = req.params;
         const channel = await channelServices.getChannelByPublicCode(id);

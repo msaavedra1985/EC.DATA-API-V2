@@ -896,6 +896,52 @@ const handleApiError = (error) => {
 
 ---
 
+## 📁 Integración con Files API
+
+Además del endpoint específico para logos (`/upload-url`), las organizaciones pueden tener archivos asociados usando la [Files API](./FILES_API_GUIDE.md).
+
+### Subir Archivos a una Organización
+
+Para documentos, imágenes adicionales o cualquier otro archivo, usa la Files API:
+
+```javascript
+// POST /api/v1/files/upload-url
+// Campos requeridos para la Files API
+const uploadRequest = {
+  organization_id: "ORG-yOM9ewfqOeWa-4",  // Organización que posee el archivo
+  original_name: "contrato-2025.pdf",
+  mime_type: "application/pdf",
+  size_bytes: 1245678,
+  category: "document",
+  owner_type: "organization",              // Opcional: tipo de propietario
+  owner_id: "ORG-yOM9ewfqOeWa-4",          // Opcional: public_code del propietario
+  is_public: false                         // Opcional: si el archivo es público
+};
+
+// Nota: owner_type + owner_id son opcionales.
+// Si se omiten, el archivo pertenece a la organización (organization_id).
+```
+
+### Listar Archivos de la Organización
+
+```
+GET /api/v1/files?owner_type=organization&owner_id=ORG-yOM9ewfqOeWa-4
+```
+
+### Estadísticas de Almacenamiento
+
+```
+GET /api/v1/files/stats/ORG-yOM9ewfqOeWa-4
+```
+
+Consulta la [Guía de Files API](./FILES_API_GUIDE.md) para más detalles sobre:
+- Flujo completo de upload con BFF
+- Categorías de archivos permitidas
+- Límites de tamaño por categoría
+- Gestión de archivos públicos y privados
+
+---
+
 ## 🚀 Quick Start
 
 ```javascript
