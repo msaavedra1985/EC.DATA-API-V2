@@ -126,6 +126,18 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes (November 2025)
 
+### Organization-Scoped Filtering System (NEW)
+- **Middleware `enforceActiveOrganization`:** Automatically filters GET list endpoints by user's active organization
+- **Location:** `src/middleware/enforceActiveOrganization.js`
+- **Applied to:** Sites, Devices, Channels, Files GET list endpoints
+- **Features:**
+  - Default: Returns only records from user's `activeOrgId` (from JWT)
+  - `organization_id` param: Only allowed if user has access to that organization
+  - `all=true` param: **Admin-only** - system-admin gets full access, org-admin gets descendant orgs via `getOrganizationScope()`
+  - **Security:** Client-supplied `organization_ids` is stripped and logged as injection attempt
+  - **Internal field:** `organization_ids` is middleware-only, not part of public API contract
+- **Repository support:** All list repositories now support `organization_ids` array with `[Op.in]` filtering
+
 ### Security Fix
 - **Channels Module:** Added `authenticate` middleware to GET endpoints (`GET /api/v1/channels` and `GET /api/v1/channels/:id`). All API endpoints now require JWT authentication - no public endpoints exist.
 

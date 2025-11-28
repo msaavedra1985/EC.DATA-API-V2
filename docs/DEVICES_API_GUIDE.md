@@ -173,11 +173,19 @@ Crea un nuevo device. Requiere rol `system-admin` u `org-admin`.
 
 Lista devices con paginación y filtros.
 
+**⚠️ Filtrado por Organización Activa**
+
+Este endpoint aplica filtrado automático basado en la organización activa del usuario:
+- Por defecto, solo retorna devices de la **organización activa del usuario** (JWT `activeOrgId`)
+- Si se envía `organization_id`, solo se permite si el usuario tiene acceso a esa organización
+- Solo usuarios con rol `system-admin` u `org-admin` pueden usar `all=true` para ver múltiples organizaciones
+
 **Query Parameters:**
 
 | Parámetro | Tipo | Default | Descripción |
 |-----------|------|---------|-------------|
-| `organization_id` | string | - | Filtrar por organización (public_code) |
+| `organization_id` | string | - | Filtrar por organización específica (public_code). Debe tener acceso. |
+| `all` | boolean | false | **Solo admins**: `true` para ver devices de todas las organizaciones permitidas |
 | `site_id` | string | - | Filtrar por site (public_code) |
 | `device_type` | string | - | Filtrar por tipo de dispositivo |
 | `status` | string | - | Filtrar por estado |
@@ -186,9 +194,19 @@ Lista devices con paginación y filtros.
 | `limit` | number | 20 | Máximo de resultados (máx 100) |
 | `offset` | number | 0 | Offset para paginación |
 
+**Comportamiento de `all=true`:**
+- `system-admin`: Acceso total a todas las organizaciones
+- `org-admin`: Acceso a su organización y todas sus sub-organizaciones descendientes
+- Otros roles: Error 403 Forbidden
+
 **Ejemplo de Request:**
 ```
 GET /api/v1/devices?organization_id=ORG-yOM9ewfqOeWa-4&device_type=sensor&status=active&limit=10
+```
+
+**Ejemplo para admin (ver todos):**
+```
+GET /api/v1/devices?all=true&limit=50
 ```
 
 **Response (200 OK):**

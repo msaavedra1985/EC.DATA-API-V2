@@ -179,21 +179,39 @@ Crea un nuevo channel para un device. Requiere rol `system-admin` u `org-admin`.
 
 Lista channels con paginación y filtros.
 
+**⚠️ Filtrado por Organización Activa**
+
+Este endpoint aplica filtrado automático basado en la organización activa del usuario:
+- Por defecto, solo retorna channels de la **organización activa del usuario** (JWT `activeOrgId`)
+- Si se envía `organization_id`, solo se permite si el usuario tiene acceso a esa organización
+- Solo usuarios con rol `system-admin` u `org-admin` pueden usar `all=true` para ver múltiples organizaciones
+
 **Query Parameters:**
 
 | Parámetro | Tipo | Default | Descripción |
 |-----------|------|---------|-------------|
 | `device_id` | string | - | Filtrar por device (public_code) |
-| `organization_id` | string | - | Filtrar por organización (public_code) |
+| `organization_id` | string | - | Filtrar por organización específica (public_code). Debe tener acceso. |
+| `all` | boolean | false | **Solo admins**: `true` para ver channels de todas las organizaciones permitidas |
 | `channel_type` | string | - | Filtrar por tipo de canal |
 | `status` | string | - | Filtrar por estado |
 | `search` | string | - | Buscar en nombre o endpoint_url |
 | `limit` | number | 20 | Máximo de resultados (máx 100) |
 | `offset` | number | 0 | Offset para paginación |
 
+**Comportamiento de `all=true`:**
+- `system-admin`: Acceso total a todas las organizaciones
+- `org-admin`: Acceso a su organización y todas sus sub-organizaciones descendientes
+- Otros roles: Error 403 Forbidden
+
 **Ejemplo de Request:**
 ```
 GET /api/v1/channels?device_id=DEV-621EAvIr1lqB-5&channel_type=mqtt&status=active&limit=10
+```
+
+**Ejemplo para admin (ver todos):**
+```
+GET /api/v1/channels?all=true&limit=50
 ```
 
 **Response (200 OK):**

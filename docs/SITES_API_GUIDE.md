@@ -168,20 +168,38 @@ Crea un nuevo site. Requiere rol `system-admin` u `org-admin`.
 
 Lista sites con paginación y filtros.
 
+**⚠️ Filtrado por Organización Activa**
+
+Este endpoint aplica filtrado automático basado en la organización activa del usuario:
+- Por defecto, solo retorna sites de la **organización activa del usuario** (JWT `activeOrgId`)
+- Si se envía `organization_id`, solo se permite si el usuario tiene acceso a esa organización
+- Solo usuarios con rol `system-admin` u `org-admin` pueden usar `all=true` para ver múltiples organizaciones
+
 **Query Parameters:**
 
 | Parámetro | Tipo | Default | Descripción |
 |-----------|------|---------|-------------|
-| `organization_id` | string | - | Filtrar por organización (public_code) |
+| `organization_id` | string | - | Filtrar por organización específica (public_code). Debe tener acceso. |
+| `all` | boolean | false | **Solo admins**: `true` para ver sites de todas las organizaciones permitidas |
 | `country_id` | number | - | Filtrar por país |
 | `is_active` | boolean | true | Filtrar por estado activo |
 | `city` | string | - | Filtrar por ciudad |
 | `limit` | number | 20 | Máximo de resultados (máx 100) |
 | `offset` | number | 0 | Offset para paginación |
 
+**Comportamiento de `all=true`:**
+- `system-admin`: Acceso total a todas las organizaciones
+- `org-admin`: Acceso a su organización y todas sus sub-organizaciones descendientes
+- Otros roles: Error 403 Forbidden
+
 **Ejemplo de Request:**
 ```
 GET /api/v1/sites?organization_id=ORG-yOM9ewfqOeWa-4&is_active=true&limit=10
+```
+
+**Ejemplo para admin (ver todos):**
+```
+GET /api/v1/sites?all=true&limit=50
 ```
 
 **Response (200 OK):**

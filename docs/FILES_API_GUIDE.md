@@ -342,10 +342,18 @@ Confirma que el upload a Azure fue exitoso.
 
 Lista archivos con filtros y paginación.
 
+**⚠️ Filtrado por Organización Activa**
+
+Este endpoint aplica filtrado automático basado en la organización activa del usuario:
+- Por defecto, solo retorna archivos de la **organización activa del usuario** (JWT `activeOrgId`)
+- Si se envía `organization_id`, solo se permite si el usuario tiene acceso a esa organización
+- Solo usuarios con rol `system-admin` u `org-admin` pueden usar `all=true` para ver múltiples organizaciones
+
 **Query Parameters:**
 | Parámetro | Tipo | Default | Descripción |
 |-----------|------|---------|-------------|
-| `organization_id` | string | - | Filtrar por organización (public_code) |
+| `organization_id` | string | - | Filtrar por organización específica (public_code). Debe tener acceso. |
+| `all` | boolean | false | **Solo admins**: `true` para ver archivos de todas las organizaciones permitidas |
 | `category` | string | - | Filtrar por categoría |
 | `status` | string | - | Filtrar por estado |
 | `owner_type` | string | - | Filtrar por tipo de propietario |
@@ -355,9 +363,19 @@ Lista archivos con filtros y paginación.
 | `limit` | number | 20 | Máximo de resultados (máx 100) |
 | `offset` | number | 0 | Offset para paginación |
 
+**Comportamiento de `all=true`:**
+- `system-admin`: Acceso total a todas las organizaciones
+- `org-admin`: Acceso a su organización y todas sus sub-organizaciones descendientes
+- Otros roles: Error 403 Forbidden
+
 **Ejemplo - Listar archivos de un sitio:**
 ```
 GET /api/v1/files?owner_type=site&owner_id=SITE-7K9D2-X&limit=10
+```
+
+**Ejemplo para admin (ver todos):**
+```
+GET /api/v1/files?all=true&limit=50
 ```
 
 **Response:**
