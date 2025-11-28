@@ -4,6 +4,7 @@ import { Router } from 'express';
 import * as fileServices from './services.js';
 import { authenticate, requireRole } from '../../middleware/auth.js';
 import { validate } from '../../middleware/validate.js';
+import { enforceActiveOrganization } from '../../middleware/enforceActiveOrganization.js';
 import {
     requestUploadUrlSchema,
     confirmUploadSchema,
@@ -506,8 +507,10 @@ router.post('/:id/link', authenticate, validate(linkFileSchema), async (req, res
  *       401:
  *         description: No autenticado
  */
-router.get('/', authenticate, validate(listFilesSchema), async (req, res, next) => {
+router.get('/', authenticate, enforceActiveOrganization, validate(listFilesSchema), async (req, res, next) => {
     try {
+        // El middleware enforceActiveOrganization ya configuró req.query.organization_id
+        // con el UUID correcto (de la org activa o la especificada)
         const result = await fileServices.listFiles(req.query);
 
         res.json({
@@ -515,7 +518,8 @@ router.get('/', authenticate, validate(listFilesSchema), async (req, res, next) 
             data: result,
             meta: {
                 timestamp: new Date().toISOString(),
-                locale: req.locale
+                locale: req.locale,
+                organizationFilter: req.organizationFilter
             }
         });
     } catch (error) {

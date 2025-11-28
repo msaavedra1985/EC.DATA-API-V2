@@ -4,6 +4,7 @@
 import express from 'express';
 import { authenticate, requireRole } from '../../middleware/auth.js';
 import { validate } from '../../middleware/validate.js';
+import { enforceActiveOrganization } from '../../middleware/enforceActiveOrganization.js';
 import * as deviceServices from './services.js';
 import {
     createDeviceSchema,
@@ -254,8 +255,10 @@ router.post('/', authenticate, requireRole(['system-admin', 'org-admin']), valid
  *       401:
  *         description: No autenticado
  */
-router.get('/', authenticate, validate(getDevicesSchema), async (req, res, next) => {
+router.get('/', authenticate, enforceActiveOrganization, validate(getDevicesSchema), async (req, res, next) => {
     try {
+        // El middleware enforceActiveOrganization ya configuró req.query.organization_id
+        // con el UUID correcto (de la org activa o la especificada)
         const result = await deviceServices.listDevices(req.query);
         
         res.json({
@@ -263,7 +266,8 @@ router.get('/', authenticate, validate(getDevicesSchema), async (req, res, next)
             data: result,
             meta: {
                 timestamp: new Date().toISOString(),
-                locale: req.locale
+                locale: req.locale,
+                organizationFilter: req.organizationFilter
             }
         });
     } catch (error) {

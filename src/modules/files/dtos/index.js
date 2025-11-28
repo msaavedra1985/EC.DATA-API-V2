@@ -186,12 +186,20 @@ export const getFileByIdSchema = z.object({
 
 /**
  * Schema para listar archivos con filtros
+ * 
+ * Comportamiento del filtro por organización:
+ * - Sin filtro: Usa la organización activa del usuario (del JWT)
+ * - Con organization_id: Filtra por esa organización (si tiene acceso)
+ * - Con all=true: Solo admins, muestra todos los archivos accesibles
  */
 export const listFilesSchema = z.object({
     query: z.object({
         organization_id: z.string()
             .optional()
             .describe('Filtrar por organización'),
+        all: z.string()
+            .optional()
+            .describe('Solo admins: si es "true", muestra todos los archivos sin filtrar por organización'),
         category: z.enum(FILE_CATEGORIES)
             .optional()
             .describe('Filtrar por categoría'),

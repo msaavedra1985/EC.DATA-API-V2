@@ -4,6 +4,7 @@
 import express from 'express';
 import { authenticate, requireRole } from '../../middleware/auth.js';
 import { validate } from '../../middleware/validate.js';
+import { enforceActiveOrganization } from '../../middleware/enforceActiveOrganization.js';
 import * as channelServices from './services.js';
 import {
     createChannelSchema,
@@ -276,8 +277,10 @@ router.post('/', authenticate, requireRole(['system-admin', 'org-admin']), valid
  *       400:
  *         description: Parámetros inválidos
  */
-router.get('/', authenticate, validate(getChannelsSchema), async (req, res, next) => {
+router.get('/', authenticate, enforceActiveOrganization, validate(getChannelsSchema), async (req, res, next) => {
     try {
+        // El middleware enforceActiveOrganization ya configuró req.query.organization_id
+        // con el UUID correcto (de la org activa o la especificada)
         const { device_id, organization_id, channel_type, status, search, limit, offset } = req.query;
         
         const result = await channelServices.listChannels({
@@ -295,7 +298,8 @@ router.get('/', authenticate, validate(getChannelsSchema), async (req, res, next
             data: result,
             meta: {
                 timestamp: new Date().toISOString(),
-                locale: req.locale
+                locale: req.locale,
+                organizationFilter: req.organizationFilter
             }
         });
     } catch (error) {

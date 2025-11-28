@@ -165,6 +165,11 @@ export const updateChannelSchema = z.object({
 /**
  * Schema para obtener channels con filtros
  * GET /channels
+ * 
+ * Comportamiento del filtro por organización:
+ * - Sin filtro: Usa la organización activa del usuario (del JWT)
+ * - Con organization_id: Filtra por esa organización (si tiene acceso)
+ * - Con all=true: Solo admins, muestra todos los channels accesibles
  */
 export const getChannelsSchema = z.object({
     query: z.object({
@@ -174,6 +179,10 @@ export const getChannelsSchema = z.object({
         organization_id: z
             .string()
             .optional(),
+        all: z
+            .string()
+            .optional()
+            .describe('Solo admins: si es "true", muestra todos los channels sin filtrar por organización'),
         channel_type: z
             .enum(['mqtt', 'http', 'websocket', 'coap', 'modbus', 'opcua', 'bacnet', 'lorawan', 'sigfox', 'other'])
             .optional(),

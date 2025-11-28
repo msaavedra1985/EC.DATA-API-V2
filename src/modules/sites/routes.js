@@ -4,6 +4,7 @@
 import express from 'express';
 import { authenticate, requireRole } from '../../middleware/auth.js';
 import { validate } from '../../middleware/validate.js';
+import { enforceActiveOrganization } from '../../middleware/enforceActiveOrganization.js';
 import * as siteServices from './services.js';
 import {
     createSiteSchema,
@@ -215,17 +216,30 @@ router.post('/', authenticate, requireRole(['system-admin', 'org-admin']), valid
  * /api/v1/sites:
  *   get:
  *     summary: Listar sites con paginación y filtros
- *     description: Obtiene lista de sites con filtros opcionales
+ *     description: |
+ *       Obtiene lista de sites filtrados por organización.
+ *       
+ *       **Comportamiento del filtro por organización:**
+ *       - Sin filtro: Usa automáticamente la organización activa del usuario (del JWT)
+ *       - Con `organization_id`: Filtra por esa organización específica (si tiene acceso)
+ *       - Con `all=true`: Solo admins (system-admin, org-admin), muestra todos los sites accesibles
  *     tags: [Sites]
  *     security:
  *       - bearerAuth: []
  *     parameters:
  *       - in: query
  *         name: organization_id
- *         description: Filtrar por organización (public_code)
+ *         description: Filtrar por organización específica (public_code). Si no se especifica, usa la organización activa del usuario.
  *         schema:
  *           type: string
  *           example: "ORG-yOM9ewfqOeWa-4"
+ *       - in: query
+ *         name: all
+ *         description: Solo admins - Si es "true", muestra todos los sites sin filtrar por organización
+ *         schema:
+ *           type: string
+ *           enum: ["true", "false"]
+ *           example: "true"
  *       - in: query
  *         name: country_id
  *         description: Filtrar por país
@@ -289,8 +303,10 @@ router.post('/', authenticate, requireRole(['system-admin', 'org-admin']), valid
  *       401:
  *         description: No autenticado
  */
-router.get('/', authenticate, validate(listSitesSchema), async (req, res, next) => {
+router.get('/', authenticate, enforceActiveOrganization, validate(listSitesSchema), async (req, res, next) => {
     try {
+        // El middleware enforceActiveOrganization ya configuró req.query.organization_id
+        // con el UUID correcto (de la org activa o la especificada)
         const result = await siteServices.listSites(req.query);
         
         res.json({
@@ -298,7 +314,8 @@ router.get('/', authenticate, validate(listSitesSchema), async (req, res, next) 
             data: result,
             meta: {
                 timestamp: new Date().toISOString(),
-                locale: req.locale
+                locale: req.locale,
+                organizationFilter: req.organizationFilter
             }
         });
     } catch (error) {

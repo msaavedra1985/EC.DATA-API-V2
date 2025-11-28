@@ -174,12 +174,21 @@ export const updateDeviceSchema = z.object({
 /**
  * Schema para obtener devices con filtros
  * GET /devices
+ * 
+ * Comportamiento del filtro por organización:
+ * - Sin filtro: Usa la organización activa del usuario (del JWT)
+ * - Con organization_id: Filtra por esa organización (si tiene acceso)
+ * - Con all=true: Solo admins, muestra todos los devices accesibles
  */
 export const getDevicesSchema = z.object({
     query: z.object({
         organization_id: z
             .string()
             .optional(),
+        all: z
+            .string()
+            .optional()
+            .describe('Solo admins: si es "true", muestra todos los devices sin filtrar por organización'),
         site_id: z
             .string()
             .optional(),

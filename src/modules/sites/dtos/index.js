@@ -219,12 +219,21 @@ export const updateSiteSchema = z.object({
 /**
  * Schema para listar sites con filtros
  * GET /sites
+ * 
+ * Comportamiento del filtro por organización:
+ * - Sin filtro: Usa la organización activa del usuario (del JWT)
+ * - Con organization_id: Filtra por esa organización (si tiene acceso)
+ * - Con all=true: Solo admins, muestra todos los sites accesibles
  */
 export const listSitesSchema = z.object({
     query: z.object({
         organization_id: z
             .string()
             .optional(),
+        all: z
+            .string()
+            .optional()
+            .describe('Solo admins: si es "true", muestra todos los sites sin filtrar por organización'),
         country_id: z
             .string()
             .transform(val => parseInt(val, 10))
