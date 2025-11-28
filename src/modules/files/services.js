@@ -340,11 +340,19 @@ export const getFileByPublicCode = async (publicCode) => {
  * @returns {Promise<Object>} - Lista paginada de archivos
  */
 export const listFiles = async (filters) => {
-    // Si viene organization_id como public_code, convertir a UUID
-    if (filters.organization_id) {
+    // Preparar filtros de organización
+    let organizationUuid = null;
+    let organizationUuids = null;
+
+    // Prioridad: organization_ids (array del middleware) > organization_id (singular)
+    if (filters.organization_ids && Array.isArray(filters.organization_ids) && filters.organization_ids.length > 0) {
+        // Array de UUIDs inyectado por el middleware (ya son UUIDs validados)
+        organizationUuids = filters.organization_ids;
+    } else if (filters.organization_id) {
+        // Si viene organization_id como public_code, convertir a UUID
         const org = await orgRepository.findOrganizationByPublicCodeInternal(filters.organization_id);
         if (org) {
-            filters.organization_id = org.id;
+            organizationUuid = org.id;
         } else {
             // Si no existe la org, retornar vacío
             return toPublicFileListDto({
@@ -356,7 +364,14 @@ export const listFiles = async (filters) => {
         }
     }
 
-    const result = await repository.listFiles(filters);
+    // Preparar filtros para el repository
+    const repoFilters = {
+        ...filters,
+        organization_id: organizationUuid,
+        organization_ids: organizationUuids
+    };
+
+    const result = await repository.listFiles(repoFilters);
     return toPublicFileListDto(result);
 };
 

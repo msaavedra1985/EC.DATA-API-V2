@@ -107,23 +107,34 @@ export const getSiteByPublicCode = async (publicCode) => {
  * @returns {Promise<Object>} - Lista de sites paginada
  */
 export const listSites = async (filters) => {
-    // Convertir organization_id de public_code a UUID si es necesario
-    let organizationUuid = filters.organization_id;
-    if (filters.organization_id && !filters.organization_id.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
-        const org = await organizationRepository.findOrganizationByPublicCodeInternal(filters.organization_id);
-        if (!org) {
-            const error = new Error('Organización no encontrada');
-            error.status = 404;
-            error.code = 'ORGANIZATION_NOT_FOUND';
-            throw error;
+    // Preparar filtros de organización
+    let organizationUuid = null;
+    let organizationUuids = null;
+
+    // Prioridad: organization_ids (array del middleware) > organization_id (singular)
+    if (filters.organization_ids && Array.isArray(filters.organization_ids) && filters.organization_ids.length > 0) {
+        // Array de UUIDs inyectado por el middleware (ya son UUIDs validados)
+        organizationUuids = filters.organization_ids;
+    } else if (filters.organization_id) {
+        // Convertir organization_id de public_code a UUID si es necesario
+        organizationUuid = filters.organization_id;
+        if (!filters.organization_id.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+            const org = await organizationRepository.findOrganizationByPublicCodeInternal(filters.organization_id);
+            if (!org) {
+                const error = new Error('Organización no encontrada');
+                error.status = 404;
+                error.code = 'ORGANIZATION_NOT_FOUND';
+                throw error;
+            }
+            organizationUuid = org.id;
         }
-        organizationUuid = org.id;
     }
     
     // Generar cache key basada en filtros
     const cacheKey = JSON.stringify({
         ...filters,
-        organization_id: organizationUuid
+        organization_id: organizationUuid,
+        organization_ids: organizationUuids
     });
     
     // Intentar obtener del cache
@@ -132,11 +143,15 @@ export const listSites = async (filters) => {
         return cached;
     }
     
-    // Obtener de BD
-    const result = await siteRepository.listSites({
+    // Preparar filtros para el repository
+    const repoFilters = {
         ...filters,
-        organization_id: organizationUuid
-    });
+        organization_id: organizationUuid,
+        organization_ids: organizationUuids
+    };
+
+    // Obtener de BD
+    const result = await siteRepository.listSites(repoFilters);
     
     // Cachear resultado
     await cacheSiteList(cacheKey, result);

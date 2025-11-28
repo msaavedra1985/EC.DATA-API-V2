@@ -2,7 +2,7 @@
 // Middleware para forzar filtrado por organización activa
 // Implementa aislamiento de datos por tenant según el JWT del usuario
 
-import { canAccessOrganization } from '../modules/organizations/services.js';
+import { canAccessOrganization, getOrganizationScope } from '../modules/organizations/services.js';
 import * as orgRepository from '../modules/organizations/repository.js';
 import { errorResponse } from '../utils/response.js';
 import logger from '../utils/logger.js';
@@ -41,6 +41,21 @@ export const enforceActiveOrganization = async (req, res, next) => {
             });
         }
 
+        // SEGURIDAD CRÍTICA: Eliminar organization_ids del query si viene del cliente
+        // Este parámetro solo debe ser inyectado por el middleware, nunca aceptado del cliente
+        // Previene bypass de seguridad multi-tenant
+        if (req.query.organization_ids) {
+            orgLogger.warn({
+                userId: user.userId,
+                role: user.role,
+                path: req.path,
+                attemptedIds: Array.isArray(req.query.organization_ids) 
+                    ? req.query.organization_ids.length 
+                    : 'non-array'
+            }, 'Client attempted to inject organization_ids - rejected');
+            delete req.query.organization_ids;
+        }
+
         const requestedOrgId = req.query.organization_id;
         const requestAll = req.query.all === 'true';
 
@@ -61,36 +76,71 @@ export const enforceActiveOrganization = async (req, res, next) => {
                 });
             }
 
-            // Para org-admin, debe poder ver solo sus organizaciones descendientes
-            // Para system-admin, puede ver absolutamente todo
-            if (user.role === 'org-admin' && !user.canAccessAllOrgs) {
-                // org-admin sin acceso total: no filtramos pero el servicio 
-                // debería considerar el scope del usuario
-                req.organizationFilter = {
-                    enforced: false,
-                    organizationId: null,
-                    showAll: true,
-                    limitToScope: true
-                };
-            } else {
-                // system-admin: acceso total sin filtro
+            // Obtener el scope organizacional del usuario
+            const scope = await getOrganizationScope(user.userId, user.role);
+
+            // Para system-admin con canAccessAll=true: acceso total sin filtro
+            if (scope.canAccessAll) {
                 req.organizationFilter = {
                     enforced: false,
                     organizationId: null,
                     showAll: true,
                     limitToScope: false
                 };
+
+                // Eliminar filtros del query
+                delete req.query.organization_id;
+                delete req.query.organization_ids;
+                delete req.query.all;
+
+                orgLogger.debug({
+                    userId: user.userId,
+                    role: user.role,
+                    showAll: true,
+                    canAccessAll: true
+                }, 'System admin requested all records without restrictions');
+
+                return next();
             }
 
-            // Eliminar organization_id del query si viene junto con all=true
+            // Para org-admin u otros con scope limitado: materializar IDs permitidos
+            const allowedOrgIds = scope.organizationIds || [];
+
+            if (allowedOrgIds.length === 0) {
+                orgLogger.warn({
+                    userId: user.userId,
+                    role: user.role,
+                    path: req.path
+                }, 'Admin with all=true has no accessible organizations');
+
+                return errorResponse(res, {
+                    message: 'auth.organization.no_accessible',
+                    status: 403,
+                    code: 'NO_ACCESSIBLE_ORGANIZATIONS'
+                });
+            }
+
+            // Materializar los IDs permitidos en el query para que los servicios filtren
+            req.query.organization_ids = allowedOrgIds;
+            req.organizationFilter = {
+                enforced: true,
+                organizationId: null,
+                organizationIds: allowedOrgIds,
+                showAll: true,
+                limitToScope: true
+            };
+
+            // Limpiar parámetros originales
             delete req.query.organization_id;
             delete req.query.all;
 
             orgLogger.debug({
                 userId: user.userId,
                 role: user.role,
-                showAll: true
-            }, 'Admin requested all records');
+                showAll: true,
+                limitToScope: true,
+                allowedOrgsCount: allowedOrgIds.length
+            }, 'Scoped admin requested all records within permitted organizations');
 
             return next();
         }

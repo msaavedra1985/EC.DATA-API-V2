@@ -165,6 +165,7 @@ export const deleteChannel = async (id) => {
 export const listChannels = async ({ 
     device_id, 
     organization_id,
+    organization_ids,  // Array de UUIDs para filtrar múltiples organizaciones
     channel_type,
     status,
     search,
@@ -177,7 +178,10 @@ export const listChannels = async ({
         where.device_id = device_id;
     }
     
-    if (organization_id !== undefined) {
+    // Soporte para filtro de múltiples organizaciones (usado por all=true con scope limitado)
+    if (organization_ids !== undefined && Array.isArray(organization_ids) && organization_ids.length > 0) {
+        where.organization_id = { [Op.in]: organization_ids };
+    } else if (organization_id !== undefined && organization_id !== null) {
         where.organization_id = organization_id;
     }
     

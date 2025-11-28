@@ -233,6 +233,7 @@ export const softDelete = async (id) => {
  * 
  * @param {Object} filters - Filtros de búsqueda
  * @param {string} [filters.organization_id] - UUID de organización
+ * @param {string[]} [filters.organization_ids] - Array de UUIDs de organizaciones
  * @param {string} [filters.category] - Categoría del archivo
  * @param {string} [filters.status] - Estado del archivo
  * @param {string} [filters.owner_type] - Tipo de propietario
@@ -246,6 +247,7 @@ export const softDelete = async (id) => {
 export const listFiles = async (filters = {}) => {
     const {
         organization_id,
+        organization_ids,  // Array de UUIDs para filtrar múltiples organizaciones
         category,
         status,
         owner_type,
@@ -258,8 +260,10 @@ export const listFiles = async (filters = {}) => {
 
     const where = {};
 
-    // Filtro por organización
-    if (organization_id) {
+    // Soporte para filtro de múltiples organizaciones (usado por all=true con scope limitado)
+    if (organization_ids !== undefined && Array.isArray(organization_ids) && organization_ids.length > 0) {
+        where.organization_id = { [Op.in]: organization_ids };
+    } else if (organization_id) {
         where.organization_id = organization_id;
     }
 

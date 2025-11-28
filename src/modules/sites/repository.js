@@ -1,6 +1,7 @@
 // modules/sites/repository.js
 // Capa de acceso a datos para Sites
 
+import { Op } from 'sequelize';
 import Site from './models/Site.js';
 import Organization from '../organizations/models/Organization.js';
 import Country from '../countries/models/Country.js';
@@ -162,7 +163,8 @@ export const deleteSite = async (id) => {
  * @returns {Promise<Object>} - { sites: [...], total, page, limit }
  */
 export const listSites = async ({ 
-    organization_id, 
+    organization_id,
+    organization_ids,  // Array de UUIDs para filtrar múltiples organizaciones
     country_id,
     is_active,
     city,
@@ -171,7 +173,10 @@ export const listSites = async ({
 }) => {
     const where = {};
     
-    if (organization_id !== undefined) {
+    // Soporte para filtro de múltiples organizaciones (usado por all=true con scope limitado)
+    if (organization_ids !== undefined && Array.isArray(organization_ids) && organization_ids.length > 0) {
+        where.organization_id = { [Op.in]: organization_ids };
+    } else if (organization_id !== undefined && organization_id !== null) {
         where.organization_id = organization_id;
     }
     

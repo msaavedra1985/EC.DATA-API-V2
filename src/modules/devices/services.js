@@ -126,17 +126,27 @@ export const getDeviceByPublicCode = async (publicCode) => {
  * @returns {Promise<Object>} - Lista de devices paginada
  */
 export const listDevices = async (filters) => {
-    // Convertir organization_id de public_code a UUID si es necesario
-    let organizationUuid = filters.organization_id;
-    if (filters.organization_id && !filters.organization_id.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
-        const org = await organizationRepository.findOrganizationByPublicCodeInternal(filters.organization_id);
-        if (!org) {
-            const error = new Error('Organización no encontrada');
-            error.status = 404;
-            error.code = 'ORGANIZATION_NOT_FOUND';
-            throw error;
+    // Preparar filtros de organización
+    let organizationUuid = null;
+    let organizationUuids = null;
+
+    // Prioridad: organization_ids (array del middleware) > organization_id (singular)
+    if (filters.organization_ids && Array.isArray(filters.organization_ids) && filters.organization_ids.length > 0) {
+        // Array de UUIDs inyectado por el middleware (ya son UUIDs validados)
+        organizationUuids = filters.organization_ids;
+    } else if (filters.organization_id) {
+        // Convertir organization_id de public_code a UUID si es necesario
+        organizationUuid = filters.organization_id;
+        if (!filters.organization_id.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+            const org = await organizationRepository.findOrganizationByPublicCodeInternal(filters.organization_id);
+            if (!org) {
+                const error = new Error('Organización no encontrada');
+                error.status = 404;
+                error.code = 'ORGANIZATION_NOT_FOUND';
+                throw error;
+            }
+            organizationUuid = org.id;
         }
-        organizationUuid = org.id;
     }
     
     // Convertir site_id de public_code a UUID si es necesario
@@ -156,6 +166,7 @@ export const listDevices = async (filters) => {
     const cacheKey = JSON.stringify({
         ...filters,
         organization_id: organizationUuid,
+        organization_ids: organizationUuids,
         site_id: siteUuid
     });
     
@@ -165,12 +176,16 @@ export const listDevices = async (filters) => {
         return cached;
     }
     
-    // Obtener de BD
-    const result = await deviceRepository.listDevices({
+    // Preparar filtros para el repository
+    const repoFilters = {
         ...filters,
         organization_id: organizationUuid,
+        organization_ids: organizationUuids,
         site_id: siteUuid
-    });
+    };
+
+    // Obtener de BD
+    const result = await deviceRepository.listDevices(repoFilters);
     
     // Cachear resultado
     await cacheDeviceList(cacheKey, result);

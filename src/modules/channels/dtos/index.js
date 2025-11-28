@@ -169,7 +169,8 @@ export const updateChannelSchema = z.object({
  * Comportamiento del filtro por organización:
  * - Sin filtro: Usa la organización activa del usuario (del JWT)
  * - Con organization_id: Filtra por esa organización (si tiene acceso)
- * - Con all=true: Solo admins, muestra todos los channels accesibles
+ * - Con all=true: Solo admins, muestra todos los channels accesibles (org-admins limitados a su scope)
+ * - organization_ids: Array interno usado por el middleware (no expuesto a clientes)
  */
 export const getChannelsSchema = z.object({
     query: z.object({
@@ -179,6 +180,10 @@ export const getChannelsSchema = z.object({
         organization_id: z
             .string()
             .optional(),
+        organization_ids: z
+            .array(z.string())
+            .optional()
+            .describe('INTERNO: Array de UUIDs de organizaciones (inyectado por middleware)'),
         all: z
             .string()
             .optional()
