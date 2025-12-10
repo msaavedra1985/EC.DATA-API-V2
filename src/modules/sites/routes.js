@@ -5,7 +5,9 @@ import express from 'express';
 import { authenticate, requireRole } from '../../middleware/auth.js';
 import { validate } from '../../middleware/validate.js';
 import { enforceActiveOrganization } from '../../middleware/enforceActiveOrganization.js';
+import { validateResourceOwnership } from '../../middleware/validateResourceOwnership.js';
 import * as siteServices from './services.js';
+import * as siteRepository from './repository.js';
 import {
     createSiteSchema,
     updateSiteSchema,
@@ -14,6 +16,16 @@ import {
     deleteSiteSchema
 } from './dtos/index.js';
 import logger from '../../utils/logger.js';
+
+// Middleware de validación de ownership para Sites
+// Verifica que el recurso pertenece a una organización accesible por el usuario
+const validateSiteOwnership = validateResourceOwnership({
+    findById: siteRepository.findSiteById,
+    findByPublicCode: siteRepository.findSiteByPublicCodeInternal,
+    resourceName: 'site',
+    paramName: 'id',
+    checkSoftDelete: true
+});
 
 const router = express.Router();
 const siteLogger = logger.child({ component: 'sites' });
@@ -358,8 +370,10 @@ router.get('/', authenticate, enforceActiveOrganization, validate(listSitesSchem
  *       401:
  *         description: No autenticado
  */
-router.get('/:id', authenticate, validate(getSiteSchema), async (req, res, next) => {
+router.get('/:id', authenticate, validateSiteOwnership, validate(getSiteSchema), async (req, res, next) => {
     try {
+        // El middleware validateSiteOwnership ya validó el acceso
+        // Usamos el servicio para obtener el DTO público completo con relaciones
         const site = await siteServices.getSiteByPublicCode(req.params.id);
         
         res.json({
@@ -434,8 +448,9 @@ router.get('/:id', authenticate, validate(getSiteSchema), async (req, res, next)
  *       404:
  *         description: Site no encontrado
  */
-router.put('/:id', authenticate, requireRole(['system-admin', 'org-admin']), validate(updateSiteSchema), async (req, res, next) => {
+router.put('/:id', authenticate, requireRole(['system-admin', 'org-admin']), validateSiteOwnership, validate(updateSiteSchema), async (req, res, next) => {
     try {
+        // El middleware validateSiteOwnership ya validó el acceso
         const userId = req.user.userId;
         const ipAddress = req.ip || req.connection.remoteAddress;
         const userAgent = req.headers['user-agent'];
@@ -496,8 +511,9 @@ router.put('/:id', authenticate, requireRole(['system-admin', 'org-admin']), val
  *       404:
  *         description: Site no encontrado
  */
-router.delete('/:id', authenticate, requireRole(['system-admin']), validate(deleteSiteSchema), async (req, res, next) => {
+router.delete('/:id', authenticate, requireRole(['system-admin']), validateSiteOwnership, validate(deleteSiteSchema), async (req, res, next) => {
     try {
+        // El middleware validateSiteOwnership ya validó el acceso y existencia
         const userId = req.user.userId;
         const ipAddress = req.ip || req.connection.remoteAddress;
         const userAgent = req.headers['user-agent'];

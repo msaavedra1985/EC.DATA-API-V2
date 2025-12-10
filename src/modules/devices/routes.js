@@ -5,7 +5,9 @@ import express from 'express';
 import { authenticate, requireRole } from '../../middleware/auth.js';
 import { validate } from '../../middleware/validate.js';
 import { enforceActiveOrganization } from '../../middleware/enforceActiveOrganization.js';
+import { validateResourceOwnership } from '../../middleware/validateResourceOwnership.js';
 import * as deviceServices from './services.js';
+import * as deviceRepository from './repository.js';
 import {
     createDeviceSchema,
     updateDeviceSchema,
@@ -14,6 +16,16 @@ import {
     deleteDeviceSchema
 } from './dtos/index.js';
 import logger from '../../utils/logger.js';
+
+// Middleware de validación de ownership para Devices
+// Verifica que el recurso pertenece a una organización accesible por el usuario
+const validateDeviceOwnership = validateResourceOwnership({
+    findById: deviceRepository.findDeviceById,
+    findByPublicCode: deviceRepository.findDeviceByPublicCodeInternal,
+    resourceName: 'device',
+    paramName: 'id',
+    checkSoftDelete: true
+});
 
 const router = express.Router();
 const deviceLogger = logger.child({ component: 'devices' });
@@ -310,8 +322,9 @@ router.get('/', authenticate, enforceActiveOrganization, validate(getDevicesSche
  *       401:
  *         description: No autenticado
  */
-router.get('/:id', authenticate, validate(getDeviceByIdSchema), async (req, res, next) => {
+router.get('/:id', authenticate, validateDeviceOwnership, validate(getDeviceByIdSchema), async (req, res, next) => {
     try {
+        // El middleware validateDeviceOwnership ya validó el acceso
         const device = await deviceServices.getDeviceByPublicCode(req.params.id);
         
         res.json({
@@ -391,8 +404,9 @@ router.get('/:id', authenticate, validate(getDeviceByIdSchema), async (req, res,
  *       404:
  *         description: Device no encontrado
  */
-router.put('/:id', authenticate, requireRole(['system-admin', 'org-admin']), validate(updateDeviceSchema), async (req, res, next) => {
+router.put('/:id', authenticate, requireRole(['system-admin', 'org-admin']), validateDeviceOwnership, validate(updateDeviceSchema), async (req, res, next) => {
     try {
+        // El middleware validateDeviceOwnership ya validó el acceso
         const userId = req.user.userId;
         const ipAddress = req.ip || req.connection.remoteAddress;
         const userAgent = req.headers['user-agent'];
@@ -483,8 +497,9 @@ router.put('/:id', authenticate, requireRole(['system-admin', 'org-admin']), val
  *       404:
  *         description: Device no encontrado
  */
-router.delete('/:id', authenticate, requireRole(['system-admin']), validate(deleteDeviceSchema), async (req, res, next) => {
+router.delete('/:id', authenticate, requireRole(['system-admin']), validateDeviceOwnership, validate(deleteDeviceSchema), async (req, res, next) => {
     try {
+        // El middleware validateDeviceOwnership ya validó el acceso y existencia
         const userId = req.user.userId;
         const ipAddress = req.ip || req.connection.remoteAddress;
         const userAgent = req.headers['user-agent'];

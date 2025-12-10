@@ -2,9 +2,11 @@
 // Rutas HTTP para el módulo de files
 import { Router } from 'express';
 import * as fileServices from './services.js';
+import * as fileRepository from './repository.js';
 import { authenticate, requireRole } from '../../middleware/auth.js';
 import { validate } from '../../middleware/validate.js';
 import { enforceActiveOrganization } from '../../middleware/enforceActiveOrganization.js';
+import { validateResourceOwnership } from '../../middleware/validateResourceOwnership.js';
 import {
     requestUploadUrlSchema,
     confirmUploadSchema,
@@ -13,6 +15,16 @@ import {
     deleteFileSchema,
     linkFileSchema
 } from './dtos/index.js';
+
+// Middleware de validación de ownership para Files
+// Verifica que el recurso pertenece a una organización accesible por el usuario
+const validateFileOwnership = validateResourceOwnership({
+    findById: fileRepository.findById,
+    findByPublicCode: fileRepository.findByPublicCodeInternal,
+    resourceName: 'file',
+    paramName: 'id',
+    checkSoftDelete: true
+});
 
 const router = Router();
 
@@ -562,8 +574,9 @@ router.get('/', authenticate, enforceActiveOrganization, validate(listFilesSchem
  *       404:
  *         description: Archivo no encontrado
  */
-router.get('/:id', authenticate, validate(getFileByIdSchema), async (req, res, next) => {
+router.get('/:id', authenticate, validateFileOwnership, validate(getFileByIdSchema), async (req, res, next) => {
     try {
+        // El middleware validateFileOwnership ya validó el acceso
         const { id } = req.params;
         const result = await fileServices.getFileByPublicCode(id);
 
@@ -627,8 +640,9 @@ router.get('/:id', authenticate, validate(getFileByIdSchema), async (req, res, n
  *       404:
  *         description: Archivo no encontrado
  */
-router.delete('/:id', authenticate, requireRole(['system-admin']), validate(deleteFileSchema), async (req, res, next) => {
+router.delete('/:id', authenticate, requireRole(['system-admin']), validateFileOwnership, validate(deleteFileSchema), async (req, res, next) => {
     try {
+        // El middleware validateFileOwnership ya validó el acceso y existencia
         const { id } = req.params;
         const userId = req.user.userId;
         const ipAddress = req.ip || req.connection.remoteAddress;

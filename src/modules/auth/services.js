@@ -635,6 +635,29 @@ export const switchOrganization = async (userId, newActiveOrgId, sessionData = {
         throw error;
     }
     
+    // Verificar que la organización existe y está activa
+    // Importación dinámica para evitar dependencias circulares
+    const Organization = (await import('../organizations/models/Organization.js')).default;
+    const targetOrg = await Organization.findByPk(newActiveOrgId, {
+        attributes: ['id', 'is_active', 'name']
+    });
+    
+    // Error 404: Organización no existe
+    if (!targetOrg) {
+        const error = new Error('auth.organization.not_found');
+        error.status = 404;
+        error.code = 'ORGANIZATION_NOT_FOUND';
+        throw error;
+    }
+    
+    // Error 404: Organización eliminada/desactivada (tratada como no existente para el cliente)
+    if (!targetOrg.is_active) {
+        const error = new Error('auth.organization.not_found');
+        error.status = 404;
+        error.code = 'ORGANIZATION_NOT_FOUND';
+        throw error;
+    }
+    
     // Verificar que el usuario puede acceder a la organización
     const canAccess = await organizationService.canAccessOrganization(
         userId, 
@@ -642,6 +665,7 @@ export const switchOrganization = async (userId, newActiveOrgId, sessionData = {
         user.role.name
     );
     
+    // Error 403: Usuario sin permiso para esta organización
     if (!canAccess) {
         const error = new Error('auth.organization.access_denied');
         error.status = 403;

@@ -5,7 +5,9 @@ import express from 'express';
 import { authenticate, requireRole } from '../../middleware/auth.js';
 import { validate } from '../../middleware/validate.js';
 import { enforceActiveOrganization } from '../../middleware/enforceActiveOrganization.js';
+import { validateResourceOwnership } from '../../middleware/validateResourceOwnership.js';
 import * as channelServices from './services.js';
+import * as channelRepository from './repository.js';
 import {
     createChannelSchema,
     updateChannelSchema,
@@ -14,6 +16,16 @@ import {
     deleteChannelSchema
 } from './dtos/index.js';
 import logger from '../../utils/logger.js';
+
+// Middleware de validación de ownership para Channels
+// Verifica que el recurso pertenece a una organización accesible por el usuario
+const validateChannelOwnership = validateResourceOwnership({
+    findById: channelRepository.findChannelById,
+    findByPublicCode: channelRepository.findChannelByPublicCodeInternal,
+    resourceName: 'channel',
+    paramName: 'id',
+    checkSoftDelete: true
+});
 
 const router = express.Router();
 const channelLogger = logger.child({ component: 'channels' });
@@ -377,8 +389,9 @@ router.get('/', authenticate, enforceActiveOrganization, validate(getChannelsSch
  *       404:
  *         description: Channel no encontrado
  */
-router.get('/:id', authenticate, validate(getChannelByIdSchema), async (req, res, next) => {
+router.get('/:id', authenticate, validateChannelOwnership, validate(getChannelByIdSchema), async (req, res, next) => {
     try {
+        // El middleware validateChannelOwnership ya validó el acceso
         const { id } = req.params;
         const channel = await channelServices.getChannelByPublicCode(id);
         
@@ -486,8 +499,9 @@ router.get('/:id', authenticate, validate(getChannelByIdSchema), async (req, res
  *       404:
  *         description: Channel no encontrado
  */
-router.put('/:id', authenticate, requireRole(['system-admin', 'org-admin']), validate(updateChannelSchema), async (req, res, next) => {
+router.put('/:id', authenticate, requireRole(['system-admin', 'org-admin']), validateChannelOwnership, validate(updateChannelSchema), async (req, res, next) => {
     try {
+        // El middleware validateChannelOwnership ya validó el acceso
         const { id } = req.params;
         const userId = req.user.userId;
         const ipAddress = req.ip || req.connection.remoteAddress;
@@ -549,8 +563,9 @@ router.put('/:id', authenticate, requireRole(['system-admin', 'org-admin']), val
  *       404:
  *         description: Channel no encontrado
  */
-router.delete('/:id', authenticate, requireRole(['system-admin']), validate(deleteChannelSchema), async (req, res, next) => {
+router.delete('/:id', authenticate, requireRole(['system-admin']), validateChannelOwnership, validate(deleteChannelSchema), async (req, res, next) => {
     try {
+        // El middleware validateChannelOwnership ya validó el acceso y existencia
         const { id } = req.params;
         const userId = req.user.userId;
         const ipAddress = req.ip || req.connection.remoteAddress;
