@@ -126,7 +126,24 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes (December 2025)
 
-### Individual Resource Ownership Validation (NEW)
+### Hardened Login System (NEW)
+- **Hybrid Login Identifier:** `POST /api/v1/auth/login` now accepts `identifier` field instead of `email`
+  - Supports email OR public_code (format: `EC-XXXXX-X`)
+  - Repository method `findUserByIdentifier()` handles hybrid lookup
+- **Cloudflare Turnstile Integration:**
+  - Optional captcha validation before credential verification
+  - Configuration: `TURNSTILE_SECRET_KEY` (secret) + `TURNSTILE_ENABLED` (env var)
+  - **FAIL-CLOSED:** If Turnstile API errors, login is rejected with 503
+  - Disable in development: `TURNSTILE_ENABLED=false`
+- **Login Rate Limiting** (`src/middleware/loginRateLimit.js`):
+  - **Dual-layer protection:** IP (20 attempts/15min, 30min block) + Identifier (5 attempts/5min, 15min block)
+  - **FAIL-CLOSED:** If Redis unavailable, returns 503 (prevents bypass)
+  - **Malformed payload tracking:** Uses `_malformed_` placeholder for missing identifiers
+  - **Auto-reset:** Counters reset on successful login
+- **Failed Attempt Tracking:** Records failed attempts for: `INVALID_CREDENTIALS`, `CAPTCHA_REQUIRED`, `CAPTCHA_INVALID`, `USER_INACTIVE`
+- **Location:** `src/modules/auth/`, `src/middleware/loginRateLimit.js`, `src/config/env.js`
+
+### Individual Resource Ownership Validation
 - **Middleware `validateResourceOwnership`:** Validates user access to individual resources (GET/:id, PUT/:id, DELETE/:id)
 - **Location:** `src/middleware/validateResourceOwnership.js`
 - **Applied to:** Sites, Devices, Channels, Files individual resource endpoints
