@@ -4,6 +4,9 @@ import helmet from 'helmet';
 import cors from 'cors';
 import compression from 'compression';
 import pinoHttp from 'pino-http';
+import { readFileSync } from 'fs';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 import { config } from './config/env.js';
 import { httpLogger } from './utils/logger.js';
 import { i18nMiddleware } from './middleware/i18n.js';
@@ -12,6 +15,12 @@ import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import { setupSwagger } from './docs/openapi.js';
 import { metricsHandler } from './metrics/prometheus.js';
 import routes from './routes/index.js';
+
+// Leer versión desde package.json
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const packageJson = JSON.parse(readFileSync(join(__dirname, '../package.json'), 'utf8'));
+const API_VERSION = packageJson.version;
 
 /**
  * Crea y configura la aplicación Express
@@ -133,6 +142,42 @@ const createApp = () => {
     if (config.env === 'development') {
         app.get('/metrics', metricsHandler);
     }
+
+    // ========================================
+    // RUTA RAÍZ - TARJETA DE PRESENTACIÓN
+    // ========================================
+
+    /**
+     * Endpoint raíz con content negotiation:
+     * - Navegadores (Accept: text/html) → Redirige a /docs
+     * - API clients (Accept: application/json) → JSON informativo
+     */
+    app.get('/', (req, res) => {
+        // Content negotiation: determinar formato preferido del cliente
+        // req.accepts() devuelve el mejor match de la lista ordenada por preferencia
+        const preferredFormat = req.accepts(['html', 'json']);
+
+        // Si el cliente prefiere HTML (navegadores), redirigir a documentación
+        if (preferredFormat === 'html') {
+            return res.redirect('/docs');
+        }
+
+        // API client (JSON) o cualquier otro formato: devolver JSON informativo
+        res.status(200).json({
+            ok: true,
+            data: {
+                service: 'EC.DATA API',
+                version: API_VERSION,
+                environment: config.env,
+                documentation: '/docs',
+                health_check: '/api/v1/health'
+            },
+            meta: {
+                timestamp: new Date().toISOString(),
+                locale: req.locale || 'es'
+            }
+        });
+    });
 
     // ========================================
     // MANEJO DE ERRORES
