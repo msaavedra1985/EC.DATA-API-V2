@@ -52,15 +52,19 @@ export const registerSchema = z.object({
 /**
  * Schema para login
  * POST /auth/login
+ * 
+ * Login híbrido: acepta email o username en el campo 'identifier'
+ * Captcha opcional: si TURNSTILE_SECRET_KEY está configurado, se valida el token
  */
 export const loginSchema = z.object({
     body: z.object({
-        email: z
+        // Campo genérico que acepta email o username
+        identifier: z
             .string({
-                required_error: 'Email es requerido'
+                required_error: 'Email o nombre de usuario es requerido'
             })
-            .email('Formato de email inválido')
-            .toLowerCase()
+            .min(1, 'Email o nombre de usuario no puede estar vacío')
+            .max(255, 'Identificador demasiado largo')
             .trim(),
         password: z
             .string({
@@ -72,7 +76,12 @@ export const loginSchema = z.object({
                 invalid_type_error: 'remember_me debe ser un booleano'
             })
             .optional()
-            .default(false)
+            .default(false),
+        // Token de Cloudflare Turnstile (captcha) - opcional
+        captchaToken: z
+            .string()
+            .optional()
+            .nullable()
     })
 });
 

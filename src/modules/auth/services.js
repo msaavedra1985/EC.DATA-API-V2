@@ -107,16 +107,89 @@ export const register = async (userData, sessionData = {}) => {
 };
 
 /**
- * Login de usuario
- * @param {string} email - Email del usuario
+ * Verificar token de Cloudflare Turnstile (Captcha)
+ * Solo se ejecuta si TURNSTILE_SECRET_KEY está configurado
+ * 
+ * @param {string} captchaToken - Token del captcha enviado por el cliente
+ * @param {string} remoteIp - IP del cliente
+ * @returns {Promise<boolean>} - true si válido, lanza error si inválido
+ */
+export const verifyTurnstileToken = async (captchaToken, remoteIp) => {
+    const { config } = await import('../../config/env.js');
+    
+    // Si no hay secret key configurada O el captcha está deshabilitado, no es obligatorio
+    if (!config.turnstile.secretKey || !config.turnstile.enabled) {
+        return true;
+    }
+
+    // Si hay secret key pero no hay token, rechazar
+    if (!captchaToken) {
+        const error = new Error('auth.login.captcha_required');
+        error.status = 400;
+        error.code = 'CAPTCHA_REQUIRED';
+        throw error;
+    }
+
+    try {
+        const response = await fetch(config.turnstile.verifyUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams({
+                secret: config.turnstile.secretKey,
+                response: captchaToken,
+                remoteip: remoteIp || ''
+            })
+        });
+
+        const result = await response.json();
+
+        if (!result.success) {
+            authLogger.warn({
+                errorCodes: result['error-codes'],
+                remoteIp
+            }, 'Turnstile verification failed');
+
+            const error = new Error('auth.login.captcha_invalid');
+            error.status = 400;
+            error.code = 'CAPTCHA_INVALID';
+            throw error;
+        }
+
+        return true;
+    } catch (error) {
+        // Si ya es nuestro error, re-lanzarlo
+        if (error.code === 'CAPTCHA_INVALID' || error.code === 'CAPTCHA_REQUIRED') {
+            throw error;
+        }
+
+        // SEGURIDAD FAIL-CLOSED: Error de red/otro - rechazar login
+        // Previene bypass intencional bloqueando acceso a Cloudflare
+        authLogger.error(error, 'Turnstile API error - rejecting login (fail-closed)');
+        
+        const captchaError = new Error('auth.login.captcha_service_unavailable');
+        captchaError.status = 503;
+        captchaError.code = 'CAPTCHA_SERVICE_UNAVAILABLE';
+        throw captchaError;
+    }
+};
+
+/**
+ * Login de usuario (híbrido: email o username)
+ * @param {string} identifier - Email o username del usuario
  * @param {string} password - Password en texto plano
- * @param {Object} [sessionData] - Datos de la sesión (userAgent, ipAddress, rememberMe)
+ * @param {Object} [sessionData] - Datos de la sesión (userAgent, ipAddress, rememberMe, captchaToken)
  * @param {boolean} [sessionData.rememberMe=false] - Si true, genera tokens con duración extendida
+ * @param {string} [sessionData.captchaToken] - Token de Cloudflare Turnstile para validación
  * @returns {Promise<Object>} - Usuario y token JWT
  */
-export const login = async (email, password, sessionData = {}) => {
-    // Buscar usuario con password incluido (para verificación)
-    const user = await authRepository.findUserByEmail(email, true);
+export const login = async (identifier, password, sessionData = {}) => {
+    // Validar captcha ANTES de verificar credenciales (si está configurado)
+    await verifyTurnstileToken(sessionData.captchaToken, sessionData.ipAddress);
+
+    // Buscar usuario por email O username con password incluido (para verificación)
+    const user = await authRepository.findUserByIdentifier(identifier, true);
 
     if (!user) {
         const error = new Error('auth.login.invalid_credentials');

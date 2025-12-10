@@ -92,6 +92,60 @@ export const findUserByEmail = async (email, includePassword = false) => {
 };
 
 /**
+ * Buscar usuario por identificador (email O public_code)
+ * Para login híbrido que acepta email o identificador público
+ * 
+ * NOTA: La tabla users no tiene columna 'username'. 
+ * El login híbrido acepta: email o public_code (formato EC-XXXXX-X)
+ * 
+ * @param {string} identifier - Email o public_code del usuario
+ * @param {boolean} includePassword - Si incluir password_hash (para verificación de login)
+ * @returns {Promise<Object|null>} - Usuario encontrado o null
+ */
+export const findUserByIdentifier = async (identifier, includePassword = false) => {
+    try {
+        // Sequelize usa queries parametrizadas, seguro contra SQL injection
+        const { Op } = await import('sequelize');
+        
+        const trimmedIdentifier = identifier.trim();
+        
+        // Construir condiciones de búsqueda dinámicamente
+        const conditions = [];
+        
+        // Siempre buscar por email (normalizado a lowercase)
+        conditions.push({ email: trimmedIdentifier.toLowerCase() });
+        
+        // Si el identificador tiene formato de public_code (EC-XXXXX-X), buscar también por public_code
+        const publicCodePattern = /^EC-[A-Z0-9]+-\d$/i;
+        if (publicCodePattern.test(trimmedIdentifier)) {
+            conditions.push({ public_code: trimmedIdentifier.toUpperCase() });
+        }
+        
+        const user = await User.findOne({
+            where: {
+                [Op.or]: conditions
+            },
+            // Si includePassword es true, necesitamos el campo para verificar login
+            attributes: includePassword 
+                ? undefined // Incluir todos los campos
+                : { exclude: ['password_hash'] },
+            include: [
+                {
+                    model: Role,
+                    as: 'role',
+                    attributes: ['id', 'name', 'description', 'is_active']
+                }
+            ]
+        });
+        
+        return user ? user.toJSON() : null;
+    } catch (error) {
+        authLogger.error(error, 'Error finding user by identifier');
+        throw error;
+    }
+};
+
+/**
  * Buscar usuario por ID
  * @param {string} userId - UUID del usuario
  * @returns {Promise<Object|null>} - Usuario encontrado o null

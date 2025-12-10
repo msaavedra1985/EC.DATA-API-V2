@@ -84,6 +84,15 @@ export const config = {
         // Tiempo de expiración del SAS URL en minutos
         sasExpiryMinutes: parseInt(process.env.AZURE_STORAGE_SAS_EXPIRY || '15', 10),
     },
+
+    // Cloudflare Turnstile (Captcha)
+    // Si está configurado Y habilitado, se valida el captcha en el login
+    turnstile: {
+        secretKey: process.env.TURNSTILE_SECRET_KEY || null,
+        verifyUrl: 'https://challenges.cloudflare.com/turnstile/v0/siteverify',
+        // Permite deshabilitar captcha en desarrollo (TURNSTILE_ENABLED=false)
+        enabled: process.env.TURNSTILE_ENABLED !== 'false',
+    },
 };
 
 /**

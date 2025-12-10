@@ -109,5 +109,8 @@
     "column User.phone does not exist": "column User.phone does not exist",
     "organizationService.getOrganizationByPublicCode is not a function": "organizationService.getOrganizationByPublicCode is not a function",
     "uuidV7.replace is not a function": "uuidV7.replace is not a function",
-    "auth.organization.no_active": "auth.organization.no_active"
+    "auth.organization.no_active": "auth.organization.no_active",
+    "column User.username does not exist": "column User.username does not exist",
+    "invalid input syntax for type integer: \"orgadmin@acme.com\"": "invalid input syntax for type integer: \"orgadmin@acme.com\"",
+    "auth.login.captcha_required": "auth.login.captcha_required"
 }

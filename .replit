@@ -54,3 +54,6 @@ externalPort = 3000
 [userenv.shared]
 AZURE_STORAGE_CONTAINER_PUBLIC = "ecdatav2-public"
 AZURE_STORAGE_CONTAINER_PRIVATE = "ecdatav2-private"
+
+[userenv.development]
+TURNSTILE_ENABLED = "false"

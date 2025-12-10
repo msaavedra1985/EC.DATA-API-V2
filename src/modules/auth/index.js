@@ -5,6 +5,7 @@ import express from 'express';
 import * as authServices from './services.js';
 import { validate } from '../../middleware/validate.js';
 import { authenticate, requireRole } from '../../middleware/auth.js';
+import { loginRateLimitMiddleware, resetLoginCounters, recordFailedLogin } from '../../middleware/loginRateLimit.js';
 import { 
     registerSchema, 
     loginSchema, 
@@ -208,51 +209,72 @@ router.post('/register', validate(registerSchema), async (req, res, next) => {
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.post('/login', validate(loginSchema), async (req, res, next) => {
+router.post('/login', loginRateLimitMiddleware, validate(loginSchema), async (req, res, next) => {
     try {
-        const { email, password, remember_me } = req.body;
+        const { identifier, password, remember_me, captchaToken } = req.body;
+        const ip = req.ip || req.connection.remoteAddress;
 
-        // Extraer datos de sesión para auditoría
+        // Extraer datos de sesión para auditoría y validación
         const sessionData = {
             userAgent: req.headers['user-agent'],
-            ipAddress: req.ip || req.connection.remoteAddress,
-            rememberMe: remember_me || false
+            ipAddress: ip,
+            rememberMe: remember_me || false,
+            captchaToken: captchaToken || null
         };
 
-        const result = await authServices.login(email, password, sessionData);
+        try {
+            const result = await authServices.login(identifier, password, sessionData);
 
-        // Obtener organización primaria del usuario
-        const primaryOrg = await organizationService.getPrimaryOrganization(result.user.id);
-        const activeOrgId = primaryOrg ? primaryOrg.organization_id : null;
-        const primaryOrgId = activeOrgId;
-        const canAccessAllOrgs = result.user.role && result.user.role.name === 'system-admin';
+            // Login exitoso: resetear contadores de rate limiting
+            await resetLoginCounters(ip, identifier);
 
-        // Crear session_context y cachearlo en Redis
-        const sessionContext = {
-            activeOrgId,
-            primaryOrgId,
-            canAccessAllOrgs,
-            role: result.user.role?.name || null,
-            email: result.user.email,
-            firstName: result.user.first_name,
-            lastName: result.user.last_name,
-            userId: result.user.id
-        };
+            // Obtener organización primaria del usuario
+            const primaryOrg = await organizationService.getPrimaryOrganization(result.user.id);
+            const activeOrgId = primaryOrg ? primaryOrg.organization_id : null;
+            const primaryOrgId = activeOrgId;
+            const canAccessAllOrgs = result.user.role && result.user.role.name === 'system-admin';
 
-        await sessionContextCache.setSessionContext(result.user.id, sessionContext);
+            // Crear session_context y cachearlo en Redis
+            const sessionContext = {
+                activeOrgId,
+                primaryOrgId,
+                canAccessAllOrgs,
+                role: result.user.role?.name || null,
+                email: result.user.email,
+                firstName: result.user.first_name,
+                lastName: result.user.last_name,
+                userId: result.user.id
+            };
 
-        // Simplificar role en la respuesta - solo enviar el nombre
-        const responseData = {
-            ...result,
-            user: {
-                ...result.user,
-                role: result.user.role?.name || null
-            },
-            session_context: sessionContext,
-            message: 'auth.login.success'
-        };
+            await sessionContextCache.setSessionContext(result.user.id, sessionContext);
 
-        return successResponse(res, responseData);
+            // Simplificar role en la respuesta - solo enviar el nombre
+            const responseData = {
+                ...result,
+                user: {
+                    ...result.user,
+                    role: result.user.role?.name || null
+                },
+                session_context: sessionContext,
+                message: 'auth.login.success'
+            };
+
+            return successResponse(res, responseData);
+        } catch (loginError) {
+            // Login fallido: registrar intento fallido para rate limiting
+            // Registrar para errores de credenciales, captcha, y cuenta inactiva
+            // No registrar para errores de sistema (5xx)
+            const failureCodes = [
+                'INVALID_CREDENTIALS', 
+                'CAPTCHA_REQUIRED', 
+                'CAPTCHA_INVALID',
+                'USER_INACTIVE'
+            ];
+            if (failureCodes.includes(loginError.code)) {
+                await recordFailedLogin(ip, identifier || '_validation_failed_');
+            }
+            throw loginError;
+        }
     } catch (error) {
         next(error);
     }
