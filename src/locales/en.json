@@ -112,5 +112,6 @@
     "auth.organization.no_active": "auth.organization.no_active",
     "column User.username does not exist": "column User.username does not exist",
     "invalid input syntax for type integer: \"orgadmin@acme.com\"": "invalid input syntax for type integer: \"orgadmin@acme.com\"",
-    "auth.login.captcha_required": "auth.login.captcha_required"
+    "auth.login.captcha_required": "auth.login.captcha_required",
+    "auth.login.captcha_invalid": "auth.login.captcha_invalid"
 }

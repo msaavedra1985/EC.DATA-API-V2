@@ -5,6 +5,7 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import { config } from '../../config/env.js';
+import { authLogger } from '../../utils/logger.js';
 import * as authRepository from './repository.js';
 import * as refreshTokenRepository from './refreshTokenRepository.js';
 import * as authCache from './cache.js';

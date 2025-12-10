@@ -211,17 +211,18 @@ router.post('/register', validate(registerSchema), async (req, res, next) => {
  */
 router.post('/login', loginRateLimitMiddleware, validate(loginSchema), async (req, res, next) => {
     try {
-        const { identifier: rawIdentifier, email, password, remember_me, captchaToken } = req.body;
+        const { identifier: rawIdentifier, email, password, remember_me, captchaToken, captcha_token } = req.body;
         // Compatibilidad: usar identifier si existe, sino usar email (campo legacy)
         const identifier = rawIdentifier || email;
         const ip = req.ip || req.connection.remoteAddress;
 
         // Extraer datos de sesión para auditoría y validación
+        // Compatibilidad: aceptar captchaToken (camelCase) o captcha_token (snake_case)
         const sessionData = {
             userAgent: req.headers['user-agent'],
             ipAddress: ip,
             rememberMe: remember_me || false,
-            captchaToken: captchaToken || null
+            captchaToken: captchaToken || captcha_token || null
         };
 
         try {

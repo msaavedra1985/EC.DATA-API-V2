@@ -84,7 +84,12 @@ export const loginSchema = z.object({
             .optional()
             .default(false),
         // Token de Cloudflare Turnstile (captcha) - opcional
+        // Acepta camelCase (captchaToken) o snake_case (captcha_token)
         captchaToken: z
+            .string()
+            .optional()
+            .nullable(),
+        captcha_token: z
             .string()
             .optional()
             .nullable()
