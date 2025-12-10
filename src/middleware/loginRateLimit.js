@@ -212,7 +212,8 @@ export const recordFailedLogin = async (ip, identifier) => {
  */
 export const loginRateLimitMiddleware = async (req, res, next) => {
     const ip = req.ip || req.headers['x-forwarded-for'] || req.connection.remoteAddress;
-    const rawIdentifier = req.body?.identifier;
+    // Soportar tanto 'identifier' (nuevo) como 'email' (legacy) para compatibilidad
+    const rawIdentifier = req.body?.identifier || req.body?.email;
     
     // Normalizar identifier: si no existe o no es string, usar placeholder
     const normalizedId = (typeof rawIdentifier === 'string' && rawIdentifier.trim()) 

@@ -211,7 +211,9 @@ router.post('/register', validate(registerSchema), async (req, res, next) => {
  */
 router.post('/login', loginRateLimitMiddleware, validate(loginSchema), async (req, res, next) => {
     try {
-        const { identifier, password, remember_me, captchaToken } = req.body;
+        const { identifier: rawIdentifier, email, password, remember_me, captchaToken } = req.body;
+        // Compatibilidad: usar identifier si existe, sino usar email (campo legacy)
+        const identifier = rawIdentifier || email;
         const ip = req.ip || req.connection.remoteAddress;
 
         // Extraer datos de sesión para auditoría y validación

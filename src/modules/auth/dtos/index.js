@@ -53,19 +53,25 @@ export const registerSchema = z.object({
  * Schema para login
  * POST /auth/login
  * 
- * Login híbrido: acepta email o username en el campo 'identifier'
+ * Login híbrido: acepta email o username en el campo 'identifier' o 'email' (compatibilidad)
  * Captcha opcional: si TURNSTILE_SECRET_KEY está configurado, se valida el token
  */
 export const loginSchema = z.object({
     body: z.object({
-        // Campo genérico que acepta email o username
+        // Campo genérico que acepta email o username (nuevo)
         identifier: z
-            .string({
-                required_error: 'Email o nombre de usuario es requerido'
-            })
+            .string()
             .min(1, 'Email o nombre de usuario no puede estar vacío')
             .max(255, 'Identificador demasiado largo')
-            .trim(),
+            .trim()
+            .optional(),
+        // Campo legacy para compatibilidad con frontends existentes
+        email: z
+            .string()
+            .min(1, 'Email no puede estar vacío')
+            .max(255, 'Email demasiado largo')
+            .trim()
+            .optional(),
         password: z
             .string({
                 required_error: 'Password es requerido'
@@ -82,7 +88,11 @@ export const loginSchema = z.object({
             .string()
             .optional()
             .nullable()
-    })
+    }).refine(
+        // Al menos uno de identifier o email debe estar presente
+        (data) => data.identifier || data.email,
+        { message: 'Email o identificador es requerido', path: ['identifier'] }
+    )
 });
 
 /**
