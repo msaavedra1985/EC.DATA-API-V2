@@ -124,9 +124,29 @@ Preferred communication style: Simple, everyday language.
 - **Logging:** Pino for general application logs; Winston for structured error persistence to PostgreSQL and rotating files; database-backed audit logging (`audit_logs` table); correlation system using `correlation_id`.
 - **Health Checks:** Basic endpoint at `/api/v1/health`.
 
+## Recent Changes (December 2025)
+
+### Individual Resource Ownership Validation (NEW)
+- **Middleware `validateResourceOwnership`:** Validates user access to individual resources (GET/:id, PUT/:id, DELETE/:id)
+- **Location:** `src/middleware/validateResourceOwnership.js`
+- **Applied to:** Sites, Devices, Channels, Files individual resource endpoints
+- **Factory Pattern:** Creates resource-specific middleware (validateSiteOwnership, validateDeviceOwnership, etc.)
+- **Security Features:**
+  - **404 Response:** Resource not found OR soft-deleted (prevents enumeration attacks)
+  - **403 Response:** Resource exists but belongs to organization user cannot access
+  - **Scope Validation:** Uses `getOrganizationScope()` to determine accessible organizations
+  - **Admin Override:** system-admin can access all resources; org-admin limited to descendant organizations
+- **Implementation Order:** authenticate → requireRole (if needed) → validateOwnership → validate → handler
+
+### Switch Organization Validation Enhancement
+- **Endpoint:** `POST /api/v1/auth/switch-org`
+- **New Behavior:** Now returns 404 if target organization doesn't exist or is inactive (soft-deleted)
+- **Error Differentiation:** 404 for missing/inactive org, 403 for no access permission
+- **Security:** Prevents users from detecting existence of organizations they shouldn't know about
+
 ## Recent Changes (November 2025)
 
-### Organization-Scoped Filtering System (NEW)
+### Organization-Scoped Filtering System
 - **Middleware `enforceActiveOrganization`:** Automatically filters GET list endpoints by user's active organization
 - **Location:** `src/middleware/enforceActiveOrganization.js`
 - **Applied to:** Sites, Devices, Channels, Files GET list endpoints
