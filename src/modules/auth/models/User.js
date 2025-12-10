@@ -57,6 +57,12 @@ const User = sequelize.define(
             },
             comment: 'Email único para login'
         },
+        username: {
+            type: DataTypes.STRING(50),
+            allowNull: false,
+            unique: true,
+            comment: 'Nombre de usuario único para login (formato: primera letra nombre + apellido)'
+        },
         password_hash: {
             type: DataTypes.STRING(255),
             allowNull: false,

@@ -1,7 +1,7 @@
 # EC.DATA API - Enterprise REST API
 
 ## Overview
-EC.DATA API is a Node.js and Express-based REST API designed for multi-tenant e-commerce platforms. It emphasizes observability, security, and scalability, integrating with Next.js frontends via a BFF pattern. The API aims to provide reliable and secure backend solutions for complex business operations across diverse market sectors.
+EC.DATA API is a Node.js and Express-based REST API for multi-tenant e-commerce platforms. It prioritizes observability, security, and scalability, integrating with Next.js frontends via a BFF pattern. The API provides robust backend solutions for complex business operations across diverse market sectors.
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
@@ -61,8 +61,8 @@ Preferred communication style: Simple, everyday language.
 ### Technology Stack
 - **Core:** Express.js 4.x, Node.js 20+ (ESM modules), API versioning (`/api/v1`).
 - **Data:** Sequelize ORM for PostgreSQL, Redis for caching/sessions.
-- **Security:** JWT (Bearer tokens, scopes), Zod for validation, Helmet, bcrypt.
-- **Observability:** Pino, Prometheus metrics, database audit logging, request/response logging.
+- **Security:** JWT (Bearer tokens, scopes), Zod for validation, Helmet, bcrypt, Cloudflare Turnstile integration, login rate limiting, resource ownership validation.
+- **Observability:** Pino, Prometheus metrics, database audit logging, request/response logging, Winston for error logging.
 - **Documentation:** Swagger/OpenAPI (`/docs`).
 
 ### Architectural Patterns
@@ -74,39 +74,24 @@ Preferred communication style: Simple, everyday language.
 ### Performance & Scalability
 - **Caching:** Redis-based caching with configurable TTLs and automatic invalidation.
 - **Compression:** Brotli/gzip compression.
-- **Rate Limiting:** Redis-powered, intelligent rate limiting with role-based limits.
+- **Rate Limiting:** Redis-powered, intelligent rate limiting with role-based limits (including a dual-layer login rate limiter).
 - **Pagination:** Mandatory offset-based pagination (`limit`, `offset`) for list endpoints.
 
 ### Extensibility & Robustness
 - **Identifier System:** UUID v7, human_id, and public_code (opaque, Hashids + Luhn checksum). Public APIs MUST use `public_code`.
-- **Authentication:** JWT-based system with access/refresh tokens, token rotation, theft detection, and RBAC. Refresh tokens are database-persisted and SHA-256 hashed.
+- **Authentication:** JWT-based system with access/refresh tokens, token rotation, theft detection, and RBAC. Refresh tokens are database-persisted and SHA-256 hashed. Hybrid login identifier supporting email, username, or public_code.
 - **RBAC:** Flexible, database-driven RBAC with 7 predefined roles and middleware.
-- **Multi-Tenant Organizations:** Hierarchical organization system with many-to-many user-organization relationships and Redis-cached scope calculation.
+- **Multi-Tenant Organizations:** Hierarchical organization system with many-to-many user-organization relationships and Redis-cached scope calculation. Organization-scoped filtering on list endpoints.
 - **Session Context Caching:** All session context is cached in Redis and returned via API responses.
 - **Global Audit Logging:** Every CUD operation is logged to the `audit_logs` table using the `auditLog` helper.
-
-### Organization Hierarchy & Hybrid Role System
 - **Organization Hierarchy:** Supports unlimited depth, root organization, tree navigation, lazy loading, and cycle prevention.
 - **Hybrid Role System:** Combines Global Roles (`users.role_id`) and Organization Roles (`user_organizations.role_in_org`) for granular permissions.
-- **Automatic Filtering:** All organization endpoints automatically filter results based on user's hybrid permissions.
 
 ### Core Modules
 - **Sites Module:** Manages physical locations (offices, branches, warehouses) linked to organizations, including geolocation and address. Uses triple identifiers and `public_code` for exposure.
 - **Devices Module:** Manages IoT/Edge devices (sensors, gateways, controllers) associated with organizations and sites. Features triple identifiers (`public_code`: `DEV-XXXXX-X`), various device types, status tracking, firmware management, and network info. Supports soft-delete with channel cascade.
 - **Channels Module:** Manages communication channels (MQTT, HTTP, WebSocket) for devices. Features triple identifiers (`public_code`: `CHN-XXXXX-X`), composite foreign key for cross-tenant integrity, various channel types, protocols, direction, status, endpoint URLs, and configuration. Supports soft-delete.
-- **Files Module:** Centralized file upload management via Azure Blob Storage with SAS URLs. Features:
-  - **Dual Containers:** Public (direct access for logos, favicons) and Private (SAS-protected for sensitive documents)
-  - **Blob Path Format:** `{owner_type}/{owner_id}/{uuid}_{filename}` (e.g., `site/SITE-XXX/abc123_doc.pdf`)
-  - **Flow:** API generates SAS URL → BFF uploads to Azure → BFF confirms → API persists metadata
-  - **Categories:** logo, image, document, firmware, backup, export, import, attachment, other (each with size/MIME limits)
-  - **Triple Identifiers:** `public_code` format `FILE-XXXXX-X`
-  - **Audit Logging:** All operations (request_upload_url, confirm_upload, delete) are logged
-
-### Database Migrations - Sequelize CLI
-- **Purpose:** Ensures reproducible schema changes across environments.
-- **Configuration:** `.sequelizerc` defines paths; `src/config/database.cjs` for connection settings.
-- **Workflow:** Create, edit, test (up/down), and update DBML (`npm run db:dbml`) for schema changes.
-- **Best Practices:** Always write `up()` and `down()` methods, test rollbacks, use transactions, avoid modifying deployed migrations.
+- **Files Module:** Centralized file upload management via Azure Blob Storage with SAS URLs. Features dual public/private containers, structured blob paths, categories with size/MIME limits, triple identifiers (`public_code`: `FILE-XXXXX-X`), and audit logging for all operations.
 
 ## External Dependencies
 
@@ -115,6 +100,7 @@ Preferred communication style: Simple, everyday language.
 - **Redis Cache:** For CORS origins, session storage, and application caching.
 - **Azure Blob Storage:** File storage with dual containers (public/private) and SAS URL generation.
 - **Next.js Frontend:** Consumes API via BFF pattern.
+- **Cloudflare Turnstile:** For captcha validation on login.
 
 ### Testing & Quality Assurance
 - **Testing Framework:** Vitest for unit and integration tests.
@@ -123,72 +109,3 @@ Preferred communication style: Simple, everyday language.
 - **Metrics:** Prometheus for HTTP request duration, counts, active connections, and custom metrics.
 - **Logging:** Pino for general application logs; Winston for structured error persistence to PostgreSQL and rotating files; database-backed audit logging (`audit_logs` table); correlation system using `correlation_id`.
 - **Health Checks:** Basic endpoint at `/api/v1/health`.
-
-## Recent Changes (December 2025)
-
-### Hardened Login System (NEW)
-- **Hybrid Login Identifier:** `POST /api/v1/auth/login` now accepts `identifier` field instead of `email`
-  - Supports email OR public_code (format: `EC-XXXXX-X`)
-  - Repository method `findUserByIdentifier()` handles hybrid lookup
-- **Cloudflare Turnstile Integration:**
-  - Optional captcha validation before credential verification
-  - Configuration: `TURNSTILE_SECRET_KEY` (secret) + `TURNSTILE_ENABLED` (env var)
-  - **FAIL-CLOSED:** If Turnstile API errors, login is rejected with 503
-  - Disable in development: `TURNSTILE_ENABLED=false`
-- **Login Rate Limiting** (`src/middleware/loginRateLimit.js`):
-  - **Dual-layer protection:** IP (20 attempts/15min, 30min block) + Identifier (5 attempts/5min, 15min block)
-  - **FAIL-CLOSED:** If Redis unavailable, returns 503 (prevents bypass)
-  - **Malformed payload tracking:** Uses `_malformed_` placeholder for missing identifiers
-  - **Auto-reset:** Counters reset on successful login
-- **Failed Attempt Tracking:** Records failed attempts for: `INVALID_CREDENTIALS`, `CAPTCHA_REQUIRED`, `CAPTCHA_INVALID`, `USER_INACTIVE`
-- **Location:** `src/modules/auth/`, `src/middleware/loginRateLimit.js`, `src/config/env.js`
-
-### Individual Resource Ownership Validation
-- **Middleware `validateResourceOwnership`:** Validates user access to individual resources (GET/:id, PUT/:id, DELETE/:id)
-- **Location:** `src/middleware/validateResourceOwnership.js`
-- **Applied to:** Sites, Devices, Channels, Files individual resource endpoints
-- **Factory Pattern:** Creates resource-specific middleware (validateSiteOwnership, validateDeviceOwnership, etc.)
-- **Security Features:**
-  - **404 Response:** Resource not found OR soft-deleted (prevents enumeration attacks)
-  - **403 Response:** Resource exists but belongs to organization user cannot access
-  - **Scope Validation:** Uses `getOrganizationScope()` to determine accessible organizations
-  - **Admin Override:** system-admin can access all resources; org-admin limited to descendant organizations
-- **Implementation Order:** authenticate → requireRole (if needed) → validateOwnership → validate → handler
-
-### Switch Organization Validation Enhancement
-- **Endpoint:** `POST /api/v1/auth/switch-org`
-- **New Behavior:** Now returns 404 if target organization doesn't exist or is inactive (soft-deleted)
-- **Error Differentiation:** 404 for missing/inactive org, 403 for no access permission
-- **Security:** Prevents users from detecting existence of organizations they shouldn't know about
-
-## Recent Changes (November 2025)
-
-### Organization-Scoped Filtering System
-- **Middleware `enforceActiveOrganization`:** Automatically filters GET list endpoints by user's active organization
-- **Location:** `src/middleware/enforceActiveOrganization.js`
-- **Applied to:** Sites, Devices, Channels, Files GET list endpoints
-- **Features:**
-  - Default: Returns only records from user's `activeOrgId` (from JWT)
-  - `organization_id` param: Only allowed if user has access to that organization
-  - `all=true` param: **Admin-only** - system-admin gets full access, org-admin gets descendant orgs via `getOrganizationScope()`
-  - **Security:** Client-supplied `organization_ids` is stripped and logged as injection attempt
-  - **Internal field:** `organization_ids` is middleware-only, not part of public API contract
-- **Repository support:** All list repositories now support `organization_ids` array with `[Op.in]` filtering
-
-### Security Fix
-- **Channels Module:** Added `authenticate` middleware to GET endpoints (`GET /api/v1/channels` and `GET /api/v1/channels/:id`). All API endpoints now require JWT authentication - no public endpoints exist.
-
-### API Documentation (Spanish)
-Complete Spanish documentation for frontend team integration:
-- `docs/AUTH_API_GUIDE.md` - Authentication, JWT tokens, RBAC
-- `docs/ORGANIZATIONS_API_GUIDE.md` - Organization hierarchy, user permissions
-- `docs/SITES_API_GUIDE.md` - Sites/locations management
-- `docs/DEVICES_API_GUIDE.md` - IoT device management
-- `docs/CHANNELS_API_GUIDE.md` - Communication channels (MQTT, HTTP, WebSocket)
-- `docs/FILES_API_GUIDE.md` - File upload via Azure Blob Storage with SAS URLs
-
-### Key Integration Notes
-- **All endpoints require Bearer token authentication**
-- **Files API:** No download endpoints exist - use SAS URLs (private) or direct URLs (public)
-- **Test user:** `orgadmin@acme.com` / `TestPassword123!` (organization `ORG-yOM9ewfqOeWa-4`)
-- **/auth/register:** May be disabled in production - check system configuration

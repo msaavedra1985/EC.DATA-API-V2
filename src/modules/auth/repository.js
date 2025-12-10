@@ -92,13 +92,15 @@ export const findUserByEmail = async (email, includePassword = false) => {
 };
 
 /**
- * Buscar usuario por identificador (email O public_code)
- * Para login híbrido que acepta email o identificador público
+ * Buscar usuario por identificador (email, username O public_code)
+ * Para login híbrido que acepta múltiples identificadores
  * 
- * NOTA: La tabla users no tiene columna 'username'. 
- * El login híbrido acepta: email o public_code (formato EC-XXXXX-X)
+ * El login híbrido acepta:
+ * - email (normalizado a lowercase)
+ * - username (normalizado a lowercase)
+ * - public_code (formato EC-XXXXX-X)
  * 
- * @param {string} identifier - Email o public_code del usuario
+ * @param {string} identifier - Email, username o public_code del usuario
  * @param {boolean} includePassword - Si incluir password_hash (para verificación de login)
  * @returns {Promise<Object|null>} - Usuario encontrado o null
  */
@@ -108,12 +110,16 @@ export const findUserByIdentifier = async (identifier, includePassword = false) 
         const { Op } = await import('sequelize');
         
         const trimmedIdentifier = identifier.trim();
+        const lowercaseIdentifier = trimmedIdentifier.toLowerCase();
         
         // Construir condiciones de búsqueda dinámicamente
         const conditions = [];
         
-        // Siempre buscar por email (normalizado a lowercase)
-        conditions.push({ email: trimmedIdentifier.toLowerCase() });
+        // Buscar por email (normalizado a lowercase)
+        conditions.push({ email: lowercaseIdentifier });
+        
+        // Buscar por username (normalizado a lowercase)
+        conditions.push({ username: lowercaseIdentifier });
         
         // Si el identificador tiene formato de public_code (EC-XXXXX-X), buscar también por public_code
         const publicCodePattern = /^EC-[A-Z0-9]+-\d$/i;
