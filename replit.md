@@ -99,6 +99,7 @@ Preferred communication style: Simple, everyday language.
 - **PostgreSQL Database:** Managed via Sequelize ORM.
 - **Redis Cache:** For CORS origins, session storage, and application caching.
 - **Azure Blob Storage:** File storage with dual containers (public/private) and SAS URL generation.
+- **Apache Cassandra:** Time-series sensor data storage for IoT measurements. Keyspace `sensores` with tables for different aggregation periods (1m, 15m, 60m, daily, monthly). Secrets: `CASSANDRA_HOST`, `CASSANDRA_USER`, `CASSANDRA_PASS`. Client: `src/db/cassandra/client.js`.
 - **Next.js Frontend:** Consumes API via BFF pattern.
 - **Cloudflare Turnstile:** For captcha validation on login.
 
