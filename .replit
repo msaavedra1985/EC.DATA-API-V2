@@ -49,14 +49,11 @@ externalPort = 80
 localPort = 36571
 externalPort = 3000
 
-[[ports]]
-localPort = 41473
-externalPort = 3001
-
 [userenv]
 
 [userenv.shared]
 AZURE_STORAGE_CONTAINER_PUBLIC = "ecdatav2-public"
 AZURE_STORAGE_CONTAINER_PRIVATE = "ecdatav2-private"
+CASSANDRA_KEYSPACE = "sensores"
 
 [userenv.development]
