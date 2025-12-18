@@ -123,6 +123,22 @@ const Channel = sequelize.define('Channel', {
         allowNull: false,
         defaultValue: true,
         comment: 'Indica si el canal está activo'
+    },
+    ch: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        comment: 'Número de canal físico usado en Cassandra para identificar mediciones'
+    },
+    measurement_type_id: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        references: {
+            model: 'measurement_types',
+            key: 'id'
+        },
+        onUpdate: 'CASCADE',
+        onDelete: 'SET NULL',
+        comment: 'FK a measurement_types - tipo de medición del canal'
     }
 }, {
     tableName: 'channels',
@@ -167,6 +183,20 @@ Channel.associate = (models) => {
     Channel.belongsTo(models.Organization, {
         foreignKey: 'organization_id',
         as: 'organization'
+    });
+
+    // Channel pertenece a MeasurementType
+    Channel.belongsTo(models.MeasurementType, {
+        foreignKey: 'measurement_type_id',
+        as: 'measurementType'
+    });
+
+    // Channel tiene muchas variables (a través de channel_variables)
+    Channel.belongsToMany(models.Variable, {
+        through: models.ChannelVariable,
+        foreignKey: 'channel_id',
+        otherKey: 'variable_id',
+        as: 'variables'
     });
 };
 

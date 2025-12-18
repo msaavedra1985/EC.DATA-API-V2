@@ -115,6 +115,12 @@ const Device = sequelize.define('Device', {
         allowNull: false,
         defaultValue: true,
         comment: 'Indica si el dispositivo está activo'
+    },
+    timezone: {
+        type: DataTypes.STRING(50),
+        allowNull: true,
+        defaultValue: 'UTC',
+        comment: 'Zona horaria del dispositivo en formato IANA (ej: America/Lima, UTC)'
     }
 }, {
     tableName: 'devices',

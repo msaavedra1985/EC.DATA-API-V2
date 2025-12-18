@@ -1,4 +1,4 @@
-// Database Schema - Generated on 2025-11-25T17:20:35.962Z
+// Database Schema - Generated on 2025-12-18T14:54:30.875Z
 // Project: EC.DATA API - Enterprise REST API
 // Use this file at https://dbdiagram.io to visualize the schema
 
@@ -28,6 +28,26 @@ Table audit_logs {
   }
 }
 
+Table channel_variables {
+  id integer [pk, not null, increment] // ID incremental - clave primaria
+  channel_id uuid [not null] // FK a tabla channels
+  variable_id integer [not null] // FK a tabla variables
+  is_active boolean [not null, default: true] // Indica si la variable está activa para este canal
+  display_order integer // Orden de visualización específico para este canal (override)
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+
+  Indexes {
+    (channel_id) [name: 'channel_variables_channel_id']
+    (channel_id) [name: 'channel_variables_channel_id_idx']
+    (is_active) [name: 'channel_variables_is_active']
+    (is_active) [name: 'channel_variables_is_active_idx']
+    (variable_id) [name: 'channel_variables_variable_id']
+    (variable_id) [name: 'channel_variables_variable_id_idx']
+    (channel_id, variable_id) [name: 'unique_channel_variable', unique]
+  }
+}
+
 Table channels {
   id uuid [pk, not null] // UUID v7 - clave primaria time-ordered
   human_id integer [unique, not null] // ID incremental global para uso interno/soporte
@@ -50,14 +70,18 @@ Table channels {
   created_at timestamptz [not null, default: `now()`]
   updated_at timestamptz [not null, default: `now()`]
   deleted_at timestamptz // Soft delete timestamp
+  ch integer // Número de canal físico usado en Cassandra para identificar mediciones
+  measurement_type_id integer // FK a measurement_types - tipo de medición del canal
 
   Indexes {
     (channel_type) [name: 'channels_channel_type']
     (channel_type) [name: 'channels_channel_type_idx']
+    (device_id, ch) [name: 'channels_device_ch_unique', unique]
     (device_id) [name: 'channels_device_id']
     (device_id) [name: 'channels_device_id_idx']
     (device_id, name) [name: 'channels_device_name_unique', unique]
     (human_id) [name: 'channels_human_id_key', unique]
+    (measurement_type_id) [name: 'channels_measurement_type_id_idx']
     (organization_id) [name: 'channels_organization_id']
     (organization_id) [name: 'channels_organization_id_idx']
     (public_code) [name: 'channels_public_code_key', unique]
@@ -124,6 +148,7 @@ Table devices {
   created_at timestamptz [not null, default: `now()`]
   updated_at timestamptz [not null, default: `now()`]
   deleted_at timestamptz // Soft delete timestamp
+  timezone varchar(50) // Zona horaria del dispositivo en formato IANA (ej: America/Lima, UTC)
 
   Indexes {
     (deleted_at) [name: 'devices_deleted_at_idx']
@@ -226,6 +251,36 @@ Table file_uploads {
     (status) [name: 'file_uploads_status_idx']
     (uploaded_by) [name: 'file_uploads_uploaded_by']
     (uploaded_by) [name: 'file_uploads_uploaded_by_idx']
+  }
+}
+
+Table measurement_type_translations {
+  id integer [pk, not null, increment] // ID incremental - clave primaria
+  measurement_type_id integer [not null] // FK a tabla measurement_types
+  lang varchar(5) [not null] // Código de idioma (es, en, pt, etc.)
+  name varchar(100) [not null] // Nombre del tipo de medición en el idioma especificado
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+
+  Indexes {
+    (lang) [name: 'measurement_type_translations_lang']
+    (lang) [name: 'measurement_type_translations_lang_idx']
+    (measurement_type_id, lang) [name: 'unique_measurement_type_lang', unique]
+  }
+}
+
+Table measurement_types {
+  id integer [pk, not null, increment] // ID incremental - clave primaria
+  table_prefix varchar(20) [not null] // Prefijo de tablas en Cassandra (vacío=energía, sim=IoT, btu=BTU)
+  is_active boolean [not null, default: true] // Indica si el tipo de medición está activo
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+
+  Indexes {
+    (is_active) [name: 'measurement_types_is_active']
+    (is_active) [name: 'measurement_types_is_active_idx']
+    (table_prefix) [name: 'measurement_types_table_prefix']
+    (table_prefix) [name: 'measurement_types_table_prefix_idx']
   }
 }
 
@@ -399,6 +454,7 @@ Table users {
   language varchar(10)
   timezone varchar(100)
   avatar_url varchar(500)
+  username varchar(50) [not null] // Nombre de usuario único para login (formato: primera letra nombre + apellido)
 
   Indexes {
     (email) [name: 'users_email_key', unique]
@@ -409,14 +465,65 @@ Table users {
     (public_code) [name: 'users_public_code_key', unique]
     (public_code) [name: 'users_public_code_unique', unique]
     (role_id) [name: 'users_role_id_idx']
+    (username) [name: 'users_username_unique', unique]
+  }
+}
+
+Table variable_translations {
+  id integer [pk, not null, increment] // ID incremental - clave primaria
+  variable_id integer [not null] // FK a tabla variables
+  lang varchar(5) [not null] // Código de idioma (es, en, pt, etc.)
+  name varchar(100) [not null] // Nombre de la variable en el idioma especificado
+  description varchar(255) // Descripción de la variable en el idioma especificado
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+
+  Indexes {
+    (variable_id, lang) [name: 'unique_variable_lang', unique]
+    (lang) [name: 'variable_translations_lang']
+    (lang) [name: 'variable_translations_lang_idx']
+  }
+}
+
+Table variables {
+  id integer [pk, not null, increment] // ID incremental - clave primaria
+  measurement_type_id integer [not null] // FK a measurement_types - tipo de medición al que pertenece
+  column_name varchar(50) [not null] // Nombre de columna en Cassandra (ej: e, p, val1, val2)
+  unit varchar(20) // Unidad de medida (ej: Wh, W, °C, %)
+  chart_type variable_chart_type // Tipo de gráfico recomendado para visualización
+  axis_name varchar(50) // Nombre del eje para gráficos (ej: Energia (Wh))
+  axis_id varchar(30) // ID del eje para agrupar variables en el mismo eje
+  axis_min numeric // Valor mínimo del eje (null = auto)
+  axis_function varchar(20) // Función de agregación para tablas (total, avg, etc.)
+  aggregation_type variable_aggregation_type // Tipo de agregación por defecto para esta variable
+  display_order integer // Orden de visualización en listas y gráficos
+  show_in_billing boolean [not null, default: false] // Mostrar en sección de facturación
+  show_in_analysis boolean [not null, default: true] // Mostrar en sección de análisis
+  is_realtime boolean [not null, default: false] // Indica si la variable soporta visualización en tiempo real
+  is_default boolean [not null, default: false] // Indica si es la variable por defecto del tipo de medición
+  is_active boolean [not null, default: true] // Indica si la variable está activa
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+
+  Indexes {
+    (display_order) [name: 'variables_display_order']
+    (display_order) [name: 'variables_display_order_idx']
+    (is_active) [name: 'variables_is_active']
+    (is_active) [name: 'variables_is_active_idx']
+    (measurement_type_id) [name: 'variables_measurement_type_id']
+    (measurement_type_id) [name: 'variables_measurement_type_id_idx']
+    (measurement_type_id, column_name) [name: 'variables_type_column_idx']
   }
 }
 
 
 // Foreign Key References
 Ref: audit_logs.performed_by > users.id [update: cascade, delete: set null]
+Ref: channel_variables.channel_id > channels.id [update: cascade, delete: cascade]
+Ref: channel_variables.variable_id > variables.id [update: cascade, delete: cascade]
 Ref: channels.device_id > devices.id [update: cascade, delete: restrict]
 Ref: channels.device_id > devices.organization_id [update: cascade, delete: restrict]
+Ref: channels.measurement_type_id > measurement_types.id [update: cascade, delete: set null]
 Ref: channels.organization_id > organizations.id [update: cascade, delete: restrict]
 Ref: channels.organization_id > devices.organization_id [update: cascade, delete: restrict]
 Ref: channels.organization_id > devices.id [update: cascade, delete: restrict]
@@ -427,6 +534,7 @@ Ref: error_logs.organization_id > organizations.id [update: cascade, delete: set
 Ref: error_logs.user_id > users.id [update: cascade, delete: set null]
 Ref: file_uploads.organization_id > organizations.id [update: cascade, delete: restrict]
 Ref: file_uploads.uploaded_by > users.id [update: cascade, delete: set null]
+Ref: measurement_type_translations.measurement_type_id > measurement_types.id [update: cascade, delete: cascade]
 Ref: organizations.country_id > countries.id [update: cascade, delete: restrict]
 Ref: organizations.parent_id > organizations.id [update: cascade, delete: restrict]
 Ref: refresh_tokens.user_id > users.id [update: cascade, delete: cascade]
@@ -436,3 +544,5 @@ Ref: user_organizations.organization_id > organizations.id [update: cascade, del
 Ref: user_organizations.user_id > users.id [update: cascade, delete: cascade]
 Ref: users.organization_id > organizations.id [update: cascade, delete: restrict]
 Ref: users.role_id > roles.id [update: cascade, delete: restrict]
+Ref: variable_translations.variable_id > variables.id [update: cascade, delete: cascade]
+Ref: variables.measurement_type_id > measurement_types.id [update: cascade, delete: restrict]

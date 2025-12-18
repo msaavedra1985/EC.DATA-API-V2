@@ -92,6 +92,11 @@ Preferred communication style: Simple, everyday language.
 - **Devices Module:** Manages IoT/Edge devices (sensors, gateways, controllers) associated with organizations and sites. Features triple identifiers (`public_code`: `DEV-XXXXX-X`), various device types, status tracking, firmware management, and network info. Supports soft-delete with channel cascade.
 - **Channels Module:** Manages communication channels (MQTT, HTTP, WebSocket) for devices. Features triple identifiers (`public_code`: `CHN-XXXXX-X`), composite foreign key for cross-tenant integrity, various channel types, protocols, direction, status, endpoint URLs, and configuration. Supports soft-delete.
 - **Files Module:** Centralized file upload management via Azure Blob Storage with SAS URLs. Features dual public/private containers, structured blob paths, categories with size/MIME limits, triple identifiers (`public_code`: `FILE-XXXXX-X`), and audit logging for all operations.
+- **Telemetry Module:** Time-series measurement data from Apache Cassandra. Features TelemetryService for querying IoT measurements, dynamic table selection based on measurement type and resolution, multi-language variable definitions, and timezone-aware filtering.
+  - **Tables:** `measurement_types` (Cassandra table prefixes), `measurement_type_translations` (i18n), `variables` (column mapping), `variable_translations` (i18n), `channel_variables` (N:N relation)
+  - **Endpoints:** `GET /api/v1/telemetry/channels/:id/data` (historical), `GET /api/v1/telemetry/channels/:id/latest` (realtime)
+  - **Resolution Support:** raw, 1m, 15m, 60m, daily, monthly
+  - **Table Naming:** `[prefix][resolution]_t_datos` (e.g., `1m_t_datos`, `sim15m_t_datos`)
 
 ## External Dependencies
 

@@ -12,6 +12,7 @@ import sitesRouter from '../modules/sites/index.js';
 import devicesRouter from '../modules/devices/index.js';
 import channelsRouter from '../modules/channels/index.js';
 import filesRouter from '../modules/files/index.js';
+import telemetryRouter from '../modules/telemetry/index.js';
 
 const router = express.Router();
 
@@ -52,6 +53,9 @@ router.use('/channels', channelsRouter);
 
 // Files (gestión centralizada de archivos - Azure Blob Storage)
 router.use('/files', filesRouter);
+
+// Telemetry (datos de mediciones IoT desde Cassandra)
+router.use('/telemetry', telemetryRouter);
 
 // Seeding (Testing/Development)
 router.use('/seed', seedRouter);
