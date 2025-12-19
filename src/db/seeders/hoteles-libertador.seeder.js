@@ -273,15 +273,18 @@ const runMigration = async () => {
         const deviceMap = new Map();
         let deviceCounter = maxDeviceHumanId[0].next_id;
         
-        // Filtrar equipos únicos por uuid (hay duplicados en el JSON)
+        // REGLA: Solo equipos activos, únicos por nombre dentro de la organización
+        const equiposActivos = equipos.filter(e => e.activo === '1');
         const uniqueEquipos = [];
-        const seenUuids = new Set();
-        for (const e of equipos) {
-            if (!seenUuids.has(e.uuid)) {
-                seenUuids.add(e.uuid);
+        const seenNombres = new Set();
+        for (const e of equiposActivos) {
+            if (!seenNombres.has(e.nombre)) {
+                seenNombres.add(e.nombre);
                 uniqueEquipos.push(e);
             }
         }
+        
+        console.log(`   (${equipos.length} total → ${equiposActivos.length} activos → ${uniqueEquipos.length} únicos por nombre)`);
         
         for (const equipo of uniqueEquipos) {
             const newDeviceId = uuidv7();
@@ -337,17 +340,24 @@ const runMigration = async () => {
             { transaction: t }
         );
         
+        // REGLA: Solo canales activos
+        const canalesActivos = canales.filter(c => c.activo === '1');
+        
         // Mapa de canalId viejo -> nuevo channel id
         const channelMap = new Map();
         let channelCounter = maxChannelHumanId[0].next_id;
         let insertedChannels = 0;
         let skippedChannels = 0;
         
-        // Sets para evitar duplicados por (device_id, ch) y (device_id, name)
-        const seenDeviceCh = new Set();
-        const seenDeviceName = new Set();
+        // REGLAS DE UNICIDAD:
+        // - Para ENERGÍA (tipoMedicionId=1): permitir mismo CH (fases R,S,T), solo validar nombre único
+        // - Para OTROS tipos: CH único por equipo Y nombre único por equipo
+        const seenDeviceCh = new Set();        // Solo para tipos != 1
+        const seenDeviceName = new Set();      // Para todos
         
-        for (const canal of canales) {
+        console.log(`   (${canales.length} total → ${canalesActivos.length} activos)`);
+        
+        for (const canal of canalesActivos) {
             const deviceId = deviceMap.get(canal.equipoId);
             
             if (!deviceId) {
@@ -355,21 +365,24 @@ const runMigration = async () => {
                 continue;
             }
             
-            // Evitar duplicados por (device_id, ch)
-            const deviceChKey = `${deviceId}-${canal.ch}`;
-            if (seenDeviceCh.has(deviceChKey)) {
-                skippedChannels++;
-                continue;
-            }
-            
-            // Evitar duplicados por (device_id, name)
+            // REGLA: Nombre siempre único por equipo
             const deviceNameKey = `${deviceId}-${canal.nombre}`;
             if (seenDeviceName.has(deviceNameKey)) {
                 skippedChannels++;
                 continue;
             }
             
-            seenDeviceCh.add(deviceChKey);
+            // REGLA: CH único por equipo SOLO para tipos != energía eléctrica
+            const isEnergia = canal.tipoMedicionId === 1;
+            if (!isEnergia) {
+                const deviceChKey = `${deviceId}-${canal.ch}`;
+                if (seenDeviceCh.has(deviceChKey)) {
+                    skippedChannels++;
+                    continue;
+                }
+                seenDeviceCh.add(deviceChKey);
+            }
+            
             seenDeviceName.add(deviceNameKey);
             
             const newChannelId = uuidv7();
