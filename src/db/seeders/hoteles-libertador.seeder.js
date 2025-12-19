@@ -490,7 +490,7 @@ const runMigration = async () => {
         // Mostrar algunos ejemplos
         console.log('📋 Ejemplos de canales activos para probar:');
         const [sampleChannels] = await sequelize.query(`
-            SELECT c.public_code, c.name, c.ch, d.uuid as device_uuid, mt.table_prefix
+            SELECT c.public_code, c.name, c.ch, d.name as device_name, d.metadata, mt.table_prefix
             FROM channels c
             JOIN devices d ON c.device_id = d.id
             JOIN measurement_types mt ON c.measurement_type_id = mt.id
@@ -499,7 +499,8 @@ const runMigration = async () => {
         `);
         
         for (const ch of sampleChannels) {
-            console.log(`   - ${ch.public_code}: ${ch.name} (ch=${ch.ch}, uuid=${ch.device_uuid.substring(0, 8)}...)`);
+            const legacyUuid = ch.metadata?.legacy_uuid || 'N/A';
+            console.log(`   - ${ch.public_code}: ${ch.name} (ch=${ch.ch}, device=${ch.device_name.substring(0, 20)})`);
         }
         
         process.exit(0);
