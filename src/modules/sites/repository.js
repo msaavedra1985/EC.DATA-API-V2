@@ -212,7 +212,7 @@ export const listSites = async ({
     });
     
     return {
-        sites: rows.map(site => toPublicSiteDto(site)),
+        items: rows.map(site => toPublicSiteDto(site)),
         total: count,
         page: Math.floor(offset / limit) + 1,
         limit: parseInt(limit)

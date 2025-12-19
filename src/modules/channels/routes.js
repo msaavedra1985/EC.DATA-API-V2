@@ -258,25 +258,13 @@ router.post('/', authenticate, requireRole(['system-admin', 'org-admin']), valid
  *                   type: boolean
  *                   example: true
  *                 data:
+ *                   type: array
+ *                   description: Array de channels
+ *                   items:
+ *                     $ref: '#/components/schemas/Channel'
+ *                 meta:
  *                   type: object
  *                   properties:
- *                     channels:
- *                       type: array
- *                       items:
- *                         type: object
- *                         properties:
- *                           id:
- *                             type: string
- *                             example: "CHN-abc123xyz-1"
- *                           name:
- *                             type: string
- *                             example: "MQTT Sensor Data Channel"
- *                           channel_type:
- *                             type: string
- *                             example: "mqtt"
- *                           status:
- *                             type: string
- *                             example: "active"
  *                     total:
  *                       type: integer
  *                       example: 50
@@ -286,6 +274,11 @@ router.post('/', authenticate, requireRole(['system-admin', 'org-admin']), valid
  *                     limit:
  *                       type: integer
  *                       example: 20
+ *                     timestamp:
+ *                       type: string
+ *                       format: date-time
+ *                     organizationFilter:
+ *                       type: object
  *       400:
  *         description: Parámetros inválidos
  */
@@ -305,10 +298,14 @@ router.get('/', authenticate, enforceActiveOrganization, validate(getChannelsSch
             offset
         });
         
+        // Respuesta con estructura estándar: data[] + meta{}
         res.status(200).json({
             ok: true,
-            data: result,
+            data: result.items,
             meta: {
+                total: result.total,
+                page: result.page,
+                limit: result.limit,
                 timestamp: new Date().toISOString(),
                 locale: req.locale,
                 organizationFilter: req.organizationFilter

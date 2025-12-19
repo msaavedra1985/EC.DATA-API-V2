@@ -4,7 +4,8 @@
 import { getCache, setCache, deleteCache } from '../../db/redis/client.js';
 import logger from '../../utils/logger.js';
 
-const SITE_LIST_CACHE_PREFIX = 'ec:sites:list:';
+// v2: Nueva estructura de respuesta con items[] en lugar de sites[]
+const SITE_LIST_CACHE_PREFIX = 'ec:v2:sites:list:';
 const SITE_LIST_CACHE_TTL = 600; // 10 minutos
 
 /**
@@ -33,8 +34,15 @@ export const getCachedSiteList = async (cacheKey) => {
         const cached = await getCache(fullKey);
         
         if (cached) {
+            const parsed = JSON.parse(cached);
+            // Validar estructura nueva (items) - si tiene estructura legacy (sites), invalidar
+            if (!parsed.items && parsed.sites) {
+                logger.debug({ cacheKey: fullKey }, 'Site list cache has legacy structure, invalidating');
+                await deleteCache(fullKey);
+                return null;
+            }
             logger.debug({ cacheKey: fullKey }, 'Site list cache hit');
-            return JSON.parse(cached);
+            return parsed;
         }
         
         logger.debug({ cacheKey: fullKey }, 'Site list cache miss');

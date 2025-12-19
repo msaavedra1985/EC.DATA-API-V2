@@ -181,8 +181,10 @@ export const listOrganizations = async (limit = 50, offset = 0, filters = {}) =>
     });
     
     const result = {
+        items: rows.map(org => toPublicOrganizationDto(org)),
         total: count,
-        organizations: rows.map(org => toPublicOrganizationDto(org))
+        page: Math.floor(offset / limit) + 1,
+        limit: parseInt(limit)
     };
     
     // Guardar en cache

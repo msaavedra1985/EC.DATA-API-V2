@@ -115,15 +115,15 @@ const orgLogger = logger.child({ component: 'organizations' });
  *                     total:
  *                       type: integer
  *                       example: 42
+ *                     page:
+ *                       type: integer
+ *                       example: 1
  *                     limit:
  *                       type: integer
  *                       example: 20
- *                     offset:
- *                       type: integer
- *                       example: 0
- *                     has_more:
- *                       type: boolean
- *                       example: true
+ *                     timestamp:
+ *                       type: string
+ *                       format: date-time
  *       401:
  *         description: No autenticado - Token JWT faltante o inválido
  *         content:
@@ -208,14 +208,16 @@ router.get('/', authenticate, async (req, res) => {
             filters
         );
 
+        // Respuesta con estructura estándar: data[] + meta{}
         res.json({
             ok: true,
-            data: result.organizations,
+            data: result.items,
             meta: {
                 total: result.total,
-                limit: parseInt(limit),
-                offset: parseInt(offset),
-                has_more: result.total > parseInt(offset) + result.organizations.length
+                page: result.page,
+                limit: result.limit,
+                timestamp: new Date().toISOString(),
+                locale: req.locale
             }
         });
     } catch (error) {

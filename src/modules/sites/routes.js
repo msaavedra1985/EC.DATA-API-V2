@@ -297,12 +297,13 @@ router.post('/', authenticate, requireRole(['system-admin', 'org-admin']), valid
  *                   type: boolean
  *                   example: true
  *                 data:
+ *                   type: array
+ *                   description: Array de sites
+ *                   items:
+ *                     $ref: '#/components/schemas/Site'
+ *                 meta:
  *                   type: object
  *                   properties:
- *                     sites:
- *                       type: array
- *                       items:
- *                         type: object
  *                     total:
  *                       type: integer
  *                       example: 15
@@ -312,6 +313,11 @@ router.post('/', authenticate, requireRole(['system-admin', 'org-admin']), valid
  *                     limit:
  *                       type: integer
  *                       example: 20
+ *                     timestamp:
+ *                       type: string
+ *                       format: date-time
+ *                     organizationFilter:
+ *                       type: object
  *       401:
  *         description: No autenticado
  */
@@ -321,10 +327,14 @@ router.get('/', authenticate, enforceActiveOrganization, validate(listSitesSchem
         // con el UUID correcto (de la org activa o la especificada)
         const result = await siteServices.listSites(req.query);
         
+        // Respuesta con estructura estándar: data[] + meta{}
         res.json({
             ok: true,
-            data: result,
+            data: result.items,
             meta: {
+                total: result.total,
+                page: result.page,
+                limit: result.limit,
                 timestamp: new Date().toISOString(),
                 locale: req.locale,
                 organizationFilter: req.organizationFilter

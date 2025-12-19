@@ -248,22 +248,23 @@ export const invalidateOrganizationHierarchyBulk = async (publicCodes) => {
 
 /**
  * Cachea una lista paginada de organizaciones
- * Key pattern: ec:org:list:{limit}:{offset}:{filtersHash}
+ * Key pattern: ec:v2:org:list:{limit}:{offset}:{filtersHash}
  * 
  * @param {number} limit - Límite de resultados
  * @param {number} offset - Offset para paginación
  * @param {Object} filters - Filtros aplicados
- * @param {Object} result - Resultado de la query (total y organizations)
+ * @param {Object} result - Resultado de la query { items, total, page, limit }
  * @returns {Promise<boolean>} true si se guardó correctamente
  */
 export const cacheOrganizationList = async (limit, offset, filters, result) => {
     try {
         const filtersHash = generateFiltersHash(filters);
-        const key = `ec:org:list:${limit}:${offset}:${filtersHash}`;
+        // v2: Nueva estructura de respuesta con items[] en lugar de organizations[]
+        const key = `ec:v2:org:list:${limit}:${offset}:${filtersHash}`;
         
         await setCache(key, result, LIST_CACHE_TTL);
         
-        orgLogger.debug({ limit, offset, filtersHash, count: result.organizations?.length }, 'Organization list cached');
+        orgLogger.debug({ limit, offset, filtersHash, count: result.items?.length }, 'Organization list cached');
         return true;
     } catch (error) {
         orgLogger.error({ err: error, limit, offset }, 'Error caching organization list');
@@ -273,6 +274,7 @@ export const cacheOrganizationList = async (limit, offset, filters, result) => {
 
 /**
  * Obtiene una lista paginada cacheada de organizaciones
+ * Valida estructura nueva (items) y descarta cache legacy (organizations)
  * 
  * @param {number} limit - Límite de resultados
  * @param {number} offset - Offset para paginación
@@ -282,11 +284,18 @@ export const cacheOrganizationList = async (limit, offset, filters, result) => {
 export const getCachedOrganizationList = async (limit, offset, filters) => {
     try {
         const filtersHash = generateFiltersHash(filters);
-        const key = `ec:org:list:${limit}:${offset}:${filtersHash}`;
+        // v2: Nueva estructura de respuesta con items[] en lugar de organizations[]
+        const key = `ec:v2:org:list:${limit}:${offset}:${filtersHash}`;
         
         const cached = await getCache(key);
         
         if (cached) {
+            // Validar estructura nueva (items) - si tiene estructura legacy (organizations), invalidar
+            if (!cached.items && cached.organizations) {
+                orgLogger.debug({ key }, 'Organization list cache has legacy structure, invalidating');
+                await deleteCache(key);
+                return null;
+            }
             orgLogger.debug({ limit, offset, filtersHash }, 'Organization list cache hit');
         }
         
@@ -305,7 +314,8 @@ export const getCachedOrganizationList = async (limit, offset, filters) => {
  */
 export const invalidateAllOrganizationLists = async () => {
     try {
-        const pattern = 'ec:org:list:*';
+        // v2: Nueva estructura de respuesta con items[] en lugar de organizations[]
+        const pattern = 'ec:v2:org:list:*';
         const deletedCount = await scanAndDelete(pattern);
         
         orgLogger.info({ deletedCount }, 'All organization list caches invalidated');

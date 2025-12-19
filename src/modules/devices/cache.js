@@ -4,7 +4,8 @@
 import { getCache, setCache, deleteCache } from '../../db/redis/client.js';
 import logger from '../../utils/logger.js';
 
-const DEVICE_LIST_CACHE_PREFIX = 'ec:devices:list:';
+// v2: Nueva estructura de respuesta con items[] en lugar de devices[]
+const DEVICE_LIST_CACHE_PREFIX = 'ec:v2:devices:list:';
 const DEVICE_LIST_CACHE_TTL = 600; // 10 minutos
 
 /**
@@ -33,8 +34,15 @@ export const getCachedDeviceList = async (cacheKey) => {
         const cached = await getCache(fullKey);
         
         if (cached) {
+            const parsed = JSON.parse(cached);
+            // Validar estructura nueva (items) - si tiene estructura legacy (devices), invalidar
+            if (!parsed.items && parsed.devices) {
+                logger.debug({ cacheKey: fullKey }, 'Device list cache has legacy structure, invalidating');
+                await deleteCache(fullKey);
+                return null;
+            }
             logger.debug({ cacheKey: fullKey }, 'Device list cache hit');
-            return JSON.parse(cached);
+            return parsed;
         }
         
         logger.debug({ cacheKey: fullKey }, 'Device list cache miss');

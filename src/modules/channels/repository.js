@@ -221,7 +221,7 @@ export const listChannels = async ({
     });
     
     return {
-        channels: rows.map(channel => toPublicChannelDto(channel)),
+        items: rows.map(channel => toPublicChannelDto(channel)),
         total: count,
         page: Math.floor(offset / limit) + 1,
         limit: parseInt(limit)

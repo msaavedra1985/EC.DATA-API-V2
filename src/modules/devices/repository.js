@@ -260,7 +260,7 @@ export const listDevices = async ({
     });
     
     return {
-        devices: rows.map(device => toPublicDeviceDto(device)),
+        items: rows.map(device => toPublicDeviceDto(device)),
         total: count,
         page: Math.floor(offset / limit) + 1,
         limit: parseInt(limit)
