@@ -115,3 +115,17 @@ Preferred communication style: Simple, everyday language.
 - **Metrics:** Prometheus for HTTP request duration, counts, active connections, and custom metrics.
 - **Logging:** Pino for general application logs; Winston for structured error persistence to PostgreSQL and rotating files; database-backed audit logging (`audit_logs` table); correlation system using `correlation_id`.
 - **Health Checks:** Basic endpoint at `/api/v1/health`.
+
+## Recent Changes
+
+### 2025-12-19: Hoteles Libertador Migration
+- **Schema Change:** Modified `channels_device_ch_unique` constraint to exclude `measurement_type_id = 1` (energy) - allows duplicate CH numbers for tri-phase electrical readings (R, S, T phases)
+- **Migration File:** `src/db/migrations/20251218200000-modify-channels-device-ch-unique-for-energy.cjs`
+- **Data Migrated:**
+  - 1 organization: "Hoteles Libertador" (ORG-P28EG-5)
+  - 33 devices (filtered from 37 - only active, unique names)
+  - 222 channels (filtered from 250 - only active)
+  - 13 channel_variables relationships
+  - 213 energy channels, 9 SIM channels
+- **Legacy UUID Preservation:** Stored in `devices.metadata.legacy_uuid` for Cassandra query compatibility
+- **Seeder File:** `src/db/seeders/hoteles-libertador.seeder.js`
