@@ -118,6 +118,27 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+### 2025-12-19: API Response Structure Standardization
+- **Breaking Change:** All list endpoints now return standardized response structure
+- **Affected Endpoints:** GET /devices, GET /channels, GET /sites, GET /organizations
+- **New Response Format:**
+  ```json
+  {
+    "ok": true,
+    "data": [...],           // Array directo (antes: data.devices, data.channels, etc.)
+    "meta": {
+      "total": 33,
+      "page": 1,
+      "limit": 20,
+      "timestamp": "...",
+      "locale": "es"
+    }
+  }
+  ```
+- **Cache Version Bump:** All list caches now use `ec:v2:` prefix to prevent legacy data conflicts
+- **Frontend Migration Guide:** See `CHANGELOG.md` for detailed migration instructions
+- **Files Modified:** repositories (return {items, total, page, limit}), routes (use result.items), cache helpers (validate structure)
+
 ### 2025-12-19: Hoteles Libertador Migration
 - **Schema Change:** Modified `channels_device_ch_unique` constraint to exclude `measurement_type_id = 1` (energy) - allows duplicate CH numbers for tri-phase electrical readings (R, S, T phases)
 - **Migration File:** `src/db/migrations/20251218200000-modify-channels-device-ch-unique-for-energy.cjs`
