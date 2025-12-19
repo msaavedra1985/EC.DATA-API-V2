@@ -269,9 +269,27 @@ router.post('/', authenticate, requireRole(['system-admin', 'org-admin']), valid
  */
 router.get('/', authenticate, enforceActiveOrganization, validate(getDevicesSchema), async (req, res, next) => {
     try {
+        // DEBUG: Log detallado para diagnóstico de filtrado por organización
+        const debugInfo = {
+            jwtActiveOrgId: req.user?.activeOrgId,
+            jwtRole: req.user?.role,
+            jwtUserId: req.user?.userId,
+            queryOrgId: req.query.organization_id,
+            queryOrgIds: req.query.organization_ids,
+            organizationFilter: req.organizationFilter
+        };
+        logger.info({ debug: debugInfo, path: '/devices' }, 'DEBUG: Devices endpoint request');
+        
         // El middleware enforceActiveOrganization ya configuró req.query.organization_id
         // con el UUID correcto (de la org activa o la especificada)
         const result = await deviceServices.listDevices(req.query);
+        
+        // DEBUG: Log resultado
+        logger.info({ 
+            totalDevices: result.total,
+            firstDeviceOrg: result.devices?.[0]?.organization?.id,
+            filterUsed: req.query.organization_id || req.query.organization_ids
+        }, 'DEBUG: Devices response');
         
         res.json({
             ok: true,
