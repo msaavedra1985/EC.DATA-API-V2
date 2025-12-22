@@ -139,6 +139,14 @@ Preferred communication style: Simple, everyday language.
 - **Frontend Migration Guide:** See `CHANGELOG.md` for detailed migration instructions
 - **Files Modified:** repositories (return {items, total, page, limit}), routes (use result.items), cache helpers (validate structure)
 
+### 2025-12-22: Cassandra Telemetry Integration Validated
+- **Connection Status:** Cassandra client initialized at server startup, graceful shutdown implemented
+- **Telemetry Endpoint Validated:** `GET /api/v1/telemetry/channels/:id/data` returns real data from Hoteles Libertador
+- **Legacy UUID Support:** Queries use `devices.metadata.legacy_uuid` for backward compatibility with historical Cassandra data
+- **Variable Column Fix:** Corrected `variables.column_name` from 'fp' to 'pf' to match Cassandra schema
+- **Resolutions Working:** daily (diario_t_datos) confirmed working with 21+ records per channel
+- **Variables Configured:** 5 variables per energy channel (e, p, pf, v, i) with 1,065 total channel_variables assignments
+
 ### 2025-12-19: Hoteles Libertador Migration
 - **Schema Change:** Modified `channels_device_ch_unique` constraint to exclude `measurement_type_id = 1` (energy) - allows duplicate CH numbers for tri-phase electrical readings (R, S, T phases)
 - **Migration File:** `src/db/migrations/20251218200000-modify-channels-device-ch-unique-for-energy.cjs`
