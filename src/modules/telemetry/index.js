@@ -5,6 +5,7 @@
  */
 import { Router } from 'express';
 import { search, getLatest, getLatestBatch } from './services/telemetryService.js';
+import { variablesRouter } from './routes/variablesRoutes.js';
 import { z } from 'zod';
 
 // Esquema de validación para búsqueda de telemetría
@@ -446,6 +447,9 @@ router.post('/batch/latest', async (req, res) => {
         });
     }
 });
+
+// Montar rutas de variables
+router.use('/variables', variablesRouter);
 
 // Exportar router y servicios
 export { router as telemetryRouter };
