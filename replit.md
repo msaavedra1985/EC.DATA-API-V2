@@ -93,6 +93,11 @@ Preferred communication style: Simple, everyday language.
 - **Channels Module:** Manages communication channels for devices, including MQTT, HTTP, WebSocket.
 - **Files Module:** Centralized file upload management via Azure Blob Storage with SAS URLs.
 - **Telemetry Module:** Time-series measurement data from Apache Cassandra for IoT measurements. Supports historical and latest data retrieval with various resolutions (raw, 1m, 15m, 60m, daily, monthly). Features multi-language variable definitions and timezone-aware filtering.
+  - **Variables CRUD:** Full REST API for managing telemetry variables (`GET/POST/PUT/DELETE /api/v1/telemetry/variables`)
+    - Filters: search (name/description/column_name), measurementTypeId, isRealtime, isDefault, isActive, showInBilling, showInAnalysis, chartType, aggregationType
+    - Pagination: limit, offset with sortBy/sortOrder
+    - Multi-language translations support (es, en, etc.)
+    - Zod validation, audit logging, cache invalidation on CUD
 
 ## External Dependencies
 
