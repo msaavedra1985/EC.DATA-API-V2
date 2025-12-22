@@ -8,6 +8,7 @@ import * as organizationRepository from '../organizations/repository.js';
 import * as siteRepository from '../sites/repository.js';
 import { cacheDeviceList, getCachedDeviceList, invalidateDeviceCache } from './cache.js';
 import { invalidateChannelCache } from '../channels/cache.js';
+import { invalidateDeviceTelemetryCache } from '../telemetry/cache.js';
 import { logAuditAction } from '../../helpers/auditLog.js';
 import { generateHumanId, generatePublicCode } from '../../utils/identifiers.js';
 import Device from './models/Device.js';
@@ -266,8 +267,9 @@ export const updateDevice = async (publicCode, updateData, userId, ipAddress, us
         userAgent: userAgent
     });
     
-    // Invalidar cache
+    // Invalidar cache de devices y telemetría de todos los canales del device
     await invalidateDeviceCache();
+    await invalidateDeviceTelemetryCache(deviceInternal.id);
     
     logger.info({ deviceId: updatedDevice.id, userId }, 'Device updated successfully');
     
@@ -391,7 +393,8 @@ export const deleteDevice = async (publicCode, userId, ipAddress, userAgent) => 
         // Invalidar caches (después del commit)
         await Promise.all([
             invalidateDeviceCache(),
-            invalidateChannelCache()
+            invalidateChannelCache(),
+            invalidateDeviceTelemetryCache(deviceInternal.id)
         ]);
         
         logger.info(

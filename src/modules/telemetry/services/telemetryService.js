@@ -23,6 +23,13 @@ import {
     getLatestData 
 } from '../repositories/cassandraRepository.js';
 import { parseLocalDateToUTC, dayjs } from '../../../utils/dateUtils.js';
+import {
+    cacheLatestData,
+    getCachedLatestData,
+    cacheHistoricalData,
+    getCachedHistoricalData,
+    TELEMETRY_CACHE_TTL
+} from '../cache.js';
 
 /**
  * @typedef {Object} ChannelIdentifier
@@ -91,6 +98,11 @@ const normalizeIdentifier = (identifier) => {
 /**
  * Busca datos de telemetría para un canal
  * 
+ * CACHE (solo para resoluciones agregadas estables):
+ * - daily: TTL 1h (datos cambian durante el día actual)
+ * - monthly: TTL 24h (datos casi inmutables)
+ * - raw/1m/15m/60m: sin cache (cambian frecuentemente)
+ * 
  * @param {TelemetrySearchRequest} req - Parámetros de búsqueda
  * @returns {Promise<TelemetryResult>} Resultado de la búsqueda
  */
@@ -104,7 +116,8 @@ export const search = async (req) => {
         resolution = '1m', 
         variables = null,
         options = {},
-        filters = {}
+        filters = {},
+        skipCache = false
     } = req;
 
     // 1. Normalizar y resolver identificador
@@ -152,7 +165,26 @@ export const search = async (req) => {
     const fromDate = parseLocalDateToUTC(from, metadata.device.timezone, false);
     const toDate = parseLocalDateToUTC(to, metadata.device.timezone, true);
 
-    // 5. Ejecutar query en Cassandra
+    // 5. Verificar cache para resoluciones agregadas (daily, monthly)
+    // Solo cachear sin filtros adicionales para mantener simplicidad
+    const shouldCache = !skipCache && 
+                        ['daily', 'monthly'].includes(resolution) && 
+                        !filters.excludeDays?.length && 
+                        !filters.hourRanges?.length;
+    
+    if (shouldCache) {
+        const cached = await getCachedHistoricalData(
+            resolved.channelId,
+            resolution,
+            from,
+            to
+        );
+        if (cached) {
+            return { ...cached, fromCache: true };
+        }
+    }
+
+    // 6. Ejecutar query en Cassandra
     const rawData = await queryTelemetryData({
         uuid: metadata.device.id,
         ch: metadata.channel.ch,
@@ -163,7 +195,7 @@ export const search = async (req) => {
         to: toDate
     });
 
-    // 6. Post-procesar datos
+    // 7. Post-procesar datos
     let processedData = rawData;
 
     // Aplicar filtro de días excluidos
@@ -176,7 +208,7 @@ export const search = async (req) => {
         processedData = filterByHourRanges(processedData, filters.hourRanges, tz || metadata.device.timezone);
     }
 
-    // 7. Mapear a formato de respuesta
+    // 8. Mapear a formato de respuesta
     const data = processedData.map(row => {
         const values = {};
         for (const [varId, varInfo] of Object.entries(metadata.variables)) {
@@ -190,7 +222,7 @@ export const search = async (req) => {
         };
     });
 
-    return {
+    const result = {
         metadata: {
             uuid: metadata.device.id,
             timezone: metadata.device.timezone,
@@ -206,6 +238,19 @@ export const search = async (req) => {
         variables: metadata.variables,
         data
     };
+
+    // 9. Cachear resultado (solo para daily/monthly sin filtros)
+    if (shouldCache && data.length > 0) {
+        await cacheHistoricalData(
+            resolved.channelId,
+            resolution,
+            from,
+            to,
+            result
+        );
+    }
+
+    return result;
 };
 
 /**
@@ -213,10 +258,13 @@ export const search = async (req) => {
  * @property {string} [since] - ISO timestamp del último dato que tiene el cliente
  *                              Si el dato más reciente no es más nuevo, retorna hasNew: false
  *                              Optimiza polling reduciendo transferencia de datos
+ * @property {boolean} [skipCache=false] - Saltear cache (para forzar query fresca)
  */
 
 /**
  * Obtiene el último dato de un canal (para pseudo-realtime/polling)
+ * 
+ * CACHE: TTL 30s - Balance entre frescura y reducción de carga
  * 
  * Soporta parámetro `since` para optimizar polling:
  * - Si hay datos más nuevos que `since` → retorna los datos
@@ -227,7 +275,7 @@ export const search = async (req) => {
  * @returns {Promise<Object>} Último dato disponible o { hasNew: false }
  */
 export const getLatest = async (rawIdentifier, options = {}) => {
-    const { since } = options;
+    const { since, skipCache = false } = options;
     
     // Normalizar y resolver identificador
     const normalizedIdentifier = normalizeIdentifier(rawIdentifier);
@@ -247,6 +295,31 @@ export const getLatest = async (rawIdentifier, options = {}) => {
         throw new Error(`Canal ${resolved.channelId} no tiene ch configurado`);
     }
 
+    // Intentar obtener desde cache (si no hay since y no se solicita skip)
+    // El cache guarda el último dato sin procesar "since" logic
+    if (!skipCache) {
+        const cached = await getCachedLatestData(resolved.channelId);
+        if (cached) {
+            // Aplicar lógica de "since" sobre dato cacheado
+            if (since && cached.data) {
+                const sinceDate = new Date(since);
+                const latestDate = new Date(cached.data.ts);
+                
+                if (latestDate <= sinceDate) {
+                    return {
+                        hasNew: false,
+                        lastChecked: new Date().toISOString(),
+                        latestTimestamp: cached.data.ts,
+                        metadata: cached.metadata,
+                        fromCache: true
+                    };
+                }
+            }
+            // Retornar con flag fromCache para debugging
+            return { ...cached, fromCache: true };
+        }
+    }
+
     const latestRow = await getLatestData({
         uuid: metadata.device.id,
         ch: metadata.channel.ch,
@@ -254,7 +327,7 @@ export const getLatest = async (rawIdentifier, options = {}) => {
         columns: metadata.columns
     });
 
-    // Si no hay datos, retornar sin data
+    // Si no hay datos, retornar sin data (no cachear respuestas vacías)
     if (!latestRow) {
         return {
             hasNew: false,
@@ -269,26 +342,6 @@ export const getLatest = async (rawIdentifier, options = {}) => {
         };
     }
 
-    // Optimización de polling: si el cliente ya tiene el último dato, no transferir
-    if (since) {
-        const sinceDate = new Date(since);
-        const latestDate = new Date(latestRow.timestamp);
-        
-        // Si el último dato no es más nuevo que lo que tiene el cliente
-        if (latestDate <= sinceDate) {
-            return {
-                hasNew: false,
-                lastChecked: new Date().toISOString(),
-                latestTimestamp: latestRow.timestamp,
-                metadata: {
-                    uuid: metadata.device.id,
-                    deviceName: metadata.device.name,
-                    channelName: metadata.channel.name
-                }
-            };
-        }
-    }
-
     // Hay datos nuevos, construir respuesta completa
     const values = {};
     for (const [varId, varInfo] of Object.entries(metadata.variables)) {
@@ -296,7 +349,7 @@ export const getLatest = async (rawIdentifier, options = {}) => {
         values[varId] = value !== undefined && value !== null ? Number(value) : null;
     }
 
-    return {
+    const result = {
         hasNew: true,
         lastChecked: new Date().toISOString(),
         metadata: {
@@ -311,6 +364,26 @@ export const getLatest = async (rawIdentifier, options = {}) => {
             values
         }
     };
+
+    // Cachear el resultado (TTL 30s)
+    await cacheLatestData(resolved.channelId, result);
+
+    // Aplicar lógica de "since" post-cache
+    if (since) {
+        const sinceDate = new Date(since);
+        const latestDate = new Date(latestRow.timestamp);
+        
+        if (latestDate <= sinceDate) {
+            return {
+                hasNew: false,
+                lastChecked: new Date().toISOString(),
+                latestTimestamp: latestRow.timestamp,
+                metadata: result.metadata
+            };
+        }
+    }
+
+    return result;
 };
 
 /**

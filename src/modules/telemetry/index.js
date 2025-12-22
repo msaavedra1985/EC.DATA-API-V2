@@ -453,8 +453,12 @@ export { search, getLatest, getLatestBatch } from './services/telemetryService.j
 export { 
     getTelemetryMetadata, 
     resolveChannelIdentifier,
-    resolveChannelIdentifierWithCh 
+    resolveChannelIdentifierWithCh,
+    warmUpTelemetryCache,
+    loadGlobalVariables,
+    loadGlobalMeasurementTypes
 } from './repositories/metadataRepository.js';
+export * from './cache.js';
 export * from './models/index.js';
 
 export default router;

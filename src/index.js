@@ -5,6 +5,7 @@ import { initializeDatabase, closeDatabase } from './db/sql/sequelize.js';
 import { initializeRedis, closeRedis } from './db/redis/client.js';
 import { initCassandra, closeCassandra, hasCredentials } from './db/cassandra/client.js';
 import { startTokenCleanupScheduler } from './utils/cleanupTokens.js';
+import { warmUpTelemetryCache } from './modules/telemetry/index.js';
 import logger from './utils/logger.js';
 
 // Importar todos los modelos en orden de dependencias (necesario para Sequelize.sync())
@@ -32,6 +33,14 @@ const initializeServices = async () => {
             await initCassandra();
         } else {
             logger.info('⏸️  Cassandra: Credenciales no configuradas, saltando inicialización');
+        }
+
+        // Warm-up de cache de telemetría (variables globales, measurement types)
+        try {
+            await warmUpTelemetryCache();
+            logger.info('✅ Telemetry cache warmed up successfully');
+        } catch (cacheError) {
+            logger.warn({ err: cacheError }, '⚠️  Telemetry cache warm-up failed (non-critical)');
         }
 
         logger.info('✅ All services initialized successfully');

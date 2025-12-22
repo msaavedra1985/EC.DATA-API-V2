@@ -1,7 +1,7 @@
 # EC.DATA API - Enterprise REST API
 
 ## Overview
-EC.DATA API is a Node.js and Express-based REST API for multi-tenant e-commerce platforms. It prioritizes observability, security, and scalability, integrating with Next.js frontends via a BFF pattern. The API provides robust backend solutions for complex business operations across diverse market sectors.
+EC.DATA API is a Node.js and Express-based REST API for multi-tenant e-commerce platforms. It provides robust backend solutions for complex business operations across diverse market sectors, integrating with Next.js frontends via a BFF pattern. The API prioritizes observability, security, and scalability.
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
@@ -88,15 +88,11 @@ Preferred communication style: Simple, everyday language.
 - **Hybrid Role System:** Combines Global Roles (`users.role_id`) and Organization Roles (`user_organizations.role_in_org`) for granular permissions.
 
 ### Core Modules
-- **Sites Module:** Manages physical locations (offices, branches, warehouses) linked to organizations, including geolocation and address. Uses triple identifiers and `public_code` for exposure.
-- **Devices Module:** Manages IoT/Edge devices (sensors, gateways, controllers) associated with organizations and sites. Features triple identifiers (`public_code`: `DEV-XXXXX-X`), various device types, status tracking, firmware management, and network info. Supports soft-delete with channel cascade.
-- **Channels Module:** Manages communication channels (MQTT, HTTP, WebSocket) for devices. Features triple identifiers (`public_code`: `CHN-XXXXX-X`), composite foreign key for cross-tenant integrity, various channel types, protocols, direction, status, endpoint URLs, and configuration. Supports soft-delete.
-- **Files Module:** Centralized file upload management via Azure Blob Storage with SAS URLs. Features dual public/private containers, structured blob paths, categories with size/MIME limits, triple identifiers (`public_code`: `FILE-XXXXX-X`), and audit logging for all operations.
-- **Telemetry Module:** Time-series measurement data from Apache Cassandra. Features TelemetryService for querying IoT measurements, dynamic table selection based on measurement type and resolution, multi-language variable definitions, and timezone-aware filtering.
-  - **Tables:** `measurement_types` (Cassandra table prefixes), `measurement_type_translations` (i18n), `variables` (column mapping), `variable_translations` (i18n), `channel_variables` (N:N relation)
-  - **Endpoints:** `GET /api/v1/telemetry/channels/:id/data` (historical), `GET /api/v1/telemetry/channels/:id/latest` (realtime)
-  - **Resolution Support:** raw, 1m, 15m, 60m, daily, monthly
-  - **Table Naming:** `[prefix][resolution]_t_datos` (e.g., `1m_t_datos`, `sim15m_t_datos`)
+- **Sites Module:** Manages physical locations (offices, branches, warehouses) linked to organizations, including geolocation and address.
+- **Devices Module:** Manages IoT/Edge devices associated with organizations and sites.
+- **Channels Module:** Manages communication channels for devices, including MQTT, HTTP, WebSocket.
+- **Files Module:** Centralized file upload management via Azure Blob Storage with SAS URLs.
+- **Telemetry Module:** Time-series measurement data from Apache Cassandra for IoT measurements. Supports historical and latest data retrieval with various resolutions (raw, 1m, 15m, 60m, daily, monthly). Features multi-language variable definitions and timezone-aware filtering.
 
 ## External Dependencies
 
@@ -104,7 +100,7 @@ Preferred communication style: Simple, everyday language.
 - **PostgreSQL Database:** Managed via Sequelize ORM.
 - **Redis Cache:** For CORS origins, session storage, and application caching.
 - **Azure Blob Storage:** File storage with dual containers (public/private) and SAS URL generation.
-- **Apache Cassandra:** Time-series sensor data storage for IoT measurements. Keyspace `sensores` with tables for different aggregation periods (1m, 15m, 60m, daily, monthly). Secrets: `CASSANDRA_HOST`, `CASSANDRA_USER`, `CASSANDRA_PASS`. Client: `src/db/cassandra/client.js`.
+- **Apache Cassandra:** Time-series sensor data storage for IoT measurements. Keyspace `sensores`.
 - **Next.js Frontend:** Consumes API via BFF pattern.
 - **Cloudflare Turnstile:** For captcha validation on login.
 
@@ -115,72 +111,3 @@ Preferred communication style: Simple, everyday language.
 - **Metrics:** Prometheus for HTTP request duration, counts, active connections, and custom metrics.
 - **Logging:** Pino for general application logs; Winston for structured error persistence to PostgreSQL and rotating files; database-backed audit logging (`audit_logs` table); correlation system using `correlation_id`.
 - **Health Checks:** Basic endpoint at `/api/v1/health`.
-
-## Recent Changes
-
-### 2025-12-19: API Response Structure Standardization
-- **Breaking Change:** All list endpoints now return standardized response structure
-- **Affected Endpoints:** GET /devices, GET /channels, GET /sites, GET /organizations
-- **New Response Format:**
-  ```json
-  {
-    "ok": true,
-    "data": [...],           // Array directo (antes: data.devices, data.channels, etc.)
-    "meta": {
-      "total": 33,
-      "page": 1,
-      "limit": 20,
-      "timestamp": "...",
-      "locale": "es"
-    }
-  }
-  ```
-- **Cache Version Bump:** All list caches now use `ec:v2:` prefix to prevent legacy data conflicts
-- **Frontend Migration Guide:** See `CHANGELOG.md` for detailed migration instructions
-- **Files Modified:** repositories (return {items, total, page, limit}), routes (use result.items), cache helpers (validate structure)
-
-### 2025-12-22: Cassandra Telemetry Integration Validated
-- **Connection Status:** Cassandra client initialized at server startup, graceful shutdown implemented
-- **Telemetry Endpoint Validated:** `GET /api/v1/telemetry/channels/:id/data` returns real data from Hoteles Libertador
-- **Legacy UUID Support:** Queries use `devices.metadata.legacy_uuid` for backward compatibility with historical Cassandra data
-- **Variable Column Fix:** Corrected `variables.column_name` from 'fp' to 'pf' to match Cassandra schema
-- **Resolutions Working:** daily (diario_t_datos) confirmed working with 21+ records per channel
-- **Variables Configured:** 5 variables per energy channel (e, p, pf, v, i) with 1,065 total channel_variables assignments
-- **DayJS Timezone Integration:** Implemented DayJS with UTC/Timezone plugins for accurate date conversions
-  - `src/utils/dateUtils.js` - Centralized date utilities with `parseLocalDateToUTC`, `getYearsInRange`, `getDaysInRange`
-  - **Fin de año resuelto:** 31 dic Lima = `2024-12-31T05:00Z` a `2025-01-01T04:59:59Z` (cruza años 2024 y 2025)
-  - **Validación obligatoria:** Dispositivos sin timezone configurado lanzan error explícito
-  - **Filtros timezone-aware:** `filterByExcludeDays` y `filterByHourRanges` usan timezone del dispositivo
-- **Flexible Channel Identification:** `resolveChannelIdentifier` helper supports 4 identifier types:
-  - `publicCode` (CHN-XXXXX-X) - Para frontend
-  - `channelUuid` (UUID PostgreSQL) - Para cron interno
-  - `legacyUuid` (UUID histórico) - Para migración/debug
-  - `deviceChannel` ({ deviceCode, ch }) - Para batch processing
-  - **Validación de exclusividad:** Solo un tipo de identificador por request
-  - **Compatibilidad hacia atrás:** Las rutas siguen funcionando con `:channelId` en URL
-- **Pseudo-Realtime Polling Optimizado:**
-  - **Parámetro `since`:** `GET /telemetry/channels/:id/latest?since=2024-12-22T14:30:00Z`
-    - Si no hay datos nuevos: retorna `{ hasNew: false, latestTimestamp: "..." }`
-    - Si hay datos nuevos: retorna `{ hasNew: true, data: {...} }`
-    - Reduce transferencia de datos en polling frecuente
-  - **Endpoint batch:** `POST /telemetry/batch/latest` - consulta múltiples canales en paralelo
-    - Máximo 50 canales por request
-    - Cada canal con todas sus variables en una query Cassandra
-    - Retorna estadísticas: `{ totalChannels, successCount, withNewData, elapsedMs }`
-  - **Rendimiento medido:**
-    - Individual (1 canal): ~330ms
-    - Batch 10 canales: ~770ms (77ms/canal)
-    - Batch 20 canales: ~545ms (27ms/canal)
-  - **Fix Cassandra:** Nombres de tabla que empiezan con número ahora se escapan con comillas dobles
-
-### 2025-12-19: Hoteles Libertador Migration
-- **Schema Change:** Modified `channels_device_ch_unique` constraint to exclude `measurement_type_id = 1` (energy) - allows duplicate CH numbers for tri-phase electrical readings (R, S, T phases)
-- **Migration File:** `src/db/migrations/20251218200000-modify-channels-device-ch-unique-for-energy.cjs`
-- **Data Migrated:**
-  - 1 organization: "Hoteles Libertador" (ORG-P28EG-5)
-  - 33 devices (filtered from 37 - only active, unique names)
-  - 222 channels (filtered from 250 - only active)
-  - 13 channel_variables relationships
-  - 213 energy channels, 9 SIM channels
-- **Legacy UUID Preservation:** Stored in `devices.metadata.legacy_uuid` for Cassandra query compatibility
-- **Seeder File:** `src/db/seeders/hoteles-libertador.seeder.js`

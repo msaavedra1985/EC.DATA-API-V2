@@ -7,9 +7,26 @@
  * - Tipo de medición (para determinar prefijo de tabla)
  * - Variables activas del canal (para seleccionar columnas)
  * - Timezone del device (para post-procesamiento)
+ * 
+ * CACHE STRATEGY:
+ * - Variables globales: TTL 24h (casi nunca cambian)
+ * - Measurement types: TTL 24h (casi nunca cambian)
+ * - Resolución identificadores: TTL 10min
+ * - Metadata de canal: TTL 10min
  */
 import sequelize from '../../../db/sql/sequelize.js';
 import { QueryTypes } from 'sequelize';
+import {
+    cacheResolvedIdentifier,
+    getCachedResolvedIdentifier,
+    cacheChannelMetadata,
+    getCachedChannelMetadata,
+    cacheGlobalVariables,
+    getCachedGlobalVariables,
+    cacheGlobalMeasurementTypes,
+    getCachedGlobalMeasurementTypes
+} from '../cache.js';
+import logger from '../../../utils/logger.js';
 
 /**
  * Obtiene la metadata completa de un canal para queries de telemetría
@@ -117,6 +134,8 @@ export const getChannelVariables = async (channelId, lang = 'es', variableIds = 
 /**
  * Obtiene la metadata completa para telemetría incluyendo variables
  * 
+ * CACHE: TTL 10min para evitar queries repetitivas a PostgreSQL
+ * 
  * @param {string} channelId - ID del canal (UUID o public_code)
  * @param {string} lang - Código de idioma (default: 'es')
  * @param {number[]} variableIds - IDs específicos de variables (opcional)
@@ -136,6 +155,15 @@ export const getTelemetryMetadata = async (channelId, lang = 'es', variableIds =
             return null;
         }
         resolvedChannelId = channel[0].id;
+    }
+
+    // Intentar obtener desde cache (solo si no hay variableIds específicos)
+    // El cache guarda todas las variables, no subconjuntos
+    if (!variableIds || variableIds.length === 0) {
+        const cached = await getCachedChannelMetadata(resolvedChannelId, lang);
+        if (cached) {
+            return cached;
+        }
     }
 
     // Obtener metadata del canal
@@ -173,7 +201,7 @@ export const getTelemetryMetadata = async (channelId, lang = 'es', variableIds =
     // Si no hay legacy_uuid, usar el device_id de PostgreSQL
     const cassandraUuid = channelMeta.device_legacy_uuid || channelMeta.device_id;
 
-    return {
+    const result = {
         channel: {
             id: channelMeta.channel_id,
             humanId: channelMeta.channel_human_id,
@@ -195,6 +223,13 @@ export const getTelemetryMetadata = async (channelId, lang = 'es', variableIds =
         variables: variablesMap,
         columns
     };
+
+    // Cachear solo si no hay filtro de variables (cache completo)
+    if (!variableIds || variableIds.length === 0) {
+        await cacheChannelMetadata(resolvedChannelId, lang, result);
+    }
+
+    return result;
 };
 
 /**
@@ -205,6 +240,160 @@ export const getTelemetryMetadata = async (channelId, lang = 'es', variableIds =
 const isValidUUID = (str) => {
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-7][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
     return uuidRegex.test(str);
+};
+
+// ============================================
+// FUNCIONES GLOBALES CON CACHE (WARM-UP)
+// ============================================
+
+/**
+ * Carga todas las variables activas con traducciones (para warm-up cache)
+ * Estas casi nunca cambian, TTL 24h
+ * 
+ * @param {string} lang - Código de idioma
+ * @returns {Promise<Object>} Mapa de variables por ID
+ */
+export const loadGlobalVariables = async (lang = 'es') => {
+    // Intentar desde cache primero
+    const cached = await getCachedGlobalVariables(lang);
+    if (cached) {
+        logger.debug({ lang, count: Object.keys(cached).length }, 'Global variables loaded from cache');
+        return cached;
+    }
+
+    // Cargar desde PostgreSQL
+    const query = `
+        SELECT 
+            v.id,
+            v.column_name,
+            v.unit,
+            v.chart_type,
+            v.axis_name,
+            v.axis_id,
+            v.axis_min,
+            v.axis_function,
+            v.aggregation_type,
+            v.is_realtime,
+            v.is_default,
+            v.display_order,
+            COALESCE(vt.name, vt_default.name, 'Unknown') AS name,
+            COALESCE(vt.description, vt_default.description) AS description
+        FROM variables v
+        LEFT JOIN variable_translations vt 
+            ON v.id = vt.variable_id AND vt.lang = :lang
+        LEFT JOIN variable_translations vt_default 
+            ON v.id = vt_default.variable_id AND vt_default.lang = 'es'
+        WHERE v.is_active = true
+        ORDER BY v.id ASC
+    `;
+
+    const results = await sequelize.query(query, {
+        replacements: { lang },
+        type: QueryTypes.SELECT
+    });
+
+    // Construir mapa por ID
+    const variablesMap = {};
+    for (const v of results) {
+        variablesMap[v.id] = {
+            name: v.name,
+            description: v.description,
+            column: v.column_name,
+            unit: v.unit,
+            chartType: v.chart_type,
+            axisName: v.axis_name,
+            axisId: v.axis_id,
+            axisMin: v.axis_min,
+            axisFunction: v.axis_function,
+            aggregationType: v.aggregation_type,
+            isRealtime: v.is_realtime,
+            isDefault: v.is_default,
+            displayOrder: v.display_order
+        };
+    }
+
+    // Guardar en cache
+    await cacheGlobalVariables(lang, variablesMap);
+    logger.info({ lang, count: Object.keys(variablesMap).length }, 'Global variables loaded from DB and cached');
+
+    return variablesMap;
+};
+
+/**
+ * Carga todos los measurement types con traducciones (para warm-up cache)
+ * Estos casi nunca cambian, TTL 24h
+ * 
+ * @param {string} lang - Código de idioma
+ * @returns {Promise<Object>} Mapa de measurement types por ID
+ */
+export const loadGlobalMeasurementTypes = async (lang = 'es') => {
+    // Intentar desde cache primero
+    const cached = await getCachedGlobalMeasurementTypes(lang);
+    if (cached) {
+        logger.debug({ lang, count: Object.keys(cached).length }, 'Global measurement types loaded from cache');
+        return cached;
+    }
+
+    // Cargar desde PostgreSQL
+    const query = `
+        SELECT 
+            mt.id,
+            mt.table_prefix,
+            mt.is_active,
+            COALESCE(mtt.name, mtt_default.name, 'Unknown') AS name,
+            COALESCE(mtt.description, mtt_default.description) AS description
+        FROM measurement_types mt
+        LEFT JOIN measurement_type_translations mtt 
+            ON mt.id = mtt.measurement_type_id AND mtt.lang = :lang
+        LEFT JOIN measurement_type_translations mtt_default 
+            ON mt.id = mtt_default.measurement_type_id AND mtt_default.lang = 'es'
+        WHERE mt.is_active = true
+        ORDER BY mt.id ASC
+    `;
+
+    const results = await sequelize.query(query, {
+        replacements: { lang },
+        type: QueryTypes.SELECT
+    });
+
+    // Construir mapa por ID
+    const typesMap = {};
+    for (const t of results) {
+        typesMap[t.id] = {
+            name: t.name,
+            description: t.description,
+            tablePrefix: t.table_prefix || ''
+        };
+    }
+
+    // Guardar en cache
+    await cacheGlobalMeasurementTypes(lang, typesMap);
+    logger.info({ lang, count: Object.keys(typesMap).length }, 'Global measurement types loaded from DB and cached');
+
+    return typesMap;
+};
+
+/**
+ * Warm-up: Carga datos globales en cache al iniciar el servidor
+ * Llamar desde el bootstrap de la aplicación
+ * 
+ * @param {string[]} langs - Idiomas a pre-cargar (default: ['es', 'en'])
+ */
+export const warmUpTelemetryCache = async (langs = ['es', 'en']) => {
+    logger.info({ langs }, 'Starting telemetry cache warm-up...');
+    const startTime = Date.now();
+
+    try {
+        await Promise.all(langs.flatMap(lang => [
+            loadGlobalVariables(lang),
+            loadGlobalMeasurementTypes(lang)
+        ]));
+
+        const elapsed = Date.now() - startTime;
+        logger.info({ elapsed, langs }, 'Telemetry cache warm-up completed');
+    } catch (error) {
+        logger.error({ err: error }, 'Error during telemetry cache warm-up');
+    }
 };
 
 /**
@@ -237,8 +426,24 @@ const isDevicePublicCode = (str) => {
  */
 
 /**
+ * Construye clave de cache para un identificador
+ * @param {Object} identifier - Identificador
+ * @returns {string} Clave única
+ */
+const buildIdentifierCacheKey = (identifier) => {
+    const { publicCode, channelUuid, legacyUuid, deviceChannel } = identifier;
+    if (publicCode) return `publicCode:${publicCode.toUpperCase()}`;
+    if (channelUuid) return `channelUuid:${channelUuid}`;
+    if (legacyUuid) return `legacyUuid:${legacyUuid}`;
+    if (deviceChannel) return `deviceChannel:${deviceChannel.deviceCode}:${deviceChannel.ch}`;
+    return null;
+};
+
+/**
  * Resuelve un identificador de canal a su UUID de PostgreSQL
  * Soporta múltiples tipos de identificadores para flexibilidad en queries frontend y cron
+ * 
+ * CACHE: TTL 10min para evitar queries repetitivas a PostgreSQL
  * 
  * @param {Object} identifier - Objeto con el tipo de identificador
  * @param {string} [identifier.publicCode] - Código público del canal (CHN-XXXXX-X)
@@ -276,24 +481,42 @@ export const resolveChannelIdentifier = async (identifier) => {
             .filter(Boolean).join(', '));
     }
 
+    // Intentar obtener desde cache primero
+    const cacheKey = buildIdentifierCacheKey(identifier);
+    if (cacheKey) {
+        const cached = await getCachedResolvedIdentifier(cacheKey);
+        if (cached) {
+            return cached;
+        }
+    }
+
     // Resolver según el tipo de identificador (prioridad ya garantizada por exclusividad)
+    let result = null;
     
+    // Helper para cachear y retornar
+    const cacheAndReturn = async (resolved) => {
+        if (resolved && cacheKey) {
+            await cacheResolvedIdentifier(cacheKey, resolved);
+        }
+        return resolved;
+    };
+
     // 1. channelUuid - UUID directo de PostgreSQL
     if (channelUuid) {
         if (!isValidUUID(channelUuid)) {
             throw new Error(`channelUuid inválido: ${channelUuid} no es un UUID válido`);
         }
         
-        const result = await sequelize.query(
+        const rows = await sequelize.query(
             `SELECT id FROM channels WHERE id = :channelUuid AND deleted_at IS NULL`,
             { replacements: { channelUuid }, type: QueryTypes.SELECT }
         );
         
-        if (result.length === 0) {
+        if (rows.length === 0) {
             return null;
         }
         
-        return { channelId: result[0].id, source: 'channelUuid' };
+        return cacheAndReturn({ channelId: rows[0].id, source: 'channelUuid' });
     }
 
     // 2. legacyUuid - UUID histórico almacenado en devices.metadata.legacy_uuid
@@ -302,10 +525,7 @@ export const resolveChannelIdentifier = async (identifier) => {
             throw new Error(`legacyUuid inválido: ${legacyUuid} no es un UUID válido`);
         }
         
-        // Buscar dispositivo por legacy_uuid y retornar todos sus canales
-        // Nota: legacyUuid identifica un device, no un canal específico
-        // Se necesita ch adicional o retornar error si hay múltiples canales
-        const result = await sequelize.query(
+        const rows = await sequelize.query(
             `SELECT c.id 
              FROM channels c
              INNER JOIN devices d ON c.device_id = d.id
@@ -315,15 +535,15 @@ export const resolveChannelIdentifier = async (identifier) => {
             { replacements: { legacyUuid }, type: QueryTypes.SELECT }
         );
         
-        if (result.length === 0) {
+        if (rows.length === 0) {
             return null;
         }
         
-        if (result.length > 1) {
-            throw new Error(`legacyUuid ${legacyUuid} tiene ${result.length} canales. Use deviceChannel con ch específico.`);
+        if (rows.length > 1) {
+            throw new Error(`legacyUuid ${legacyUuid} tiene ${rows.length} canales. Use deviceChannel con ch específico.`);
         }
         
-        return { channelId: result[0].id, source: 'legacyUuid' };
+        return cacheAndReturn({ channelId: rows[0].id, source: 'legacyUuid' });
     }
 
     // 3. deviceChannel - Combo dispositivo + número de canal
@@ -346,7 +566,7 @@ export const resolveChannelIdentifier = async (identifier) => {
             throw new Error(`ch inválido: ${ch} debe ser un número >= 0`);
         }
         
-        const result = await sequelize.query(
+        const rows = await sequelize.query(
             `SELECT c.id 
              FROM channels c
              INNER JOIN devices d ON c.device_id = d.id
@@ -357,16 +577,15 @@ export const resolveChannelIdentifier = async (identifier) => {
             { replacements: { deviceCode: deviceCode.toUpperCase(), ch }, type: QueryTypes.SELECT }
         );
         
-        if (result.length === 0) {
+        if (rows.length === 0) {
             return null;
         }
         
-        if (result.length > 1) {
-            // Esto puede pasar con canales de energía trifásica (mismo ch, distinto measurement_type)
-            throw new Error(`Dispositivo ${deviceCode} tiene ${result.length} canales con ch=${ch}. Use publicCode para especificar.`);
+        if (rows.length > 1) {
+            throw new Error(`Dispositivo ${deviceCode} tiene ${rows.length} canales con ch=${ch}. Use publicCode para especificar.`);
         }
         
-        return { channelId: result[0].id, source: 'deviceChannel' };
+        return cacheAndReturn({ channelId: rows[0].id, source: 'deviceChannel' });
     }
 
     // 4. publicCode - Código público del canal
@@ -375,16 +594,16 @@ export const resolveChannelIdentifier = async (identifier) => {
             throw new Error(`publicCode inválido: ${publicCode} no tiene formato CHN-XXXXX-X`);
         }
         
-        const result = await sequelize.query(
+        const rows = await sequelize.query(
             `SELECT id FROM channels WHERE public_code = :publicCode AND deleted_at IS NULL`,
             { replacements: { publicCode: publicCode.toUpperCase() }, type: QueryTypes.SELECT }
         );
         
-        if (result.length === 0) {
+        if (rows.length === 0) {
             return null;
         }
         
-        return { channelId: result[0].id, source: 'publicCode' };
+        return cacheAndReturn({ channelId: rows[0].id, source: 'publicCode' });
     }
 
     // No debería llegar aquí
@@ -441,6 +660,9 @@ export default {
     getTelemetryMetadata,
     resolveChannelIdentifier,
     resolveChannelIdentifierWithCh,
+    loadGlobalVariables,
+    loadGlobalMeasurementTypes,
+    warmUpTelemetryCache,
     isValidUUID,
     isChannelPublicCode,
     isDevicePublicCode

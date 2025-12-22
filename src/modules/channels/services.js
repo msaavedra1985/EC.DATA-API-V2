@@ -5,6 +5,7 @@ import { v7 as uuidv7 } from 'uuid';
 import * as channelRepository from './repository.js';
 import * as deviceRepository from '../devices/repository.js';
 import { cacheChannelList, getCachedChannelList, invalidateChannelCache } from './cache.js';
+import { invalidateChannelTelemetryCache } from '../telemetry/cache.js';
 import { logAuditAction } from '../../helpers/auditLog.js';
 import { generateHumanId, generatePublicCode } from '../../utils/identifiers.js';
 import Channel from './models/Channel.js';
@@ -234,8 +235,9 @@ export const updateChannel = async (publicCode, updateData, userId, ipAddress, u
         userAgent: userAgent
     });
     
-    // Invalidar cache
+    // Invalidar cache de channels y telemetría
     await invalidateChannelCache();
+    await invalidateChannelTelemetryCache(existingChannel.id);
     
     logger.info({ channelId: existingChannel.id, userId }, 'Channel updated successfully');
     
@@ -285,8 +287,9 @@ export const deleteChannel = async (publicCode, userId, ipAddress, userAgent) =>
             userAgent: userAgent
         });
         
-        // Invalidar cache
+        // Invalidar cache de channels y telemetría
         await invalidateChannelCache();
+        await invalidateChannelTelemetryCache(existingChannel.id);
         
         logger.info({ channelId: existingChannel.id, userId }, 'Channel deleted successfully');
     }
