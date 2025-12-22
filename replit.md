@@ -158,6 +158,20 @@ Preferred communication style: Simple, everyday language.
   - `deviceChannel` ({ deviceCode, ch }) - Para batch processing
   - **Validación de exclusividad:** Solo un tipo de identificador por request
   - **Compatibilidad hacia atrás:** Las rutas siguen funcionando con `:channelId` en URL
+- **Pseudo-Realtime Polling Optimizado:**
+  - **Parámetro `since`:** `GET /telemetry/channels/:id/latest?since=2024-12-22T14:30:00Z`
+    - Si no hay datos nuevos: retorna `{ hasNew: false, latestTimestamp: "..." }`
+    - Si hay datos nuevos: retorna `{ hasNew: true, data: {...} }`
+    - Reduce transferencia de datos en polling frecuente
+  - **Endpoint batch:** `POST /telemetry/batch/latest` - consulta múltiples canales en paralelo
+    - Máximo 50 canales por request
+    - Cada canal con todas sus variables en una query Cassandra
+    - Retorna estadísticas: `{ totalChannels, successCount, withNewData, elapsedMs }`
+  - **Rendimiento medido:**
+    - Individual (1 canal): ~330ms
+    - Batch 10 canales: ~770ms (77ms/canal)
+    - Batch 20 canales: ~545ms (27ms/canal)
+  - **Fix Cassandra:** Nombres de tabla que empiezan con número ahora se escapan con comillas dobles
 
 ### 2025-12-19: Hoteles Libertador Migration
 - **Schema Change:** Modified `channels_device_ch_unique` constraint to exclude `measurement_type_id = 1` (energy) - allows duplicate CH numbers for tri-phase electrical readings (R, S, T phases)
