@@ -151,6 +151,13 @@ Preferred communication style: Simple, everyday language.
   - **Fin de año resuelto:** 31 dic Lima = `2024-12-31T05:00Z` a `2025-01-01T04:59:59Z` (cruza años 2024 y 2025)
   - **Validación obligatoria:** Dispositivos sin timezone configurado lanzan error explícito
   - **Filtros timezone-aware:** `filterByExcludeDays` y `filterByHourRanges` usan timezone del dispositivo
+- **Flexible Channel Identification:** `resolveChannelIdentifier` helper supports 4 identifier types:
+  - `publicCode` (CHN-XXXXX-X) - Para frontend
+  - `channelUuid` (UUID PostgreSQL) - Para cron interno
+  - `legacyUuid` (UUID histórico) - Para migración/debug
+  - `deviceChannel` ({ deviceCode, ch }) - Para batch processing
+  - **Validación de exclusividad:** Solo un tipo de identificador por request
+  - **Compatibilidad hacia atrás:** Las rutas siguen funcionando con `:channelId` en URL
 
 ### 2025-12-19: Hoteles Libertador Migration
 - **Schema Change:** Modified `channels_device_ch_unique` constraint to exclude `measurement_type_id = 1` (energy) - allows duplicate CH numbers for tri-phase electrical readings (R, S, T phases)
