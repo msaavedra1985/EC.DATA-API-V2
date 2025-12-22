@@ -19,6 +19,9 @@ import { QueryTypes } from 'sequelize';
  * @returns {Promise<Object|null>} Metadata del canal o null si no existe
  */
 export const getChannelMetadata = async (channelId, lang = 'es') => {
+    // La query obtiene el UUID para Cassandra priorizando legacy_uuid si existe
+    // Esto es necesario para dispositivos migrados que tienen datos históricos
+    // en Cassandra con un UUID diferente al de PostgreSQL
     const query = `
         SELECT 
             c.id AS channel_id,
@@ -30,6 +33,7 @@ export const getChannelMetadata = async (channelId, lang = 'es') => {
             d.id AS device_id,
             d.name AS device_name,
             d.timezone AS device_timezone,
+            d.metadata->>'legacy_uuid' AS device_legacy_uuid,
             mt.table_prefix,
             COALESCE(mtt.name, mtt_default.name, 'Unknown') AS measurement_type_name
         FROM channels c
@@ -165,6 +169,10 @@ export const getTelemetryMetadata = async (channelId, lang = 'es', variableIds =
         }
     }
 
+    // Para queries de Cassandra, usar legacy_uuid si existe (dispositivos migrados)
+    // Si no hay legacy_uuid, usar el device_id de PostgreSQL
+    const cassandraUuid = channelMeta.device_legacy_uuid || channelMeta.device_id;
+
     return {
         channel: {
             id: channelMeta.channel_id,
@@ -174,7 +182,8 @@ export const getTelemetryMetadata = async (channelId, lang = 'es', variableIds =
             ch: channelMeta.channel_number
         },
         device: {
-            id: channelMeta.device_id,
+            id: cassandraUuid,  // UUID para Cassandra (legacy_uuid o device_id)
+            postgresId: channelMeta.device_id,  // UUID original de PostgreSQL
             name: channelMeta.device_name,
             timezone: channelMeta.device_timezone || 'UTC'
         },

@@ -3,6 +3,7 @@ import createApp from './app.js';
 import { config, validateConfig } from './config/env.js';
 import { initializeDatabase, closeDatabase } from './db/sql/sequelize.js';
 import { initializeRedis, closeRedis } from './db/redis/client.js';
+import { initCassandra, closeCassandra, hasCredentials } from './db/cassandra/client.js';
 import { startTokenCleanupScheduler } from './utils/cleanupTokens.js';
 import logger from './utils/logger.js';
 
@@ -25,6 +26,13 @@ const initializeServices = async () => {
 
         // Inicializar Redis (opcional en desarrollo)
         await initializeRedis();
+
+        // Inicializar Cassandra (opcional - solo si hay credenciales)
+        if (hasCredentials()) {
+            await initCassandra();
+        } else {
+            logger.info('⏸️  Cassandra: Credenciales no configuradas, saltando inicialización');
+        }
 
         logger.info('✅ All services initialized successfully');
     } catch (error) {
@@ -81,6 +89,7 @@ const startServer = async () => {
                 // Cerrar conexiones a servicios externos
                 await closeDatabase();
                 await closeRedis();
+                await closeCassandra();
                 
                 logger.info('✅ Graceful shutdown completed');
                 process.exit(0);
