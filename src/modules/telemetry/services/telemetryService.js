@@ -80,13 +80,17 @@ export const search = async (req) => {
         resolution
     );
 
-    // 3. Parsear fechas locales a UTC considerando timezone del dispositivo
+    // 3. Validar timezone del dispositivo (obligatorio para conversiones correctas)
+    if (!metadata.device.timezone) {
+        throw new Error(`Dispositivo ${metadata.device.name} no tiene timezone configurado. Configure timezone en la tabla devices.`);
+    }
+    
+    // 4. Parsear fechas locales a UTC considerando timezone del dispositivo
     // Esto resuelve el problema de fin de año: 31 dic Lima = 31 dic 05:00 UTC a 1 ene 04:59:59 UTC
-    const deviceTimezone = metadata.device.timezone || 'America/Lima';
-    const fromDate = parseLocalDateToUTC(from, deviceTimezone, false);
-    const toDate = parseLocalDateToUTC(to, deviceTimezone, true);
+    const fromDate = parseLocalDateToUTC(from, metadata.device.timezone, false);
+    const toDate = parseLocalDateToUTC(to, metadata.device.timezone, true);
 
-    // 4. Ejecutar query en Cassandra
+    // 5. Ejecutar query en Cassandra
     const rawData = await queryTelemetryData({
         uuid: metadata.device.id,
         ch: metadata.channel.ch,
@@ -97,7 +101,7 @@ export const search = async (req) => {
         to: toDate
     });
 
-    // 5. Post-procesar datos
+    // 6. Post-procesar datos
     let processedData = rawData;
 
     // Aplicar filtro de días excluidos
@@ -110,7 +114,7 @@ export const search = async (req) => {
         processedData = filterByHourRanges(processedData, filters.hourRanges, tz || metadata.device.timezone);
     }
 
-    // 6. Mapear a formato de respuesta
+    // 7. Mapear a formato de respuesta
     const data = processedData.map(row => {
         const values = {};
         for (const [varId, varInfo] of Object.entries(metadata.variables)) {

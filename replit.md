@@ -146,6 +146,11 @@ Preferred communication style: Simple, everyday language.
 - **Variable Column Fix:** Corrected `variables.column_name` from 'fp' to 'pf' to match Cassandra schema
 - **Resolutions Working:** daily (diario_t_datos) confirmed working with 21+ records per channel
 - **Variables Configured:** 5 variables per energy channel (e, p, pf, v, i) with 1,065 total channel_variables assignments
+- **DayJS Timezone Integration:** Implemented DayJS with UTC/Timezone plugins for accurate date conversions
+  - `src/utils/dateUtils.js` - Centralized date utilities with `parseLocalDateToUTC`, `getYearsInRange`, `getDaysInRange`
+  - **Fin de año resuelto:** 31 dic Lima = `2024-12-31T05:00Z` a `2025-01-01T04:59:59Z` (cruza años 2024 y 2025)
+  - **Validación obligatoria:** Dispositivos sin timezone configurado lanzan error explícito
+  - **Filtros timezone-aware:** `filterByExcludeDays` y `filterByHourRanges` usan timezone del dispositivo
 
 ### 2025-12-19: Hoteles Libertador Migration
 - **Schema Change:** Modified `channels_device_ch_unique` constraint to exclude `measurement_type_id = 1` (energy) - allows duplicate CH numbers for tri-phase electrical readings (R, S, T phases)
