@@ -209,12 +209,26 @@ export const search = async (req) => {
 };
 
 /**
- * Obtiene el último dato de un canal (para realtime)
+ * @typedef {Object} GetLatestOptions
+ * @property {string} [since] - ISO timestamp del último dato que tiene el cliente
+ *                              Si el dato más reciente no es más nuevo, retorna hasNew: false
+ *                              Optimiza polling reduciendo transferencia de datos
+ */
+
+/**
+ * Obtiene el último dato de un canal (para pseudo-realtime/polling)
+ * 
+ * Soporta parámetro `since` para optimizar polling:
+ * - Si hay datos más nuevos que `since` → retorna los datos
+ * - Si no hay datos nuevos → retorna { hasNew: false }
  * 
  * @param {string|ChannelIdentifier} rawIdentifier - Identificador del canal (string o objeto)
- * @returns {Promise<Object>} Último dato disponible
+ * @param {GetLatestOptions} [options={}] - Opciones adicionales
+ * @returns {Promise<Object>} Último dato disponible o { hasNew: false }
  */
-export const getLatest = async (rawIdentifier) => {
+export const getLatest = async (rawIdentifier, options = {}) => {
+    const { since } = options;
+    
     // Normalizar y resolver identificador
     const normalizedIdentifier = normalizeIdentifier(rawIdentifier);
     const resolved = await resolveChannelIdentifier(normalizedIdentifier);
@@ -240,8 +254,11 @@ export const getLatest = async (rawIdentifier) => {
         columns: metadata.columns
     });
 
+    // Si no hay datos, retornar sin data
     if (!latestRow) {
         return {
+            hasNew: false,
+            lastChecked: new Date().toISOString(),
             metadata: {
                 uuid: metadata.device.id,
                 deviceName: metadata.device.name,
@@ -252,6 +269,27 @@ export const getLatest = async (rawIdentifier) => {
         };
     }
 
+    // Optimización de polling: si el cliente ya tiene el último dato, no transferir
+    if (since) {
+        const sinceDate = new Date(since);
+        const latestDate = new Date(latestRow.timestamp);
+        
+        // Si el último dato no es más nuevo que lo que tiene el cliente
+        if (latestDate <= sinceDate) {
+            return {
+                hasNew: false,
+                lastChecked: new Date().toISOString(),
+                latestTimestamp: latestRow.timestamp,
+                metadata: {
+                    uuid: metadata.device.id,
+                    deviceName: metadata.device.name,
+                    channelName: metadata.channel.name
+                }
+            };
+        }
+    }
+
+    // Hay datos nuevos, construir respuesta completa
     const values = {};
     for (const [varId, varInfo] of Object.entries(metadata.variables)) {
         const value = latestRow[varInfo.column];
@@ -259,6 +297,8 @@ export const getLatest = async (rawIdentifier) => {
     }
 
     return {
+        hasNew: true,
+        lastChecked: new Date().toISOString(),
         metadata: {
             uuid: metadata.device.id,
             deviceName: metadata.device.name,
@@ -270,6 +310,59 @@ export const getLatest = async (rawIdentifier) => {
             ts: latestRow.timestamp,
             values
         }
+    };
+};
+
+/**
+ * Obtiene datos de múltiples canales en paralelo
+ * 
+ * Ejecuta Promise.all sobre cada canal para máximo rendimiento.
+ * Cada canal obtiene todas sus variables en una sola query Cassandra.
+ * 
+ * @param {Array<string|ChannelIdentifier>} identifiers - Array de identificadores de canal
+ * @param {Object} [options={}] - Opciones compartidas
+ * @param {string} [options.since] - ISO timestamp para optimización de polling
+ * @returns {Promise<Object>} Resultados indexados por identificador
+ */
+export const getLatestBatch = async (identifiers, options = {}) => {
+    const startTime = Date.now();
+    
+    // Ejecutar todas las consultas en paralelo
+    const promises = identifiers.map(async (identifier, index) => {
+        try {
+            const result = await getLatest(identifier, options);
+            return { 
+                index,
+                identifier,
+                success: true, 
+                ...result 
+            };
+        } catch (error) {
+            return { 
+                index,
+                identifier,
+                success: false, 
+                error: error.message 
+            };
+        }
+    });
+
+    const results = await Promise.all(promises);
+    const elapsed = Date.now() - startTime;
+
+    // Estadísticas de la operación batch
+    const successCount = results.filter(r => r.success).length;
+    const withNewData = results.filter(r => r.success && r.hasNew).length;
+
+    return {
+        batchMeta: {
+            totalChannels: identifiers.length,
+            successCount,
+            withNewData,
+            elapsedMs: elapsed,
+            timestamp: new Date().toISOString()
+        },
+        results
     };
 };
 
@@ -324,5 +417,6 @@ const filterByHourRanges = (data, hourRanges, tz) => {
 
 export default {
     search,
-    getLatest
+    getLatest,
+    getLatestBatch
 };

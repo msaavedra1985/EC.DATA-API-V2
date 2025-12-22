@@ -4,7 +4,7 @@
  * Exporta rutas, servicios y repositorios del módulo de telemetría.
  */
 import { Router } from 'express';
-import { search, getLatest } from './services/telemetryService.js';
+import { search, getLatest, getLatestBatch } from './services/telemetryService.js';
 import { z } from 'zod';
 
 // Esquema de validación para búsqueda de telemetría
@@ -222,7 +222,13 @@ router.get('/channels/:channelId/data', async (req, res) => {
  * /api/v1/telemetry/channels/{channelId}/latest:
  *   get:
  *     summary: Obtiene el último dato de telemetría de un canal
- *     description: Retorna el registro más reciente disponible para visualización en tiempo real.
+ *     description: |
+ *       Retorna el registro más reciente disponible para pseudo-realtime/polling.
+ *       
+ *       **Optimización de polling con `since`:**
+ *       - Si se proporciona `since` y no hay datos más nuevos → retorna `hasNew: false`
+ *       - Si hay datos nuevos → retorna los datos completos con `hasNew: true`
+ *       - Reduce transferencia de datos en polling frecuente
  *     tags:
  *       - Telemetry
  *     security:
@@ -233,18 +239,52 @@ router.get('/channels/:channelId/data', async (req, res) => {
  *         required: true
  *         schema:
  *           type: string
- *         description: ID del canal (UUID o public_code)
+ *         description: ID del canal (UUID, public_code CHN-XXXXX-X)
+ *       - in: query
+ *         name: since
+ *         required: false
+ *         schema:
+ *           type: string
+ *           format: date-time
+ *         description: |
+ *           ISO timestamp del último dato que tiene el cliente.
+ *           Si el dato más reciente no es más nuevo, retorna hasNew: false.
+ *         example: "2024-12-22T14:30:00.000Z"
  *     responses:
  *       200:
- *         description: Último dato de telemetría
+ *         description: Último dato de telemetría o indicador de sin cambios
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     hasNew:
+ *                       type: boolean
+ *                       description: Si hay datos nuevos respecto a `since`
+ *                     lastChecked:
+ *                       type: string
+ *                       format: date-time
+ *                     metadata:
+ *                       type: object
+ *                     variables:
+ *                       type: object
+ *                     data:
+ *                       type: object
+ *                       nullable: true
  *       404:
  *         description: Canal no encontrado
  */
 router.get('/channels/:channelId/latest', async (req, res) => {
     try {
         const { channelId } = req.params;
+        const { since } = req.query;
 
-        const result = await getLatest(channelId);
+        const result = await getLatest(channelId, { since });
 
         return res.json({
             ok: true,
@@ -275,9 +315,141 @@ router.get('/channels/:channelId/latest', async (req, res) => {
     }
 });
 
+/**
+ * @swagger
+ * /api/v1/telemetry/batch/latest:
+ *   post:
+ *     summary: Obtiene últimos datos de múltiples canales en paralelo
+ *     description: |
+ *       Ejecuta consultas en paralelo para máximo rendimiento.
+ *       Cada canal consulta todas sus variables en una sola query Cassandra.
+ *       Ideal para dashboards con múltiples sensores.
+ *       
+ *       **Tipos de identificador soportados:**
+ *       - `publicCode`: "CHN-5Q775-2" (para frontend)
+ *       - `channelUuid`: UUID de PostgreSQL (para cron)
+ *       - `deviceChannel`: { deviceCode: "DEV-XXXXX-X", ch: 1 } (para batch)
+ *     tags:
+ *       - Telemetry
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - channels
+ *             properties:
+ *               channels:
+ *                 type: array
+ *                 description: Array de identificadores de canal
+ *                 maxItems: 50
+ *                 items:
+ *                   oneOf:
+ *                     - type: string
+ *                       description: public_code del canal
+ *                     - type: object
+ *                       properties:
+ *                         publicCode:
+ *                           type: string
+ *                         channelUuid:
+ *                           type: string
+ *                         deviceChannel:
+ *                           type: object
+ *                           properties:
+ *                             deviceCode:
+ *                               type: string
+ *                             ch:
+ *                               type: integer
+ *                 example: ["CHN-5Q775-2", "CHN-7B3R2-8", "CHN-4K9P1-3"]
+ *               since:
+ *                 type: string
+ *                 format: date-time
+ *                 description: ISO timestamp para optimización de polling
+ *     responses:
+ *       200:
+ *         description: Resultados de todos los canales
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     batchMeta:
+ *                       type: object
+ *                       properties:
+ *                         totalChannels:
+ *                           type: integer
+ *                         successCount:
+ *                           type: integer
+ *                         withNewData:
+ *                           type: integer
+ *                         elapsedMs:
+ *                           type: integer
+ *                           description: Tiempo total de ejecución en ms
+ *                     results:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *       400:
+ *         description: Parámetros inválidos
+ */
+router.post('/batch/latest', async (req, res) => {
+    try {
+        const { channels, since } = req.body;
+
+        // Validar que channels es un array
+        if (!channels || !Array.isArray(channels)) {
+            return res.status(400).json({
+                ok: false,
+                error: {
+                    code: 'VALIDATION_ERROR',
+                    message: 'Se requiere un array de canales en el body'
+                }
+            });
+        }
+
+        // Limitar cantidad de canales por request
+        if (channels.length > 50) {
+            return res.status(400).json({
+                ok: false,
+                error: {
+                    code: 'VALIDATION_ERROR',
+                    message: 'Máximo 50 canales por request batch'
+                }
+            });
+        }
+
+        const result = await getLatestBatch(channels, { since });
+
+        return res.json({
+            ok: true,
+            data: result
+        });
+
+    } catch (error) {
+        console.error('Telemetry batch error:', error);
+
+        return res.status(500).json({
+            ok: false,
+            error: {
+                code: 'INTERNAL_ERROR',
+                message: 'Error al obtener datos batch',
+                details: process.env.NODE_ENV === 'development' ? error.message : undefined
+            }
+        });
+    }
+});
+
 // Exportar router y servicios
 export { router as telemetryRouter };
-export { search, getLatest } from './services/telemetryService.js';
+export { search, getLatest, getLatestBatch } from './services/telemetryService.js';
 export { 
     getTelemetryMetadata, 
     resolveChannelIdentifier,

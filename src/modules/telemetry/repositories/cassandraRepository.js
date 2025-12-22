@@ -107,6 +107,9 @@ export const queryTelemetryData = async ({ uuid, ch, tableName, partitionType, c
     const selectColumns = ['timestamp', ...columns.filter(c => c !== 'timestamp')];
     const columnsStr = selectColumns.join(', ');
 
+    // Nota: Nombres de tabla que empiezan con número requieren comillas dobles en CQL
+    const quotedTableName = tableName.match(/^[0-9]/) ? `"${tableName}"` : tableName;
+
     // Ejecutar queries por cada partición
     const allResults = [];
 
@@ -117,7 +120,7 @@ export const queryTelemetryData = async ({ uuid, ch, tableName, partitionType, c
         if (partitionType === 'year') {
             cql = `
                 SELECT ${columnsStr}
-                FROM sensores.${tableName}
+                FROM sensores.${quotedTableName}
                 WHERE uuid = ?
                   AND canal = ?
                   AND year = ?
@@ -128,7 +131,7 @@ export const queryTelemetryData = async ({ uuid, ch, tableName, partitionType, c
         } else {
             cql = `
                 SELECT ${columnsStr}
-                FROM sensores.${tableName}
+                FROM sensores.${quotedTableName}
                 WHERE uuid = ?
                   AND canal = ?
                   AND year = ?
@@ -175,9 +178,11 @@ export const getLatestData = async ({ uuid, ch, tablePrefix, columns }) => {
     const columnsStr = selectColumns.join(', ');
 
     // Buscar en el año actual
+    // Nota: Nombres de tabla que empiezan con número requieren comillas dobles en CQL
+    const quotedTableName = tableName.match(/^[0-9]/) ? `"${tableName}"` : tableName;
     const cql = `
         SELECT ${columnsStr}
-        FROM sensores.${tableName}
+        FROM sensores.${quotedTableName}
         WHERE uuid = ?
           AND canal = ?
           AND year = ?
