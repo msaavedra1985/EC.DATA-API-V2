@@ -5,13 +5,18 @@
  * Combina metadata de PostgreSQL con datos de Cassandra.
  * 
  * Flujo:
- * 1. Obtener metadata del canal (device UUID, ch, tipo medición, variables)
- * 2. Determinar tabla Cassandra correcta (prefijo + resolución)
- * 3. Convertir fechas locales a UTC considerando timezone del dispositivo
- * 4. Construir y ejecutar queries CQL con manejo de particiones (incluye años cruzados)
- * 5. Post-procesar resultados (filtros timezone, mapeo columnas)
+ * 1. Resolver identificador del canal (soporta múltiples tipos)
+ * 2. Obtener metadata del canal (device UUID, ch, tipo medición, variables)
+ * 3. Determinar tabla Cassandra correcta (prefijo + resolución)
+ * 4. Convertir fechas locales a UTC considerando timezone del dispositivo
+ * 5. Construir y ejecutar queries CQL con manejo de particiones (incluye años cruzados)
+ * 6. Post-procesar resultados (filtros timezone, mapeo columnas)
  */
-import { getTelemetryMetadata } from '../repositories/metadataRepository.js';
+import { 
+    getTelemetryMetadata, 
+    resolveChannelIdentifier,
+    resolveChannelIdentifierWithCh 
+} from '../repositories/metadataRepository.js';
 import { 
     getTableConfig, 
     queryTelemetryData, 
@@ -20,8 +25,18 @@ import {
 import { parseLocalDateToUTC, dayjs } from '../../../utils/dateUtils.js';
 
 /**
+ * @typedef {Object} ChannelIdentifier
+ * @property {string} [publicCode] - Código público del canal (CHN-XXXXX-X) - Para frontend
+ * @property {string} [channelUuid] - UUID de PostgreSQL del canal - Para cron interno
+ * @property {string} [legacyUuid] - UUID legacy del dispositivo en Cassandra - Para migración/debug
+ * @property {Object} [deviceChannel] - Combo dispositivo + canal - Para batch processing
+ * @property {string} [deviceChannel.deviceCode] - Código público del dispositivo (DEV-XXXXX-X)
+ * @property {number} [deviceChannel.ch] - Número de canal físico
+ */
+
+/**
  * @typedef {Object} TelemetrySearchRequest
- * @property {string} channelId - ID del canal (UUID o public_code)
+ * @property {string|ChannelIdentifier} identifier - Identificador del canal (string para compatibilidad, objeto para nuevos usos)
  * @property {string} from - Fecha inicio (ISO string o YYYY-MM-DD)
  * @property {string} to - Fecha fin (ISO string o YYYY-MM-DD)
  * @property {string} [tz] - Timezone objetivo
@@ -42,6 +57,38 @@ import { parseLocalDateToUTC, dayjs } from '../../../utils/dateUtils.js';
  */
 
 /**
+ * Normaliza un identificador de canal al formato objeto esperado
+ * Mantiene compatibilidad con el formato legacy (string directo)
+ * 
+ * @param {string|ChannelIdentifier} identifier - Identificador en cualquier formato
+ * @returns {ChannelIdentifier} Identificador normalizado como objeto
+ */
+const normalizeIdentifier = (identifier) => {
+    // Si ya es objeto, retornar como está
+    if (identifier && typeof identifier === 'object') {
+        return identifier;
+    }
+    
+    // Si es string, intentar determinar el tipo automáticamente
+    if (typeof identifier === 'string') {
+        // Formato CHN-XXXXX-X -> publicCode
+        if (/^CHN-[A-Z0-9]{5}-[0-9]$/i.test(identifier)) {
+            return { publicCode: identifier };
+        }
+        
+        // Formato UUID -> channelUuid
+        if (/^[0-9a-f]{8}-[0-9a-f]{4}-[1-7][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(identifier)) {
+            return { channelUuid: identifier };
+        }
+        
+        // Fallback: asumir publicCode para mantener compatibilidad
+        return { publicCode: identifier };
+    }
+    
+    throw new Error('Identificador inválido: debe ser string o objeto');
+};
+
+/**
  * Busca datos de telemetría para un canal
  * 
  * @param {TelemetrySearchRequest} req - Parámetros de búsqueda
@@ -49,7 +96,8 @@ import { parseLocalDateToUTC, dayjs } from '../../../utils/dateUtils.js';
  */
 export const search = async (req) => {
     const { 
-        channelId, 
+        identifier,
+        channelId,  // Legacy: mantener compatibilidad con código existente
         from, 
         to, 
         tz, 
@@ -59,19 +107,33 @@ export const search = async (req) => {
         filters = {}
     } = req;
 
-    // 1. Obtener metadata del canal
-    const metadata = await getTelemetryMetadata(channelId, 'es', variables);
+    // 1. Normalizar y resolver identificador
+    // Soporta tanto el nuevo formato (identifier) como el legacy (channelId)
+    const rawIdentifier = identifier || channelId;
+    if (!rawIdentifier) {
+        throw new Error('Se requiere identifier o channelId');
+    }
+    
+    const normalizedIdentifier = normalizeIdentifier(rawIdentifier);
+    const resolved = await resolveChannelIdentifier(normalizedIdentifier);
+    
+    if (!resolved) {
+        throw new Error(`Canal no encontrado: ${JSON.stringify(rawIdentifier)}`);
+    }
+
+    // 2. Obtener metadata del canal usando el UUID resuelto
+    const metadata = await getTelemetryMetadata(resolved.channelId, 'es', variables);
     
     if (!metadata) {
-        throw new Error(`Canal no encontrado: ${channelId}`);
+        throw new Error(`Metadata no encontrada para canal: ${resolved.channelId}`);
     }
 
     if (!metadata.channel.ch) {
-        throw new Error(`Canal ${channelId} no tiene número de canal físico (ch) configurado`);
+        throw new Error(`Canal ${resolved.channelId} no tiene número de canal físico (ch) configurado`);
     }
 
     if (!metadata.measurementType.id) {
-        throw new Error(`Canal ${channelId} no tiene tipo de medición configurado`);
+        throw new Error(`Canal ${resolved.channelId} no tiene tipo de medición configurado`);
     }
 
     // 2. Obtener configuración de tabla
@@ -149,18 +211,26 @@ export const search = async (req) => {
 /**
  * Obtiene el último dato de un canal (para realtime)
  * 
- * @param {string} channelId - ID del canal
+ * @param {string|ChannelIdentifier} rawIdentifier - Identificador del canal (string o objeto)
  * @returns {Promise<Object>} Último dato disponible
  */
-export const getLatest = async (channelId) => {
-    const metadata = await getTelemetryMetadata(channelId, 'es');
+export const getLatest = async (rawIdentifier) => {
+    // Normalizar y resolver identificador
+    const normalizedIdentifier = normalizeIdentifier(rawIdentifier);
+    const resolved = await resolveChannelIdentifier(normalizedIdentifier);
+    
+    if (!resolved) {
+        throw new Error(`Canal no encontrado: ${JSON.stringify(rawIdentifier)}`);
+    }
+
+    const metadata = await getTelemetryMetadata(resolved.channelId, 'es');
     
     if (!metadata) {
-        throw new Error(`Canal no encontrado: ${channelId}`);
+        throw new Error(`Metadata no encontrada para canal: ${resolved.channelId}`);
     }
 
     if (!metadata.channel.ch) {
-        throw new Error(`Canal ${channelId} no tiene ch configurado`);
+        throw new Error(`Canal ${resolved.channelId} no tiene ch configurado`);
     }
 
     const latestRow = await getLatestData({

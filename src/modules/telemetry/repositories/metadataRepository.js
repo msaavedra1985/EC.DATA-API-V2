@@ -207,8 +207,241 @@ const isValidUUID = (str) => {
     return uuidRegex.test(str);
 };
 
+/**
+ * Valida si un string es un public_code de canal (formato CHN-XXXXX-X)
+ * @param {string} str - String a validar
+ * @returns {boolean}
+ */
+const isChannelPublicCode = (str) => {
+    return /^CHN-[A-Z0-9]{5}-[0-9]$/i.test(str);
+};
+
+/**
+ * Valida si un string es un public_code de dispositivo (formato DEV-XXXXX-X)
+ * @param {string} str - String a validar
+ * @returns {boolean}
+ */
+const isDevicePublicCode = (str) => {
+    return /^DEV-[A-Z0-9]{5}-[0-9]$/i.test(str);
+};
+
+/**
+ * TIPOS DE IDENTIFICADOR SOPORTADOS:
+ * 
+ * 1. publicCode (string): Código público del canal (CHN-XXXXX-X) - Para frontend
+ * 2. channelUuid (string): UUID de PostgreSQL del canal - Para cron interno
+ * 3. legacyUuid (string): UUID histórico en devices.metadata.legacy_uuid - Para migración/debug
+ * 4. deviceChannel (object): { deviceCode: 'DEV-XXXXX-X', ch: 1 } - Para batch processing
+ * 
+ * PRIORIDAD si se envían múltiples: channelUuid > legacyUuid > deviceChannel > publicCode
+ */
+
+/**
+ * Resuelve un identificador de canal a su UUID de PostgreSQL
+ * Soporta múltiples tipos de identificadores para flexibilidad en queries frontend y cron
+ * 
+ * @param {Object} identifier - Objeto con el tipo de identificador
+ * @param {string} [identifier.publicCode] - Código público del canal (CHN-XXXXX-X)
+ * @param {string} [identifier.channelUuid] - UUID de PostgreSQL del canal
+ * @param {string} [identifier.legacyUuid] - UUID legacy del dispositivo en Cassandra
+ * @param {Object} [identifier.deviceChannel] - Combo dispositivo + canal
+ * @param {string} [identifier.deviceChannel.deviceCode] - Código público del dispositivo
+ * @param {number} [identifier.deviceChannel.ch] - Número de canal físico
+ * @returns {Promise<{channelId: string, source: string}|null>} ID del canal y fuente de resolución
+ * @throws {Error} Si se envían múltiples identificadores o formato inválido
+ */
+export const resolveChannelIdentifier = async (identifier) => {
+    // Validar que el identificador sea un objeto
+    if (!identifier || typeof identifier !== 'object') {
+        throw new Error('Identificador inválido: debe ser un objeto con una propiedad de identificación');
+    }
+
+    const { publicCode, channelUuid, legacyUuid, deviceChannel } = identifier;
+    
+    // Contar cuántos identificadores se proporcionaron
+    const providedIdentifiers = [
+        publicCode !== undefined,
+        channelUuid !== undefined,
+        legacyUuid !== undefined,
+        deviceChannel !== undefined
+    ].filter(Boolean).length;
+
+    if (providedIdentifiers === 0) {
+        throw new Error('Identificador requerido: proporcione publicCode, channelUuid, legacyUuid o deviceChannel');
+    }
+
+    if (providedIdentifiers > 1) {
+        throw new Error('Solo se permite un tipo de identificador por request. Identificadores recibidos: ' + 
+            [publicCode && 'publicCode', channelUuid && 'channelUuid', legacyUuid && 'legacyUuid', deviceChannel && 'deviceChannel']
+            .filter(Boolean).join(', '));
+    }
+
+    // Resolver según el tipo de identificador (prioridad ya garantizada por exclusividad)
+    
+    // 1. channelUuid - UUID directo de PostgreSQL
+    if (channelUuid) {
+        if (!isValidUUID(channelUuid)) {
+            throw new Error(`channelUuid inválido: ${channelUuid} no es un UUID válido`);
+        }
+        
+        const result = await sequelize.query(
+            `SELECT id FROM channels WHERE id = :channelUuid AND deleted_at IS NULL`,
+            { replacements: { channelUuid }, type: QueryTypes.SELECT }
+        );
+        
+        if (result.length === 0) {
+            return null;
+        }
+        
+        return { channelId: result[0].id, source: 'channelUuid' };
+    }
+
+    // 2. legacyUuid - UUID histórico almacenado en devices.metadata.legacy_uuid
+    if (legacyUuid) {
+        if (!isValidUUID(legacyUuid)) {
+            throw new Error(`legacyUuid inválido: ${legacyUuid} no es un UUID válido`);
+        }
+        
+        // Buscar dispositivo por legacy_uuid y retornar todos sus canales
+        // Nota: legacyUuid identifica un device, no un canal específico
+        // Se necesita ch adicional o retornar error si hay múltiples canales
+        const result = await sequelize.query(
+            `SELECT c.id 
+             FROM channels c
+             INNER JOIN devices d ON c.device_id = d.id
+             WHERE d.metadata->>'legacy_uuid' = :legacyUuid
+               AND c.deleted_at IS NULL
+               AND d.deleted_at IS NULL`,
+            { replacements: { legacyUuid }, type: QueryTypes.SELECT }
+        );
+        
+        if (result.length === 0) {
+            return null;
+        }
+        
+        if (result.length > 1) {
+            throw new Error(`legacyUuid ${legacyUuid} tiene ${result.length} canales. Use deviceChannel con ch específico.`);
+        }
+        
+        return { channelId: result[0].id, source: 'legacyUuid' };
+    }
+
+    // 3. deviceChannel - Combo dispositivo + número de canal
+    if (deviceChannel) {
+        const { deviceCode, ch } = deviceChannel;
+        
+        if (!deviceCode) {
+            throw new Error('deviceChannel.deviceCode es requerido');
+        }
+        
+        if (ch === undefined || ch === null) {
+            throw new Error('deviceChannel.ch es requerido');
+        }
+        
+        if (!isDevicePublicCode(deviceCode)) {
+            throw new Error(`deviceCode inválido: ${deviceCode} no tiene formato DEV-XXXXX-X`);
+        }
+        
+        if (typeof ch !== 'number' || ch < 0) {
+            throw new Error(`ch inválido: ${ch} debe ser un número >= 0`);
+        }
+        
+        const result = await sequelize.query(
+            `SELECT c.id 
+             FROM channels c
+             INNER JOIN devices d ON c.device_id = d.id
+             WHERE d.public_code = :deviceCode
+               AND c.ch = :ch
+               AND c.deleted_at IS NULL
+               AND d.deleted_at IS NULL`,
+            { replacements: { deviceCode: deviceCode.toUpperCase(), ch }, type: QueryTypes.SELECT }
+        );
+        
+        if (result.length === 0) {
+            return null;
+        }
+        
+        if (result.length > 1) {
+            // Esto puede pasar con canales de energía trifásica (mismo ch, distinto measurement_type)
+            throw new Error(`Dispositivo ${deviceCode} tiene ${result.length} canales con ch=${ch}. Use publicCode para especificar.`);
+        }
+        
+        return { channelId: result[0].id, source: 'deviceChannel' };
+    }
+
+    // 4. publicCode - Código público del canal
+    if (publicCode) {
+        if (!isChannelPublicCode(publicCode)) {
+            throw new Error(`publicCode inválido: ${publicCode} no tiene formato CHN-XXXXX-X`);
+        }
+        
+        const result = await sequelize.query(
+            `SELECT id FROM channels WHERE public_code = :publicCode AND deleted_at IS NULL`,
+            { replacements: { publicCode: publicCode.toUpperCase() }, type: QueryTypes.SELECT }
+        );
+        
+        if (result.length === 0) {
+            return null;
+        }
+        
+        return { channelId: result[0].id, source: 'publicCode' };
+    }
+
+    // No debería llegar aquí
+    return null;
+};
+
+/**
+ * Resuelve un identificador de canal con soporte para legacyUuid + ch
+ * Extensión de resolveChannelIdentifier para casos donde legacyUuid tiene múltiples canales
+ * 
+ * @param {Object} identifier - Objeto con el tipo de identificador
+ * @param {string} [identifier.legacyUuid] - UUID legacy del dispositivo
+ * @param {number} [identifier.ch] - Número de canal (requerido con legacyUuid si hay múltiples)
+ * @returns {Promise<{channelId: string, source: string}|null>}
+ */
+export const resolveChannelIdentifierWithCh = async (identifier) => {
+    const { legacyUuid, ch, ...rest } = identifier;
+    
+    // Si tiene legacyUuid Y ch, hacer query específica
+    if (legacyUuid && ch !== undefined) {
+        if (!isValidUUID(legacyUuid)) {
+            throw new Error(`legacyUuid inválido: ${legacyUuid} no es un UUID válido`);
+        }
+        
+        const result = await sequelize.query(
+            `SELECT c.id 
+             FROM channels c
+             INNER JOIN devices d ON c.device_id = d.id
+             WHERE d.metadata->>'legacy_uuid' = :legacyUuid
+               AND c.ch = :ch
+               AND c.deleted_at IS NULL
+               AND d.deleted_at IS NULL`,
+            { replacements: { legacyUuid, ch }, type: QueryTypes.SELECT }
+        );
+        
+        if (result.length === 0) {
+            return null;
+        }
+        
+        if (result.length > 1) {
+            throw new Error(`legacyUuid ${legacyUuid} + ch=${ch} tiene ${result.length} canales. Use publicCode para especificar.`);
+        }
+        
+        return { channelId: result[0].id, source: 'legacyUuid+ch' };
+    }
+    
+    // Si no, delegar al resolver estándar
+    return resolveChannelIdentifier({ legacyUuid, ...rest });
+};
+
 export default {
     getChannelMetadata,
     getChannelVariables,
-    getTelemetryMetadata
+    getTelemetryMetadata,
+    resolveChannelIdentifier,
+    resolveChannelIdentifierWithCh,
+    isValidUUID,
+    isChannelPublicCode,
+    isDevicePublicCode
 };

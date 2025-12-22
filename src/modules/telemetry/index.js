@@ -278,7 +278,11 @@ router.get('/channels/:channelId/latest', async (req, res) => {
 // Exportar router y servicios
 export { router as telemetryRouter };
 export { search, getLatest } from './services/telemetryService.js';
-export { getTelemetryMetadata } from './repositories/metadataRepository.js';
+export { 
+    getTelemetryMetadata, 
+    resolveChannelIdentifier,
+    resolveChannelIdentifierWithCh 
+} from './repositories/metadataRepository.js';
 export * from './models/index.js';
 
 export default router;
