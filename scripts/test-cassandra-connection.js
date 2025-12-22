@@ -92,84 +92,87 @@ const runTests = async () => {
         separator();
         console.log(colors.cyan('7. Buscando datos de prueba de Hoteles Libertador...'));
         
-        // UUID de prueba del primer dispositivo
+        // UUID de prueba del primer dispositivo (legacy_uuid del device migrado)
         const testUuid = '41eb0f66-575c-4f40-833e-fd9b6384606c'; // HL - Westin - Azotea Nodo 1
-        console.log(`   Buscando datos para equipo: ${testUuid}`);
+        console.log(`   Buscando datos para uuid: ${testUuid}`);
         
-        // Consultar últimos 10 registros de la última semana
-        const oneWeekAgo = new Date();
-        oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+        // La tabla usa: uuid (PK), year (PK), canal (PK), timestamp (CK)
+        // Partition key compuesta requiere los 3 campos o ALLOW FILTERING
+        const currentYear = new Date().getFullYear();
+        const lastYear = currentYear - 1;
         
+        // Consulta con ALLOW FILTERING (necesario sin conocer el canal específico)
         const query = `
-            SELECT fecha_hora, ch, kwh, kw, kvarh, kvar, kvah, kva, fp, hz, 
-                   v1n, v2n, v3n, i1, i2, i3
+            SELECT uuid, canal, timestamp, e, p, v, i, pf, v1, v2, v3, i1, i2, i3
             FROM sensores."1m_t_datos"
-            WHERE equipo = ?
-            AND fecha_hora >= ?
+            WHERE uuid = ? AND year = ?
             LIMIT 10
             ALLOW FILTERING
         `;
         
         try {
-            const result = await execute(query, [testUuid, oneWeekAgo]);
+            console.log(`   Probando año ${currentYear}...`);
+            let result = await execute(query, [testUuid, currentYear]);
             
             if (result.rows.length === 0) {
-                console.log(colors.yellow('   ⚠️  No se encontraron datos en la última semana'));
-                console.log('   Probando con rango más amplio (último mes)...');
+                console.log(colors.yellow(`   ⚠️  No hay datos en ${currentYear}, probando ${lastYear}...`));
+                result = await execute(query, [testUuid, lastYear]);
+            }
+            
+            if (result.rows.length === 0) {
+                console.log(colors.yellow('   ⚠️  No hay datos recientes'));
                 
-                const oneMonthAgo = new Date();
-                oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+                // Intentar obtener cualquier registro de este UUID
+                console.log('   Buscando en cualquier año con ALLOW FILTERING...');
+                const queryAny = `
+                    SELECT uuid, year, canal, timestamp, e, p
+                    FROM sensores."1m_t_datos"
+                    WHERE uuid = ?
+                    LIMIT 5
+                    ALLOW FILTERING
+                `;
+                const resultAny = await execute(queryAny, [testUuid]);
                 
-                const result2 = await execute(query, [testUuid, oneMonthAgo]);
-                
-                if (result2.rows.length === 0) {
-                    console.log(colors.yellow('   ⚠️  No hay datos del último mes'));
-                    
-                    // Intentar sin filtro de fecha
-                    console.log('   Intentando sin filtro de fecha...');
-                    const queryNoDate = `
-                        SELECT fecha_hora, ch, kwh, kw
-                        FROM sensores."1m_t_datos"
-                        WHERE equipo = ?
-                        LIMIT 5
-                        ALLOW FILTERING
-                    `;
-                    const result3 = await execute(queryNoDate, [testUuid]);
-                    
-                    if (result3.rows.length > 0) {
-                        console.log(colors.green(`   ✅ Encontrados ${result3.rows.length} registros históricos`));
-                        console.log('   Primeros registros:');
-                        result3.rows.forEach((row, i) => {
-                            console.log(`   ${i+1}. ${row.fecha_hora} | CH${row.ch} | kWh: ${row.kwh}`);
-                        });
-                    } else {
-                        console.log(colors.red('   ❌ No se encontraron datos para este equipo'));
-                    }
+                if (resultAny.rows.length > 0) {
+                    console.log(colors.green(`   ✅ Encontrados ${resultAny.rows.length} registros históricos`));
+                    console.log('   Datos encontrados:');
+                    resultAny.rows.forEach((row, i) => {
+                        console.log(`   ${i+1}. ${row.timestamp} | Año: ${row.year} | Canal: ${row.canal} | E: ${row.e} kWh | P: ${row.p} kW`);
+                    });
                 } else {
-                    console.log(colors.green(`   ✅ Encontrados ${result2.rows.length} registros del último mes`));
+                    console.log(colors.red('   ❌ No se encontraron datos para este UUID'));
+                    console.log('   Esto puede significar que el legacy_uuid no coincide');
                 }
             } else {
                 console.log(colors.green(`   ✅ Encontrados ${result.rows.length} registros`));
                 console.log('\n   Muestra de datos:');
-                result.rows.slice(0, 5).forEach((row, i) => {
-                    console.log(`   ${i+1}. ${row.fecha_hora} | CH${row.ch} | kWh: ${row.kwh} | kW: ${row.kw}`);
+                result.rows.forEach((row, i) => {
+                    console.log(`   ${i+1}. ${row.timestamp} | Canal: ${row.canal} | E: ${row.e} kWh | P: ${row.p} kW | V: ${row.v}V | PF: ${row.pf}`);
                 });
             }
+            
+            // Probar también con tabla de 15 minutos
+            separator();
+            console.log(colors.cyan('8. Probando tabla de 15 minutos (15m_t_datos)...'));
+            const query15m = `
+                SELECT uuid, canal, timestamp, e, p, v, i
+                FROM sensores."15m_t_datos"
+                WHERE uuid = ? AND year = ?
+                LIMIT 5
+                ALLOW FILTERING
+            `;
+            const result15m = await execute(query15m, [testUuid, currentYear]);
+            if (result15m.rows.length > 0) {
+                console.log(colors.green(`   ✅ Encontrados ${result15m.rows.length} registros en 15m_t_datos`));
+                result15m.rows.forEach((row, i) => {
+                    console.log(`   ${i+1}. ${row.timestamp} | Canal: ${row.canal} | E: ${row.e} kWh`);
+                });
+            } else {
+                console.log(colors.yellow('   ⚠️  Sin datos en 15m_t_datos para este año'));
+            }
+            
         } catch (queryError) {
             console.log(colors.red(`   ❌ Error en consulta: ${queryError.message}`));
-            
-            // Mostrar tablas alternativas
-            console.log('\n   Probando con otras resoluciones...');
-            const altTables = ['15m_t_datos', '60m_t_datos', 'daily_t_datos'];
-            for (const table of altTables) {
-                try {
-                    const altQuery = `SELECT COUNT(*) as total FROM sensores."${table}" LIMIT 1`;
-                    await execute(altQuery);
-                    console.log(colors.green(`   ✅ Tabla ${table} accesible`));
-                } catch (e) {
-                    console.log(colors.red(`   ❌ Tabla ${table}: ${e.message}`));
-                }
-            }
         }
         
     } catch (error) {
