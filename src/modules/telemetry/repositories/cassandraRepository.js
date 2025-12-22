@@ -5,8 +5,13 @@
  * de mediciones históricos. Considera las estrategias de particionamiento:
  * - Tablas agregadas (1m, 15m, 60m, diario): partition por (uuid, canal, year)
  * - Tablas raw/realtime: partition por (uuid, canal, year, month, day)
+ * 
+ * IMPORTANTE: Las fechas ya vienen convertidas a UTC desde el servicio.
+ * Este repositorio solo se encarga de detectar qué particiones (años/días)
+ * cruza el rango UTC y ejecutar las queries correspondientes.
  */
 import { execute, getCassandraClient } from '../../../db/cassandra/client.js';
+import { getYearsInRange, getDaysInRange } from '../../../utils/dateUtils.js';
 
 /**
  * Resoluciones soportadas y sus sufijos de tabla
@@ -57,37 +62,28 @@ export const getTableConfig = (tablePrefix, resolution) => {
 
 /**
  * Genera los rangos de partición según el tipo de particionamiento
+ * Usa las funciones de dateUtils que manejan correctamente los rangos UTC
  * 
- * @param {Date} from - Fecha inicio
- * @param {Date} to - Fecha fin
+ * @param {Date} from - Fecha inicio (UTC)
+ * @param {Date} to - Fecha fin (UTC)
  * @param {string} partitionType - 'year' o 'day'
- * @returns {Array<Object>} Lista de particiones { year, month?, day? }
+ * @returns {Array<Object>} Lista de particiones { year } o { year, month, day }
+ * 
+ * @example
+ * // Rango de fin de año: 2024-12-31T05:00:00Z a 2025-01-01T04:59:59Z
+ * // Retorna: [{ year: 2024 }, { year: 2025 }]
  */
 export const generatePartitionRanges = (from, to, partitionType) => {
-    const partitions = [];
-    const current = new Date(from);
-
     if (partitionType === 'year') {
-        // Iterar por años
-        while (current <= to) {
-            partitions.push({ year: current.getFullYear() });
-            current.setFullYear(current.getFullYear() + 1);
-            current.setMonth(0);
-            current.setDate(1);
-        }
+        // Usa getYearsInRange que detecta todos los años que cruza el rango UTC
+        const years = getYearsInRange(from, to);
+        return years.map(year => ({ year }));
     } else if (partitionType === 'day') {
-        // Iterar por días
-        while (current <= to) {
-            partitions.push({
-                year: current.getFullYear(),
-                month: current.getMonth() + 1,
-                day: current.getDate()
-            });
-            current.setDate(current.getDate() + 1);
-        }
+        // Usa getDaysInRange que detecta todos los días que cruza el rango UTC
+        return getDaysInRange(from, to);
     }
 
-    return partitions;
+    return [];
 };
 
 /**

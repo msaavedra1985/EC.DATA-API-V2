@@ -7,8 +7,9 @@
  * Flujo:
  * 1. Obtener metadata del canal (device UUID, ch, tipo medición, variables)
  * 2. Determinar tabla Cassandra correcta (prefijo + resolución)
- * 3. Construir y ejecutar queries CQL con manejo de particiones
- * 4. Post-procesar resultados (filtros timezone, mapeo columnas)
+ * 3. Convertir fechas locales a UTC considerando timezone del dispositivo
+ * 4. Construir y ejecutar queries CQL con manejo de particiones (incluye años cruzados)
+ * 5. Post-procesar resultados (filtros timezone, mapeo columnas)
  */
 import { getTelemetryMetadata } from '../repositories/metadataRepository.js';
 import { 
@@ -16,6 +17,7 @@ import {
     queryTelemetryData, 
     getLatestData 
 } from '../repositories/cassandraRepository.js';
+import { parseLocalDateToUTC, dayjs } from '../../../utils/dateUtils.js';
 
 /**
  * @typedef {Object} TelemetrySearchRequest
@@ -78,9 +80,11 @@ export const search = async (req) => {
         resolution
     );
 
-    // 3. Parsear fechas
-    const fromDate = parseDate(from, metadata.device.timezone);
-    const toDate = parseDate(to, metadata.device.timezone, true);
+    // 3. Parsear fechas locales a UTC considerando timezone del dispositivo
+    // Esto resuelve el problema de fin de año: 31 dic Lima = 31 dic 05:00 UTC a 1 ene 04:59:59 UTC
+    const deviceTimezone = metadata.device.timezone || 'America/Lima';
+    const fromDate = parseLocalDateToUTC(from, deviceTimezone, false);
+    const toDate = parseLocalDateToUTC(to, deviceTimezone, true);
 
     // 4. Ejecutar query en Cassandra
     const rawData = await queryTelemetryData({
@@ -195,60 +199,34 @@ export const getLatest = async (channelId) => {
     };
 };
 
-/**
- * Parsea fecha string a Date, considerando timezone
- * 
- * @param {string} dateStr - Fecha en formato ISO o YYYY-MM-DD
- * @param {string} timezone - Timezone del device
- * @param {boolean} endOfDay - Si true, establece al final del día
- * @returns {Date}
- */
-const parseDate = (dateStr, timezone, endOfDay = false) => {
-    let date;
-    
-    // Si es formato corto YYYY-MM-DD, agregar hora
-    if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
-        if (endOfDay) {
-            date = new Date(`${dateStr}T23:59:59.999Z`);
-        } else {
-            date = new Date(`${dateStr}T00:00:00.000Z`);
-        }
-    } else {
-        date = new Date(dateStr);
-    }
-
-    if (isNaN(date.getTime())) {
-        throw new Error(`Fecha inválida: ${dateStr}`);
-    }
-
-    return date;
-};
 
 /**
  * Filtra datos excluyendo días específicos de la semana
+ * Usa dayjs con timezone para determinar el día correcto en la zona horaria local
  * 
  * @param {Array} data - Datos a filtrar
  * @param {number[]} excludeDays - Días a excluir (0=Domingo, 6=Sábado)
- * @param {string} timezone - Timezone para determinar día
+ * @param {string} tz - Timezone para determinar día
  * @returns {Array}
  */
-const filterByExcludeDays = (data, excludeDays, timezone) => {
+const filterByExcludeDays = (data, excludeDays, tz) => {
     return data.filter(row => {
-        const date = new Date(row.timestamp);
-        const dayOfWeek = date.getDay();
-        return !excludeDays.includes(dayOfWeek);
+        // Convertir timestamp UTC a timezone local para obtener día correcto
+        const localDay = dayjs(row.timestamp).tz(tz).day();
+        return !excludeDays.includes(localDay);
     });
 };
 
 /**
  * Filtra datos por rangos horarios
+ * Usa dayjs con timezone para determinar la hora correcta en la zona horaria local
  * 
  * @param {Array} data - Datos a filtrar
  * @param {Array<[string,string]>} hourRanges - Rangos horarios (ej: [['08:00','12:00'],['14:00','18:00']])
- * @param {string} timezone - Timezone para determinar hora
+ * @param {string} tz - Timezone para determinar hora
  * @returns {Array}
  */
-const filterByHourRanges = (data, hourRanges, timezone) => {
+const filterByHourRanges = (data, hourRanges, tz) => {
     // Parsear rangos a minutos desde medianoche
     const parsedRanges = hourRanges.map(([start, end]) => {
         const [startH, startM] = start.split(':').map(Number);
@@ -260,8 +238,9 @@ const filterByHourRanges = (data, hourRanges, timezone) => {
     });
 
     return data.filter(row => {
-        const date = new Date(row.timestamp);
-        const minutes = date.getHours() * 60 + date.getMinutes();
+        // Convertir timestamp UTC a timezone local para obtener hora correcta
+        const local = dayjs(row.timestamp).tz(tz);
+        const minutes = local.hour() * 60 + local.minute();
         
         return parsedRanges.some(range => 
             minutes >= range.startMinutes && minutes <= range.endMinutes
