@@ -37,14 +37,15 @@ const paginationSchema = z.object({
 /**
  * Schema para crear un nuevo nodo
  * POST /resource-hierarchy/nodes
+ * Nota: organization_id es opcional, se usa la organización activa del usuario si no se especifica
+ * Solo system-admin puede especificar organization_id para crear en otra organización
  */
 export const createNodeSchema = z.object({
     body: z.object({
         organization_id: z
-            .string({
-                required_error: 'organization_id es requerido'
-            })
-            .min(1, 'organization_id no puede estar vacío'),
+            .string()
+            .min(1, 'organization_id no puede estar vacío')
+            .optional(),
         parent_id: z
             .string()
             .nullable()
@@ -185,14 +186,15 @@ export const moveNodeSchema = z.object({
 /**
  * Schema para listar nodos de una organización
  * GET /resource-hierarchy/nodes
+ * Nota: organization_id es opcional, se usa la organización activa del usuario si no se especifica
+ * Solo system-admin puede especificar organization_id para ver otra organización
  */
 export const listNodesSchema = z.object({
     query: paginationSchema.extend({
         organization_id: z
-            .string({
-                required_error: 'organization_id es requerido'
-            })
-            .min(1, 'organization_id no puede estar vacío'),
+            .string()
+            .min(1, 'organization_id no puede estar vacío')
+            .optional(),
         parent_id: z
             .string()
             .optional(),
@@ -280,14 +282,15 @@ export const getAncestorsSchema = z.object({
 /**
  * Schema para obtener árbol de una organización
  * GET /resource-hierarchy/tree
+ * Nota: organization_id es opcional, se usa la organización activa del usuario si no se especifica
+ * Solo system-admin puede especificar organization_id para ver otra organización
  */
 export const getTreeSchema = z.object({
     query: z.object({
         organization_id: z
-            .string({
-                required_error: 'organization_id es requerido'
-            })
-            .min(1, 'organization_id no puede estar vacío'),
+            .string()
+            .min(1, 'organization_id no puede estar vacío')
+            .optional(),
         root_id: z
             .string()
             .optional(),
@@ -302,14 +305,15 @@ export const getTreeSchema = z.object({
 /**
  * Schema para obtener nodos raíz de una organización
  * GET /resource-hierarchy/roots
+ * Nota: organization_id es opcional, se usa la organización activa del usuario si no se especifica
+ * Solo system-admin puede especificar organization_id para ver otra organización
  */
 export const getRootsSchema = z.object({
     query: paginationSchema.extend({
         organization_id: z
-            .string({
-                required_error: 'organization_id es requerido'
-            })
-            .min(1, 'organization_id no puede estar vacío'),
+            .string()
+            .min(1, 'organization_id no puede estar vacío')
+            .optional(),
         node_type: z
             .enum(nodeTypes, {
                 errorMap: () => ({ message: 'node_type debe ser: folder, site, o channel' })

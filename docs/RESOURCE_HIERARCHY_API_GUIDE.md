@@ -78,6 +78,22 @@ headers: {
 }
 ```
 
+### Organización Implícita
+
+**Los endpoints usan automáticamente la organización activa del usuario.** No es necesario enviar `organization_id` en cada request.
+
+- **Usuarios normales:** Siempre trabajan con su organización activa
+- **System-admins:** Pueden pasar `organization_id` opcionalmente para ver/crear en otra organización
+
+```javascript
+// ✅ Para usuarios normales - no necesita organization_id
+const response = await api.get('/resource-hierarchy/nodes');
+// Automáticamente usa la organización activa del usuario
+
+// ✅ Para system-admin que quiere ver otra org
+const response = await api.get('/resource-hierarchy/nodes?organization_id=ORG-xxx');
+```
+
 ### Permisos por Rol
 
 | Rol | Ver Nodos | Crear | Actualizar | Eliminar | Mover |
@@ -139,7 +155,6 @@ Crea un nuevo nodo en la jerarquía.
 **Request Body:**
 ```json
 {
-  "organization_id": "ORG-yOM9ewfqOeWa-4",
   "parent_id": "RH-a1b2c3d4e5-7",
   "name": "Zona Centro",
   "node_type": "folder",
@@ -155,7 +170,7 @@ Crea un nuevo nodo en la jerarquía.
 
 | Campo | Tipo | Requerido | Descripción |
 |-------|------|-----------|-------------|
-| `organization_id` | string | ✅ | Public code de la organización |
+| `organization_id` | string | ❌ | Public code de la organización (opcional, usa la org activa si no se especifica) |
 | `name` | string | ✅ | Nombre del nodo (máx 255 chars) |
 | `node_type` | string | ✅ | `folder`, `site`, o `channel` |
 | `parent_id` | string | ❌ | Public code del nodo padre (null = raíz) |
@@ -199,7 +214,7 @@ Lista nodos con filtros y paginación.
 
 | Parámetro | Tipo | Default | Descripción |
 |-----------|------|---------|-------------|
-| `organization_id` | string | - | Filtrar por organización (requerido para no-admins) |
+| `organization_id` | string | org activa | Opcional - usa la org activa del usuario |
 | `parent_id` | string | - | Filtrar por nodo padre |
 | `node_type` | string | - | Filtrar por tipo: `folder`, `site`, `channel` |
 | `search` | string | - | Buscar en nombre y descripción |
@@ -211,7 +226,7 @@ Lista nodos con filtros y paginación.
 
 **Ejemplo:**
 ```
-GET /api/v1/resource-hierarchy/nodes?organization_id=ORG-xxx&node_type=folder&limit=10
+GET /api/v1/resource-hierarchy/nodes?node_type=folder&limit=10
 ```
 
 **Response (200 OK):**
@@ -482,7 +497,7 @@ Obtiene el árbol completo estructurado (con hijos anidados).
 
 | Parámetro | Tipo | Default | Descripción |
 |-----------|------|---------|-------------|
-| `organization_id` | string | - | Requerido para no-admins |
+| `organization_id` | string | org activa | Opcional - usa la org activa del usuario |
 | `max_depth` | number | - | Limitar profundidad |
 
 **Response (200 OK):**
@@ -529,7 +544,7 @@ Obtiene solo los nodos raíz (sin padre).
 
 | Parámetro | Tipo | Descripción |
 |-----------|------|-------------|
-| `organization_id` | string | Requerido para no-admins |
+| `organization_id` | string | Opcional - usa la org activa del usuario |
 
 **Response (200 OK):**
 ```json

@@ -4,6 +4,7 @@
 import express from 'express';
 import { authenticate, requireRole } from '../../middleware/auth.js';
 import { validate } from '../../middleware/validate.js';
+import { enforceActiveOrganization } from '../../middleware/enforceActiveOrganization.js';
 import * as hierarchyServices from './services.js';
 import {
     createNodeSchema,
@@ -44,13 +45,12 @@ const hierarchyLogger = logger.child({ component: 'resource-hierarchy-routes' })
  *           schema:
  *             type: object
  *             required:
- *               - organization_id
  *               - node_type
  *               - name
  *             properties:
  *               organization_id:
  *                 type: string
- *                 description: Public code de la organización
+ *                 description: Public code de la organización (opcional, usa la org activa del usuario si no se especifica)
  *                 example: "ORG-abc123xyz-1"
  *               parent_id:
  *                 type: string
@@ -112,11 +112,18 @@ const hierarchyLogger = logger.child({ component: 'resource-hierarchy-routes' })
 router.post('/nodes',
     authenticate,
     requireRole(['system-admin', 'org-admin', 'org-manager']),
+    enforceActiveOrganization,
     validate(createNodeSchema),
     async (req, res, next) => {
         try {
+            // Usa organization_id del body (para system-admin) o del middleware (org activa)
+            const nodeData = {
+                ...req.body,
+                organization_id: req.body.organization_id || req.query.organization_id
+            };
+            
             const node = await hierarchyServices.createNode(
-                req.body,
+                nodeData,
                 req.user.userId,
                 req.ip,
                 req.headers['user-agent']
@@ -146,10 +153,10 @@ router.post('/nodes',
  *     parameters:
  *       - in: query
  *         name: organization_id
- *         required: true
+ *         required: false
  *         schema:
  *           type: string
- *         description: Public code de la organización
+ *         description: Public code de la organización (opcional, usa la org activa del usuario si no se especifica)
  *       - in: query
  *         name: parent_id
  *         schema:
@@ -211,9 +218,11 @@ router.post('/nodes',
  */
 router.get('/nodes',
     authenticate,
+    enforceActiveOrganization,
     validate(listNodesSchema),
     async (req, res, next) => {
         try {
+            // El middleware ya setea req.query.organization_id con la org activa
             const result = await hierarchyServices.listNodes(
                 req.query.organization_id,
                 {
@@ -676,10 +685,10 @@ router.get('/nodes/:id/ancestors',
  *     parameters:
  *       - in: query
  *         name: organization_id
- *         required: true
+ *         required: false
  *         schema:
  *           type: string
- *         description: Public code de la organización
+ *         description: Public code de la organización (opcional, usa la org activa del usuario si no se especifica)
  *       - in: query
  *         name: root_id
  *         schema:
@@ -709,9 +718,11 @@ router.get('/nodes/:id/ancestors',
  */
 router.get('/tree',
     authenticate,
+    enforceActiveOrganization,
     validate(getTreeSchema),
     async (req, res, next) => {
         try {
+            // El middleware ya setea req.query.organization_id con la org activa
             const tree = await hierarchyServices.getTree(
                 req.query.organization_id,
                 {
@@ -742,9 +753,10 @@ router.get('/tree',
  *     parameters:
  *       - in: query
  *         name: organization_id
- *         required: true
+ *         required: false
  *         schema:
  *           type: string
+ *         description: Public code de la organización (opcional, usa la org activa del usuario si no se especifica)
  *       - in: query
  *         name: node_type
  *         schema:
@@ -766,9 +778,11 @@ router.get('/tree',
  */
 router.get('/roots',
     authenticate,
+    enforceActiveOrganization,
     validate(getRootsSchema),
     async (req, res, next) => {
         try {
+            // El middleware ya setea req.query.organization_id con la org activa
             const result = await hierarchyServices.getNodeChildren(
                 'root',
                 req.query.organization_id,
