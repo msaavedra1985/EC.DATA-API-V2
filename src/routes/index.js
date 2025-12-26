@@ -13,6 +13,7 @@ import devicesRouter from '../modules/devices/index.js';
 import channelsRouter from '../modules/channels/index.js';
 import filesRouter from '../modules/files/index.js';
 import telemetryRouter from '../modules/telemetry/index.js';
+import resourceHierarchyRouter from '../modules/resource-hierarchy/index.js';
 
 const router = express.Router();
 
@@ -56,6 +57,9 @@ router.use('/files', filesRouter);
 
 // Telemetry (datos de mediciones IoT desde Cassandra)
 router.use('/telemetry', telemetryRouter);
+
+// Resource Hierarchy (jerarquía de recursos organizacionales)
+router.use('/resource-hierarchy', resourceHierarchyRouter);
 
 // Seeding (Testing/Development)
 router.use('/seed', seedRouter);

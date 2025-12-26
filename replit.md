@@ -98,6 +98,13 @@ Preferred communication style: Simple, everyday language.
     - Pagination: limit, offset with sortBy/sortOrder
     - Multi-language translations support (es, en, etc.)
     - Zod validation, audit logging, cache invalidation on CUD
+- **Resource Hierarchy Module:** Flexible tree-based organization of resources (folders, sites, channels) using PostgreSQL ltree extension.
+  - **Hybrid ltree + parent_id pattern:** ltree for fast ancestor/descendant queries, parent_id for direct navigation
+  - **Node types:** folder, site, channel (extensible without breaking changes)
+  - **Features:** Unlimited depth, permission inheritance, soft delete with cascade, automatic path calculation via DB triggers
+  - **Access control:** Per-node permissions (view, edit, admin) with inheritance to descendants
+  - **REST API:** Full CRUD at `/api/v1/resource-hierarchy/nodes`, tree operations, access management
+  - **Tables:** `resource_hierarchy` (nodes with ltree path), `user_resource_access` (permissions)
 
 ## External Dependencies
 
