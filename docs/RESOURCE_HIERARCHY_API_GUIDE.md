@@ -569,6 +569,133 @@ Obtiene solo los nodos raíz (sin padre).
 
 ---
 
+## 📂 Jerarquía Vacía - Crear Nodos Raíz
+
+### Comportamiento cuando no existen nodos
+
+Cuando una organización no tiene nodos en su jerarquía, los endpoints `GET /roots` y `GET /tree` devuelven un array vacío:
+
+```json
+{
+  "ok": true,
+  "data": []
+}
+```
+
+### Implementación en el Frontend
+
+El frontend debe detectar esta situación y mostrar una interfaz para crear el primer nodo raíz:
+
+```tsx
+// HierarchyPage.tsx
+const HierarchyPage = () => {
+  const { data, isLoading } = useQuery(['roots'], fetchRoots);
+  
+  if (isLoading) return <Skeleton />;
+  
+  // Jerarquía vacía - mostrar UI para crear primer nodo
+  if (data?.data?.length === 0) {
+    return <EmptyHierarchyPrompt onCreateRoot={handleCreateRoot} />;
+  }
+  
+  return <HierarchyTree nodes={data.data} />;
+};
+
+// Componente para jerarquía vacía
+const EmptyHierarchyPrompt = ({ onCreateRoot }) => (
+  <div className="empty-hierarchy">
+    <FolderPlusIcon />
+    <h3>Tu organización no tiene una jerarquía definida</h3>
+    <p>Crea tu primer nodo para comenzar a organizar tus recursos.</p>
+    <Button onClick={onCreateRoot}>
+      Crear nodo raíz
+    </Button>
+  </div>
+);
+```
+
+### Crear un Nodo Raíz
+
+Para crear un nodo en la raíz de la organización, el `parent_id` debe ser `null`:
+
+```tsx
+// Crear nodo raíz (sin padre)
+const createRootNode = async (name: string, nodeType: 'folder' | 'site') => {
+  const response = await fetch('/api/v1/resource-hierarchy/nodes', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify({
+      parent_id: null,        // null = nodo raíz
+      node_type: nodeType,
+      name: name,
+      display_order: 0        // Orden del nodo (0 = primero)
+    })
+  });
+  return response.json();
+};
+```
+
+### Orden de los Nodos
+
+El campo `display_order` controla el orden de visualización de los nodos dentro de su nivel:
+
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| `display_order` | integer | Orden numérico (0 = primero, valores mayores aparecen después) |
+
+**Ejemplo de ordenamiento:**
+```json
+// Nodos ordenados por display_order
+[
+  { "name": "Región Norte", "display_order": 0 },
+  { "name": "Región Centro", "display_order": 1 },
+  { "name": "Región Sur", "display_order": 2 }
+]
+```
+
+### Flujo Completo: Primera Configuración
+
+```tsx
+// Ejemplo completo de configuración inicial
+const SetupHierarchy = () => {
+  const [step, setStep] = useState<'empty' | 'creating' | 'done'>('empty');
+  
+  const handleCreateFirstNode = async () => {
+    setStep('creating');
+    
+    // Crear carpeta raíz principal
+    await createRootNode('Mi Organización', 'folder');
+    
+    setStep('done');
+    // Refrescar la vista
+    queryClient.invalidateQueries(['roots']);
+  };
+  
+  return (
+    <div>
+      {step === 'empty' && (
+        <EmptyHierarchyPrompt onCreateRoot={handleCreateFirstNode} />
+      )}
+      {step === 'creating' && <Spinner />}
+      {step === 'done' && <SuccessMessage />}
+    </div>
+  );
+};
+```
+
+### Resumen de Reglas
+
+| Situación | parent_id | Resultado |
+|-----------|-----------|-----------|
+| Crear nodo raíz | `null` | Nodo aparece en la raíz de la organización |
+| Crear nodo hijo | `"RH-xxx-xxx"` | Nodo aparece como hijo del nodo especificado |
+| Ordenar nodos | - | Usar `display_order` (0, 1, 2, ...) |
+
+---
+
 ## 🔒 Control de Acceso
 
 ### 12. POST /access
