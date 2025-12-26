@@ -177,7 +177,7 @@ Crea un nuevo nodo en la jerarquía.
 | `reference_id` | string | ❌ | Public code del recurso referenciado (para site/channel) |
 | `description` | string | ❌ | Descripción del nodo |
 | `metadata` | object | ❌ | Datos adicionales (JSON libre) |
-| `sort_order` | number | ❌ | Orden de visualización |
+| `display_order` | number | ❌ | Orden de visualización (0 = primero) |
 
 **Response (201 Created):**
 ```json
@@ -196,7 +196,7 @@ Crea un nuevo nodo en la jerarquía.
       "color": "#3498db",
       "icon": "building"
     },
-    "sort_order": 0,
+    "display_order": 0,
     "is_active": true,
     "created_at": "2025-12-26T15:30:00.000Z",
     "updated_at": "2025-12-26T15:30:00.000Z"
@@ -221,7 +221,7 @@ Lista nodos con filtros y paginación.
 | `is_active` | boolean | `true` | Filtrar por estado activo |
 | `limit` | number | 20 | Cantidad de resultados (máx 100) |
 | `offset` | number | 0 | Desplazamiento para paginación |
-| `sort_by` | string | `sort_order` | Campo de ordenamiento |
+| `sort_by` | string | `display_order` | Campo de ordenamiento |
 | `sort_order` | string | `asc` | `asc` o `desc` |
 
 **Ejemplo:**
@@ -271,7 +271,7 @@ Obtiene un nodo específico por su public_code.
     "reference_id": null,
     "depth": 1,
     "metadata": {},
-    "sort_order": 1,
+    "display_order": 1,
     "is_active": true,
     "created_at": "2025-12-20T10:00:00.000Z",
     "updated_at": "2025-12-26T15:30:00.000Z"
@@ -293,7 +293,7 @@ Actualiza un nodo existente.
   "metadata": {
     "color": "#e74c3c"
   },
-  "sort_order": 5
+  "display_order": 5
 }
 ```
 
@@ -301,7 +301,7 @@ Actualiza un nodo existente.
 - `name`
 - `description`
 - `metadata`
-- `sort_order`
+- `display_order`
 - `is_active`
 
 **⚠️ IMPORTANTE:** No se puede cambiar `node_type`, `organization_id`, ni `parent_id` con PUT. Para mover un nodo, usa `PATCH /nodes/:id/move`.
