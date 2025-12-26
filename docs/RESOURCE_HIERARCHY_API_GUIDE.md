@@ -10,6 +10,7 @@ Guía completa de uso de la API de Resource Hierarchy (Jerarquía de Recursos) p
 - [Identificadores](#identificadores)
 - [Endpoints CRUD](#endpoints-crud)
 - [Operaciones de Árbol](#operaciones-de-árbol)
+- [Jerarquía Vacía - Crear Nodos Raíz](#jerarquía-vacía---crear-nodos-raíz)
 - [Control de Acceso](#control-de-acceso)
 - [Manejo de Errores](#manejo-de-errores)
 - [Ejemplos de Uso (React/Next.js)](#ejemplos-de-uso-reactnextjs)
