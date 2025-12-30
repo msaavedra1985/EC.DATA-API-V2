@@ -9,11 +9,36 @@ import sequelize from '../../db/sql/sequelize.js';
 import { generateUuidV7, generateHumanId, generatePublicCode } from '../../utils/identifiers.js';
 
 /**
+ * Obtener un nodo por ID con conteo de hijos (uso interno)
+ * Retorna el DTO listo para usar
+ * 
+ * @param {string} nodeId - UUID del nodo
+ * @returns {Promise<Object|null>} - DTO del nodo o null
+ */
+const getNodeByIdWithChildrenCount = async (nodeId) => {
+    const query = `
+        SELECT rh.*,
+               (SELECT COUNT(*) FROM resource_hierarchy c 
+                WHERE c.parent_id = rh.id AND c.deleted_at IS NULL AND c.is_active = true) as children_count
+        FROM resource_hierarchy rh
+        WHERE rh.id = $1
+          AND rh.deleted_at IS NULL
+    `;
+    
+    const rows = await sequelize.query(query, {
+        bind: [nodeId],
+        type: QueryTypes.SELECT
+    });
+    
+    return rows.length > 0 ? toNodeDto(rows[0]) : null;
+};
+
+/**
  * Crear un nuevo nodo en la jerarquía
  * El path ltree se calcula automáticamente por el trigger de BD
  * 
  * @param {Object} data - Datos del nodo
- * @returns {Promise<Object>} - Nodo creado
+ * @returns {Promise<Object>} - Nodo creado con conteo de hijos
  */
 export const createNode = async (data) => {
     const id = generateUuidV7();
@@ -30,21 +55,37 @@ export const createNode = async (data) => {
     // Recargar para obtener el path calculado por el trigger
     await node.reload();
     
-    return toNodeDto(node);
+    // Para nodos nuevos, children_count siempre es 0
+    // Usamos el modelo Sequelize y agregamos children_count manualmente
+    const nodeData = node.toJSON();
+    nodeData.children_count = 0;
+    
+    return toNodeDto(nodeData);
 };
 
 /**
  * Buscar nodo por public_code
+ * Incluye conteo de hijos
  * 
  * @param {string} publicCode - Código público del nodo
  * @returns {Promise<Object|null>} - Nodo o null
  */
 export const findNodeByPublicCode = async (publicCode) => {
-    const node = await ResourceHierarchy.findOne({
-        where: { public_code: publicCode, deleted_at: null }
+    const query = `
+        SELECT rh.*,
+               (SELECT COUNT(*) FROM resource_hierarchy c 
+                WHERE c.parent_id = rh.id AND c.deleted_at IS NULL AND c.is_active = true) as children_count
+        FROM resource_hierarchy rh
+        WHERE rh.public_code = $1
+          AND rh.deleted_at IS NULL
+    `;
+    
+    const rows = await sequelize.query(query, {
+        bind: [publicCode],
+        type: QueryTypes.SELECT
     });
     
-    return node ? toNodeDto(node) : null;
+    return rows.length > 0 ? toNodeDto(rows[0]) : null;
 };
 
 /**
@@ -73,6 +114,7 @@ export const findNodeById = async (id) => {
 
 /**
  * Obtener hijos directos de un nodo
+ * Incluye conteo de hijos para cada nodo usando subconsulta SQL
  * 
  * @param {string} parentId - UUID del nodo padre (null para raíces)
  * @param {string} organizationId - UUID de la organización
@@ -82,32 +124,61 @@ export const findNodeById = async (id) => {
 export const getChildren = async (parentId, organizationId, options = {}) => {
     const { limit = 100, offset = 0, nodeType = null } = options;
     
-    const where = {
-        parent_id: parentId,
-        organization_id: organizationId,
-        deleted_at: null,
-        is_active: true
-    };
+    // Usar raw query para incluir conteo de hijos
+    let query = `
+        SELECT rh.*,
+               (SELECT COUNT(*) FROM resource_hierarchy c 
+                WHERE c.parent_id = rh.id AND c.deleted_at IS NULL AND c.is_active = true) as children_count
+        FROM resource_hierarchy rh
+        WHERE rh.organization_id = $1
+          AND rh.deleted_at IS NULL
+          AND rh.is_active = true
+    `;
     
-    if (nodeType) {
-        where.node_type = nodeType;
+    const replacements = [organizationId];
+    let paramIndex = 2;
+    
+    // Filtro por parent_id (null para raíces)
+    if (parentId === null) {
+        query += ` AND rh.parent_id IS NULL`;
+    } else {
+        query += ` AND rh.parent_id = $${paramIndex}`;
+        replacements.push(parentId);
+        paramIndex++;
     }
     
-    const { rows, count } = await ResourceHierarchy.findAndCountAll({
-        where,
-        order: [['display_order', 'ASC'], ['name', 'ASC']],
-        limit,
-        offset
+    if (nodeType) {
+        query += ` AND rh.node_type = $${paramIndex}`;
+        replacements.push(nodeType);
+        paramIndex++;
+    }
+    
+    // Contar total
+    const countQuery = `SELECT COUNT(*) as count FROM (${query}) as subquery`;
+    const countResult = await sequelize.query(countQuery, {
+        bind: replacements,
+        type: QueryTypes.SELECT
+    });
+    const total = parseInt(countResult[0].count, 10);
+    
+    // Agregar orden y paginación
+    query += ` ORDER BY rh.display_order ASC, rh.name ASC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
+    replacements.push(limit, offset);
+    
+    const rows = await sequelize.query(query, {
+        bind: replacements,
+        type: QueryTypes.SELECT
     });
     
     return {
         data: rows.map(toNodeDto),
-        total: count
+        total
     };
 };
 
 /**
  * Obtener todos los descendientes de un nodo usando ltree
+ * Incluye conteo de hijos para cada nodo
  * 
  * @param {string} nodeId - UUID del nodo ancestro
  * @param {Object} options - Opciones (limit, offset, nodeType, maxDepth)
@@ -125,9 +196,11 @@ export const getDescendants = async (nodeId, options = {}) => {
         return { data: [], total: 0 };
     }
     
-    // Usar raw query con operador ltree <@ para obtener descendientes
+    // Usar raw query con operador ltree <@ para obtener descendientes con conteo de hijos
     let query = `
         SELECT rh.*, 
+               (SELECT COUNT(*) FROM resource_hierarchy c 
+                WHERE c.parent_id = rh.id AND c.deleted_at IS NULL AND c.is_active = true) as children_count,
                nlevel(rh.path) - nlevel($1::ltree) as relative_depth
         FROM resource_hierarchy rh
         WHERE rh.path <@ $1::ltree
@@ -165,9 +238,7 @@ export const getDescendants = async (nodeId, options = {}) => {
     
     const descendants = await sequelize.query(query, {
         bind: replacements,
-        type: QueryTypes.SELECT,
-        model: ResourceHierarchy,
-        mapToModel: true
+        type: QueryTypes.SELECT
     });
     
     return {
@@ -178,6 +249,7 @@ export const getDescendants = async (nodeId, options = {}) => {
 
 /**
  * Obtener todos los ancestros de un nodo hasta la raíz
+ * Incluye conteo de hijos para cada nodo
  * 
  * @param {string} nodeId - UUID del nodo
  * @returns {Promise<Array>} - Lista de ancestros (desde raíz hasta padre directo)
@@ -191,9 +263,11 @@ export const getAncestors = async (nodeId) => {
         return [];
     }
     
-    // Usar operador @> para obtener ancestros
+    // Usar operador @> para obtener ancestros con conteo de hijos
     const query = `
-        SELECT rh.*
+        SELECT rh.*,
+               (SELECT COUNT(*) FROM resource_hierarchy c 
+                WHERE c.parent_id = rh.id AND c.deleted_at IS NULL AND c.is_active = true) as children_count
         FROM resource_hierarchy rh
         WHERE rh.path @> $1::ltree
           AND rh.id != $2
@@ -203,9 +277,7 @@ export const getAncestors = async (nodeId) => {
     
     const ancestors = await sequelize.query(query, {
         bind: [node.dataValues.path, nodeId],
-        type: QueryTypes.SELECT,
-        model: ResourceHierarchy,
-        mapToModel: true
+        type: QueryTypes.SELECT
     });
     
     return ancestors.map(toNodeDto);
@@ -213,6 +285,7 @@ export const getAncestors = async (nodeId) => {
 
 /**
  * Obtener árbol completo de una organización
+ * Incluye conteo de hijos para cada nodo
  * 
  * @param {string} organizationId - UUID de la organización
  * @param {Object} options - Opciones (rootId para subárbol, maxDepth)
@@ -221,31 +294,87 @@ export const getAncestors = async (nodeId) => {
 export const getTree = async (organizationId, options = {}) => {
     const { rootId = null, maxDepth = null } = options;
     
-    let where = {
-        organization_id: organizationId,
-        deleted_at: null,
-        is_active: true
-    };
-    
     let nodes;
     
     if (rootId) {
         // Obtener subárbol desde un nodo específico
-        const result = await getDescendants(rootId, { limit: 1000, maxDepth });
-        const rootNode = await findNodeById(rootId);
-        nodes = rootNode ? [toNodeDto(rootNode), ...result.data] : result.data;
+        const result = await getDescendantsWithChildCount(rootId, { limit: 1000, maxDepth });
+        const rootNode = await getNodeByIdWithChildrenCount(rootId);
+        nodes = rootNode ? [rootNode, ...result.data] : result.data;
     } else {
-        // Obtener árbol completo
-        nodes = await ResourceHierarchy.findAll({
-            where,
-            order: [['depth', 'ASC'], ['display_order', 'ASC'], ['name', 'ASC']],
-            limit: 1000
+        // Obtener árbol completo con conteo de hijos
+        const query = `
+            SELECT rh.*,
+                   (SELECT COUNT(*) FROM resource_hierarchy c 
+                    WHERE c.parent_id = rh.id AND c.deleted_at IS NULL AND c.is_active = true) as children_count
+            FROM resource_hierarchy rh
+            WHERE rh.organization_id = $1
+              AND rh.deleted_at IS NULL
+              AND rh.is_active = true
+            ORDER BY rh.depth ASC, rh.display_order ASC, rh.name ASC
+            LIMIT 1000
+        `;
+        
+        const rows = await sequelize.query(query, {
+            bind: [organizationId],
+            type: QueryTypes.SELECT
         });
-        nodes = nodes.map(toNodeDto);
+        
+        nodes = rows.map(toNodeDto);
     }
     
     // Construir estructura de árbol
     return buildTree(nodes, rootId);
+};
+
+/**
+ * Obtener descendientes con conteo de hijos (helper interno)
+ */
+const getDescendantsWithChildCount = async (nodeId, options = {}) => {
+    const { limit = 500, maxDepth = null } = options;
+    
+    // Obtener el path del nodo ancestro
+    const ancestor = await ResourceHierarchy.findByPk(nodeId, {
+        attributes: ['id', 'path', 'depth']
+    });
+    
+    if (!ancestor) {
+        return { data: [], total: 0 };
+    }
+    
+    let query = `
+        SELECT rh.*,
+               (SELECT COUNT(*) FROM resource_hierarchy c 
+                WHERE c.parent_id = rh.id AND c.deleted_at IS NULL AND c.is_active = true) as children_count,
+               nlevel(rh.path) - nlevel($1::ltree) as relative_depth
+        FROM resource_hierarchy rh
+        WHERE rh.path <@ $1::ltree
+          AND rh.id != $2
+          AND rh.deleted_at IS NULL
+          AND rh.is_active = true
+    `;
+    
+    const replacements = [ancestor.dataValues.path, nodeId];
+    let paramIndex = 3;
+    
+    if (maxDepth !== null) {
+        query += ` AND (nlevel(rh.path) - nlevel($1::ltree)) <= $${paramIndex}`;
+        replacements.push(maxDepth);
+        paramIndex++;
+    }
+    
+    query += ` ORDER BY rh.path, rh.display_order, rh.name LIMIT $${paramIndex}`;
+    replacements.push(limit);
+    
+    const descendants = await sequelize.query(query, {
+        bind: replacements,
+        type: QueryTypes.SELECT
+    });
+    
+    return {
+        data: descendants.map(toNodeDto),
+        total: descendants.length
+    };
 };
 
 /**
@@ -284,10 +413,8 @@ export const moveNode = async (nodeId, newParentId) => {
     node.parent_id = newParentId;
     await node.save();
     
-    // Recargar para obtener el path actualizado
-    await node.reload();
-    
-    return toNodeDto(node);
+    // Re-obtener nodo con conteo de hijos actualizado (retorna DTO directamente)
+    return await getNodeByIdWithChildrenCount(nodeId);
 };
 
 /**
@@ -295,7 +422,7 @@ export const moveNode = async (nodeId, newParentId) => {
  * 
  * @param {string} nodeId - UUID del nodo
  * @param {Object} updates - Campos a actualizar
- * @returns {Promise<Object>} - Nodo actualizado
+ * @returns {Promise<Object>} - Nodo actualizado con conteo de hijos
  */
 export const updateNode = async (nodeId, updates) => {
     const node = await ResourceHierarchy.findByPk(nodeId);
@@ -316,7 +443,8 @@ export const updateNode = async (nodeId, updates) => {
     
     await node.update(sanitizedUpdates);
     
-    return toNodeDto(node);
+    // Re-obtener nodo con conteo de hijos actualizado (retorna DTO directamente)
+    return await getNodeByIdWithChildrenCount(nodeId);
 };
 
 /**
@@ -366,6 +494,7 @@ export const deleteNode = async (nodeId, cascade = true) => {
 
 /**
  * Listar nodos de una organización con filtros
+ * Incluye conteo de hijos para cada nodo
  * 
  * @param {string} organizationId - UUID de la organización
  * @param {Object} options - Opciones de filtro y paginación
@@ -381,61 +510,99 @@ export const listNodes = async (organizationId, options = {}) => {
         isActive = true
     } = options;
     
-    const where = {
-        organization_id: organizationId,
-        deleted_at: null
-    };
+    // Usar raw query para incluir conteo de hijos
+    let query = `
+        SELECT rh.*,
+               (SELECT COUNT(*) FROM resource_hierarchy c 
+                WHERE c.parent_id = rh.id AND c.deleted_at IS NULL AND c.is_active = true) as children_count
+        FROM resource_hierarchy rh
+        WHERE rh.organization_id = $1
+          AND rh.deleted_at IS NULL
+    `;
+    
+    const replacements = [organizationId];
+    let paramIndex = 2;
     
     if (isActive !== null) {
-        where.is_active = isActive;
+        query += ` AND rh.is_active = $${paramIndex}`;
+        replacements.push(isActive);
+        paramIndex++;
     }
     
     if (nodeType) {
-        where.node_type = nodeType;
+        query += ` AND rh.node_type = $${paramIndex}`;
+        replacements.push(nodeType);
+        paramIndex++;
     }
     
     if (parentId !== undefined) {
-        where.parent_id = parentId;
+        if (parentId === null) {
+            query += ` AND rh.parent_id IS NULL`;
+        } else {
+            query += ` AND rh.parent_id = $${paramIndex}`;
+            replacements.push(parentId);
+            paramIndex++;
+        }
     }
     
     if (search) {
-        where[Op.or] = [
-            { name: { [Op.iLike]: `%${search}%` } },
-            { description: { [Op.iLike]: `%${search}%` } }
-        ];
+        query += ` AND (rh.name ILIKE $${paramIndex} OR rh.description ILIKE $${paramIndex})`;
+        replacements.push(`%${search}%`);
+        paramIndex++;
     }
     
-    const { rows, count } = await ResourceHierarchy.findAndCountAll({
-        where,
-        order: [['depth', 'ASC'], ['display_order', 'ASC'], ['name', 'ASC']],
-        limit,
-        offset
+    // Contar total
+    const countQuery = `SELECT COUNT(*) as count FROM (${query}) as subquery`;
+    const countResult = await sequelize.query(countQuery, {
+        bind: replacements,
+        type: QueryTypes.SELECT
+    });
+    const total = parseInt(countResult[0].count, 10);
+    
+    // Agregar orden y paginación
+    query += ` ORDER BY rh.depth ASC, rh.display_order ASC, rh.name ASC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
+    replacements.push(limit, offset);
+    
+    const rows = await sequelize.query(query, {
+        bind: replacements,
+        type: QueryTypes.SELECT
     });
     
     return {
         data: rows.map(toNodeDto),
-        total: count
+        total
     };
 };
 
 /**
  * Buscar nodos por reference_id
+ * Incluye conteo de hijos para cada nodo
  * 
  * @param {string} referenceId - UUID del recurso referenciado
  * @param {string} organizationId - UUID de la organización (opcional)
  * @returns {Promise<Array>} - Lista de nodos que referencian el recurso
  */
 export const findNodesByReferenceId = async (referenceId, organizationId = null) => {
-    const where = {
-        reference_id: referenceId,
-        deleted_at: null
-    };
+    let query = `
+        SELECT rh.*,
+               (SELECT COUNT(*) FROM resource_hierarchy c 
+                WHERE c.parent_id = rh.id AND c.deleted_at IS NULL AND c.is_active = true) as children_count
+        FROM resource_hierarchy rh
+        WHERE rh.reference_id = $1
+          AND rh.deleted_at IS NULL
+    `;
+    
+    const replacements = [referenceId];
     
     if (organizationId) {
-        where.organization_id = organizationId;
+        query += ` AND rh.organization_id = $2`;
+        replacements.push(organizationId);
     }
     
-    const nodes = await ResourceHierarchy.findAll({ where });
+    const nodes = await sequelize.query(query, {
+        bind: replacements,
+        type: QueryTypes.SELECT
+    });
     
     return nodes.map(toNodeDto);
 };
@@ -571,11 +738,20 @@ export const listUserAccess = async (userId, organizationId = null) => {
 /**
  * Convertir modelo a DTO público
  * Oculta UUID interno y muestra public_code como id
+ * Usa children_count de la consulta SQL para determinar has_children
+ * 
+ * Nota: Usamos function declaration (no arrow function) para permitir hoisting
+ * ya que esta función es usada por helpers al inicio del archivo
  */
-const toNodeDto = (node) => {
+function toNodeDto(node) {
     if (!node) return null;
     
     const data = node.toJSON ? node.toJSON() : node;
+    
+    // Determinar has_children: priorizar children_count de la consulta SQL,
+    // luego verificar array children si existe (para árbol construido)
+    const childrenCount = parseInt(data.children_count, 10) || 0;
+    const hasChildren = childrenCount > 0 || (data.children?.length > 0);
     
     return {
         id: data.public_code,
@@ -586,7 +762,8 @@ const toNodeDto = (node) => {
         display_order: data.display_order,
         depth: data.depth,
         parent_id: data.parent_id ? data.parent?.public_code || data.parent_id : null,
-        has_children: data.children?.length > 0,
+        has_children: hasChildren,
+        children_count: childrenCount,
         metadata: data.metadata,
         is_active: data.is_active,
         created_at: data.created_at,
@@ -595,7 +772,7 @@ const toNodeDto = (node) => {
         _uuid: data.id,
         _organization_id: data.organization_id
     };
-};
+}
 
 /**
  * Construir estructura de árbol desde lista plana
