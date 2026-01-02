@@ -1150,3 +1150,92 @@ await deleteNode('RH-zona-xxx-1', true); // cascade=true
 4. **Referencias:** Cuando creas un nodo tipo `site` o `channel`, el `reference_id` debe apuntar a un recurso real existente.
 
 5. **Organización única:** Todos los nodos de una rama deben pertenecer a la misma organización. No se puede mover un nodo a otra organización.
+
+---
+
+## ⚡ Optimizaciones de Rendimiento
+
+### Cache Redis (Backend)
+
+El backend implementa cache Redis para todas las operaciones de lectura:
+- **Nodos individuales:** 10 minutos TTL
+- **Hijos/Listados:** 5 minutos TTL  
+- **Árbol/Ancestros:** 5-10 minutos TTL
+
+El cache se invalida automáticamente en operaciones CUD (Create/Update/Delete/Move).
+
+### Límite de Profundidad en `getTree()`
+
+Para evitar cargar árboles muy grandes, el endpoint `/tree` tiene un límite de profundidad por defecto:
+
+```javascript
+// Por defecto: 3 niveles de profundidad
+const tree = await api.get('/resource-hierarchy/tree');
+
+// Especificar profundidad (1-50)
+const tree = await api.get('/resource-hierarchy/tree?max_depth=5');
+
+// Sin límite (usar con precaución)
+const tree = await api.get('/resource-hierarchy/tree?max_depth=50');
+```
+
+### Flag `include_counts` 
+
+Para optimizar consultas cuando no necesitas saber si los nodos tienen hijos:
+
+```javascript
+// Por defecto: incluye has_children y children_count
+const children = await api.get('/resource-hierarchy/nodes/RES-xxx/children');
+
+// Sin conteo (más rápido para grandes volúmenes)
+const children = await api.get('/resource-hierarchy/nodes/RES-xxx/children?include_counts=false');
+```
+
+**Cuándo usar `include_counts=false`:**
+- Listados donde no muestras iconos de expandir
+- Exportaciones de datos
+- Operaciones batch internas
+
+### Endpoint Batch
+
+Obtén múltiples nodos en una sola llamada (máximo 100):
+
+```javascript
+// POST /api/v1/resource-hierarchy/nodes/batch
+const response = await api.post('/resource-hierarchy/nodes/batch', {
+  ids: ['RES-abc123-1', 'RES-def456-2', 'RES-ghi789-3'],
+  include_counts: true
+});
+
+// Respuesta
+{
+  "ok": true,
+  "data": [
+    { "id": "RES-abc123-1", "name": "Hotel Lima", ... },
+    { "id": "RES-def456-2", "name": "Hotel Cusco", ... }
+    // RES-ghi789-3 no encontrado, no aparece
+  ],
+  "meta": {
+    "requested": 3,
+    "found": 2
+  }
+}
+```
+
+**Casos de uso:**
+- Cargar breadcrumbs (múltiples ancestros)
+- Detalles de selección múltiple
+- Sincronización de favoritos
+- Validación de referencias
+
+### Recomendaciones de Carga
+
+| Escenario | Estrategia Recomendada |
+|-----------|------------------------|
+| Vista inicial | `GET /roots` (solo raíces) |
+| Expandir nodo | `GET /nodes/:id/children` |
+| Árbol pequeño (<100 nodos) | `GET /tree?max_depth=3` |
+| Árbol grande | Lazy loading con `children` |
+| Breadcrumbs | `GET /nodes/:id/ancestors` o batch |
+| Búsqueda global | `GET /nodes?search=texto` |
+| Selección múltiple | `POST /nodes/batch`|

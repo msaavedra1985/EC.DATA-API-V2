@@ -105,6 +105,12 @@ Preferred communication style: Simple, everyday language.
   - **Access control:** Per-node permissions (view, edit, admin) with inheritance to descendants
   - **REST API:** Full CRUD at `/api/v1/resource-hierarchy/nodes`, tree operations, access management
   - **Tables:** `resource_hierarchy` (nodes with ltree path), `user_resource_access` (permissions)
+  - **Performance Optimizations:**
+    - Redis caching with TTL (5-15 min) and automatic invalidation on CUD operations
+    - Composite partial indexes for children queries and root nodes
+    - `max_depth` parameter for getTree() to limit tree depth (default 3, max 50)
+    - `include_counts` flag to skip expensive COUNT queries when not needed
+    - Batch endpoint `POST /nodes/batch` to fetch up to 100 nodes in single call
 
 ## External Dependencies
 

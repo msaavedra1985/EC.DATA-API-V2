@@ -5,6 +5,7 @@ import * as repository from './repository.js';
 import { findOrganizationByPublicCodeInternal } from '../organizations/repository.js';
 import { logAuditAction } from '../../helpers/auditLog.js';
 import logger from '../../utils/logger.js';
+import * as cache from './cache.js';
 
 const hierarchyLogger = logger.child({ component: 'resource-hierarchy' });
 
@@ -84,6 +85,9 @@ export const createNode = async (nodeData, userId, ipAddress, userAgent) => {
         userAgent
     });
     
+    // Invalidar cache de la organización (listas, árboles, hijos del padre)
+    await cache.invalidateNodeAndRelated(node.id, organizationUuid, parentNode?.public_code || null);
+    
     hierarchyLogger.info({ nodeId: node.id, nodeType: nodeData.node_type, userId }, 'Node created successfully');
     
     return sanitizeNode(node);
@@ -96,6 +100,12 @@ export const createNode = async (nodeData, userId, ipAddress, userAgent) => {
  * @returns {Promise<Object>} - Nodo encontrado
  */
 export const getNodeByPublicCode = async (publicCode) => {
+    // Intentar obtener de cache primero
+    const cachedNode = await cache.getCachedNode(publicCode);
+    if (cachedNode) {
+        return sanitizeNode(cachedNode);
+    }
+    
     const node = await repository.findNodeByPublicCode(publicCode);
     
     if (!node) {
@@ -104,6 +114,9 @@ export const getNodeByPublicCode = async (publicCode) => {
         error.code = 'NODE_NOT_FOUND';
         throw error;
     }
+    
+    // Guardar en cache
+    await cache.cacheNode(publicCode, node);
     
     return sanitizeNode(node);
 };
@@ -118,6 +131,15 @@ export const getNodeByPublicCode = async (publicCode) => {
  */
 export const getNodeChildren = async (nodePublicCode, organizationId, options = {}) => {
     const organizationUuid = await resolveOrganizationId(organizationId);
+    
+    // Intentar obtener de cache primero
+    const cachedResult = await cache.getCachedChildren(nodePublicCode, organizationUuid, options);
+    if (cachedResult) {
+        return {
+            data: cachedResult.data.map(sanitizeNode),
+            meta: cachedResult.meta
+        };
+    }
     
     let parentUuid = null;
     
@@ -134,13 +156,21 @@ export const getNodeChildren = async (nodePublicCode, organizationId, options = 
     
     const result = await repository.getChildren(parentUuid, organizationUuid, options);
     
-    return {
-        data: result.data.map(sanitizeNode),
+    const response = {
+        data: result.data,
         meta: {
             total: result.total,
             limit: options.limit || 100,
             offset: options.offset || 0
         }
+    };
+    
+    // Guardar en cache
+    await cache.cacheChildren(nodePublicCode, organizationUuid, options, response);
+    
+    return {
+        data: result.data.map(sanitizeNode),
+        meta: response.meta
     };
 };
 
@@ -180,6 +210,12 @@ export const getNodeDescendants = async (nodePublicCode, options = {}) => {
  * @returns {Promise<Array>} - Lista de ancestros (desde raíz hasta padre directo)
  */
 export const getNodeAncestors = async (nodePublicCode) => {
+    // Intentar obtener de cache primero
+    const cachedAncestors = await cache.getCachedAncestors(nodePublicCode);
+    if (cachedAncestors) {
+        return cachedAncestors.map(sanitizeNode);
+    }
+    
     const node = await repository.findNodeByPublicCodeInternal(nodePublicCode);
     
     if (!node) {
@@ -190,6 +226,9 @@ export const getNodeAncestors = async (nodePublicCode) => {
     }
     
     const ancestors = await repository.getAncestors(node.id);
+    
+    // Guardar en cache
+    await cache.cacheAncestors(nodePublicCode, ancestors);
     
     return ancestors.map(sanitizeNode);
 };
@@ -203,6 +242,13 @@ export const getNodeAncestors = async (nodePublicCode) => {
  */
 export const getTree = async (organizationId, options = {}) => {
     const organizationUuid = await resolveOrganizationId(organizationId);
+    
+    // Intentar obtener de cache primero
+    const cacheOptions = { rootId: options.rootId, maxDepth: options.maxDepth };
+    const cachedTree = await cache.getCachedTree(organizationUuid, cacheOptions);
+    if (cachedTree) {
+        return sanitizeTree(cachedTree);
+    }
     
     let rootUuid = null;
     if (options.rootId) {
@@ -220,6 +266,9 @@ export const getTree = async (organizationId, options = {}) => {
         rootId: rootUuid,
         maxDepth: options.maxDepth
     });
+    
+    // Guardar en cache
+    await cache.cacheTree(organizationUuid, cacheOptions, tree);
     
     return sanitizeTree(tree);
 };
@@ -286,6 +335,10 @@ export const moveNode = async (nodePublicCode, newParentPublicCode, userId, ipAd
         userAgent
     });
     
+    // Invalidar cache del nodo y ambos padres (antiguo y nuevo)
+    const oldParentPublicCode = oldParentId ? (await repository.findNodeById(oldParentId))?.public_code : null;
+    await cache.invalidateAfterMove(nodePublicCode, node.organization_id, oldParentPublicCode, newParentPublicCode);
+    
     hierarchyLogger.info({ nodeId: nodePublicCode, newParent: newParentPublicCode, userId }, 'Node moved successfully');
     
     return sanitizeNode(updatedNode);
@@ -342,6 +395,10 @@ export const updateNode = async (nodePublicCode, updates, userId, ipAddress, use
         userAgent
     });
     
+    // Invalidar cache del nodo y estructura relacionada
+    const parentPublicCode = node.parent_id ? (await repository.findNodeById(node.parent_id))?.public_code : null;
+    await cache.invalidateNodeAndRelated(nodePublicCode, node.organization_id, parentPublicCode);
+    
     hierarchyLogger.info({ nodeId: nodePublicCode, userId }, 'Node updated successfully');
     
     return sanitizeNode(updatedNode);
@@ -384,6 +441,10 @@ export const deleteNode = async (nodePublicCode, cascade, userId, ipAddress, use
         userAgent
     });
     
+    // Invalidar cache de toda la organización (puede afectar múltiples nodos en cascade)
+    const parentPublicCode = node.parent_id ? (await repository.findNodeById(node.parent_id))?.public_code : null;
+    await cache.invalidateNodeAndRelated(nodePublicCode, node.organization_id, parentPublicCode);
+    
     hierarchyLogger.info({ nodeId: nodePublicCode, deletedCount, cascade, userId }, 'Node deleted successfully');
     
     return {
@@ -401,6 +462,15 @@ export const deleteNode = async (nodePublicCode, cascade, userId, ipAddress, use
  */
 export const listNodes = async (organizationId, options = {}) => {
     const organizationUuid = await resolveOrganizationId(organizationId);
+    
+    // Intentar obtener de cache primero
+    const cachedResult = await cache.getCachedList(organizationUuid, options);
+    if (cachedResult) {
+        return {
+            data: cachedResult.data.map(sanitizeNode),
+            meta: cachedResult.meta
+        };
+    }
     
     // Resolver parent_id si se proporciona como public_code
     let parentUuid = undefined;
@@ -420,13 +490,21 @@ export const listNodes = async (organizationId, options = {}) => {
         parentId: parentUuid
     });
     
-    return {
-        data: result.data.map(sanitizeNode),
+    const response = {
+        data: result.data,
         meta: {
             total: result.total,
             limit: options.limit || 50,
             offset: options.offset || 0
         }
+    };
+    
+    // Guardar en cache
+    await cache.cacheList(organizationUuid, options, response);
+    
+    return {
+        data: result.data.map(sanitizeNode),
+        meta: response.meta
     };
 };
 
@@ -663,6 +741,33 @@ const sanitizeTree = (tree) => {
     });
 };
 
+/**
+ * Obtener múltiples nodos por sus public_codes
+ * Solo retorna nodos que pertenezcan a la organización activa (seguridad multi-tenant)
+ * 
+ * @param {Array<string>} publicCodes - Array de public codes
+ * @param {Object} options - Opciones (includeCounts, organizationId)
+ * @returns {Promise<Array>} - Lista de nodos encontrados (filtrados por organización)
+ */
+export const batchGetNodes = async (publicCodes, options = {}) => {
+    if (!publicCodes || publicCodes.length === 0) {
+        return [];
+    }
+    
+    // Resolver organizationId para filtrado multi-tenant
+    let organizationUuid = null;
+    if (options.organizationId) {
+        organizationUuid = await resolveOrganizationId(options.organizationId);
+    }
+    
+    const nodes = await repository.batchFindByPublicCodes(publicCodes, {
+        includeCounts: options.includeCounts,
+        organizationId: organizationUuid
+    });
+    
+    return nodes.map(sanitizeNode);
+};
+
 export default {
     createNode,
     getNodeByPublicCode,
@@ -674,6 +779,7 @@ export default {
     updateNode,
     deleteNode,
     listNodes,
+    batchGetNodes,
     grantNodeAccess,
     revokeNodeAccess,
     checkNodeAccess,

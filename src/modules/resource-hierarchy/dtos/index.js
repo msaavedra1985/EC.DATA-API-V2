@@ -214,7 +214,12 @@ export const listNodesSchema = z.object({
                 if (val === 'true' || val === '1') return true;
                 if (val === 'false' || val === '0') return false;
                 return undefined;
-            })
+            }),
+        include_counts: z
+            .string()
+            .optional()
+            .transform(val => val !== 'false' && val !== '0')
+            .default('true')
     })
 });
 
@@ -235,7 +240,12 @@ export const getChildrenSchema = z.object({
             .enum(nodeTypes, {
                 errorMap: () => ({ message: 'node_type debe ser: folder, site, o channel' })
             })
+            .optional(),
+        include_counts: z
+            .string()
             .optional()
+            .transform(val => val !== 'false' && val !== '0')
+            .default('true')
     })
 });
 
@@ -298,7 +308,12 @@ export const getTreeSchema = z.object({
             .string()
             .optional()
             .transform(val => val ? parseInt(val, 10) : null)
-            .pipe(z.number().int().min(1).max(50).nullable())
+            .pipe(z.number().int().min(1).max(50).nullable()),
+        include_counts: z
+            .string()
+            .optional()
+            .transform(val => val !== 'false' && val !== '0')
+            .default('true')
     })
 });
 
@@ -410,6 +425,25 @@ export const checkAccessSchema = z.object({
     })
 });
 
+/**
+ * Schema para obtener múltiples nodos por IDs
+ * POST /resource-hierarchy/nodes/batch
+ */
+export const batchGetNodesSchema = z.object({
+    body: z.object({
+        ids: z
+            .array(z.string().min(1), {
+                required_error: 'ids es requerido'
+            })
+            .min(1, 'Debe proporcionar al menos un ID')
+            .max(100, 'No puede solicitar más de 100 nodos a la vez'),
+        include_counts: z
+            .boolean()
+            .optional()
+            .default(true)
+    })
+});
+
 export default {
     createNodeSchema,
     getNodeSchema,
@@ -424,5 +458,6 @@ export default {
     getRootsSchema,
     grantAccessSchema,
     revokeAccessSchema,
-    checkAccessSchema
+    checkAccessSchema,
+    batchGetNodesSchema
 };

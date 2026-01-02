@@ -122,13 +122,16 @@ export const findNodeById = async (id) => {
  * @returns {Promise<Object>} - Lista de hijos y total
  */
 export const getChildren = async (parentId, organizationId, options = {}) => {
-    const { limit = 100, offset = 0, nodeType = null } = options;
+    const { limit = 100, offset = 0, nodeType = null, includeCounts = true } = options;
     
-    // Usar raw query para incluir conteo de hijos
+    // Seleccionar columnas: incluir conteo de hijos solo si se solicita
+    const selectColumns = includeCounts
+        ? `rh.*, (SELECT COUNT(*) FROM resource_hierarchy c 
+            WHERE c.parent_id = rh.id AND c.deleted_at IS NULL AND c.is_active = true) as children_count`
+        : 'rh.*';
+    
     let query = `
-        SELECT rh.*,
-               (SELECT COUNT(*) FROM resource_hierarchy c 
-                WHERE c.parent_id = rh.id AND c.deleted_at IS NULL AND c.is_active = true) as children_count
+        SELECT ${selectColumns}
         FROM resource_hierarchy rh
         WHERE rh.organization_id = $1
           AND rh.deleted_at IS NULL
@@ -153,10 +156,16 @@ export const getChildren = async (parentId, organizationId, options = {}) => {
         paramIndex++;
     }
     
-    // Contar total
-    const countQuery = `SELECT COUNT(*) as count FROM (${query}) as subquery`;
+    // Contar total (sin la subconsulta de children_count)
+    const countQuery = `SELECT COUNT(*) as count FROM resource_hierarchy rh 
+        WHERE rh.organization_id = $1 AND rh.deleted_at IS NULL AND rh.is_active = true
+        ${parentId === null ? 'AND rh.parent_id IS NULL' : `AND rh.parent_id = $2`}
+        ${nodeType ? `AND rh.node_type = $${parentId === null ? 2 : 3}` : ''}`;
+    const countReplacements = parentId === null 
+        ? (nodeType ? [organizationId, nodeType] : [organizationId])
+        : (nodeType ? [organizationId, parentId, nodeType] : [organizationId, parentId]);
     const countResult = await sequelize.query(countQuery, {
-        bind: replacements,
+        bind: countReplacements,
         type: QueryTypes.SELECT
     });
     const total = parseInt(countResult[0].count, 10);
@@ -171,7 +180,7 @@ export const getChildren = async (parentId, organizationId, options = {}) => {
     });
     
     return {
-        data: rows.map(toNodeDto),
+        data: rows.map(row => toNodeDto(row, includeCounts)),
         total
     };
 };
@@ -292,18 +301,20 @@ export const getAncestors = async (nodeId) => {
  * @returns {Promise<Array>} - Árbol estructurado
  */
 export const getTree = async (organizationId, options = {}) => {
-    const { rootId = null, maxDepth = null } = options;
+    // maxDepth por defecto: 3 niveles para evitar cargas masivas
+    // Se puede aumentar hasta 10 o null para carga completa
+    const { rootId = null, maxDepth = 3, limit = 500 } = options;
     
     let nodes;
     
     if (rootId) {
         // Obtener subárbol desde un nodo específico
-        const result = await getDescendantsWithChildCount(rootId, { limit: 1000, maxDepth });
+        const result = await getDescendantsWithChildCount(rootId, { limit, maxDepth });
         const rootNode = await getNodeByIdWithChildrenCount(rootId);
         nodes = rootNode ? [rootNode, ...result.data] : result.data;
     } else {
-        // Obtener árbol completo con conteo de hijos
-        const query = `
+        // Obtener árbol completo con conteo de hijos y límite de profundidad
+        let query = `
             SELECT rh.*,
                    (SELECT COUNT(*) FROM resource_hierarchy c 
                     WHERE c.parent_id = rh.id AND c.deleted_at IS NULL AND c.is_active = true) as children_count
@@ -311,12 +322,23 @@ export const getTree = async (organizationId, options = {}) => {
             WHERE rh.organization_id = $1
               AND rh.deleted_at IS NULL
               AND rh.is_active = true
-            ORDER BY rh.depth ASC, rh.display_order ASC, rh.name ASC
-            LIMIT 1000
         `;
         
+        const replacements = [organizationId];
+        let paramIndex = 2;
+        
+        // Agregar filtro de profundidad si está definido
+        if (maxDepth !== null) {
+            query += ` AND rh.depth <= $${paramIndex}`;
+            replacements.push(maxDepth);
+            paramIndex++;
+        }
+        
+        query += ` ORDER BY rh.depth ASC, rh.display_order ASC, rh.name ASC LIMIT $${paramIndex}`;
+        replacements.push(limit);
+        
         const rows = await sequelize.query(query, {
-            bind: [organizationId],
+            bind: replacements,
             type: QueryTypes.SELECT
         });
         
@@ -733,6 +755,56 @@ export const listUserAccess = async (userId, organizationId = null) => {
     return accesses.map(a => a.toJSON());
 };
 
+/**
+ * Obtener múltiples nodos por sus public_codes
+ * Útil para cargas batch desde el frontend
+ * Filtra por organizationId para garantizar aislamiento multi-tenant
+ * 
+ * @param {Array<string>} publicCodes - Array de public codes
+ * @param {Object} options - Opciones (includeCounts, organizationId)
+ * @returns {Promise<Array>} - Lista de nodos encontrados (solo de la organización especificada)
+ */
+export const batchFindByPublicCodes = async (publicCodes, options = {}) => {
+    const { includeCounts = true, organizationId = null } = options;
+    
+    if (!publicCodes || publicCodes.length === 0) {
+        return [];
+    }
+    
+    // Limitar a 100 nodos por consulta
+    const limitedCodes = publicCodes.slice(0, 100);
+    
+    // Construir placeholders para la consulta
+    const placeholders = limitedCodes.map((_, i) => `$${i + 1}`).join(', ');
+    
+    const selectColumns = includeCounts
+        ? `rh.*, (SELECT COUNT(*) FROM resource_hierarchy c 
+            WHERE c.parent_id = rh.id AND c.deleted_at IS NULL AND c.is_active = true) as children_count`
+        : 'rh.*';
+    
+    // Filtrar por organización si se especifica (seguridad multi-tenant)
+    let orgFilter = '';
+    const bindings = [...limitedCodes];
+    if (organizationId) {
+        orgFilter = ` AND rh.organization_id = $${bindings.length + 1}`;
+        bindings.push(organizationId);
+    }
+    
+    const query = `
+        SELECT ${selectColumns}
+        FROM resource_hierarchy rh
+        WHERE rh.public_code IN (${placeholders})
+          AND rh.deleted_at IS NULL${orgFilter}
+    `;
+    
+    const rows = await sequelize.query(query, {
+        bind: bindings,
+        type: QueryTypes.SELECT
+    });
+    
+    return rows.map(row => toNodeDto(row, includeCounts));
+};
+
 // ============ HELPERS ============
 
 /**
@@ -743,17 +815,12 @@ export const listUserAccess = async (userId, organizationId = null) => {
  * Nota: Usamos function declaration (no arrow function) para permitir hoisting
  * ya que esta función es usada por helpers al inicio del archivo
  */
-function toNodeDto(node) {
+function toNodeDto(node, includeCounts = true) {
     if (!node) return null;
     
     const data = node.toJSON ? node.toJSON() : node;
     
-    // Determinar has_children: priorizar children_count de la consulta SQL,
-    // luego verificar array children si existe (para árbol construido)
-    const childrenCount = parseInt(data.children_count, 10) || 0;
-    const hasChildren = childrenCount > 0 || (data.children?.length > 0);
-    
-    return {
+    const dto = {
         id: data.public_code,
         name: data.name,
         description: data.description,
@@ -762,8 +829,6 @@ function toNodeDto(node) {
         display_order: data.display_order,
         depth: data.depth,
         parent_id: data.parent_id ? data.parent?.public_code || data.parent_id : null,
-        has_children: hasChildren,
-        children_count: childrenCount,
         metadata: data.metadata,
         is_active: data.is_active,
         created_at: data.created_at,
@@ -772,6 +837,16 @@ function toNodeDto(node) {
         _uuid: data.id,
         _organization_id: data.organization_id
     };
+    
+    // Solo incluir has_children y children_count si se solicita
+    if (includeCounts) {
+        const childrenCount = parseInt(data.children_count, 10) || 0;
+        const hasChildren = childrenCount > 0 || (data.children?.length > 0);
+        dto.has_children = hasChildren;
+        dto.children_count = childrenCount;
+    }
+    
+    return dto;
 }
 
 /**

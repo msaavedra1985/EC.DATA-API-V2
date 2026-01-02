@@ -20,7 +20,8 @@ import {
     getRootsSchema,
     grantAccessSchema,
     revokeAccessSchema,
-    checkAccessSchema
+    checkAccessSchema,
+    batchGetNodesSchema
 } from './dtos/index.js';
 import logger from '../../utils/logger.js';
 
@@ -231,7 +232,8 @@ router.get('/nodes',
                     nodeType: req.query.node_type,
                     parentId: req.query.parent_id,
                     search: req.query.search,
-                    isActive: req.query.is_active
+                    isActive: req.query.is_active,
+                    includeCounts: req.query.include_counts
                 }
             );
             
@@ -287,6 +289,93 @@ router.get('/nodes/:id',
             res.json({
                 ok: true,
                 data: node
+            });
+        } catch (error) {
+            next(error);
+        }
+    }
+);
+
+/**
+ * @swagger
+ * /api/v1/resource-hierarchy/nodes/batch:
+ *   post:
+ *     summary: Obtener múltiples nodos por IDs
+ *     description: |
+ *       Obtiene los detalles de múltiples nodos en una sola llamada. 
+ *       Útil para cargar breadcrumbs o selecciones múltiples.
+ *       
+ *       **Nota de seguridad:** Solo retorna nodos que pertenezcan a la organización activa del usuario.
+ *       Nodos de otras organizaciones son filtrados automáticamente.
+ *     tags: [Resource Hierarchy]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - ids
+ *             properties:
+ *               ids:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 description: Array de public codes de nodos (máximo 100)
+ *                 example: ["RES-abc123-1", "RES-def456-2"]
+ *               include_counts:
+ *                 type: boolean
+ *                 default: true
+ *                 description: Incluir conteo de hijos
+ *     responses:
+ *       200:
+ *         description: Lista de nodos encontrados (filtrados por organización activa)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/ResourceNode'
+ *                 meta:
+ *                   type: object
+ *                   properties:
+ *                     requested:
+ *                       type: integer
+ *                       description: Cantidad de IDs solicitados
+ *                     found:
+ *                       type: integer
+ *                       description: Cantidad de nodos encontrados (puede ser menor si hay nodos de otras orgs)
+ */
+router.post('/nodes/batch',
+    authenticate,
+    enforceActiveOrganization,
+    validate(batchGetNodesSchema),
+    async (req, res, next) => {
+        try {
+            // El middleware ya setea req.body.organization_id con la org activa
+            const nodes = await hierarchyServices.batchGetNodes(
+                req.body.ids,
+                { 
+                    includeCounts: req.body.include_counts,
+                    organizationId: req.body.organization_id
+                }
+            );
+            
+            res.json({
+                ok: true,
+                data: nodes,
+                meta: {
+                    requested: req.body.ids.length,
+                    found: nodes.length
+                }
             });
         } catch (error) {
             next(error);
@@ -555,7 +644,8 @@ router.get('/nodes/:id/children',
                 {
                     limit: req.query.limit,
                     offset: req.query.offset,
-                    nodeType: req.query.node_type
+                    nodeType: req.query.node_type,
+                    includeCounts: req.query.include_counts
                 }
             );
             
@@ -727,7 +817,8 @@ router.get('/tree',
                 req.query.organization_id,
                 {
                     rootId: req.query.root_id,
-                    maxDepth: req.query.max_depth
+                    maxDepth: req.query.max_depth,
+                    includeCounts: req.query.include_counts
                 }
             );
             
@@ -789,7 +880,8 @@ router.get('/roots',
                 {
                     limit: req.query.limit,
                     offset: req.query.offset,
-                    nodeType: req.query.node_type
+                    nodeType: req.query.node_type,
+                    includeCounts: req.query.include_counts
                 }
             );
             
