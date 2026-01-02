@@ -444,6 +444,74 @@ export const batchGetNodesSchema = z.object({
     })
 });
 
+/**
+ * Schema para un nodo individual en creación batch
+ * Usado internamente por batchCreateNodesSchema
+ */
+const batchNodeItemSchema = z.object({
+    node_type: z
+        .enum(nodeTypes, {
+            errorMap: () => ({ message: 'node_type debe ser: folder, site, o channel' })
+        }),
+    name: z
+        .string({
+            required_error: 'name es requerido'
+        })
+        .min(1, 'name no puede estar vacío')
+        .max(255, 'name no puede exceder 255 caracteres'),
+    description: z
+        .string()
+        .max(2000, 'description no puede exceder 2000 caracteres')
+        .optional()
+        .nullable(),
+    reference_id: z
+        .string()
+        .max(100, 'reference_id no puede exceder 100 caracteres')
+        .optional()
+        .nullable(),
+    icon: z
+        .string()
+        .max(50, 'icon no puede exceder 50 caracteres')
+        .optional(),
+    color: z
+        .string()
+        .max(20, 'color no puede exceder 20 caracteres')
+        .regex(/^#[0-9a-fA-F]{6}$|^#[0-9a-fA-F]{3}$/, 'color debe ser un código hexadecimal válido (#RGB o #RRGGBB)')
+        .optional()
+        .nullable(),
+    display_order: z
+        .number()
+        .int('display_order debe ser un número entero')
+        .min(0, 'display_order debe ser mayor o igual a 0')
+        .optional()
+        .default(0),
+    metadata: z
+        .record(z.any())
+        .optional()
+});
+
+/**
+ * Schema para crear múltiples nodos de una vez
+ * POST /resource-hierarchy/nodes/batch-create
+ * Todos los nodos se crean bajo el mismo parent_id
+ * La organización se toma del contexto (req.organizationContext.id)
+ */
+export const batchCreateNodesSchema = z.object({
+    body: z.object({
+        parent_id: z
+            .string()
+            .min(1, 'parent_id no puede estar vacío')
+            .nullable()
+            .optional(),
+        nodes: z
+            .array(batchNodeItemSchema, {
+                required_error: 'nodes es requerido'
+            })
+            .min(1, 'Debe proporcionar al menos un nodo')
+            .max(50, 'No puede crear más de 50 nodos a la vez')
+    })
+});
+
 export default {
     createNodeSchema,
     getNodeSchema,
@@ -459,5 +527,6 @@ export default {
     grantAccessSchema,
     revokeAccessSchema,
     checkAccessSchema,
-    batchGetNodesSchema
+    batchGetNodesSchema,
+    batchCreateNodesSchema
 };
