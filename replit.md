@@ -144,6 +144,7 @@ req.locale = 'es';              // Idioma detectado (seteado por i18n middleware
 - **Resource Hierarchy Module:** Flexible tree-based organization of resources (folders, sites, channels) using PostgreSQL ltree extension.
   - **Hybrid ltree + parent_id pattern:** ltree for fast ancestor/descendant queries, parent_id for direct navigation
   - **Node types:** folder, site, channel (extensible without breaking changes)
+  - **Flexible parent-child relationships:** Any node type can be a child of any other node type. This supports "totalizer channels" that aggregate data from sites or groups of channels (e.g., Channel → Site, Channel → Channel, Channel → Folder → Sites)
   - **Features:** Unlimited depth, permission inheritance, soft delete with cascade, automatic path calculation via DB triggers
   - **Access control:** Per-node permissions (view, edit, admin) with inheritance to descendants
   - **REST API:** Full CRUD at `/api/v1/resource-hierarchy/nodes`, tree operations, access management

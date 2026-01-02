@@ -697,21 +697,22 @@ const resolveNodeId = async (nodeId) => {
 
 /**
  * Validar reglas de tipo de nodo
+ * 
+ * Reglas actuales (flexibles para soportar canales totalizadores):
+ * - Los channels pueden contener cualquier tipo de hijo (channels, folders, sites)
+ *   porque pueden actuar como totalizadores que agregan datos de sites o conjuntos de canales
+ * - Los sites pueden estar en carpetas, canales o en la raíz
+ * - Las carpetas pueden estar en cualquier lugar
+ * 
+ * Esta flexibilidad permite estructuras como:
+ * - Canal totalizador → Site (el canal agrega los datos del site)
+ * - Canal totalizador → Múltiples canales (el canal agrega datos de varios canales)
+ * - Canal totalizador → Carpeta → Sites/Canales (organización jerárquica)
  */
 const validateNodeTypeRules = (nodeType, parentNode) => {
-    // Reglas de negocio:
-    // - Los channels solo pueden estar dentro de sites o carpetas
-    // - Los sites pueden estar en carpetas o en la raíz
-    // - Las carpetas pueden estar en cualquier lugar
-    
-    if (nodeType === 'channel' && parentNode && parentNode.node_type === 'channel') {
-        const error = new Error('Un canal no puede contener otros canales');
-        error.status = 400;
-        error.code = 'INVALID_NODE_HIERARCHY';
-        throw error;
-    }
-    
-    // Por ahora permitimos flexibilidad, se pueden agregar más reglas después
+    // Actualmente no hay restricciones de tipo padre-hijo
+    // Los canales totalizadores pueden contener cualquier tipo de nodo
+    // Se pueden agregar validaciones específicas aquí si el negocio lo requiere
 };
 
 /**
