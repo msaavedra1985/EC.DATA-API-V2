@@ -892,6 +892,52 @@ UserResourceAccess.belongsTo(ResourceHierarchy, {
     as: 'resourceNode'
 });
 
+/**
+ * Crear múltiples nodos en una transacción
+ * Todos los nodos deben compartir el mismo parent_id y organization_id
+ * 
+ * @param {Array<Object>} nodesData - Array de datos de nodos
+ * @param {Object} options - Opciones { parentId, organizationId, transaction }
+ * @returns {Promise<Array<Object>>} - Array de nodos creados
+ */
+export const batchCreateNodes = async (nodesData, options = {}) => {
+    const { parentId = null, organizationId, transaction } = options;
+    
+    const createdNodes = [];
+    
+    for (let i = 0; i < nodesData.length; i++) {
+        const data = nodesData[i];
+        const id = generateUuidV7();
+        const humanId = await generateHumanId(ResourceHierarchy, null, transaction);
+        const publicCode = generatePublicCode('RES', id);
+        
+        const node = await ResourceHierarchy.create({
+            id,
+            human_id: humanId,
+            public_code: publicCode,
+            organization_id: organizationId,
+            parent_id: parentId,
+            node_type: data.node_type,
+            reference_id: data.reference_id || null,
+            name: data.name,
+            description: data.description || null,
+            icon: data.icon || null,
+            color: data.color || null,
+            display_order: data.display_order ?? i,
+            metadata: data.metadata || {}
+        }, { transaction });
+        
+        await node.reload({ transaction });
+        
+        const nodeData = node.toJSON();
+        nodeData.children_count = 0;
+        
+        createdNodes.push(toNodeDto(nodeData));
+    }
+    
+    return createdNodes;
+};
+
 export default {
     createNode,
     findNodeByPublicCode,
@@ -910,5 +956,6 @@ export default {
     revokeAccess,
     checkAccess,
     getAccessibleNodeIds,
-    listUserAccess
+    listUserAccess,
+    batchCreateNodes
 };

@@ -777,6 +777,110 @@ export const batchGetNodes = async (publicCodes, options = {}) => {
     return nodes.map(sanitizeNode);
 };
 
+/**
+ * Crear múltiples nodos en una sola operación (transacción atómica)
+ * Todos los nodos se crean bajo el mismo parent_id y organización
+ * 
+ * @param {Object} batchData - Datos del batch
+ * @param {string|null} batchData.parent_id - ID del nodo padre (public_code, null para raíz)
+ * @param {Array<Object>} batchData.nodes - Array de nodos a crear
+ * @param {string} organizationId - ID de la organización (UUID)
+ * @param {string} userId - UUID del usuario que crea
+ * @param {string} ipAddress - IP del usuario
+ * @param {string} userAgent - User agent
+ * @returns {Promise<Object>} - Resultado con nodos creados
+ */
+export const batchCreateNodes = async (batchData, organizationId, userId, ipAddress, userAgent) => {
+    const { parent_id, nodes } = batchData;
+    
+    // Importar sequelize para transacciones
+    const sequelize = (await import('../../db/sql/sequelize.js')).default;
+    
+    // Resolver organization_id
+    const organizationUuid = await resolveOrganizationId(organizationId);
+    
+    // Resolver parent_id si se proporciona
+    let parentUuid = null;
+    let parentNode = null;
+    
+    if (parent_id) {
+        parentNode = await resolveNodeId(parent_id);
+        if (!parentNode) {
+            const error = new Error('Nodo padre no encontrado');
+            error.status = 404;
+            error.code = 'PARENT_NODE_NOT_FOUND';
+            throw error;
+        }
+        
+        // Validar que el padre pertenece a la misma organización
+        if (parentNode._organization_id !== organizationUuid) {
+            const error = new Error('El nodo padre debe pertenecer a la misma organización');
+            error.status = 400;
+            error.code = 'PARENT_ORG_MISMATCH';
+            throw error;
+        }
+        
+        parentUuid = parentNode._uuid;
+    }
+    
+    // Validar reglas de tipo de nodo para cada nodo
+    for (const nodeData of nodes) {
+        validateNodeTypeRules(nodeData.node_type, parentNode);
+    }
+    
+    // Crear todos los nodos en una transacción
+    const transaction = await sequelize.transaction();
+    
+    try {
+        const createdNodes = await repository.batchCreateNodes(nodes, {
+            parentId: parentUuid,
+            organizationId: organizationUuid,
+            transaction
+        });
+        
+        // Audit log para cada nodo creado
+        for (const node of createdNodes) {
+            await logAuditAction({
+                entityType: 'resource_hierarchy',
+                entityId: node._uuid || node.id,
+                action: 'created',
+                performedBy: userId,
+                changes: { new: node },
+                metadata: {
+                    node_type: node.node_type,
+                    parent_id: parent_id,
+                    organization_id: organizationId,
+                    batch_operation: true,
+                    batch_size: nodes.length
+                },
+                ipAddress,
+                userAgent
+            });
+        }
+        
+        await transaction.commit();
+        
+        // Invalidar cache de la organización (una sola vez para todo el batch)
+        await cache.invalidateNodeAndRelated(null, organizationUuid, parentNode?.public_code || null);
+        
+        hierarchyLogger.info({ 
+            count: createdNodes.length, 
+            parentId: parent_id, 
+            userId 
+        }, 'Batch nodes created successfully');
+        
+        return {
+            created_count: createdNodes.length,
+            nodes: createdNodes.map(sanitizeNode)
+        };
+        
+    } catch (error) {
+        await transaction.rollback();
+        hierarchyLogger.error({ error: error.message, userId }, 'Batch node creation failed');
+        throw error;
+    }
+};
+
 export default {
     createNode,
     getNodeByPublicCode,
@@ -789,6 +893,7 @@ export default {
     deleteNode,
     listNodes,
     batchGetNodes,
+    batchCreateNodes,
     grantNodeAccess,
     revokeNodeAccess,
     checkNodeAccess,
