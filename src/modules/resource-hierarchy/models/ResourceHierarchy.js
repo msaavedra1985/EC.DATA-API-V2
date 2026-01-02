@@ -64,9 +64,9 @@ const ResourceHierarchy = sequelize.define('ResourceHierarchy', {
         comment: 'Tipo de nodo: folder, site, channel'
     },
     reference_id: {
-        type: DataTypes.UUID,
+        type: DataTypes.STRING(100),
         allowNull: true,
-        comment: 'FK opcional al recurso real (site_id, channel_id). Null para carpetas.'
+        comment: 'Public code del recurso referenciado (ej: CHN-5LYJX-4, SIT-xxx). Null para carpetas.'
     },
     name: {
         type: DataTypes.STRING(200),

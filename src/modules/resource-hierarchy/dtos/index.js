@@ -67,9 +67,7 @@ export const createNodeSchema = z.object({
             .nullable(),
         reference_id: z
             .string()
-            .refine(val => !val || uuidRegex.test(val), {
-                message: 'reference_id debe ser un UUID válido'
-            })
+            .max(100, 'reference_id no puede exceder 100 caracteres')
             .optional()
             .nullable(),
         icon: z

@@ -19,7 +19,7 @@ const hierarchyLogger = logger.child({ component: 'resource-hierarchy' });
  * @param {string|null} nodeData.parent_id - ID del nodo padre (public_code o UUID, null para raíz)
  * @param {string} nodeData.node_type - Tipo: folder, site, channel
  * @param {string} nodeData.name - Nombre del nodo
- * @param {string|null} nodeData.reference_id - UUID del recurso referenciado (opcional)
+ * @param {string|null} nodeData.reference_id - Public code del recurso referenciado (ej: CHN-xxx, SIT-xxx) (opcional)
  * @param {string} userId - UUID del usuario que crea
  * @param {string} ipAddress - IP del usuario
  * @param {string} userAgent - User agent

@@ -1,4 +1,4 @@
-// Database Schema - Generated on 2025-12-26T15:18:23.288Z
+// Database Schema - Generated on 2026-01-02T19:49:45.763Z
 // Project: EC.DATA API - Enterprise REST API
 // Use this file at https://dbdiagram.io to visualize the schema
 
@@ -354,7 +354,7 @@ Table resource_hierarchy {
   organization_id uuid [not null] // FK a organizations - cada org tiene su propia jerarquía aislada
   parent_id uuid // FK self-reference - nodo padre (null para nodos raíz)
   node_type resource_node_type [not null] // Tipo de nodo: folder, site, channel
-  reference_id uuid // FK opcional al recurso real (site_id, channel_id). Null para carpetas.
+  reference_id varchar(100) // Public code del recurso referenciado (site, channel, etc). Formato: XXX-YYYYY-Z
   name varchar(200) [not null] // Nombre visible del nodo en la jerarquía
   description text // Descripción opcional del nodo
   icon varchar(50) // Icono para mostrar en el árbol (ej: folder, building, sensor)
@@ -368,6 +368,8 @@ Table resource_hierarchy {
   path ltree // Path materializado como ltree para queries rápidas de ancestros/descendientes. Formato: org_<uuid>.node_<uuid>.node_<uuid>
 
   Indexes {
+    (organization_id, parent_id) [name: 'resource_hierarchy_active_not_deleted_idx']
+    (parent_id) [name: 'resource_hierarchy_children_count_idx']
     (human_id) [name: 'resource_hierarchy_human_id_key', unique]
     (is_active) [name: 'resource_hierarchy_is_active']
     (is_active) [name: 'resource_hierarchy_is_active_idx']
@@ -375,6 +377,7 @@ Table resource_hierarchy {
     (node_type) [name: 'resource_hierarchy_node_type_idx']
     (organization_id, name) [name: 'resource_hierarchy_org_name_idx']
     (organization_id, path) [name: 'resource_hierarchy_org_path_idx']
+    (organization_id, display_order) [name: 'resource_hierarchy_org_root_order_idx']
     (organization_id) [name: 'resource_hierarchy_organization_id']
     (organization_id) [name: 'resource_hierarchy_organization_id_idx']
     (parent_id) [name: 'resource_hierarchy_parent_id']
