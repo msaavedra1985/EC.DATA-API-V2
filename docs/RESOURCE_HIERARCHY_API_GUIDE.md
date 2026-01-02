@@ -6,6 +6,7 @@ Guía completa de uso de la API de Resource Hierarchy (Jerarquía de Recursos) p
 
 - [Descripción General](#descripción-general)
 - [Conceptos Clave](#conceptos-clave)
+- [Patrones de Carga del Árbol](#patrones-de-carga-del-árbol) ⭐ **LEER PRIMERO**
 - [Autenticación y Permisos](#autenticación-y-permisos)
 - [Identificadores](#identificadores)
 - [Endpoints CRUD](#endpoints-crud)
@@ -14,6 +15,7 @@ Guía completa de uso de la API de Resource Hierarchy (Jerarquía de Recursos) p
 - [Control de Acceso](#control-de-acceso)
 - [Manejo de Errores](#manejo-de-errores)
 - [Ejemplos de Uso (React/Next.js)](#ejemplos-de-uso-reactnextjs)
+- [Optimizaciones de Rendimiento](#optimizaciones-de-rendimiento)
 
 ---
 
@@ -65,6 +67,226 @@ root.abc123.def456.ghi789
 Esto permite consultas ultrarrápidas como:
 - "Dame todos los descendientes de este nodo"
 - "Dame todos los ancestros hasta la raíz"
+
+---
+
+## 🎯 Patrones de Carga del Árbol
+
+Esta sección es **fundamental** para elegir correctamente cómo cargar el árbol según el caso de uso.
+
+### Resumen de Endpoints de Lectura
+
+| Endpoint | Qué retorna | Cuándo usar |
+|----------|-------------|-------------|
+| `GET /roots` | Solo nodos raíz (nivel 0) | Carga inicial para lazy loading |
+| `GET /nodes/:id/children` | Hijos directos de un nodo | Cuando usuario expande un nodo |
+| `GET /tree` | Árbol completo o limitado por `max_depth` | Selectores rápidos, vistas compactas |
+| `GET /nodes/:id/ancestors` | Ancestros hasta la raíz | Breadcrumbs |
+| `POST /nodes/batch` | Múltiples nodos por IDs | Cargar varios nodos específicos |
+
+---
+
+### Patrón 1: Lazy Loading (Recomendado para Gestión)
+
+**Usar para:** Administrador de jerarquía, interfaces de CRUD, árboles grandes
+
+```
+Carga Inicial: GET /roots
+     ↓
+Usuario expande nodo: GET /nodes/:id/children
+     ↓
+Usuario expande otro: GET /nodes/:id/children
+     ...
+```
+
+**Flujo:**
+
+```javascript
+// 1. Carga inicial - solo raíces
+const { data: roots } = await api.get('/resource-hierarchy/roots');
+// Cada nodo tiene: { id, name, node_type, has_children, children_count, ... }
+
+// 2. Cuando el usuario hace clic en expandir (si has_children === true)
+const { data: children } = await api.get(`/resource-hierarchy/nodes/${nodeId}/children`);
+
+// 3. Renderizar hijos y repetir el proceso
+```
+
+**Ejemplo de respuesta de `/roots`:**
+
+```json
+{
+  "ok": true,
+  "data": [
+    {
+      "id": "RH-abc123-1",
+      "name": "Región Norte",
+      "node_type": "folder",
+      "has_children": true,
+      "children_count": 3,
+      "depth": 0
+    },
+    {
+      "id": "RH-def456-2",
+      "name": "Región Sur",
+      "node_type": "folder",
+      "has_children": true,
+      "children_count": 2,
+      "depth": 0
+    }
+  ]
+}
+```
+
+**Ventajas:**
+- ✅ Carga mínima inicial (solo raíces)
+- ✅ El usuario controla qué expandir
+- ✅ Escala bien con árboles de cualquier tamaño
+- ✅ Menor consumo de memoria en frontend
+- ✅ Ideal para operaciones CRUD (crear, mover, eliminar)
+
+**Cuándo usar:**
+- Pantalla de administración de jerarquía
+- Cuando el usuario puede crear/editar/mover nodos
+- Árboles con más de 50-100 nodos
+- Árboles con profundidad desconocida o variable
+
+---
+
+### Patrón 2: Carga Completa con Límite (Para Selectores)
+
+**Usar para:** Selectores en formularios, filtros de dashboard, vistas de solo lectura
+
+```
+Carga única: GET /tree?max_depth=2
+     ↓
+Árbol completo en memoria (hasta 2 niveles)
+```
+
+**Flujo:**
+
+```javascript
+// Cargar árbol con máximo 2 niveles de profundidad
+const { data: tree } = await api.get('/resource-hierarchy/tree?max_depth=2');
+// Retorna: nivel 0 (raíces) + nivel 1 (hijos de raíces) + nivel 2 (nietos)
+
+// El árbol viene estructurado con children anidados
+```
+
+**Ejemplo de respuesta de `/tree?max_depth=2`:**
+
+```json
+{
+  "ok": true,
+  "data": [
+    {
+      "id": "RH-abc123-1",
+      "name": "Región Norte",
+      "node_type": "folder",
+      "has_children": true,
+      "children_count": 2,
+      "children": [
+        {
+          "id": "RH-zona1-3",
+          "name": "Zona A",
+          "node_type": "folder",
+          "has_children": true,
+          "children_count": 3,
+          "children": [
+            {
+              "id": "RH-hotel1-5",
+              "name": "Hotel Lima",
+              "node_type": "site",
+              "has_children": true,
+              "children": []
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
+```
+
+**Importante sobre `max_depth`:**
+- `max_depth=1` → Retorna nivel 0 + nivel 1 (raíces y sus hijos directos)
+- `max_depth=2` → Retorna nivel 0 + nivel 1 + nivel 2 (3 niveles)
+- `max_depth=3` → Es el **default** si no se especifica
+- Máximo permitido: 50
+
+**Ventajas:**
+- ✅ Una sola llamada a la API
+- ✅ Árbol listo para renderizar inmediatamente
+- ✅ Ideal para selectores tipo dropdown/tree-select
+
+**Cuándo usar:**
+- Selector de ubicación en formularios
+- Filtros de dashboard
+- Vistas compactas de resumen
+- Árboles pequeños/medianos (menos de 100 nodos)
+- Cuando conoces la profundidad máxima necesaria
+
+---
+
+### Patrón 3: Breadcrumbs
+
+**Usar para:** Mostrar la ruta desde la raíz hasta un nodo específico
+
+```javascript
+// Obtener ancestros de un nodo (desde raíz hasta el padre del nodo)
+const { data: ancestors } = await api.get(`/resource-hierarchy/nodes/${nodeId}/ancestors`);
+
+// Respuesta ordenada: [raíz, nivel1, nivel2, ..., padre_inmediato]
+```
+
+**Alternativa con batch (si ya tienes los IDs):**
+
+```javascript
+// Si ya conoces los IDs de los ancestros
+const { data: nodes } = await api.post('/resource-hierarchy/nodes/batch', {
+  ids: ['RH-root-1', 'RH-parent-2', 'RH-current-3']
+});
+```
+
+---
+
+### Tabla de Decisión
+
+| Escenario | Endpoint Recomendado | Razón |
+|-----------|---------------------|-------|
+| Administrador de jerarquía (CRUD) | `/roots` + `/children` | Precisión, lazy loading |
+| Selector "Elegir ubicación" | `/tree?max_depth=2` | Carga rápida, vista compacta |
+| Filtro por zona en dashboard | `/tree?max_depth=3` | Vista completa para filtrar |
+| Breadcrumbs | `/ancestors` | Ruta directa al nodo |
+| Cargar nodos favoritos | `/nodes/batch` | Múltiples IDs específicos |
+| Exportar estructura | `/tree?max_depth=50` | Árbol completo |
+| Buscar nodos por nombre | `/nodes?search=texto` | Búsqueda global |
+
+---
+
+### Propiedad `has_children`
+
+Todos los endpoints de lectura incluyen por defecto:
+
+```json
+{
+  "id": "RH-xxx",
+  "name": "Mi Nodo",
+  "has_children": true,
+  "children_count": 5
+}
+```
+
+- `has_children: true` → El nodo tiene hijos, mostrar icono de expandir
+- `has_children: false` → El nodo es hoja, no mostrar icono de expandir
+- `children_count` → Número exacto de hijos directos
+
+**Nota:** Si no necesitas el conteo exacto, puedes usar `include_counts=false` para mejor rendimiento:
+
+```javascript
+// Más rápido, pero sin has_children ni children_count
+const { data } = await api.get('/resource-hierarchy/nodes/RH-xxx/children?include_counts=false');
+```
 
 ---
 
