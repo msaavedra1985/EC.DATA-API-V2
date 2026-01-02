@@ -323,9 +323,11 @@ router.post('/', authenticate, requireRole(['system-admin', 'org-admin']), valid
  */
 router.get('/', authenticate, enforceActiveOrganization, validate(listSitesSchema), async (req, res, next) => {
     try {
-        // El middleware enforceActiveOrganization ya configuró req.query.organization_id
-        // con el UUID correcto (de la org activa o la especificada)
-        const result = await siteServices.listSites(req.query);
+        // Usa la organización del contexto establecido por el middleware
+        const result = await siteServices.listSites({
+            ...req.query,
+            organization_id: req.organizationContext.id
+        });
         
         // Respuesta con estructura estándar: data[] + meta{}
         res.json({

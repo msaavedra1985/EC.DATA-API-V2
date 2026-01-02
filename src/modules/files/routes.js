@@ -521,9 +521,11 @@ router.post('/:id/link', authenticate, validate(linkFileSchema), async (req, res
  */
 router.get('/', authenticate, enforceActiveOrganization, validate(listFilesSchema), async (req, res, next) => {
     try {
-        // El middleware enforceActiveOrganization ya configuró req.query.organization_id
-        // con el UUID correcto (de la org activa o la especificada)
-        const result = await fileServices.listFiles(req.query);
+        // Usa la organización del contexto establecido por el middleware
+        const result = await fileServices.listFiles({
+            ...req.query,
+            organization_id: req.organizationContext.id
+        });
 
         res.json({
             ok: true,

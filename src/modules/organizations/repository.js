@@ -96,6 +96,18 @@ export const findOrganizationByHumanId = async (humanId) => {
 };
 
 /**
+ * Buscar organización por ID (SOLO USO INTERNO - retorna modelo con todos los campos)
+ * Esta función NO debe usarse para respuestas API, solo para lógica interna
+ * que requiere acceso al modelo completo para relaciones o verificaciones
+ * 
+ * @param {string} id - UUID de la organización
+ * @returns {Promise<Object|null>} - Modelo de Sequelize o null
+ */
+export const findOrganizationByIdInternal = async (id) => {
+    return await Organization.findByPk(id);
+};
+
+/**
  * Buscar organización por ID (UUID v7)
  * 
  * @param {string} id - UUID de la organización

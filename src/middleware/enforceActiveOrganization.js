@@ -1,6 +1,7 @@
 // middleware/enforceActiveOrganization.js
-// Middleware para forzar filtrado por organización activa
-// Implementa aislamiento de datos por tenant según el JWT del usuario
+// Middleware para establecer contexto de organización desde JWT
+// Implementa aislamiento de datos por tenant sin mutar req.query
+// Soporta JWT de sesión web y JWT de API key para clientes externos
 
 import { canAccessOrganization, getOrganizationScope } from '../modules/organizations/services.js';
 import * as orgRepository from '../modules/organizations/repository.js';
@@ -12,19 +13,58 @@ const orgLogger = logger.child({ component: 'enforceActiveOrganization' });
 // Roles que pueden usar all=true para ver todas las organizaciones
 const ADMIN_ROLES = ['system-admin', 'org-admin'];
 
+// Regex para validar formato UUID
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 /**
- * Middleware para forzar filtrado por organización activa
+ * Resuelve un ID de organización (public_code o UUID) a su UUID interno
  * 
- * Comportamiento:
- * - Usuario sin filtro: Usa su activeOrgId del JWT
- * - Usuario con organization_id en query: Valida acceso y usa ese ID
- * - Usuario con all=true: Solo admins, devuelve todos los registros
+ * @param {string} orgId - Public code o UUID de la organización
+ * @returns {Promise<{uuid: string, publicCode: string}|null>} - UUID y public_code resueltos o null si no existe
+ */
+const resolveOrganizationId = async (orgId) => {
+    if (!orgId) return null;
+    
+    const isUuid = UUID_REGEX.test(orgId);
+    
+    if (isUuid) {
+        // Ya es UUID, obtener public_code si es posible
+        const org = await orgRepository.findOrganizationByIdInternal(orgId);
+        return org ? { uuid: orgId, publicCode: org.public_code } : null;
+    }
+    
+    // Es public_code, buscar organización
+    const org = await orgRepository.findOrganizationByPublicCodeInternal(orgId);
+    return org ? { uuid: org.id, publicCode: org.public_code } : null;
+};
+
+/**
+ * Middleware para establecer contexto de organización en req.organizationContext
  * 
- * El middleware modifica req.query.organization_id con el UUID interno
- * para que los servicios puedan filtrar correctamente.
+ * ARQUITECTURA:
+ * - NO modifica req.query (los datos del cliente permanecen intactos)
+ * - Setea req.organizationContext con toda la información necesaria
+ * - Soporta tanto JWT de sesión web como JWT de API key para clientes externos
  * 
- * También agrega a req:
- * - req.organizationFilter: { enforced: boolean, organizationId: string|null, showAll: boolean }
+ * ESTRUCTURA DE req.organizationContext:
+ * {
+ *   id: string,              // UUID interno de la organización (siempre resuelto)
+ *   publicCode: string,      // Public code de la organización
+ *   source: string,          // 'jwt' | 'query' | 'api_key' - De dónde vino el contexto
+ *   tokenType: string,       // 'session' | 'api_key' - Tipo de token
+ *   scopes: string[],        // Scopes permitidos (solo para API keys)
+ *   clientId: string|null,   // ID del cliente API (solo para API keys)
+ *   showAll: boolean,        // true si admin pidió all=true
+ *   allowedIds: string[],    // UUIDs permitidos (para admins con scope limitado)
+ *   enforced: boolean,       // true si se forzó filtrado por organización
+ *   canAccessAll: boolean    // true si tiene acceso sin restricciones
+ * }
+ * 
+ * CASOS DE USO:
+ * 1. JWT de sesión sin filtro → Usa activeOrgId del JWT
+ * 2. JWT de sesión con organization_id en query → Valida acceso y usa ese ID
+ * 3. JWT de sesión con all=true → Solo admins, acceso a todas o scope limitado
+ * 4. JWT de API key → Fijo a la organización del token, sin switch
  * 
  * @returns {Function} - Middleware de Express
  */
@@ -41,9 +81,8 @@ export const enforceActiveOrganization = async (req, res, next) => {
             });
         }
 
-        // SEGURIDAD CRÍTICA: Eliminar organization_ids del query si viene del cliente
-        // Este parámetro solo debe ser inyectado por el middleware, nunca aceptado del cliente
-        // Previene bypass de seguridad multi-tenant
+        // SEGURIDAD CRÍTICA: Detectar intentos de inyección de organization_ids
+        // Este parámetro solo es válido cuando es seteado internamente
         if (req.query.organization_ids) {
             orgLogger.warn({
                 userId: user.userId,
@@ -52,14 +91,68 @@ export const enforceActiveOrganization = async (req, res, next) => {
                 attemptedIds: Array.isArray(req.query.organization_ids) 
                     ? req.query.organization_ids.length 
                     : 'non-array'
-            }, 'Client attempted to inject organization_ids - rejected');
-            delete req.query.organization_ids;
+            }, 'Client attempted to inject organization_ids - ignored');
         }
 
+        // Detectar tipo de token
+        const tokenType = user.tokenType === 'api_key' ? 'api_key' : 'session';
+        const isApiKey = tokenType === 'api_key';
+
+        // ============ CASO: JWT de API Key (clientes externos) ============
+        if (isApiKey) {
+            // Los API keys están fijos a una organización, no pueden cambiar
+            const apiOrgId = user.organizationId || user.activeOrgId;
+            
+            if (!apiOrgId) {
+                orgLogger.warn({
+                    clientId: user.clientId,
+                    path: req.path
+                }, 'API key JWT has no organization bound');
+
+                return errorResponse(res, {
+                    message: 'auth.api_key.no_organization',
+                    status: 400,
+                    code: 'API_KEY_NO_ORGANIZATION'
+                });
+            }
+
+            const resolved = await resolveOrganizationId(apiOrgId);
+            
+            if (!resolved) {
+                return errorResponse(res, {
+                    message: 'errors.organization.not_found',
+                    status: 404,
+                    code: 'ORGANIZATION_NOT_FOUND'
+                });
+            }
+
+            // Establecer contexto para API key
+            req.organizationContext = {
+                id: resolved.uuid,
+                publicCode: resolved.publicCode,
+                source: 'api_key',
+                tokenType: 'api_key',
+                scopes: user.scopes || [],
+                clientId: user.clientId || null,
+                showAll: false,
+                allowedIds: [resolved.uuid],
+                enforced: true,
+                canAccessAll: false
+            };
+
+            orgLogger.debug({
+                clientId: user.clientId,
+                organizationId: resolved.uuid
+            }, 'API key context established');
+
+            return next();
+        }
+
+        // ============ CASO: JWT de Sesión Web ============
         const requestedOrgId = req.query.organization_id;
         const requestAll = req.query.all === 'true';
 
-        // Caso 1: Usuario solicita ver TODOS los registros (all=true)
+        // --- Caso 1: Usuario solicita ver TODOS los registros (all=true) ---
         if (requestAll) {
             // Solo admins pueden usar all=true
             if (!ADMIN_ROLES.includes(user.role)) {
@@ -81,17 +174,18 @@ export const enforceActiveOrganization = async (req, res, next) => {
 
             // Para system-admin con canAccessAll=true: acceso total sin filtro
             if (scope.canAccessAll) {
-                req.organizationFilter = {
-                    enforced: false,
-                    organizationId: null,
+                req.organizationContext = {
+                    id: null,
+                    publicCode: null,
+                    source: 'jwt',
+                    tokenType: 'session',
+                    scopes: [],
+                    clientId: null,
                     showAll: true,
-                    limitToScope: false
+                    allowedIds: [],
+                    enforced: false,
+                    canAccessAll: true
                 };
-
-                // Eliminar filtros del query
-                delete req.query.organization_id;
-                delete req.query.organization_ids;
-                delete req.query.all;
 
                 orgLogger.debug({
                     userId: user.userId,
@@ -120,58 +214,45 @@ export const enforceActiveOrganization = async (req, res, next) => {
                 });
             }
 
-            // Materializar los IDs permitidos en el query para que los servicios filtren
-            req.query.organization_ids = allowedOrgIds;
-            req.organizationFilter = {
-                enforced: true,
-                organizationId: null,
-                organizationIds: allowedOrgIds,
+            req.organizationContext = {
+                id: null,
+                publicCode: null,
+                source: 'jwt',
+                tokenType: 'session',
+                scopes: [],
+                clientId: null,
                 showAll: true,
-                limitToScope: true
+                allowedIds: allowedOrgIds,
+                enforced: true,
+                canAccessAll: false
             };
-
-            // Limpiar parámetros originales
-            delete req.query.organization_id;
-            delete req.query.all;
 
             orgLogger.debug({
                 userId: user.userId,
                 role: user.role,
                 showAll: true,
-                limitToScope: true,
                 allowedOrgsCount: allowedOrgIds.length
             }, 'Scoped admin requested all records within permitted organizations');
 
             return next();
         }
 
-        // Caso 2: Usuario especifica organization_id explícitamente
+        // --- Caso 2: Usuario especifica organization_id explícitamente en query ---
         if (requestedOrgId) {
-            // Convertir public_code a UUID si es necesario
-            let organizationUuid = requestedOrgId;
+            const resolved = await resolveOrganizationId(requestedOrgId);
             
-            // Detectar si es UUID o public_code
-            const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(requestedOrgId);
-            
-            if (!isUuid) {
-                // Es public_code, convertir a UUID
-                const org = await orgRepository.findOrganizationByPublicCodeInternal(requestedOrgId);
-                
-                if (!org) {
-                    return errorResponse(res, {
-                        message: 'errors.organization.not_found',
-                        status: 404,
-                        code: 'ORGANIZATION_NOT_FOUND'
-                    });
-                }
-                
-                organizationUuid = org.id;
+            if (!resolved) {
+                return errorResponse(res, {
+                    message: 'errors.organization.not_found',
+                    status: 404,
+                    code: 'ORGANIZATION_NOT_FOUND'
+                });
             }
 
             // Verificar que el usuario tiene acceso a esta organización
             const hasAccess = await canAccessOrganization(
                 user.userId,
-                organizationUuid,
+                resolved.uuid,
                 user.role
             );
 
@@ -190,28 +271,32 @@ export const enforceActiveOrganization = async (req, res, next) => {
                 });
             }
 
-            // Usuario tiene acceso, usar el UUID en el query
-            req.query.organization_id = organizationUuid;
-            req.organizationFilter = {
-                enforced: true,
-                organizationId: organizationUuid,
+            req.organizationContext = {
+                id: resolved.uuid,
+                publicCode: resolved.publicCode,
+                source: 'query',
+                tokenType: 'session',
+                scopes: [],
+                clientId: null,
                 showAll: false,
-                originalPublicCode: requestedOrgId
+                allowedIds: [resolved.uuid],
+                enforced: true,
+                canAccessAll: false
             };
 
             orgLogger.debug({
                 userId: user.userId,
-                organizationId: organizationUuid
-            }, 'User accessing specific organization');
+                organizationId: resolved.uuid,
+                source: 'query'
+            }, 'User accessing specific organization from query param');
 
             return next();
         }
 
-        // Caso 3: Usuario no especifica filtro - usar organización activa
+        // --- Caso 3: Usuario no especifica filtro - usar organización activa del JWT ---
         const activeOrgId = user.activeOrgId;
 
         if (!activeOrgId) {
-            // Usuario sin organización activa
             orgLogger.warn({
                 userId: user.userId,
                 role: user.role,
@@ -225,40 +310,38 @@ export const enforceActiveOrganization = async (req, res, next) => {
             });
         }
 
-        // Convertir activeOrgId a UUID si es public_code
-        let activeOrgUuid = activeOrgId;
-        const isActiveUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(activeOrgId);
+        const resolved = await resolveOrganizationId(activeOrgId);
         
-        if (!isActiveUuid) {
-            const org = await orgRepository.findOrganizationByPublicCodeInternal(activeOrgId);
-            if (org) {
-                activeOrgUuid = org.id;
-            } else {
-                return errorResponse(res, {
-                    message: 'auth.organization.not_found',
-                    status: 404,
-                    code: 'ACTIVE_ORGANIZATION_NOT_FOUND'
-                });
-            }
+        if (!resolved) {
+            return errorResponse(res, {
+                message: 'auth.organization.not_found',
+                status: 404,
+                code: 'ACTIVE_ORGANIZATION_NOT_FOUND'
+            });
         }
 
-        // Forzar el filtro por organización activa
-        req.query.organization_id = activeOrgUuid;
-        req.organizationFilter = {
-            enforced: true,
-            organizationId: activeOrgUuid,
+        req.organizationContext = {
+            id: resolved.uuid,
+            publicCode: resolved.publicCode,
+            source: 'jwt',
+            tokenType: 'session',
+            scopes: [],
+            clientId: null,
             showAll: false,
-            fromActiveOrg: true
+            allowedIds: [resolved.uuid],
+            enforced: true,
+            canAccessAll: false
         };
 
         orgLogger.debug({
             userId: user.userId,
-            activeOrgId: activeOrgUuid
-        }, 'Enforcing active organization filter');
+            activeOrgId: resolved.uuid,
+            source: 'jwt'
+        }, 'Organization context established from JWT activeOrgId');
 
         next();
     } catch (error) {
-        orgLogger.error({ err: error }, 'Error enforcing active organization');
+        orgLogger.error({ err: error }, 'Error establishing organization context');
         next(error);
     }
 };

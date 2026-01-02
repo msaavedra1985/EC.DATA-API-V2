@@ -284,13 +284,12 @@ router.post('/', authenticate, requireRole(['system-admin', 'org-admin']), valid
  */
 router.get('/', authenticate, enforceActiveOrganization, validate(getChannelsSchema), async (req, res, next) => {
     try {
-        // El middleware enforceActiveOrganization ya configuró req.query.organization_id
-        // con el UUID correcto (de la org activa o la especificada)
-        const { device_id, organization_id, channel_type, status, search, limit, offset } = req.query;
+        // Usa la organización del contexto establecido por el middleware
+        const { device_id, channel_type, status, search, limit, offset } = req.query;
         
         const result = await channelServices.listChannels({
             device_id,
-            organization_id,
+            organization_id: req.organizationContext.id,
             channel_type,
             status,
             search,

@@ -87,6 +87,49 @@ Preferred communication style: Simple, everyday language.
 - **Organization Hierarchy:** Supports unlimited depth, root organization, tree navigation, lazy loading, and cycle prevention.
 - **Hybrid Role System:** Combines Global Roles (`users.role_id`) and Organization Roles (`user_organizations.role_in_org`) for granular permissions.
 
+### Request Context Architecture (MANDATORY)
+Los datos contextuales del servidor se inyectan en objetos dedicados del request, **nunca en `req.query`**. Esto separa claramente los datos del cliente vs datos derivados del servidor.
+
+**Estructura estándar de `req` con datos del servidor:**
+```javascript
+req.user = {                    // Datos del JWT (seteado por authenticate middleware)
+    userId: 'uuid',
+    role: 'system-admin',
+    activeOrgId: 'uuid',        // Org activa del JWT
+    primaryOrgId: 'uuid',
+    canAccessAllOrgs: boolean,
+    tokenType: 'access' | 'api_key',
+    scopes: [],                 // Solo para API keys
+    clientId: 'string'          // Solo para API keys
+};
+
+req.organizationContext = {     // Contexto de organización resuelto (seteado por enforceActiveOrganization)
+    id: 'uuid',                 // UUID interno SIEMPRE resuelto
+    publicCode: 'ORG-xxx',      // Public code
+    source: 'jwt' | 'query' | 'api_key',  // Origen del contexto
+    tokenType: 'session' | 'api_key',
+    scopes: [],                 // Permisos para API keys
+    clientId: string | null,    // ID del cliente API
+    showAll: boolean,           // true si admin pidió all=true
+    allowedIds: string[],       // UUIDs permitidos
+    enforced: boolean,          // true si se forzó filtrado
+    canAccessAll: boolean       // true si tiene acceso sin restricciones
+};
+
+req.locale = 'es';              // Idioma detectado (seteado por i18n middleware)
+```
+
+**Reglas de acceso:**
+- `req.query` → Solo datos que envía el cliente (nunca modificar desde el servidor)
+- `req.organizationContext.id` → Para filtrar por organización en los servicios
+- `req.user.activeOrgId` → Valor raw del JWT (puede necesitar resolución)
+
+**Tipos de JWT soportados:**
+| Tipo | Uso | Características |
+|------|-----|-----------------|
+| Session JWT | Web/Frontend | Usuario logueado, `activeOrgId` dinámico |
+| API Key JWT | Clientes externos (M2M) | Organización fija, scopes limitados |
+
 ### Core Modules
 - **Sites Module:** Manages physical locations (offices, branches, warehouses) linked to organizations, including geolocation and address.
 - **Devices Module:** Manages IoT/Edge devices associated with organizations and sites.

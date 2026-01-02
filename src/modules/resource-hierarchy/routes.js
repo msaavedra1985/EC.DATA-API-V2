@@ -117,10 +117,10 @@ router.post('/nodes',
     validate(createNodeSchema),
     async (req, res, next) => {
         try {
-            // Usa organization_id del body (para system-admin) o del middleware (org activa)
+            // Usa organization_id del body (para system-admin) o del contexto (org activa)
             const nodeData = {
                 ...req.body,
-                organization_id: req.body.organization_id || req.query.organization_id
+                organization_id: req.body.organization_id || req.organizationContext.id
             };
             
             const node = await hierarchyServices.createNode(
@@ -223,9 +223,9 @@ router.get('/nodes',
     validate(listNodesSchema),
     async (req, res, next) => {
         try {
-            // El middleware ya setea req.query.organization_id con la org activa
+            // Usa la organización del contexto establecido por el middleware
             const result = await hierarchyServices.listNodes(
-                req.query.organization_id,
+                req.organizationContext.id,
                 {
                     limit: req.query.limit,
                     offset: req.query.offset,
@@ -360,12 +360,12 @@ router.post('/nodes/batch',
     validate(batchGetNodesSchema),
     async (req, res, next) => {
         try {
-            // El middleware ya setea req.body.organization_id con la org activa
+            // Usa la organización del contexto establecido por el middleware
             const nodes = await hierarchyServices.batchGetNodes(
                 req.body.ids,
                 { 
                     includeCounts: req.body.include_counts,
-                    organizationId: req.body.organization_id
+                    organizationId: req.organizationContext.id
                 }
             );
             
@@ -639,12 +639,10 @@ router.get('/nodes/:id/children',
     validate(getChildrenSchema),
     async (req, res, next) => {
         try {
-            // Usa organization_id del query (para system-admin) o del middleware (org activa)
-            const organizationId = req.query.organization_id || req.activeOrganization.id;
-            
+            // Usa la organización del contexto establecido por el middleware
             const result = await hierarchyServices.getNodeChildren(
                 req.params.id,
-                organizationId,
+                req.organizationContext.id,
                 {
                     limit: req.query.limit,
                     offset: req.query.offset,
@@ -816,9 +814,9 @@ router.get('/tree',
     validate(getTreeSchema),
     async (req, res, next) => {
         try {
-            // El middleware ya setea req.query.organization_id con la org activa
+            // Usa la organización del contexto establecido por el middleware
             const tree = await hierarchyServices.getTree(
-                req.query.organization_id,
+                req.organizationContext.id,
                 {
                     rootId: req.query.root_id,
                     maxDepth: req.query.max_depth,
@@ -877,10 +875,10 @@ router.get('/roots',
     validate(getRootsSchema),
     async (req, res, next) => {
         try {
-            // El middleware ya setea req.query.organization_id con la org activa
+            // Usa la organización del contexto establecido por el middleware
             const result = await hierarchyServices.getNodeChildren(
                 'root',
-                req.query.organization_id,
+                req.organizationContext.id,
                 {
                     limit: req.query.limit,
                     offset: req.query.offset,
