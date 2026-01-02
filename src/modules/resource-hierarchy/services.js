@@ -839,10 +839,15 @@ export const batchCreateNodes = async (batchData, organizationId, userId, ipAddr
         });
         
         // Audit log para cada nodo creado
+        // Usamos _uuid que contiene el UUID interno del nodo
         for (const node of createdNodes) {
+            const nodeUuid = node._uuid;
+            if (!nodeUuid) {
+                hierarchyLogger.warn({ node }, 'Batch create: node missing _uuid for audit log');
+            }
             await logAuditAction({
                 entityType: 'resource_hierarchy',
-                entityId: node._uuid || node.id,
+                entityId: nodeUuid,
                 action: 'created',
                 performedBy: userId,
                 changes: { new: node },

@@ -21,7 +21,8 @@ import {
     grantAccessSchema,
     revokeAccessSchema,
     checkAccessSchema,
-    batchGetNodesSchema
+    batchGetNodesSchema,
+    batchCreateNodesSchema
 } from './dtos/index.js';
 import logger from '../../utils/logger.js';
 
@@ -376,6 +377,150 @@ router.post('/nodes/batch',
                     requested: req.body.ids.length,
                     found: nodes.length
                 }
+            });
+        } catch (error) {
+            next(error);
+        }
+    }
+);
+
+/**
+ * @swagger
+ * /api/v1/resource-hierarchy/nodes/batch-create:
+ *   post:
+ *     summary: Crear múltiples nodos en lote
+ *     description: |
+ *       Crea múltiples nodos en una sola operación atómica.
+ *       Todos los nodos se crean bajo el mismo padre y organización.
+ *       Si algún nodo falla, la operación completa se revierte (transacción atómica).
+ *       
+ *       **Límites:**
+ *       - Máximo 50 nodos por request
+ *       - Todos los nodos deben ser válidos según las reglas de tipo
+ *       
+ *       **Audit:** Se registra un audit log por cada nodo creado.
+ *     tags: [Resource Hierarchy]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - nodes
+ *             properties:
+ *               parent_id:
+ *                 type: string
+ *                 nullable: true
+ *                 description: Public code del nodo padre (null para nodos raíz)
+ *                 example: "RES-abc123xyz-1"
+ *               nodes:
+ *                 type: array
+ *                 minItems: 1
+ *                 maxItems: 50
+ *                 description: Array de nodos a crear
+ *                 items:
+ *                   type: object
+ *                   required:
+ *                     - node_type
+ *                     - name
+ *                   properties:
+ *                     node_type:
+ *                       type: string
+ *                       enum: [folder, site, channel]
+ *                       description: Tipo de nodo
+ *                     name:
+ *                       type: string
+ *                       description: Nombre del nodo (1-255 caracteres)
+ *                       example: "Sensor de Temperatura"
+ *                     description:
+ *                       type: string
+ *                       nullable: true
+ *                       description: Descripción del nodo
+ *                     reference_id:
+ *                       type: string
+ *                       format: uuid
+ *                       nullable: true
+ *                       description: UUID del recurso referenciado
+ *                     icon:
+ *                       type: string
+ *                       nullable: true
+ *                       description: Nombre del ícono
+ *                     color:
+ *                       type: string
+ *                       nullable: true
+ *                       pattern: "^#[0-9A-Fa-f]{6}$"
+ *                       description: Color en formato hexadecimal (#RRGGBB)
+ *                       example: "#3B82F6"
+ *                     display_order:
+ *                       type: integer
+ *                       description: Orden de visualización (auto-asignado si no se especifica)
+ *                     metadata:
+ *                       type: object
+ *                       description: Metadatos adicionales
+ *     responses:
+ *       201:
+ *         description: Nodos creados exitosamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     created_count:
+ *                       type: integer
+ *                       description: Cantidad de nodos creados
+ *                       example: 5
+ *                     nodes:
+ *                       type: array
+ *                       items:
+ *                         $ref: '#/components/schemas/ResourceNode'
+ *       400:
+ *         description: Error de validación o regla de negocio
+ *       401:
+ *         description: No autenticado
+ *       403:
+ *         description: Sin permisos suficientes
+ *       404:
+ *         description: Nodo padre no encontrado
+ */
+router.post('/nodes/batch-create',
+    authenticate,
+    requireRole(['system-admin', 'org-admin', 'org-manager']),
+    enforceActiveOrganization,
+    validate(batchCreateNodesSchema),
+    async (req, res, next) => {
+        try {
+            // Extraer datos de auditoría
+            const userId = req.user.userId;
+            const ipAddress = req.ip || req.connection?.remoteAddress || 'unknown';
+            const userAgent = req.get('User-Agent') || 'unknown';
+            
+            // Llamar al servicio de creación batch
+            const result = await hierarchyServices.batchCreateNodes(
+                req.body,
+                req.organizationContext.id,
+                userId,
+                ipAddress,
+                userAgent
+            );
+            
+            hierarchyLogger.info({ 
+                count: result.created_count, 
+                parentId: req.body.parent_id,
+                userId 
+            }, 'Batch nodes created via API');
+            
+            res.status(201).json({
+                ok: true,
+                data: result
             });
         } catch (error) {
             next(error);
