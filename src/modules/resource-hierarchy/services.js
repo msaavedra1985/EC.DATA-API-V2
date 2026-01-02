@@ -650,6 +650,14 @@ export const getAccessibleNodes = async (userId, organizationId, accessType = 'v
  * Resolver organization_id de public_code a UUID
  */
 const resolveOrganizationId = async (organizationId) => {
+    // Validar que organizationId no sea undefined o null
+    if (!organizationId) {
+        const error = new Error('ID de organización es requerido');
+        error.status = 400;
+        error.code = 'ORGANIZATION_ID_REQUIRED';
+        throw error;
+    }
+    
     // Si ya es UUID, retornar
     if (organizationId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
         return organizationId;

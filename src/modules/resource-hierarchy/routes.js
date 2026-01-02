@@ -635,12 +635,16 @@ router.patch('/nodes/:id/move',
  */
 router.get('/nodes/:id/children',
     authenticate,
+    enforceActiveOrganization,
     validate(getChildrenSchema),
     async (req, res, next) => {
         try {
+            // Usa organization_id del query (para system-admin) o del middleware (org activa)
+            const organizationId = req.query.organization_id || req.activeOrganization.id;
+            
             const result = await hierarchyServices.getNodeChildren(
                 req.params.id,
-                req.query.organization_id,
+                organizationId,
                 {
                     limit: req.query.limit,
                     offset: req.query.offset,
