@@ -13,6 +13,13 @@ Preferred communication style: Simple, everyday language.
 - Single quotes for strings (enforced by ESLint)
 - Comment extensively - every function, middleware, helper, model, and endpoint should have explanatory comments in Spanish
 
+**Identifier Security Policy (MANDATORY):**
+- **NEVER expose internal UUIDs** in API responses - Use public_codes exclusively (e.g., `CHN-5LYJX-4`, `SIT-xxx`, `RES-xxx`)
+- **Public codes use Hashids + Luhn checksum** - Opaque, non-enumerable, and tamper-detectable
+- **UUIDv7 stays internal only** - Contains timestamp info that could leak creation patterns
+- **When creating new tables, ask if data is sensitive** to decide between classic IDs vs public_codes
+- **reference_id fields store public_codes** (VARCHAR), not UUIDs - Enables safe cross-module references
+
 **Audit Standards (MANDATORY):**
 - **Every CREATE, UPDATE, DELETE operation MUST log to `audit_logs` table** - No exceptions
 - Use the centralized `auditLog` helper service (never direct database inserts)
