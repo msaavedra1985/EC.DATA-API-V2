@@ -197,6 +197,11 @@ export const getChannelsSchema = z.object({
         search: z
             .string()
             .optional(),
+        not_in_hierarchy: z
+            .string()
+            .transform(val => val === 'true')
+            .optional()
+            .describe('Si es "true", muestra solo channels que NO están en ninguna jerarquía de recursos'),
         limit: z
             .string()
             .regex(/^\d+$/, 'limit debe ser un número')

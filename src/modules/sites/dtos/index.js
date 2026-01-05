@@ -250,6 +250,11 @@ export const listSitesSchema = z.object({
         city: z
             .string()
             .optional(),
+        not_in_hierarchy: z
+            .string()
+            .transform(val => val === 'true')
+            .optional()
+            .describe('Si es "true", muestra solo sites que NO están en ninguna jerarquía de recursos'),
         limit: z
             .string()
             .transform(val => parseInt(val, 10))

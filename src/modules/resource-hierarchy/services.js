@@ -56,6 +56,17 @@ export const createNode = async (nodeData, userId, ipAddress, userAgent) => {
     // Validar reglas de tipo de nodo
     validateNodeTypeRules(nodeData.node_type, parentNode);
     
+    // Validar que el reference_id no esté duplicado en la jerarquía de esta organización
+    if (nodeData.reference_id && (nodeData.node_type === 'site' || nodeData.node_type === 'channel')) {
+        const existingNode = await repository.findNodeByReferenceId(nodeData.reference_id, organizationUuid);
+        if (existingNode) {
+            const error = new Error(`Este recurso (${nodeData.reference_id}) ya existe en la jerarquía de la organización`);
+            error.status = 409;
+            error.code = 'REFERENCE_ALREADY_IN_HIERARCHY';
+            throw error;
+        }
+    }
+    
     // Crear nodo
     const node = await repository.createNode({
         organization_id: organizationUuid,
@@ -826,6 +837,32 @@ export const batchCreateNodes = async (batchData, organizationId, userId, ipAddr
     // Validar reglas de tipo de nodo para cada nodo
     for (const nodeData of nodes) {
         validateNodeTypeRules(nodeData.node_type, parentNode);
+    }
+    
+    // Validar que ningún reference_id esté duplicado en la jerarquía
+    // Colectar todos los reference_ids del batch para validar
+    const referenceIdsToCheck = nodes
+        .filter(n => n.reference_id && (n.node_type === 'site' || n.node_type === 'channel'))
+        .map(n => n.reference_id);
+    
+    // Verificar duplicados dentro del mismo batch
+    const uniqueRefs = new Set(referenceIdsToCheck);
+    if (uniqueRefs.size !== referenceIdsToCheck.length) {
+        const error = new Error('El batch contiene reference_ids duplicados');
+        error.status = 400;
+        error.code = 'DUPLICATE_REFERENCE_IN_BATCH';
+        throw error;
+    }
+    
+    // Verificar que ninguno exista ya en la jerarquía
+    for (const refId of referenceIdsToCheck) {
+        const existingNode = await repository.findNodeByReferenceId(refId, organizationUuid);
+        if (existingNode) {
+            const error = new Error(`El recurso (${refId}) ya existe en la jerarquía de la organización`);
+            error.status = 409;
+            error.code = 'REFERENCE_ALREADY_IN_HIERARCHY';
+            throw error;
+        }
     }
     
     // Crear todos los nodos en una transacción

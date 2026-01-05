@@ -5,7 +5,8 @@ import Channel from './models/Channel.js';
 import Device from '../devices/models/Device.js';
 import Organization from '../organizations/models/Organization.js';
 import { toPublicChannelDto } from './helpers/serializers.js';
-import { Op } from 'sequelize';
+import { Op, QueryTypes } from 'sequelize';
+import sequelize from '../../db/sql/sequelize.js';
 
 // Definir relaciones de Sequelize
 Channel.belongsTo(Device, {
@@ -159,26 +160,44 @@ export const deleteChannel = async (id) => {
 
 /**
  * Listar channels con filtros y paginación
+ * Soporta filtro not_in_hierarchy para excluir channels ya en jerarquía
+ * 
  * @param {Object} options - Opciones de filtrado y paginación
- * @returns {Promise<Object>} - { channels: [...], total, page, limit }
+ * @param {boolean} options.not_in_hierarchy - Si true, excluye channels que ya están en resource_hierarchy
+ * @returns {Promise<Object>} - { items: [...], total, page, limit }
  */
 export const listChannels = async ({ 
     device_id, 
     organization_id,
-    organization_ids,  // Array de UUIDs para filtrar múltiples organizaciones
+    organization_ids,
     channel_type,
     status,
     search,
+    not_in_hierarchy = false,
     limit = 20, 
     offset = 0 
 }) => {
+    // Si se requiere filtrar por not_in_hierarchy, usamos raw SQL
+    if (not_in_hierarchy) {
+        return await listChannelsNotInHierarchy({
+            device_id,
+            organization_id,
+            organization_ids,
+            channel_type,
+            status,
+            search,
+            limit,
+            offset
+        });
+    }
+    
+    // Flujo normal con Sequelize ORM
     const where = {};
     
     if (device_id !== undefined) {
         where.device_id = device_id;
     }
     
-    // Soporte para filtro de múltiples organizaciones (usado por all=true con scope limitado)
     if (organization_ids !== undefined && Array.isArray(organization_ids) && organization_ids.length > 0) {
         where.organization_id = { [Op.in]: organization_ids };
     } else if (organization_id !== undefined && organization_id !== null) {
@@ -193,7 +212,6 @@ export const listChannels = async ({
         where.status = status;
     }
     
-    // Búsqueda por nombre o endpoint_url
     if (search) {
         where[Op.or] = [
             { name: { [Op.iLike]: `%${search}%` } },
@@ -223,6 +241,147 @@ export const listChannels = async ({
     return {
         items: rows.map(channel => toPublicChannelDto(channel)),
         total: count,
+        page: Math.floor(offset / limit) + 1,
+        limit: parseInt(limit)
+    };
+};
+
+/**
+ * Listar channels que NO están en ninguna jerarquía de recursos
+ * Usa raw SQL con LEFT JOIN para filtrar eficientemente
+ * 
+ * @param {Object} options - Opciones de filtrado
+ * @returns {Promise<Object>} - { items: [...], total, page, limit }
+ */
+const listChannelsNotInHierarchy = async ({
+    device_id,
+    organization_id,
+    organization_ids,
+    channel_type,
+    status,
+    search,
+    limit = 20,
+    offset = 0
+}) => {
+    const conditions = ['c.deleted_at IS NULL'];
+    const bindings = [];
+    let bindIndex = 1;
+    
+    // Filtros de organización
+    if (organization_ids && Array.isArray(organization_ids) && organization_ids.length > 0) {
+        conditions.push(`c.organization_id = ANY($${bindIndex}::uuid[])`);
+        bindings.push(organization_ids);
+        bindIndex++;
+    } else if (organization_id) {
+        conditions.push(`c.organization_id = $${bindIndex}`);
+        bindings.push(organization_id);
+        bindIndex++;
+    }
+    
+    if (device_id) {
+        conditions.push(`c.device_id = $${bindIndex}`);
+        bindings.push(device_id);
+        bindIndex++;
+    }
+    
+    if (channel_type) {
+        conditions.push(`c.channel_type = $${bindIndex}`);
+        bindings.push(channel_type);
+        bindIndex++;
+    }
+    
+    if (status) {
+        conditions.push(`c.status = $${bindIndex}`);
+        bindings.push(status);
+        bindIndex++;
+    }
+    
+    if (search) {
+        conditions.push(`(c.name ILIKE $${bindIndex} OR c.endpoint_url ILIKE $${bindIndex})`);
+        bindings.push(`%${search}%`);
+        bindIndex++;
+    }
+    
+    const whereClause = conditions.join(' AND ');
+    
+    // Query para contar total
+    const countQuery = `
+        SELECT COUNT(DISTINCT c.id) as total
+        FROM channels c
+        LEFT JOIN resource_hierarchy rh 
+            ON rh.reference_id = c.public_code 
+            AND rh.node_type = 'channel' 
+            AND rh.deleted_at IS NULL
+        WHERE ${whereClause}
+          AND rh.id IS NULL
+    `;
+    
+    // Query para obtener datos con relaciones
+    const dataQuery = `
+        SELECT 
+            c.*,
+            d.id as device_id_rel,
+            d.public_code as device_public_code,
+            d.name as device_name,
+            d.device_type as device_type,
+            d.status as device_status,
+            o.id as org_id_rel,
+            o.public_code as org_public_code,
+            o.slug as org_slug,
+            o.name as org_name,
+            o.logo_url as org_logo_url
+        FROM channels c
+        LEFT JOIN resource_hierarchy rh 
+            ON rh.reference_id = c.public_code 
+            AND rh.node_type = 'channel' 
+            AND rh.deleted_at IS NULL
+        LEFT JOIN devices d ON c.device_id = d.id
+        LEFT JOIN organizations o ON c.organization_id = o.id
+        WHERE ${whereClause}
+          AND rh.id IS NULL
+        ORDER BY c.created_at DESC
+        LIMIT $${bindIndex} OFFSET $${bindIndex + 1}
+    `;
+    
+    const countBindings = [...bindings];
+    const dataBindings = [...bindings, parseInt(limit), parseInt(offset)];
+    
+    const [countResult, dataResult] = await Promise.all([
+        sequelize.query(countQuery, { bind: countBindings, type: QueryTypes.SELECT }),
+        sequelize.query(dataQuery, { bind: dataBindings, type: QueryTypes.SELECT })
+    ]);
+    
+    const total = parseInt(countResult[0]?.total || 0);
+    
+    // Transformar resultados a formato DTO
+    const items = dataResult.map(row => ({
+        id: row.public_code,
+        name: row.name,
+        channel_type: row.channel_type,
+        endpoint_url: row.endpoint_url,
+        status: row.status,
+        priority: row.priority,
+        metadata: row.metadata,
+        is_active: row.is_active,
+        device: row.device_id_rel ? {
+            id: row.device_public_code,
+            name: row.device_name,
+            device_type: row.device_type,
+            status: row.device_status
+        } : null,
+        organization: row.org_id_rel ? {
+            id: row.org_public_code,
+            slug: row.org_slug,
+            name: row.org_name,
+            logo_url: row.org_logo_url
+        } : null,
+        created_at: row.created_at,
+        updated_at: row.updated_at
+    }));
+    
+    return {
+        items,
+        total,
         page: Math.floor(offset / limit) + 1,
         limit: parseInt(limit)
     };

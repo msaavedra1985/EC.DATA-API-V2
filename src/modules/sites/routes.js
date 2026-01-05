@@ -271,6 +271,13 @@ router.post('/', authenticate, requireRole(['system-admin', 'org-admin']), valid
  *           type: string
  *           example: "Buenos Aires"
  *       - in: query
+ *         name: not_in_hierarchy
+ *         description: Si es "true", muestra solo sites que NO están en ninguna jerarquía de recursos. Útil para evitar duplicados al agregar a la jerarquía.
+ *         schema:
+ *           type: string
+ *           enum: ["true", "false"]
+ *           example: "true"
+ *       - in: query
  *         name: limit
  *         description: Número máximo de resultados
  *         schema:

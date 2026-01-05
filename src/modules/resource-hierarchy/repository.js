@@ -113,6 +113,32 @@ export const findNodeById = async (id) => {
 };
 
 /**
+ * Buscar nodo por reference_id dentro de una organización
+ * Usado para validar que un recurso no esté duplicado en la jerarquía
+ * 
+ * @param {string} referenceId - Public code del recurso (ej: CHN-xxx, SIT-xxx)
+ * @param {string} organizationId - UUID de la organización
+ * @returns {Promise<Object|null>} - Nodo encontrado o null
+ */
+export const findNodeByReferenceId = async (referenceId, organizationId) => {
+    const query = `
+        SELECT rh.*
+        FROM resource_hierarchy rh
+        WHERE rh.reference_id = $1
+          AND rh.organization_id = $2
+          AND rh.deleted_at IS NULL
+        LIMIT 1
+    `;
+    
+    const rows = await sequelize.query(query, {
+        bind: [referenceId, organizationId],
+        type: QueryTypes.SELECT
+    });
+    
+    return rows.length > 0 ? rows[0] : null;
+};
+
+/**
  * Obtener hijos directos de un nodo
  * Incluye conteo de hijos para cada nodo usando subconsulta SQL
  * 

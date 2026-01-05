@@ -232,6 +232,13 @@ router.post('/', authenticate, requireRole(['system-admin', 'org-admin']), valid
  *         description: Buscar en nombre o endpoint_url
  *         example: "mqtt"
  *       - in: query
+ *         name: not_in_hierarchy
+ *         schema:
+ *           type: string
+ *           enum: ["true", "false"]
+ *         description: Si es "true", muestra solo channels que NO están en ninguna jerarquía de recursos. Útil para evitar duplicados al agregar a la jerarquía.
+ *         example: "true"
+ *       - in: query
  *         name: limit
  *         schema:
  *           type: integer
