@@ -578,11 +578,32 @@ export const getDescendantsForDeletion = async (nodeId) => {
  * @returns {Promise<Object>} - Resultado con count y lista de nodos eliminados
  */
 export const deleteNode = async (nodeId, cascade = false) => {
-    const node = await ResourceHierarchy.findByPk(nodeId);
+    // Obtener nodo con path ltree (necesario para cascade delete)
+    const [nodeRow] = await sequelize.query(
+        `SELECT * FROM resource_hierarchy WHERE id = $1 AND deleted_at IS NULL`,
+        { bind: [nodeId], type: QueryTypes.SELECT }
+    );
     
-    if (!node) {
+    if (!nodeRow) {
         throw new Error('Nodo no encontrado');
     }
+    
+    // Crear objeto node compatible para el resto del código
+    const node = {
+        id: nodeRow.id,
+        organization_id: nodeRow.organization_id,
+        public_code: nodeRow.public_code,
+        name: nodeRow.name,
+        node_type: nodeRow.node_type,
+        path: nodeRow.path,
+        dataValues: { path: nodeRow.path },
+        destroy: async () => {
+            await sequelize.query(
+                `UPDATE resource_hierarchy SET deleted_at = CURRENT_TIMESTAMP WHERE id = $1`,
+                { bind: [nodeId] }
+            );
+        }
+    };
     
     // Verificar si tiene hijos activos
     const children = await getChildren(nodeId, node.organization_id, { limit: 1 });
