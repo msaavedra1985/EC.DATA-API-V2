@@ -388,17 +388,24 @@ router.post('/nodes/batch',
  * @swagger
  * /api/v1/resource-hierarchy/nodes/batch-create:
  *   post:
- *     summary: Crear múltiples nodos en lote
+ *     summary: Crear múltiples nodos en lote (soporta éxito parcial)
  *     description: |
- *       Crea múltiples nodos en una sola operación atómica.
- *       Todos los nodos se crean bajo el mismo padre y organización.
- *       Si algún nodo falla, la operación completa se revierte (transacción atómica).
+ *       Crea múltiples nodos bajo el mismo padre y organización.
+ *       
+ *       **Comportamiento de éxito parcial:**
+ *       - Si algunos nodos fallan (ej: duplicados), los demás se insertan correctamente
+ *       - Solo falla completamente (409) si TODOS los nodos fallan
+ *       - Retorna arrays separados de `inserted` y `failed` para que el frontend pueda mostrar qué funcionó y qué no
+ *       
+ *       **Códigos de fallo por nodo:**
+ *       - `DUPLICATE_IN_BATCH`: El mismo reference_id aparece más de una vez en el batch
+ *       - `ALREADY_IN_HIERARCHY`: El recurso (site/channel) ya existe en la jerarquía
+ *       - `INVALID_NODE_TYPE`: Tipo de nodo no permitido para este padre
  *       
  *       **Límites:**
  *       - Máximo 50 nodos por request
- *       - Todos los nodos deben ser válidos según las reglas de tipo
  *       
- *       **Audit:** Se registra un audit log por cada nodo creado.
+ *       **Audit:** Se registra un audit log solo por cada nodo insertado exitosamente.
  *     tags: [Resource Hierarchy]
  *     security:
  *       - bearerAuth: []
@@ -441,9 +448,9 @@ router.post('/nodes/batch',
  *                       description: Descripción del nodo
  *                     reference_id:
  *                       type: string
- *                       format: uuid
  *                       nullable: true
- *                       description: UUID del recurso referenciado
+ *                       description: Public code del recurso referenciado (ej CHN-xxx, SIT-xxx)
+ *                       example: "CHN-5LYJX-4"
  *                     icon:
  *                       type: string
  *                       nullable: true
@@ -462,7 +469,27 @@ router.post('/nodes/batch',
  *                       description: Metadatos adicionales
  *     responses:
  *       201:
- *         description: Nodos creados exitosamente
+ *         description: Todos los nodos creados exitosamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/BatchCreateNodesResponse'
+ *       200:
+ *         description: Éxito parcial - algunos nodos insertados, otros fallaron
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/BatchCreateNodesResponse'
+ *       400:
+ *         description: Error de validación del request
+ *       401:
+ *         description: No autenticado
+ *       403:
+ *         description: Sin permisos suficientes
+ *       404:
+ *         description: Nodo padre no encontrado
+ *       409:
+ *         description: Todos los nodos fallaron (ninguno insertado)
  *         content:
  *           application/json:
  *             schema:
@@ -470,26 +497,18 @@ router.post('/nodes/batch',
  *               properties:
  *                 ok:
  *                   type: boolean
- *                   example: true
- *                 data:
+ *                   example: false
+ *                 error:
  *                   type: object
  *                   properties:
- *                     created_count:
- *                       type: integer
- *                       description: Cantidad de nodos creados
- *                       example: 5
- *                     nodes:
- *                       type: array
- *                       items:
- *                         $ref: '#/components/schemas/ResourceNode'
- *       400:
- *         description: Error de validación o regla de negocio
- *       401:
- *         description: No autenticado
- *       403:
- *         description: Sin permisos suficientes
- *       404:
- *         description: Nodo padre no encontrado
+ *                     code:
+ *                       type: string
+ *                       example: "ALL_NODES_FAILED"
+ *                     message:
+ *                       type: string
+ *                       example: "Todos los nodos fallaron al insertarse"
+ *                 data:
+ *                   $ref: '#/components/schemas/BatchCreateNodesResult'
  */
 router.post('/nodes/batch-create',
     authenticate,
@@ -513,16 +532,31 @@ router.post('/nodes/batch-create',
             );
             
             hierarchyLogger.info({ 
-                count: result.created_count, 
+                inserted: result.meta.inserted,
+                failed: result.meta.failed,
                 parentId: req.body.parent_id,
                 userId 
-            }, 'Batch nodes created via API');
+            }, 'Batch create nodes completed via API');
             
-            res.status(201).json({
+            // 201 si todo se insertó, 200 si hubo éxito parcial
+            const statusCode = result.meta.failed === 0 ? 201 : 200;
+            
+            res.status(statusCode).json({
                 ok: true,
                 data: result
             });
         } catch (error) {
+            // Manejar error ALL_NODES_FAILED con data adjunta
+            if (error.code === 'ALL_NODES_FAILED' && error.data) {
+                return res.status(error.status || 409).json({
+                    ok: false,
+                    error: {
+                        code: error.code,
+                        message: error.message
+                    },
+                    data: error.data
+                });
+            }
             next(error);
         }
     }
@@ -1288,6 +1322,84 @@ router.get('/access/check',
  *               type: array
  *               items:
  *                 $ref: '#/components/schemas/ResourceNodeWithChildren'
+ *     BatchCreateNodeInserted:
+ *       type: object
+ *       description: Nodo insertado exitosamente
+ *       properties:
+ *         public_code:
+ *           type: string
+ *           description: Código público del nodo creado
+ *           example: "RES-abc123xyz-1"
+ *         reference_id:
+ *           type: string
+ *           nullable: true
+ *           description: Public code del recurso referenciado
+ *           example: "CHN-5LYJX-4"
+ *         node_type:
+ *           type: string
+ *           enum: [folder, site, channel]
+ *         name:
+ *           type: string
+ *           example: "Medidor Principal"
+ *     BatchCreateNodeFailed:
+ *       type: object
+ *       description: Nodo que falló al insertarse
+ *       properties:
+ *         reference_id:
+ *           type: string
+ *           nullable: true
+ *           description: Public code del recurso que se intentó insertar
+ *           example: "CHN-ABCDE-1"
+ *         name:
+ *           type: string
+ *           description: Nombre del nodo que se intentó crear
+ *           example: "Sensor de Humedad"
+ *         reason_code:
+ *           type: string
+ *           description: Código del error
+ *           enum: [DUPLICATE_IN_BATCH, ALREADY_IN_HIERARCHY, INVALID_NODE_TYPE, UNKNOWN_ERROR]
+ *           example: "ALREADY_IN_HIERARCHY"
+ *         message:
+ *           type: string
+ *           description: Mensaje descriptivo del error
+ *           example: "Este recurso ya existe en la jerarquía"
+ *     BatchCreateNodesResult:
+ *       type: object
+ *       description: Resultado del batch create
+ *       properties:
+ *         inserted:
+ *           type: array
+ *           description: Nodos insertados exitosamente
+ *           items:
+ *             $ref: '#/components/schemas/BatchCreateNodeInserted'
+ *         failed:
+ *           type: array
+ *           description: Nodos que fallaron
+ *           items:
+ *             $ref: '#/components/schemas/BatchCreateNodeFailed'
+ *         meta:
+ *           type: object
+ *           properties:
+ *             requested:
+ *               type: integer
+ *               description: Total de nodos solicitados
+ *               example: 5
+ *             inserted:
+ *               type: integer
+ *               description: Nodos insertados exitosamente
+ *               example: 3
+ *             failed:
+ *               type: integer
+ *               description: Nodos que fallaron
+ *               example: 2
+ *     BatchCreateNodesResponse:
+ *       type: object
+ *       properties:
+ *         ok:
+ *           type: boolean
+ *           example: true
+ *         data:
+ *           $ref: '#/components/schemas/BatchCreateNodesResult'
  */
 
 export default router;

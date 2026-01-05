@@ -789,8 +789,8 @@ export const batchGetNodes = async (publicCodes, options = {}) => {
 };
 
 /**
- * Crear múltiples nodos en una sola operación (transacción atómica)
- * Todos los nodos se crean bajo el mismo parent_id y organización
+ * Crear múltiples nodos con soporte para éxito parcial
+ * Los nodos que no puedan crearse (duplicados, errores) no bloquean la operación
  * 
  * @param {Object} batchData - Datos del batch
  * @param {string|null} batchData.parent_id - ID del nodo padre (public_code, null para raíz)
@@ -799,13 +799,17 @@ export const batchGetNodes = async (publicCodes, options = {}) => {
  * @param {string} userId - UUID del usuario que crea
  * @param {string} ipAddress - IP del usuario
  * @param {string} userAgent - User agent
- * @returns {Promise<Object>} - Resultado con nodos creados
+ * @returns {Promise<Object>} - Resultado con nodos insertados y fallidos
+ * 
+ * Respuesta:
+ * {
+ *   inserted: [{ public_code, reference_id, node_type, name }],
+ *   failed: [{ reference_id, name, reason_code, message }],
+ *   meta: { requested, inserted, failed }
+ * }
  */
 export const batchCreateNodes = async (batchData, organizationId, userId, ipAddress, userAgent) => {
     const { parent_id, nodes } = batchData;
-    
-    // Importar sequelize para transacciones
-    const sequelize = (await import('../../db/sql/sequelize.js')).default;
     
     // Resolver organization_id
     const organizationUuid = await resolveOrganizationId(organizationId);
@@ -834,62 +838,69 @@ export const batchCreateNodes = async (batchData, organizationId, userId, ipAddr
         parentUuid = parentNode._uuid;
     }
     
-    // Validar reglas de tipo de nodo para cada nodo
+    // Arrays para resultados
+    const inserted = [];
+    const failed = [];
+    
+    // Set para detectar duplicados dentro del mismo batch
+    const seenReferenceIds = new Set();
+    
+    // Procesar cada nodo individualmente
     for (const nodeData of nodes) {
-        validateNodeTypeRules(nodeData.node_type, parentNode);
-    }
-    
-    // Validar que ningún reference_id esté duplicado en la jerarquía
-    // Colectar todos los reference_ids del batch para validar
-    const referenceIdsToCheck = nodes
-        .filter(n => n.reference_id && (n.node_type === 'site' || n.node_type === 'channel'))
-        .map(n => n.reference_id);
-    
-    // Verificar duplicados dentro del mismo batch
-    const uniqueRefs = new Set(referenceIdsToCheck);
-    if (uniqueRefs.size !== referenceIdsToCheck.length) {
-        const error = new Error('El batch contiene reference_ids duplicados');
-        error.status = 400;
-        error.code = 'DUPLICATE_REFERENCE_IN_BATCH';
-        throw error;
-    }
-    
-    // Verificar que ninguno exista ya en la jerarquía
-    for (const refId of referenceIdsToCheck) {
-        const existingNode = await repository.findNodeByReferenceId(refId, organizationUuid);
-        if (existingNode) {
-            const error = new Error(`El recurso (${refId}) ya existe en la jerarquía de la organización`);
-            error.status = 409;
-            error.code = 'REFERENCE_ALREADY_IN_HIERARCHY';
-            throw error;
-        }
-    }
-    
-    // Crear todos los nodos en una transacción
-    const transaction = await sequelize.transaction();
-    
-    try {
-        const createdNodes = await repository.batchCreateNodes(nodes, {
-            parentId: parentUuid,
-            organizationId: organizationUuid,
-            transaction
-        });
+        const nodeIdentifier = nodeData.reference_id || nodeData.name;
         
-        // Audit log para cada nodo creado
-        // Usamos _uuid que contiene el UUID interno del nodo
-        for (const node of createdNodes) {
-            const nodeUuid = node._uuid;
-            if (!nodeUuid) {
-                hierarchyLogger.warn({ node }, 'Batch create: node missing _uuid for audit log');
+        try {
+            // Validar reglas de tipo de nodo
+            validateNodeTypeRules(nodeData.node_type, parentNode);
+            
+            // Validar duplicados dentro del batch (para sites y channels con reference_id)
+            if (nodeData.reference_id && (nodeData.node_type === 'site' || nodeData.node_type === 'channel')) {
+                if (seenReferenceIds.has(nodeData.reference_id)) {
+                    failed.push({
+                        reference_id: nodeData.reference_id,
+                        name: nodeData.name,
+                        reason_code: 'DUPLICATE_IN_BATCH',
+                        message: 'Este recurso está duplicado dentro del mismo batch'
+                    });
+                    continue;
+                }
+                seenReferenceIds.add(nodeData.reference_id);
+                
+                // Verificar que no exista ya en la jerarquía de esta organización
+                const existingNode = await repository.findNodeByReferenceId(nodeData.reference_id, organizationUuid);
+                if (existingNode) {
+                    failed.push({
+                        reference_id: nodeData.reference_id,
+                        name: nodeData.name,
+                        reason_code: 'ALREADY_IN_HIERARCHY',
+                        message: 'Este recurso ya existe en la jerarquía'
+                    });
+                    continue;
+                }
             }
+            
+            // Crear nodo (transacción individual implícita via repository)
+            const node = await repository.createNode({
+                organization_id: organizationUuid,
+                parent_id: parentUuid,
+                node_type: nodeData.node_type,
+                reference_id: nodeData.reference_id || null,
+                name: nodeData.name,
+                description: nodeData.description || null,
+                icon: nodeData.icon || getDefaultIcon(nodeData.node_type),
+                display_order: nodeData.display_order || 0,
+                metadata: nodeData.metadata || {}
+            });
+            
+            // Audit log para el nodo creado
             await logAuditAction({
                 entityType: 'resource_hierarchy',
-                entityId: nodeUuid,
+                entityId: node.id,
                 action: 'created',
                 performedBy: userId,
                 changes: { new: node },
                 metadata: {
-                    node_type: node.node_type,
+                    node_type: nodeData.node_type,
                     parent_id: parent_id,
                     organization_id: organizationId,
                     batch_operation: true,
@@ -898,29 +909,73 @@ export const batchCreateNodes = async (batchData, organizationId, userId, ipAddr
                 ipAddress,
                 userAgent
             });
+            
+            // Agregar a insertados con datos mínimos para el frontend
+            inserted.push({
+                public_code: node.public_code,
+                reference_id: node.reference_id,
+                node_type: node.node_type,
+                name: node.name
+            });
+            
+        } catch (error) {
+            // Capturar error y agregarlo a fallidos
+            hierarchyLogger.warn({ 
+                nodeIdentifier, 
+                error: error.message, 
+                code: error.code 
+            }, 'Batch create: node failed');
+            
+            failed.push({
+                reference_id: nodeData.reference_id || null,
+                name: nodeData.name,
+                reason_code: error.code || 'UNKNOWN_ERROR',
+                message: error.message
+            });
         }
-        
-        await transaction.commit();
-        
-        // Invalidar cache de la organización (una sola vez para todo el batch)
+    }
+    
+    // Invalidar cache si hubo al menos un nodo insertado
+    if (inserted.length > 0) {
         await cache.invalidateNodeAndRelated(null, organizationUuid, parentNode?.public_code || null);
-        
-        hierarchyLogger.info({ 
-            count: createdNodes.length, 
-            parentId: parent_id, 
-            userId 
-        }, 'Batch nodes created successfully');
-        
-        return {
-            created_count: createdNodes.length,
-            nodes: createdNodes.map(sanitizeNode)
+    }
+    
+    // Log de resultado
+    hierarchyLogger.info({ 
+        requested: nodes.length,
+        inserted: inserted.length, 
+        failed: failed.length,
+        parentId: parent_id, 
+        userId 
+    }, 'Batch create nodes completed');
+    
+    // Si todos fallaron, devolver error 409
+    if (inserted.length === 0 && failed.length > 0) {
+        const error = new Error('Todos los nodos fallaron al insertarse');
+        error.status = 409;
+        error.code = 'ALL_NODES_FAILED';
+        error.data = {
+            inserted: [],
+            failed,
+            meta: {
+                requested: nodes.length,
+                inserted: 0,
+                failed: failed.length
+            }
         };
-        
-    } catch (error) {
-        await transaction.rollback();
-        hierarchyLogger.error({ error: error.message, userId }, 'Batch node creation failed');
         throw error;
     }
+    
+    // Éxito (total o parcial)
+    return {
+        inserted,
+        failed,
+        meta: {
+            requested: nodes.length,
+            inserted: inserted.length,
+            failed: failed.length
+        }
+    };
 };
 
 export default {
