@@ -644,7 +644,14 @@ router.put('/nodes/:id',
  * /api/v1/resource-hierarchy/nodes/{id}:
  *   delete:
  *     summary: Eliminar un nodo
- *     description: Elimina un nodo (soft delete). Por defecto elimina también todos los descendientes.
+ *     description: |
+ *       Elimina un nodo (soft delete). Si el nodo tiene hijos y no se envía cascade=true,
+ *       retorna error 409 con la lista de nodos que serían afectados para que el usuario confirme.
+ *       
+ *       **Flujo recomendado:**
+ *       1. Intentar DELETE sin cascade
+ *       2. Si responde 409 (HAS_CHILDREN), mostrar al usuario los nodos afectados
+ *       3. Si el usuario confirma, reintentar con cascade=true
  *     tags: [Resource Hierarchy]
  *     security:
  *       - bearerAuth: []
@@ -659,11 +666,11 @@ router.put('/nodes/:id',
  *         name: cascade
  *         schema:
  *           type: boolean
- *           default: true
- *         description: Si eliminar también los descendientes
+ *           default: false
+ *         description: Si true, elimina el nodo y todos sus descendientes. Si false y tiene hijos, retorna error 409.
  *     responses:
  *       200:
- *         description: Nodo eliminado
+ *         description: Nodo(s) eliminado(s) exitosamente
  *         content:
  *           application/json:
  *             schema:
@@ -677,10 +684,65 @@ router.put('/nodes/:id',
  *                   properties:
  *                     deleted_count:
  *                       type: integer
+ *                       description: Cantidad de nodos eliminados
+ *                       example: 5
+ *                     deleted_nodes:
+ *                       type: array
+ *                       description: Lista de nodos eliminados con su info básica
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           public_code:
+ *                             type: string
+ *                             example: "RES-abc123-1"
+ *                           name:
+ *                             type: string
+ *                             example: "Sensor de Temperatura"
+ *                           node_type:
+ *                             type: string
+ *                             enum: [folder, site, channel]
  *                     cascade:
  *                       type: boolean
+ *                       description: Si se usó eliminación en cascada
  *       404:
  *         description: Nodo no encontrado
+ *       409:
+ *         description: El nodo tiene hijos y no se confirmó cascade
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: object
+ *                   properties:
+ *                     code:
+ *                       type: string
+ *                       example: "HAS_CHILDREN"
+ *                     message:
+ *                       type: string
+ *                       example: "El nodo tiene hijos. Debe confirmar la eliminación en cascada."
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     affected_nodes:
+ *                       type: array
+ *                       description: Lista de nodos hijos que serían eliminados
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           public_code:
+ *                             type: string
+ *                           name:
+ *                             type: string
+ *                           node_type:
+ *                             type: string
+ *                     total_affected:
+ *                       type: integer
+ *                       description: Total de nodos que serían eliminados (incluyendo el nodo padre)
  */
 router.delete('/nodes/:id',
     authenticate,
@@ -688,9 +750,12 @@ router.delete('/nodes/:id',
     validate(deleteNodeSchema),
     async (req, res, next) => {
         try {
+            // Convertir string 'true'/'false' a boolean
+            const cascade = req.query.cascade === 'true' || req.query.cascade === true;
+            
             const result = await hierarchyServices.deleteNode(
                 req.params.id,
-                req.query.cascade,
+                cascade,
                 req.user.userId,
                 req.ip,
                 req.headers['user-agent']
@@ -703,6 +768,17 @@ router.delete('/nodes/:id',
                 data: result
             });
         } catch (error) {
+            // Manejar error HAS_CHILDREN con respuesta especial
+            if (error.code === 'HAS_CHILDREN') {
+                return res.status(409).json({
+                    ok: false,
+                    error: {
+                        code: error.code,
+                        message: error.message
+                    },
+                    data: error.data
+                });
+            }
             next(error);
         }
     }
@@ -713,7 +789,15 @@ router.delete('/nodes/:id',
  * /api/v1/resource-hierarchy/nodes/{id}/move:
  *   patch:
  *     summary: Mover un nodo a un nuevo padre
- *     description: Mueve un nodo y todos sus descendientes a una nueva ubicación en la jerarquía.
+ *     description: |
+ *       Mueve un nodo y todos sus descendientes a una nueva ubicación en la jerarquía.
+ *       
+ *       **Validaciones:**
+ *       - El nodo y nuevo padre deben existir
+ *       - Deben pertenecer a la misma organización
+ *       - No se puede mover un nodo a uno de sus descendientes (prevención de ciclos)
+ *       - No se puede mover un nodo a sí mismo
+ *       - El usuario debe tener permisos 'edit' tanto en origen como en destino (excepto admins)
  *     tags: [Resource Hierarchy]
  *     security:
  *       - bearerAuth: []
@@ -740,8 +824,52 @@ router.delete('/nodes/:id',
  *     responses:
  *       200:
  *         description: Nodo movido exitosamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   $ref: '#/components/schemas/ResourceNode'
  *       400:
- *         description: Movimiento inválido (ej. mover a descendiente)
+ *         description: Movimiento inválido
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: object
+ *                   properties:
+ *                     code:
+ *                       type: string
+ *                       enum: [CYCLE_DETECTED, SELF_REFERENCE, CROSS_ORG_MOVE_NOT_ALLOWED]
+ *                     message:
+ *                       type: string
+ *       403:
+ *         description: Permisos insuficientes
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: object
+ *                   properties:
+ *                     code:
+ *                       type: string
+ *                       enum: [INSUFFICIENT_SOURCE_PERMISSIONS, INSUFFICIENT_DESTINATION_PERMISSIONS]
+ *                     message:
+ *                       type: string
  *       404:
  *         description: Nodo no encontrado
  */
@@ -751,12 +879,16 @@ router.patch('/nodes/:id/move',
     validate(moveNodeSchema),
     async (req, res, next) => {
         try {
+            // Los system-admin y org-admin saltan la verificación de permisos por nodo
+            const isAdmin = ['system-admin', 'org-admin'].includes(req.user.role);
+            
             const node = await hierarchyServices.moveNode(
                 req.params.id,
                 req.body.new_parent_id,
                 req.user.userId,
                 req.ip,
-                req.headers['user-agent']
+                req.headers['user-agent'],
+                isAdmin // skipPermissionCheck para admins
             );
             
             hierarchyLogger.info({ nodeId: req.params.id, newParent: req.body.new_parent_id, userId: req.user.userId }, 'Node moved via API');

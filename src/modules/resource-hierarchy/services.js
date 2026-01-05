@@ -286,15 +286,22 @@ export const getTree = async (organizationId, options = {}) => {
 
 /**
  * Mover un nodo a un nuevo padre
+ * Incluye validaciones:
+ * - Nodo y nuevo padre existen
+ * - Misma organización (no se permite mover entre orgs)
+ * - Detección de ciclos (no mover a un descendiente)
+ * - No mover a sí mismo
+ * - Permisos cruzados: usuario debe tener acceso 'edit' en origen Y destino
  * 
  * @param {string} nodePublicCode - Código público del nodo a mover
  * @param {string|null} newParentPublicCode - Código público del nuevo padre (null para raíz)
  * @param {string} userId - UUID del usuario
  * @param {string} ipAddress - IP del usuario
  * @param {string} userAgent - User agent
+ * @param {boolean} skipPermissionCheck - Si true, no verifica permisos (para admins)
  * @returns {Promise<Object>} - Nodo actualizado
  */
-export const moveNode = async (nodePublicCode, newParentPublicCode, userId, ipAddress, userAgent) => {
+export const moveNode = async (nodePublicCode, newParentPublicCode, userId, ipAddress, userAgent, skipPermissionCheck = false) => {
     const node = await repository.findNodeByPublicCodeInternal(nodePublicCode);
     
     if (!node) {
@@ -306,9 +313,10 @@ export const moveNode = async (nodePublicCode, newParentPublicCode, userId, ipAd
     
     const oldParentId = node.parent_id;
     let newParentUuid = null;
+    let newParent = null;
     
     if (newParentPublicCode) {
-        const newParent = await repository.findNodeByPublicCodeInternal(newParentPublicCode);
+        newParent = await repository.findNodeByPublicCodeInternal(newParentPublicCode);
         if (!newParent) {
             const error = new Error('Nuevo nodo padre no encontrado');
             error.status = 404;
@@ -327,7 +335,52 @@ export const moveNode = async (nodePublicCode, newParentPublicCode, userId, ipAd
         newParentUuid = newParent.id;
     }
     
-    const updatedNode = await repository.moveNode(node.id, newParentUuid);
+    // Verificar permisos cruzados: usuario necesita 'edit' en origen Y destino
+    // Los admins pueden saltarse esta verificación
+    if (!skipPermissionCheck) {
+        // Verificar permiso en el nodo origen
+        const hasSourceAccess = await repository.checkAccess(userId, node.id, 'edit');
+        if (!hasSourceAccess) {
+            const error = new Error('No tiene permisos para mover este nodo');
+            error.status = 403;
+            error.code = 'INSUFFICIENT_SOURCE_PERMISSIONS';
+            throw error;
+        }
+        
+        // Si hay nuevo padre, verificar permiso en el destino
+        if (newParentUuid) {
+            const hasDestinationAccess = await repository.checkAccess(userId, newParentUuid, 'edit');
+            if (!hasDestinationAccess) {
+                const error = new Error('No tiene permisos sobre el nodo destino');
+                error.status = 403;
+                error.code = 'INSUFFICIENT_DESTINATION_PERMISSIONS';
+                throw error;
+            }
+        }
+        // Nota: Si newParentPublicCode es null (mover a raíz), 
+        // solo verificamos acceso al nodo origen ya que el nivel raíz no tiene permisos específicos
+    }
+    
+    let updatedNode;
+    
+    try {
+        updatedNode = await repository.moveNode(node.id, newParentUuid);
+    } catch (repoError) {
+        // Convertir errores del repository a errores HTTP
+        if (repoError.code === 'CYCLE_DETECTED') {
+            const error = new Error('No se puede mover un nodo a uno de sus descendientes');
+            error.status = 400;
+            error.code = 'CYCLE_DETECTED';
+            throw error;
+        }
+        if (repoError.code === 'SELF_REFERENCE') {
+            const error = new Error('No se puede mover un nodo a sí mismo');
+            error.status = 400;
+            error.code = 'SELF_REFERENCE';
+            throw error;
+        }
+        throw repoError;
+    }
     
     // Audit log
     await logAuditAction({
@@ -336,10 +389,14 @@ export const moveNode = async (nodePublicCode, newParentPublicCode, userId, ipAd
         action: 'moved',
         performedBy: userId,
         changes: {
-            parent_id: { old: oldParentId, new: newParentUuid }
+            parent_id: { 
+                old: oldParentId, 
+                new: newParentUuid 
+            }
         },
         metadata: {
             node_type: node.node_type,
+            old_parent_public_code: oldParentId ? (await repository.findNodeById(oldParentId))?.public_code : null,
             new_parent_public_code: newParentPublicCode
         },
         ipAddress,
@@ -417,15 +474,17 @@ export const updateNode = async (nodePublicCode, updates, userId, ipAddress, use
 
 /**
  * Eliminar un nodo (soft delete)
+ * Si el nodo tiene hijos y no se envía cascade=true, retorna error con lista de nodos afectados
+ * Si cascade=true, elimina el nodo y todos sus descendientes
  * 
  * @param {string} nodePublicCode - Código público del nodo
- * @param {boolean} cascade - Si eliminar también los descendientes
+ * @param {boolean} cascade - Si eliminar también los descendientes (default false)
  * @param {string} userId - UUID del usuario
  * @param {string} ipAddress - IP del usuario
  * @param {string} userAgent - User agent
- * @returns {Promise<Object>} - Resultado de la eliminación
+ * @returns {Promise<Object>} - Resultado de la eliminación con lista de nodos eliminados
  */
-export const deleteNode = async (nodePublicCode, cascade, userId, ipAddress, userAgent) => {
+export const deleteNode = async (nodePublicCode, cascade = false, userId, ipAddress, userAgent) => {
     const node = await repository.findNodeByPublicCodeInternal(nodePublicCode);
     
     if (!node) {
@@ -435,18 +494,37 @@ export const deleteNode = async (nodePublicCode, cascade, userId, ipAddress, use
         throw error;
     }
     
-    const deletedCount = await repository.deleteNode(node.id, cascade);
+    let result;
     
-    // Audit log
+    try {
+        // Intentar eliminar - el repository lanzará error si tiene hijos y no es cascade
+        result = await repository.deleteNode(node.id, cascade);
+    } catch (repoError) {
+        // Si tiene hijos y no vino cascade, re-lanzar con status HTTP apropiado
+        if (repoError.code === 'HAS_CHILDREN') {
+            const error = new Error('El nodo tiene hijos. Debe confirmar la eliminación en cascada.');
+            error.status = 409;
+            error.code = 'HAS_CHILDREN';
+            error.data = repoError.data;
+            throw error;
+        }
+        throw repoError;
+    }
+    
+    // Audit log con detalle de todos los nodos eliminados
     await logAuditAction({
         entityType: 'resource_hierarchy',
         entityId: nodePublicCode,
         action: 'deleted',
         performedBy: userId,
-        changes: { old: { name: node.name, node_type: node.node_type } },
+        changes: { 
+            old: { name: node.name, node_type: node.node_type }
+        },
         metadata: {
             cascade,
-            deleted_count: deletedCount
+            user_confirmed_cascade: cascade,
+            deleted_count: result.deleted_count,
+            deleted_nodes: result.deleted_nodes
         },
         ipAddress,
         userAgent
@@ -456,10 +534,16 @@ export const deleteNode = async (nodePublicCode, cascade, userId, ipAddress, use
     const parentPublicCode = node.parent_id ? (await repository.findNodeById(node.parent_id))?.public_code : null;
     await cache.invalidateNodeAndRelated(nodePublicCode, node.organization_id, parentPublicCode);
     
-    hierarchyLogger.info({ nodeId: nodePublicCode, deletedCount, cascade, userId }, 'Node deleted successfully');
+    hierarchyLogger.info({ 
+        nodeId: nodePublicCode, 
+        deletedCount: result.deleted_count, 
+        cascade, 
+        userId 
+    }, 'Node deleted successfully');
     
     return {
-        deleted_count: deletedCount,
+        deleted_count: result.deleted_count,
+        deleted_nodes: result.deleted_nodes,
         cascade
     };
 };

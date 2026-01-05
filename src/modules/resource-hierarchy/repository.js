@@ -426,6 +426,36 @@ const getDescendantsWithChildCount = async (nodeId, options = {}) => {
 };
 
 /**
+ * Verificar si un nodo es descendiente de otro
+ * Usa ltree para verificación eficiente O(1) sin cargar todos los descendientes
+ * 
+ * @param {string} potentialDescendantId - UUID del posible descendiente
+ * @param {string} ancestorId - UUID del posible ancestro
+ * @returns {Promise<boolean>} - true si potentialDescendantId es descendiente de ancestorId
+ */
+export const isDescendantOf = async (potentialDescendantId, ancestorId) => {
+    const query = `
+        SELECT EXISTS (
+            SELECT 1 
+            FROM resource_hierarchy descendant, resource_hierarchy ancestor
+            WHERE descendant.id = $1
+              AND ancestor.id = $2
+              AND descendant.path <@ ancestor.path
+              AND descendant.id != ancestor.id
+              AND descendant.deleted_at IS NULL
+              AND ancestor.deleted_at IS NULL
+        ) as is_descendant
+    `;
+    
+    const [result] = await sequelize.query(query, {
+        bind: [potentialDescendantId, ancestorId],
+        type: QueryTypes.SELECT
+    });
+    
+    return result?.is_descendant === true;
+};
+
+/**
  * Mover un nodo a un nuevo padre
  * El trigger de BD actualiza automáticamente los paths de todos los descendientes
  * 
@@ -449,11 +479,21 @@ export const moveNode = async (nodeId, newParentId) => {
         if (newParent.organization_id !== node.organization_id) {
             throw new Error('No se puede mover a una organización diferente');
         }
+        
         // Verificar que no estamos moviendo a un descendiente (causaría ciclo)
-        const descendants = await getDescendants(nodeId, { limit: 1 });
-        const descendantIds = descendants.data.map(d => d.id);
-        if (descendantIds.includes(newParentId)) {
-            throw new Error('No se puede mover un nodo a uno de sus descendientes');
+        // Usa ltree para verificación eficiente O(1)
+        const wouldCreateCycle = await isDescendantOf(newParentId, nodeId);
+        if (wouldCreateCycle) {
+            const error = new Error('No se puede mover un nodo a uno de sus descendientes');
+            error.code = 'CYCLE_DETECTED';
+            throw error;
+        }
+        
+        // Verificar que no estamos moviendo a sí mismo
+        if (newParentId === nodeId) {
+            const error = new Error('No se puede mover un nodo a sí mismo');
+            error.code = 'SELF_REFERENCE';
+            throw error;
         }
     }
     
@@ -496,23 +536,77 @@ export const updateNode = async (nodeId, updates) => {
 };
 
 /**
- * Eliminar un nodo (soft delete)
- * También elimina todos los descendientes
+ * Obtener información básica de todos los descendientes de un nodo
+ * Incluye el nodo raíz en la respuesta
+ * Se usa para mostrar al usuario qué nodos serán afectados por cascade delete
  * 
  * @param {string} nodeId - UUID del nodo
- * @param {boolean} cascade - Si true, elimina descendientes (default true)
- * @returns {Promise<number>} - Cantidad de nodos eliminados
+ * @returns {Promise<Array>} - Lista de descendientes con info básica (public_code, name, node_type)
  */
-export const deleteNode = async (nodeId, cascade = true) => {
+export const getDescendantsForDeletion = async (nodeId) => {
+    const node = await ResourceHierarchy.findByPk(nodeId, {
+        attributes: ['id', 'path', 'public_code', 'name', 'node_type']
+    });
+    
+    if (!node) {
+        return [];
+    }
+    
+    // Obtener todos los nodos que serán eliminados (incluido el nodo raíz)
+    const query = `
+        SELECT public_code, name, node_type
+        FROM resource_hierarchy
+        WHERE path <@ $1::ltree
+          AND deleted_at IS NULL
+        ORDER BY path ASC
+    `;
+    
+    const descendants = await sequelize.query(query, {
+        bind: [node.dataValues.path],
+        type: QueryTypes.SELECT
+    });
+    
+    return descendants;
+};
+
+/**
+ * Eliminar un nodo (soft delete)
+ * También elimina todos los descendientes si cascade=true
+ * 
+ * @param {string} nodeId - UUID del nodo
+ * @param {boolean} cascade - Si true, elimina descendientes (default false)
+ * @returns {Promise<Object>} - Resultado con count y lista de nodos eliminados
+ */
+export const deleteNode = async (nodeId, cascade = false) => {
     const node = await ResourceHierarchy.findByPk(nodeId);
     
     if (!node) {
         throw new Error('Nodo no encontrado');
     }
     
-    let deletedCount = 0;
+    // Verificar si tiene hijos activos
+    const children = await getChildren(nodeId, node.organization_id, { limit: 1 });
+    const hasChildren = children.total > 0;
     
-    if (cascade) {
+    // Si tiene hijos y no viene cascade, lanzar error con info de descendientes
+    if (hasChildren && !cascade) {
+        const descendants = await getDescendantsForDeletion(nodeId);
+        const error = new Error('El nodo tiene hijos. Debe confirmar la eliminación en cascada.');
+        error.code = 'HAS_CHILDREN';
+        error.data = {
+            // Excluir el nodo raíz de la lista de hijos afectados
+            affected_nodes: descendants.filter(d => d.public_code !== node.public_code),
+            total_affected: descendants.length
+        };
+        throw error;
+    }
+    
+    let deletedNodes = [];
+    
+    if (cascade || hasChildren) {
+        // Obtener info de todos los nodos antes de eliminar
+        deletedNodes = await getDescendantsForDeletion(nodeId);
+        
         // Soft delete de todos los descendientes
         const query = `
             UPDATE resource_hierarchy
@@ -521,23 +615,25 @@ export const deleteNode = async (nodeId, cascade = true) => {
               AND deleted_at IS NULL
         `;
         
-        const [, result] = await sequelize.query(query, {
+        await sequelize.query(query, {
             bind: [node.dataValues.path]
         });
-        
-        deletedCount = result?.rowCount || 1;
     } else {
-        // Verificar que no tiene hijos activos
-        const children = await getChildren(nodeId, node.organization_id, { limit: 1 });
-        if (children.total > 0) {
-            throw new Error('No se puede eliminar un nodo con hijos. Use cascade=true o elimine los hijos primero.');
-        }
+        // Solo eliminar el nodo individual
+        deletedNodes = [{
+            public_code: node.public_code,
+            name: node.name,
+            node_type: node.node_type
+        }];
         
         await node.destroy(); // Soft delete (paranoid: true)
-        deletedCount = 1;
     }
     
-    return deletedCount;
+    return {
+        deleted_count: deletedNodes.length,
+        deleted_nodes: deletedNodes,
+        cascade
+    };
 };
 
 /**
