@@ -668,16 +668,24 @@ const handleDeleteNode = async (nodeId: string) => {
 
 ### 6. PATCH /nodes/:id/move
 
-Mueve un nodo a un nuevo padre.
+Mueve un nodo a un nuevo padre y/o cambia su orden de visualización.
 
 **Request Body:**
 ```json
 {
-  "new_parent_id": "RH-x1y2z3w4v5-3"
+  "new_parent_id": "RH-x1y2z3w4v5-3",
+  "display_order": 2
 }
 ```
 
+| Campo | Tipo | Requerido | Descripción |
+|-------|------|-----------|-------------|
+| `new_parent_id` | string \| null | ✅ Sí | Public code del nuevo padre, o `null` para mover a la raíz |
+| `display_order` | integer | ❌ No | Nuevo orden entre hermanos (0 = primero) |
+
 Para mover a la raíz, envía `new_parent_id: null` (solo permitido para folders).
+
+> **💡 Caso de uso:** Cuando el usuario arrastra un nodo a otro padre, naturalmente quiere especificar en qué posición quedará entre los hermanos. Este endpoint permite hacer ambas cosas en un solo paso.
 
 **Validaciones y Guards:**
 
@@ -729,9 +737,22 @@ Para mover a la raíz, envía `new_parent_id: null` (solo permitido para folders
 #### Ejemplo de Manejo de Errores en Frontend
 
 ```tsx
-const handleMoveNode = async (nodeId: string, newParentId: string | null) => {
+/**
+ * Mueve un nodo a un nuevo padre y opcionalmente cambia su orden
+ * @param nodeId - Public code del nodo a mover
+ * @param newParentId - Public code del destino (null para raíz)
+ * @param displayOrder - Posición entre hermanos (opcional)
+ */
+const handleMoveNode = async (
+  nodeId: string, 
+  newParentId: string | null,
+  displayOrder?: number
+) => {
   try {
-    await api.patch(`/resource-hierarchy/nodes/${nodeId}/move`, { new_parent_id: newParentId });
+    await api.patch(`/resource-hierarchy/nodes/${nodeId}/move`, { 
+      new_parent_id: newParentId,
+      display_order: displayOrder // Opcional: posición entre hermanos
+    });
     toast.success('Nodo movido correctamente');
     refreshTree();
   } catch (error) {
@@ -1435,10 +1456,11 @@ import { useDrag, useDrop } from 'react-dnd';
 
 interface DraggableNodeProps {
   node: HierarchyNode;
-  onMove: (nodeId: string, newParentId: string) => Promise<void>;
+  siblingIndex: number; // Posición actual entre hermanos
+  onMove: (nodeId: string, newParentId: string, displayOrder?: number) => Promise<void>;
 }
 
-export const DraggableNode = ({ node, onMove }: DraggableNodeProps) => {
+export const DraggableNode = ({ node, siblingIndex, onMove }: DraggableNodeProps) => {
   const [{ isDragging }, drag] = useDrag({
     type: 'HIERARCHY_NODE',
     item: { id: node.id, type: node.node_type },
@@ -1450,12 +1472,16 @@ export const DraggableNode = ({ node, onMove }: DraggableNodeProps) => {
   const [{ isOver, canDrop }, drop] = useDrop({
     accept: 'HIERARCHY_NODE',
     canDrop: (item) => {
-      // Solo folders pueden recibir hijos
-      // No se puede soltar sobre sí mismo
-      return node.node_type === 'folder' && item.id !== node.id;
+      // Validar restricciones de tipos
+      if (item.id === node.id) return false; // No sobre sí mismo
+      if (node.node_type === 'channel') return false; // Channels no aceptan hijos
+      if (node.node_type === 'site' && item.type !== 'channel') return false; // Sites solo aceptan channels
+      return true;
     },
-    drop: async (item) => {
-      await onMove(item.id, node.id);
+    drop: async (item, monitor) => {
+      // Calcular display_order basado en posición del drop
+      const dropPosition = siblingIndex; // Posición donde se soltó
+      await onMove(item.id, node.id, dropPosition);
     },
     collect: (monitor) => ({
       isOver: monitor.isOver(),
