@@ -16,6 +16,7 @@ Guía completa de uso de la API de Resource Hierarchy (Jerarquía de Recursos) p
 - [Manejo de Errores](#manejo-de-errores)
 - [Ejemplos de Uso (React/Next.js)](#ejemplos-de-uso-reactnextjs)
 - [Optimizaciones de Rendimiento](#optimizaciones-de-rendimiento)
+- [Integración con Sites y Channels](#integración-con-sites-y-channels) ⭐ **NUEVO**
 
 ---
 
@@ -37,11 +38,16 @@ El módulo **Resource Hierarchy** permite organizar recursos (carpetas, sites, c
 
 ### Tipos de Nodo
 
-| Tipo | Descripción | Puede tener hijos |
-|------|-------------|-------------------|
-| `folder` | Carpeta organizativa | ✅ Sí |
-| `site` | Referencia a un Site físico | ✅ Sí |
-| `channel` | Referencia a un Canal de dispositivo | ❌ No (hoja) |
+| Tipo | Descripción | Puede tener hijos | Puede moverse a raíz |
+|------|-------------|-------------------|----------------------|
+| `folder` | Carpeta organizativa | ✅ Cualquier tipo | ✅ Sí |
+| `site` | Referencia a un Site físico | ⚠️ Solo channels | ❌ No |
+| `channel` | Referencia a un Canal de dispositivo | ❌ No (hoja) | ❌ No |
+
+> **⚠️ Restricciones importantes:**
+> - Los **channels** son nodos hoja - no pueden tener hijos
+> - Los **sites** solo pueden contener **channels** como hijos
+> - Solo los **folders** pueden moverse a la raíz del árbol
 
 ### Estructura del Árbol
 
@@ -539,9 +545,66 @@ Elimina un nodo (soft delete).
 
 | Parámetro | Tipo | Default | Descripción |
 |-----------|------|---------|-------------|
-| `cascade` | boolean | `true` | Si eliminar también los descendientes |
+| `cascade` | boolean | `false` | Si eliminar también los descendientes |
 
-**Ejemplo:**
+#### Flujo de Eliminación con Confirmación
+
+El endpoint implementa un flujo de confirmación en dos pasos para proteger contra eliminaciones accidentales:
+
+```
+Paso 1: DELETE /nodes/:id (sin cascade)
+  ↓
+Si tiene hijos → 409 Conflict con lista de affected_nodes
+  ↓
+Frontend muestra modal de confirmación con los nodos afectados
+  ↓
+Paso 2: DELETE /nodes/:id?cascade=true
+  ↓
+200 OK con deleted_nodes
+```
+
+#### Caso 1: Nodo SIN hijos
+
+```
+DELETE /api/v1/resource-hierarchy/nodes/RH-a1b2c3d4e5-7
+```
+
+**Response (200 OK):**
+```json
+{
+  "ok": true,
+  "data": {
+    "deleted_count": 1,
+    "message": "Nodo eliminado correctamente"
+  }
+}
+```
+
+#### Caso 2: Nodo CON hijos (sin cascade) → Error 409
+
+```
+DELETE /api/v1/resource-hierarchy/nodes/RH-a1b2c3d4e5-7
+```
+
+**Response (409 Conflict):**
+```json
+{
+  "ok": false,
+  "error": {
+    "code": "HAS_CHILDREN",
+    "message": "El nodo tiene hijos. Use cascade=true para eliminar todo el subárbol",
+    "affected_nodes": [
+      { "id": "RH-a1b2c3d4e5-7", "name": "Zona Norte", "node_type": "folder" },
+      { "id": "RH-child1-xxx-1", "name": "Hotel Lima", "node_type": "site" },
+      { "id": "RH-child2-xxx-2", "name": "Sensor Lobby", "node_type": "channel" },
+      { "id": "RH-child3-xxx-3", "name": "Sensor Piscina", "node_type": "channel" }
+    ]
+  }
+}
+```
+
+#### Caso 3: Nodo CON hijos + cascade=true → Eliminar todo
+
 ```
 DELETE /api/v1/resource-hierarchy/nodes/RH-a1b2c3d4e5-7?cascade=true
 ```
@@ -551,13 +614,53 @@ DELETE /api/v1/resource-hierarchy/nodes/RH-a1b2c3d4e5-7?cascade=true
 {
   "ok": true,
   "data": {
-    "deleted_count": 5,
-    "message": "Nodo y 4 descendientes eliminados correctamente"
+    "deleted_count": 4,
+    "deleted_nodes": [
+      { "id": "RH-a1b2c3d4e5-7", "name": "Zona Norte", "node_type": "folder" },
+      { "id": "RH-child1-xxx-1", "name": "Hotel Lima", "node_type": "site" },
+      { "id": "RH-child2-xxx-2", "name": "Sensor Lobby", "node_type": "channel" },
+      { "id": "RH-child3-xxx-3", "name": "Sensor Piscina", "node_type": "channel" }
+    ],
+    "message": "Nodo y 3 descendientes eliminados correctamente"
   }
 }
 ```
 
-**⚠️ Sin cascade:** Si `cascade=false` y el nodo tiene hijos, retorna error 400.
+#### Ejemplo de Implementación en Frontend
+
+```tsx
+// Función para eliminar nodo con confirmación
+const handleDeleteNode = async (nodeId: string) => {
+  try {
+    // Paso 1: Intentar eliminar sin cascade
+    await api.delete(`/resource-hierarchy/nodes/${nodeId}`);
+    toast.success('Nodo eliminado correctamente');
+    refreshTree();
+  } catch (error) {
+    if (error.response?.status === 409 && error.response?.data?.error?.code === 'HAS_CHILDREN') {
+      // Paso 2: Mostrar modal de confirmación con nodos afectados
+      const affectedNodes = error.response.data.error.affected_nodes;
+      
+      const confirmed = await showConfirmModal({
+        title: '¿Eliminar nodo y todos sus descendientes?',
+        message: `Se eliminarán ${affectedNodes.length} nodos:`,
+        items: affectedNodes.map(n => `${n.node_type}: ${n.name}`),
+        confirmText: 'Eliminar todo',
+        variant: 'destructive'
+      });
+      
+      if (confirmed) {
+        // Paso 3: Eliminar con cascade
+        await api.delete(`/resource-hierarchy/nodes/${nodeId}?cascade=true`);
+        toast.success('Nodo y descendientes eliminados');
+        refreshTree();
+      }
+    } else {
+      toast.error('Error al eliminar nodo');
+    }
+  }
+};
+```
 
 ---
 
@@ -574,14 +677,21 @@ Mueve un nodo a un nuevo padre.
 }
 ```
 
-Para mover a la raíz, envía `new_parent_id: null`.
+Para mover a la raíz, envía `new_parent_id: null` (solo permitido para folders).
 
-**Validaciones:**
-- No se puede mover un nodo a sí mismo
-- No se puede mover un nodo a uno de sus descendientes (evita ciclos)
-- El nuevo padre debe pertenecer a la misma organización
+**Validaciones y Guards:**
 
-**Response (200 OK):**
+| Validación | Código de Error | Descripción |
+|------------|-----------------|-------------|
+| Auto-referencia | `SELF_REFERENCE` | No se puede mover un nodo a sí mismo |
+| Ciclos | `CYCLE_DETECTED` | No se puede mover a un descendiente propio |
+| Cross-org | `CROSS_ORG_MOVE_NOT_ALLOWED` | Origen y destino deben ser de la misma organización |
+| Permisos origen | `INSUFFICIENT_SOURCE_PERMISSIONS` | Requiere permiso `edit` en el nodo a mover |
+| Permisos destino | `INSUFFICIENT_DESTINATION_PERMISSIONS` | Requiere permiso `edit` en el destino |
+| Tipo a raíz | `INVALID_MOVE_TO_ROOT` | Solo folders pueden moverse a la raíz |
+| Tipo padre inválido | `INVALID_PARENT_TYPE` | Channels no pueden tener hijos; sites solo aceptan channels |
+
+**Response exitosa (200 OK):**
 ```json
 {
   "ok": true,
@@ -592,6 +702,54 @@ Para mover a la raíz, envía `new_parent_id: null`.
     "message": "Nodo movido correctamente"
   }
 }
+```
+
+**Response de error (400 Bad Request):**
+```json
+{
+  "ok": false,
+  "error": {
+    "code": "CYCLE_DETECTED",
+    "message": "No se puede mover un nodo a uno de sus descendientes"
+  }
+}
+```
+
+**Response de error (403 Forbidden):**
+```json
+{
+  "ok": false,
+  "error": {
+    "code": "INSUFFICIENT_DESTINATION_PERMISSIONS",
+    "message": "No tienes permisos para mover nodos a esta ubicación"
+  }
+}
+```
+
+#### Ejemplo de Manejo de Errores en Frontend
+
+```tsx
+const handleMoveNode = async (nodeId: string, newParentId: string | null) => {
+  try {
+    await api.patch(`/resource-hierarchy/nodes/${nodeId}/move`, { new_parent_id: newParentId });
+    toast.success('Nodo movido correctamente');
+    refreshTree();
+  } catch (error) {
+    const errorCode = error.response?.data?.error?.code;
+    
+    const errorMessages: Record<string, string> = {
+      'SELF_REFERENCE': 'No puedes mover un nodo a sí mismo',
+      'CYCLE_DETECTED': 'No puedes mover un nodo dentro de sus propios hijos',
+      'CROSS_ORG_MOVE_NOT_ALLOWED': 'No puedes mover nodos entre organizaciones',
+      'INSUFFICIENT_SOURCE_PERMISSIONS': 'No tienes permisos para mover este nodo',
+      'INSUFFICIENT_DESTINATION_PERMISSIONS': 'No tienes permisos en la ubicación de destino',
+      'INVALID_MOVE_TO_ROOT': 'Solo las carpetas pueden estar en la raíz',
+      'INVALID_PARENT_TYPE': 'Este tipo de nodo no puede ir dentro del destino seleccionado'
+    };
+    
+    toast.error(errorMessages[errorCode] || 'Error al mover el nodo');
+  }
+};
 ```
 
 ---
@@ -1000,14 +1158,22 @@ Verifica si un usuario tiene acceso a un nodo.
 
 ### Códigos de Error Comunes
 
-| Código | Error | Descripción |
-|--------|-------|-------------|
+| Código HTTP | Error Code | Descripción |
+|-------------|------------|-------------|
+| 400 | `VALIDATION_ERROR` | Datos de entrada inválidos |
 | 400 | `INVALID_NODE_TYPE` | Tipo de nodo no válido |
 | 400 | `INVALID_PARENT` | El padre no existe o pertenece a otra organización |
-| 400 | `CIRCULAR_REFERENCE` | Intento de mover nodo a su propio descendiente |
-| 400 | `HAS_CHILDREN` | No se puede eliminar sin cascade si tiene hijos |
+| 400 | `INVALID_PARENT_TYPE` | El tipo de padre no acepta este tipo de hijo |
+| 400 | `INVALID_MOVE_TO_ROOT` | Solo folders pueden moverse a la raíz |
+| 400 | `SELF_REFERENCE` | Intento de mover nodo a sí mismo |
+| 400 | `CYCLE_DETECTED` | Intento de mover nodo a su propio descendiente |
+| 400 | `CROSS_ORG_MOVE_NOT_ALLOWED` | Intento de mover entre organizaciones |
 | 403 | `FORBIDDEN` | Sin permisos para esta operación |
+| 403 | `INSUFFICIENT_SOURCE_PERMISSIONS` | Sin permiso `edit` en el nodo origen |
+| 403 | `INSUFFICIENT_DESTINATION_PERMISSIONS` | Sin permiso `edit` en el destino |
 | 404 | `NODE_NOT_FOUND` | Nodo no encontrado |
+| 404 | `PARENT_NOT_FOUND` | Nodo padre no encontrado |
+| 409 | `HAS_CHILDREN` | Nodo tiene hijos, usar `cascade=true` para eliminar |
 
 ### Formato de Error
 
@@ -1450,6 +1616,89 @@ const response = await api.post('/resource-hierarchy/nodes/batch', {
 - Sincronización de favoritos
 - Validación de referencias
 
+---
+
+## 🔗 Integración con Sites y Channels
+
+### Parámetro `not_in_hierarchy`
+
+Cuando el usuario quiere agregar un site o channel existente a la jerarquía, necesitas mostrar solo los que **aún no están vinculados**. Usa el parámetro `not_in_hierarchy=true` en los endpoints de Sites y Channels:
+
+```javascript
+// Obtener sites que NO están en la jerarquía (disponibles para agregar)
+const availableSites = await api.get('/sites?not_in_hierarchy=true');
+
+// Obtener channels que NO están en la jerarquía
+const availableChannels = await api.get('/channels?not_in_hierarchy=true');
+```
+
+**Comportamiento:**
+- `not_in_hierarchy=true` → Solo recursos SIN nodo en la jerarquía
+- `not_in_hierarchy=false` o sin parámetro → Todos los recursos (comportamiento normal)
+
+**Caso de uso típico: Modal "Agregar recurso existente"**
+
+```tsx
+// Modal para agregar un site existente a la jerarquía
+const AddExistingSiteModal = ({ parentNodeId, onAdd }) => {
+  const [sites, setSites] = useState([]);
+  
+  useEffect(() => {
+    // Cargar solo sites que no están en la jerarquía
+    const loadAvailableSites = async () => {
+      const response = await api.get('/sites?not_in_hierarchy=true');
+      setSites(response.data.data);
+    };
+    loadAvailableSites();
+  }, []);
+  
+  const handleSelect = async (site) => {
+    // Crear nodo en la jerarquía referenciando el site existente
+    await api.post('/resource-hierarchy/nodes', {
+      name: site.name,
+      node_type: 'site',
+      parent_id: parentNodeId,
+      reference_id: site.id  // Public code del site
+    });
+    onAdd();
+  };
+  
+  if (sites.length === 0) {
+    return <p>Todos los sites ya están en la jerarquía</p>;
+  }
+  
+  return (
+    <ul>
+      {sites.map(site => (
+        <li key={site.id} onClick={() => handleSelect(site)}>
+          {site.name}
+        </li>
+      ))}
+    </ul>
+  );
+};
+```
+
+### Campo `reference_id`
+
+Cuando creas un nodo de tipo `site` o `channel`, puedes vincularlo a un recurso existente mediante `reference_id`:
+
+```json
+{
+  "name": "Hotel Lima",
+  "node_type": "site",
+  "parent_id": "RH-zona-xxx-1",
+  "reference_id": "SITE-61D4Vc4Oo9R-4"
+}
+```
+
+**Reglas:**
+- `reference_id` es el **public_code** del site o channel
+- Un site/channel solo puede estar vinculado a **un nodo** en la jerarquía
+- Si intentas crear otro nodo con el mismo `reference_id`, recibirás error 409
+
+---
+
 ### Recomendaciones de Carga
 
 | Escenario | Estrategia Recomendada |
@@ -1461,3 +1710,5 @@ const response = await api.post('/resource-hierarchy/nodes/batch', {
 | Breadcrumbs | `GET /nodes/:id/ancestors` o batch |
 | Búsqueda global | `GET /nodes?search=texto` |
 | Selección múltiple | `POST /nodes/batch`|
+| Agregar site existente | `GET /sites?not_in_hierarchy=true` |
+| Agregar channel existente | `GET /channels?not_in_hierarchy=true` |
