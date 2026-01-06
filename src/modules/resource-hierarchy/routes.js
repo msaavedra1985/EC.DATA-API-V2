@@ -788,9 +788,14 @@ router.delete('/nodes/:id',
  * @swagger
  * /api/v1/resource-hierarchy/nodes/{id}/move:
  *   patch:
- *     summary: Mover un nodo a un nuevo padre
+ *     summary: Mover un nodo a un nuevo padre y/o cambiar su orden
  *     description: |
  *       Mueve un nodo y todos sus descendientes a una nueva ubicación en la jerarquía.
+ *       Opcionalmente permite cambiar el orden de visualización (display_order) en la misma operación.
+ *       
+ *       **Caso de uso:** Cuando el usuario arrastra un nodo a otro padre, naturalmente quiere 
+ *       especificar en qué posición dentro de los hermanos quedará. Este endpoint permite 
+ *       hacer ambas cosas en un solo paso.
  *       
  *       **Validaciones:**
  *       - El nodo y nuevo padre deben existir
@@ -798,6 +803,8 @@ router.delete('/nodes/:id',
  *       - No se puede mover un nodo a uno de sus descendientes (prevención de ciclos)
  *       - No se puede mover un nodo a sí mismo
  *       - El usuario debe tener permisos 'edit' tanto en origen como en destino (excepto admins)
+ *       - Solo folders pueden moverse a la raíz (new_parent_id: null)
+ *       - Channels no pueden tener hijos; sites solo aceptan channels
  *     tags: [Resource Hierarchy]
  *     security:
  *       - bearerAuth: []
@@ -820,7 +827,12 @@ router.delete('/nodes/:id',
  *               new_parent_id:
  *                 type: string
  *                 nullable: true
- *                 description: Public code del nuevo padre (null para mover a raíz)
+ *                 description: Public code del nuevo padre (null para mover a raíz, solo permitido para folders)
+ *               display_order:
+ *                 type: integer
+ *                 minimum: 0
+ *                 description: Nuevo orden de visualización entre hermanos (opcional)
+ *                 example: 2
  *     responses:
  *       200:
  *         description: Nodo movido exitosamente
@@ -849,7 +861,7 @@ router.delete('/nodes/:id',
  *                   properties:
  *                     code:
  *                       type: string
- *                       enum: [CYCLE_DETECTED, SELF_REFERENCE, CROSS_ORG_MOVE_NOT_ALLOWED]
+ *                       enum: [CYCLE_DETECTED, SELF_REFERENCE, CROSS_ORG_MOVE_NOT_ALLOWED, INVALID_MOVE_TO_ROOT, INVALID_PARENT_TYPE]
  *                     message:
  *                       type: string
  *       403:
@@ -888,10 +900,16 @@ router.patch('/nodes/:id/move',
                 req.user.userId,
                 req.ip,
                 req.headers['user-agent'],
-                isAdmin // skipPermissionCheck para admins
+                isAdmin, // skipPermissionCheck para admins
+                req.body.display_order // Nuevo parámetro opcional
             );
             
-            hierarchyLogger.info({ nodeId: req.params.id, newParent: req.body.new_parent_id, userId: req.user.userId }, 'Node moved via API');
+            hierarchyLogger.info({ 
+                nodeId: req.params.id, 
+                newParent: req.body.new_parent_id, 
+                displayOrder: req.body.display_order,
+                userId: req.user.userId 
+            }, 'Node moved via API');
             
             res.json({
                 ok: true,
