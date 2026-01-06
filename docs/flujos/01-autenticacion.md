@@ -158,22 +158,18 @@ flowchart TD
     B -->|Sí| D{¿Token expirado?}
     D -->|Sí| E[Eliminar token de BD]
     E --> C
-    D -->|No| F{¿Token ya usado?}
-    F -->|Sí| G[⚠️ Posible robo detectado]
-    G --> H[Invalidar TODA la familia de tokens]
-    H --> C
-    F -->|No| I[Generar nuevo Access Token]
-    I --> J[Generar nuevo Refresh Token]
-    J --> K[Marcar token anterior como usado]
-    K --> L[✅ Retornar nuevos tokens]
+    D -->|No| F[Generar nuevo Access Token]
+    F --> G[Generar nuevo Refresh Token]
+    G --> H[Eliminar token anterior]
+    H --> I[✅ Retornar nuevos tokens]
 ```
 
 ### Seguridad: Rotación de Tokens
 
 El sistema implementa **rotación de refresh tokens**:
 - Cada vez que usás un refresh token, se genera uno nuevo
-- El anterior queda marcado como "usado"
-- Si alguien intenta usar un token ya usado → se invalida toda la cadena (posible robo)
+- El token anterior se elimina de la base de datos
+- Solo el token más reciente es válido
 
 ### Endpoint
 

@@ -22,9 +22,11 @@ Resource Hierarchy permite organizar recursos (carpetas, sitios, canales) en una
 
 | Tipo | Icono | Descripción | Puede contener |
 |------|-------|-------------|----------------|
-| `folder` | 📁 | Carpeta organizativa | Cualquier tipo |
-| `site` | 📍 | Ubicación física | Cualquier tipo |
-| `channel` | 📡 | Canal de comunicación | Cualquier tipo |
+| `folder` | 📁 | Carpeta organizativa | folders, sites, channels |
+| `site` | 📍 | Ubicación física | channels |
+| `channel` | 📡 | Canal de comunicación | ❌ No puede tener hijos |
+
+> **Nota:** Los canales son nodos "hoja" - no pueden contener otros nodos. Solo las carpetas pueden moverse a la raíz del árbol.
 
 **Ejemplo de estructura:**
 ```

@@ -12,19 +12,19 @@ Las **API Keys** permiten que sistemas externos se conecten a EC.DATA sin interv
 
 - Están ligadas a una **organización fija**
 - Tienen **scopes limitados** (solo pueden hacer ciertas operaciones)
-- No expiran automáticamente (pero pueden revocarse)
+- Se autentican con **client_id + secret** en cada petición
 - Se identifican como "clientes" en lugar de "usuarios"
 
 ---
 
 ## 1. Diferencias: Session JWT vs API Key JWT
 
-| Característica | Session JWT | API Key JWT |
-|----------------|-------------|-------------|
+| Característica | Session JWT | API Key |
+|----------------|-------------|---------|
 | **Origen** | Login de usuario | Creación de API Key |
 | **Identifica a** | Usuario humano | Sistema/Cliente |
 | **Organización** | Dinámica (switch-org) | Fija |
-| **Duración** | 15 min + refresh | Sin expiración |
+| **Autenticación** | Bearer token JWT | client_id + secret |
 | **Scopes** | Todos los del rol | Limitados al crear |
 | **Revocación** | Logout | Eliminar API Key |
 
@@ -39,10 +39,10 @@ flowchart LR
         S -->|Switch-org| S2[Nueva org activa]
     end
     
-    subgraph API Key JWT
-        AK[🔑 API Key] -->|Una vez| JWT[JWT fijo]
-        JWT -->|Siempre válido| API[API]
-        JWT -.->|Revocación manual| REV[❌ Invalidado]
+    subgraph API Key
+        AK[🔑 API Key] -->|Cada petición| CREDS[client_id + secret]
+        CREDS -->|Validar| API[API]
+        AK -.->|Revocación manual| REV[❌ Invalidado]
     end
 ```
 
@@ -124,7 +124,6 @@ POST /api/v1/api-keys
     "organization_id": "ORG-xxx",
     "scopes": ["channels:read", "telemetry:read"],
     "secret": "sk_live_AbCdEfGhIjKlMnOpQrStUvWxYz123456",
-    "jwt": "eyJhbGciOiJIUzI1NiIs...",
     "created_at": "2025-01-05T10:30:00Z"
   },
   "warning": "Guardá el secret de forma segura. No se podrá recuperar después de cerrar esta ventana."
@@ -137,18 +136,7 @@ POST /api/v1/api-keys
 
 ## 4. Usar API Key
 
-### Opción 1: Bearer Token (Recomendado)
-
-Usar el JWT retornado al crear la API Key:
-
-```http
-GET /api/v1/channels
-Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
-```
-
-### Opción 2: Client Credentials
-
-Enviar client_id y secret en cada petición:
+Enviar client_id y secret en cada petición mediante headers:
 
 ```http
 GET /api/v1/channels
@@ -160,21 +148,17 @@ X-Client-Secret: sk_live_AbCdEfGhIjKlMnOpQrStUvWxYz123456
 
 ```mermaid
 flowchart TD
-    A[Petición con API Key] --> B{¿Formato Bearer?}
-    B -->|Sí| C[Validar JWT]
-    B -->|No| D{¿Headers client_id/secret?}
-    D -->|No| E[❌ 401: Sin credenciales]
-    D -->|Sí| F[Buscar API Key por client_id]
-    F --> G{¿Existe y activa?}
-    G -->|No| H[❌ 401: API Key inválida]
-    G -->|Sí| I[Verificar secret hash]
-    I -->|No match| H
-    I -->|Match| J[Inyectar contexto]
-    C -->|Inválido| H
-    C -->|Válido| J
-    J --> K[Verificar scope]
-    K -->|Insuficiente| L[❌ 403: Scope insuficiente]
-    K -->|OK| M[✅ Procesar petición]
+    A[Petición con API Key] --> B{¿Headers client_id/secret?}
+    B -->|No| C[❌ 401: Sin credenciales]
+    B -->|Sí| D[Buscar API Key por client_id]
+    D --> E{¿Existe y activa?}
+    E -->|No| F[❌ 401: API Key inválida]
+    E -->|Sí| G[Verificar secret hash]
+    G -->|No match| F
+    G -->|Match| H[Inyectar contexto]
+    H --> I[Verificar scope]
+    I -->|Insuficiente| J[❌ 403: Scope insuficiente]
+    I -->|OK| K[✅ Procesar petición]
 ```
 
 ---
@@ -266,8 +250,7 @@ POST /api/v1/api-keys/:id/regenerate
   "ok": true,
   "data": {
     "id": "APIKEY-xxx",
-    "new_secret": "sk_live_NuEvO_SeCrEt_123456",
-    "new_jwt": "eyJhbGciOiJIUzI1NiIs..."
+    "new_secret": "sk_live_NuEvO_SeCrEt_123456"
   },
   "warning": "El secret anterior ya no es válido"
 }
