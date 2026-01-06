@@ -41,13 +41,16 @@ El módulo **Resource Hierarchy** permite organizar recursos (carpetas, sites, c
 | Tipo | Descripción | Puede tener hijos | Puede moverse a raíz |
 |------|-------------|-------------------|----------------------|
 | `folder` | Carpeta organizativa | ✅ Cualquier tipo | ✅ Sí |
-| `site` | Referencia a un Site físico | ⚠️ Solo channels | ❌ No |
-| `channel` | Referencia a un Canal de dispositivo | ❌ No (hoja) | ❌ No |
+| `site` | Referencia a un Site físico | ✅ Cualquier tipo | ✅ Sí |
+| `channel` | Referencia a un Canal de dispositivo | ✅ Cualquier tipo | ✅ Sí |
 
-> **⚠️ Restricciones importantes:**
-> - Los **channels** son nodos hoja - no pueden tener hijos
-> - Los **sites** solo pueden contener **channels** como hijos
-> - Solo los **folders** pueden moverse a la raíz del árbol
+> **💡 Modelo Flexible:**
+> - **Cualquier tipo de nodo puede contener cualquier otro tipo** - Sin restricciones de padre-hijo
+> - **Todos los tipos pueden moverse a la raíz** - Máxima flexibilidad organizativa
+> - **Casos de uso habilitados:**
+>   - **Canales totalizadores**: Un channel puede contener sites o channels cuyos datos agrega
+>   - **Sites con sub-sites**: Un site puede contener otros sites para modelar campus o complejos
+>   - **Estructuras híbridas**: Cualquier combinación que el negocio requiera
 
 ### Estructura del Árbol
 
@@ -683,7 +686,7 @@ Mueve un nodo a un nuevo padre y/o cambia su orden de visualización.
 | `new_parent_id` | string \| null | ✅ Sí | Public code del nuevo padre, o `null` para mover a la raíz |
 | `display_order` | integer | ❌ No | Nuevo orden entre hermanos (0 = primero) |
 
-Para mover a la raíz, envía `new_parent_id: null` (solo permitido para folders).
+Para mover a la raíz, envía `new_parent_id: null`.
 
 > **💡 Caso de uso:** Cuando el usuario arrastra un nodo a otro padre, naturalmente quiere especificar en qué posición quedará entre los hermanos. Este endpoint permite hacer ambas cosas en un solo paso.
 
@@ -696,8 +699,6 @@ Para mover a la raíz, envía `new_parent_id: null` (solo permitido para folders
 | Cross-org | `CROSS_ORG_MOVE_NOT_ALLOWED` | Origen y destino deben ser de la misma organización |
 | Permisos origen | `INSUFFICIENT_SOURCE_PERMISSIONS` | Requiere permiso `edit` en el nodo a mover |
 | Permisos destino | `INSUFFICIENT_DESTINATION_PERMISSIONS` | Requiere permiso `edit` en el destino |
-| Tipo a raíz | `INVALID_MOVE_TO_ROOT` | Solo folders pueden moverse a la raíz |
-| Tipo padre inválido | `INVALID_PARENT_TYPE` | Channels no pueden tener hijos; sites solo aceptan channels |
 
 **Response exitosa (200 OK):**
 ```json
@@ -1472,10 +1473,9 @@ export const DraggableNode = ({ node, siblingIndex, onMove }: DraggableNodeProps
   const [{ isOver, canDrop }, drop] = useDrop({
     accept: 'HIERARCHY_NODE',
     canDrop: (item) => {
-      // Validar restricciones de tipos
+      // Solo validar que no se mueva sobre sí mismo
+      // El sistema es flexible: cualquier tipo puede contener cualquier tipo
       if (item.id === node.id) return false; // No sobre sí mismo
-      if (node.node_type === 'channel') return false; // Channels no aceptan hijos
-      if (node.node_type === 'site' && item.type !== 'channel') return false; // Sites solo aceptan channels
       return true;
     },
     drop: async (item, monitor) => {
