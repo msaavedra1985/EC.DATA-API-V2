@@ -285,7 +285,7 @@ export const getTree = async (organizationId, options = {}) => {
 };
 
 /**
- * Mover un nodo a un nuevo padre
+ * Mover un nodo a un nuevo padre y/o cambiar su display_order
  * Incluye validaciones:
  * - Nodo y nuevo padre existen
  * - Misma organización (no se permite mover entre orgs)
@@ -299,9 +299,10 @@ export const getTree = async (organizationId, options = {}) => {
  * @param {string} ipAddress - IP del usuario
  * @param {string} userAgent - User agent
  * @param {boolean} skipPermissionCheck - Si true, no verifica permisos (para admins)
+ * @param {number|undefined} displayOrder - Nuevo orden de visualización (opcional)
  * @returns {Promise<Object>} - Nodo actualizado
  */
-export const moveNode = async (nodePublicCode, newParentPublicCode, userId, ipAddress, userAgent, skipPermissionCheck = false) => {
+export const moveNode = async (nodePublicCode, newParentPublicCode, userId, ipAddress, userAgent, skipPermissionCheck = false, displayOrder = undefined) => {
     const node = await repository.findNodeByPublicCodeInternal(nodePublicCode);
     
     if (!node) {
@@ -312,6 +313,7 @@ export const moveNode = async (nodePublicCode, newParentPublicCode, userId, ipAd
     }
     
     const oldParentId = node.parent_id;
+    const oldDisplayOrder = node.display_order;
     let newParentUuid = null;
     let newParent = null;
     
@@ -364,7 +366,13 @@ export const moveNode = async (nodePublicCode, newParentPublicCode, userId, ipAd
     let updatedNode;
     
     try {
+        // Mover el nodo (cambia parent_id y path)
         updatedNode = await repository.moveNode(node.id, newParentUuid);
+        
+        // Si se especificó display_order, actualizarlo también
+        if (displayOrder !== undefined) {
+            updatedNode = await repository.updateNode(node.id, { display_order: displayOrder });
+        }
     } catch (repoError) {
         // Convertir errores del repository a errores HTTP
         if (repoError.code === 'CYCLE_DETECTED') {
@@ -382,18 +390,29 @@ export const moveNode = async (nodePublicCode, newParentPublicCode, userId, ipAd
         throw repoError;
     }
     
+    // Construir objeto de cambios para auditoría
+    const changes = {
+        parent_id: { 
+            old: oldParentId, 
+            new: newParentUuid 
+        }
+    };
+    
+    // Si cambió display_order, incluirlo en el audit
+    if (displayOrder !== undefined && displayOrder !== oldDisplayOrder) {
+        changes.display_order = {
+            old: oldDisplayOrder,
+            new: displayOrder
+        };
+    }
+    
     // Audit log
     await logAuditAction({
         entityType: 'resource_hierarchy',
         entityId: nodePublicCode,
         action: 'moved',
         performedBy: userId,
-        changes: {
-            parent_id: { 
-                old: oldParentId, 
-                new: newParentUuid 
-            }
-        },
+        changes,
         metadata: {
             node_type: node.node_type,
             old_parent_public_code: oldParentId ? (await repository.findNodeById(oldParentId))?.public_code : null,
