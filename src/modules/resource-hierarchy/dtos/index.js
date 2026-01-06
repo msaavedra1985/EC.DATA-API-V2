@@ -165,6 +165,7 @@ export const deleteNodeSchema = z.object({
 /**
  * Schema para mover un nodo
  * PATCH /resource-hierarchy/nodes/:id/move
+ * Soporta cambio de padre y/o display_order en una sola operación
  */
 export const moveNodeSchema = z.object({
     params: z.object({
@@ -177,7 +178,12 @@ export const moveNodeSchema = z.object({
     body: z.object({
         new_parent_id: z
             .string()
-            .nullable()
+            .nullable(),
+        display_order: z
+            .number()
+            .int('display_order debe ser un número entero')
+            .min(0, 'display_order debe ser mayor o igual a 0')
+            .optional()
     })
 });
 
