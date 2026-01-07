@@ -6,7 +6,33 @@ import { Op, QueryTypes } from 'sequelize';
 import ResourceHierarchy from './models/ResourceHierarchy.js';
 import UserResourceAccess from './models/UserResourceAccess.js';
 import sequelize from '../../db/sql/sequelize.js';
-import { generateUuidV7, generateHumanId, generatePublicCode } from '../../utils/identifiers.js';
+import { generateUuidV7, generatePublicCode } from '../../utils/identifiers.js';
+
+/**
+ * Obtener el siguiente human_id para una organización usando contador atómico
+ * Usa UPDATE ... RETURNING para garantizar unicidad sin race conditions
+ * Si la organización no tiene contador, lo crea con valor 1
+ * 
+ * @param {string} organizationId - UUID de la organización
+ * @param {Object} transaction - Transacción de Sequelize (opcional)
+ * @returns {Promise<number>} - Siguiente human_id
+ */
+const getNextHumanId = async (organizationId, transaction = null) => {
+    // Intentar incrementar el contador existente
+    const [results] = await sequelize.query(`
+        INSERT INTO organization_resource_counters (organization_id, last_value, created_at, updated_at)
+        VALUES ($1, 1, NOW(), NOW())
+        ON CONFLICT (organization_id) 
+        DO UPDATE SET last_value = organization_resource_counters.last_value + 1, updated_at = NOW()
+        RETURNING last_value
+    `, {
+        bind: [organizationId],
+        type: QueryTypes.SELECT,
+        transaction
+    });
+    
+    return results.last_value;
+};
 
 /**
  * Obtener un nodo por ID con conteo de hijos (uso interno)
@@ -36,14 +62,17 @@ const getNodeByIdWithChildrenCount = async (nodeId) => {
 /**
  * Crear un nuevo nodo en la jerarquía
  * El path ltree se calcula automáticamente por el trigger de BD
+ * El human_id se obtiene del contador atómico por organización
  * 
- * @param {Object} data - Datos del nodo
+ * @param {Object} data - Datos del nodo (debe incluir organization_id)
  * @returns {Promise<Object>} - Nodo creado con conteo de hijos
  */
 export const createNode = async (data) => {
     const id = generateUuidV7();
-    const humanId = await generateHumanId(ResourceHierarchy, null, null);
     const publicCode = generatePublicCode('RES', id);
+    
+    // Obtener human_id del contador atómico por organización (O(1), sin race conditions)
+    const humanId = await getNextHumanId(data.organization_id);
     
     const node = await ResourceHierarchy.create({
         id,
