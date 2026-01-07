@@ -219,7 +219,7 @@ module.exports = {
     console.log('✅ Todos los índices creados');
 
     // Crear función para actualizar automáticamente el path ltree
-    // NOTA: Usa 13 caracteres del UUID (12 sin guión) para evitar colisiones con UUIDv7
+    // NOTA: Usa el UUID completo (32 caracteres sin guiones) para garantizar unicidad absoluta
     await queryInterface.sequelize.query(`
       -- Función para generar path ltree desde un nodo
       CREATE OR REPLACE FUNCTION generate_resource_path(node_id UUID)
@@ -235,9 +235,9 @@ module.exports = {
         
         -- Recorrer hacia arriba hasta la raíz
         WHILE current_id IS NOT NULL LOOP
-          -- Agregar al inicio del path (formato: n<12 chars del uuid sin guiones>)
-          -- Usar 12 caracteres para evitar colisiones con UUIDv7 que tienen prefijos similares
-          node_label := 'n' || replace(left(current_id::text, 13), '-', '');
+          -- Agregar al inicio del path (formato: n<UUID completo sin guiones>)
+          -- Usar UUID completo (32 chars) para garantizar unicidad absoluta
+          node_label := 'n' || replace(current_id::text, '-', '');
           current_path := node_label || 
                           CASE WHEN current_path = '' THEN '' ELSE '.' || current_path END;
           
@@ -252,7 +252,7 @@ module.exports = {
       $$ LANGUAGE plpgsql;
 
       COMMENT ON FUNCTION generate_resource_path(UUID) IS 
-        'Genera el path ltree completo para un nodo recorriendo sus ancestros. Usa 12 caracteres del UUID para evitar colisiones.';
+        'Genera el path ltree completo para un nodo recorriendo sus ancestros. Usa UUID completo (32 chars) para unicidad absoluta.';
     `);
     console.log('✅ Función generate_resource_path creada');
 
