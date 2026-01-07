@@ -470,7 +470,7 @@ export const updateNode = async (nodePublicCode, updates, userId, ipAddress, use
         }
     }
     
-    // Audit log
+    // Audit log (crítico para compliance - debe esperarse)
     await logAuditAction({
         entityType: 'resource_hierarchy',
         entityId: nodePublicCode,
@@ -483,8 +483,17 @@ export const updateNode = async (nodePublicCode, updates, userId, ipAddress, use
     });
     
     // Invalidar cache del nodo y estructura relacionada
-    const parentPublicCode = node.parent_id ? (await repository.findNodeById(node.parent_id))?.public_code : null;
-    await cache.invalidateNodeAndRelated(nodePublicCode, node.organization_id, parentPublicCode);
+    // Usar timeout para evitar bloqueos indefinidos si Redis tiene problemas
+    try {
+        const parentPublicCode = node.parent_id ? (await repository.findNodeById(node.parent_id))?.public_code : null;
+        await Promise.race([
+            cache.invalidateNodeAndRelated(nodePublicCode, node.organization_id, parentPublicCode),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('Cache timeout')), 5000))
+        ]);
+    } catch (err) {
+        // Si el cache falla o timeout, logueamos pero no bloqueamos al usuario
+        hierarchyLogger.warn({ err: err.message, nodePublicCode }, 'Cache invalidation failed or timed out, continuing');
+    }
     
     hierarchyLogger.info({ nodeId: nodePublicCode, userId }, 'Node updated successfully');
     
@@ -530,7 +539,7 @@ export const deleteNode = async (nodePublicCode, cascade = false, userId, ipAddr
         throw repoError;
     }
     
-    // Audit log con detalle de todos los nodos eliminados
+    // Audit log con detalle de todos los nodos eliminados (crítico para compliance)
     await logAuditAction({
         entityType: 'resource_hierarchy',
         entityId: nodePublicCode,
@@ -549,9 +558,18 @@ export const deleteNode = async (nodePublicCode, cascade = false, userId, ipAddr
         userAgent
     });
     
-    // Invalidar cache de toda la organización (puede afectar múltiples nodos en cascade)
-    const parentPublicCode = node.parent_id ? (await repository.findNodeById(node.parent_id))?.public_code : null;
-    await cache.invalidateNodeAndRelated(nodePublicCode, node.organization_id, parentPublicCode);
+    // Invalidar cache de toda la organización
+    // Usar timeout para evitar bloqueos indefinidos si Redis tiene problemas
+    try {
+        const parentPublicCode = node.parent_id ? (await repository.findNodeById(node.parent_id))?.public_code : null;
+        await Promise.race([
+            cache.invalidateNodeAndRelated(nodePublicCode, node.organization_id, parentPublicCode),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('Cache timeout')), 5000))
+        ]);
+    } catch (err) {
+        // Si el cache falla o timeout, logueamos pero no bloqueamos al usuario
+        hierarchyLogger.warn({ err: err.message, nodePublicCode }, 'Cache invalidation failed or timed out, continuing');
+    }
     
     hierarchyLogger.info({ 
         nodeId: nodePublicCode, 
