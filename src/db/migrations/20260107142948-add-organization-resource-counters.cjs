@@ -46,17 +46,12 @@ module.exports = {
 
     // Crear índice parcial único para validación de reference_id duplicados
     // Esto acelera la búsqueda de nodos por reference_id dentro de una org
-    await queryInterface.addIndex('resource_hierarchy', 
-      ['organization_id', 'reference_id'], 
-      {
-        name: 'resource_hierarchy_org_reference_unique_idx',
-        unique: true,
-        where: {
-          reference_id: { [Sequelize.Op.ne]: null },
-          deleted_at: null
-        }
-      }
-    );
+    // Usar SQL literal para garantizar la condición WHERE correcta
+    await queryInterface.sequelize.query(`
+      CREATE UNIQUE INDEX IF NOT EXISTS resource_hierarchy_org_reference_unique_idx 
+      ON resource_hierarchy (organization_id, reference_id) 
+      WHERE reference_id IS NOT NULL AND deleted_at IS NULL
+    `);
 
     console.log('✅ Índice único para (organization_id, reference_id) creado');
 
@@ -79,8 +74,10 @@ module.exports = {
   },
 
   async down(queryInterface, Sequelize) {
-    // Eliminar índice
-    await queryInterface.removeIndex('resource_hierarchy', 'resource_hierarchy_org_reference_unique_idx');
+    // Eliminar índice usando SQL directo para consistencia
+    await queryInterface.sequelize.query(`
+      DROP INDEX IF EXISTS resource_hierarchy_org_reference_unique_idx
+    `);
     console.log('✅ Índice resource_hierarchy_org_reference_unique_idx eliminado');
 
     // Eliminar tabla de contadores

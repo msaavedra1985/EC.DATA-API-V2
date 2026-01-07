@@ -63,6 +63,7 @@ const getNodeByIdWithChildrenCount = async (nodeId) => {
  * Crear un nuevo nodo en la jerarquía
  * El path ltree se calcula automáticamente por el trigger de BD
  * El human_id se obtiene del contador atómico por organización
+ * Usa transacción para garantizar atomicidad entre contador e insert
  * 
  * @param {Object} data - Datos del nodo (debe incluir organization_id)
  * @returns {Promise<Object>} - Nodo creado con conteo de hijos
@@ -71,22 +72,28 @@ export const createNode = async (data) => {
     const id = generateUuidV7();
     const publicCode = generatePublicCode('RES', id);
     
-    // Obtener human_id del contador atómico por organización (O(1), sin race conditions)
-    const humanId = await getNextHumanId(data.organization_id);
-    
-    const node = await ResourceHierarchy.create({
-        id,
-        human_id: humanId,
-        public_code: publicCode,
-        ...data
+    // Usar transacción para que el incremento del contador y el insert sean atómicos
+    // Si el insert falla, el contador también se revierte
+    const result = await sequelize.transaction(async (transaction) => {
+        // Obtener human_id del contador atómico por organización (O(1), sin race conditions)
+        const humanId = await getNextHumanId(data.organization_id, transaction);
+        
+        const node = await ResourceHierarchy.create({
+            id,
+            human_id: humanId,
+            public_code: publicCode,
+            ...data
+        }, { transaction });
+        
+        // Recargar para obtener el path calculado por el trigger
+        await node.reload({ transaction });
+        
+        return node;
     });
-    
-    // Recargar para obtener el path calculado por el trigger
-    await node.reload();
     
     // Para nodos nuevos, children_count siempre es 0
     // Usamos el modelo Sequelize y agregamos children_count manualmente
-    const nodeData = node.toJSON();
+    const nodeData = result.toJSON();
     nodeData.children_count = 0;
     
     return toNodeDto(nodeData);
