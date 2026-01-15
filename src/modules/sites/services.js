@@ -107,6 +107,18 @@ export const getSiteByPublicCode = async (publicCode) => {
  * @returns {Promise<Object>} - Lista de sites paginada
  */
 export const listSites = async (filters) => {
+    const { showAll = false } = filters;
+    
+    // En modo showAll (God View), no filtramos por organización
+    if (showAll) {
+        // Preparar filtros para el repository sin organización
+        const repoFilters = { ...filters, showAll: true };
+        delete repoFilters.organization_id;
+        delete repoFilters.organization_ids;
+        
+        return await siteRepository.listSites(repoFilters);
+    }
+    
     // Preparar filtros de organización
     let organizationUuid = null;
     let organizationUuids = null;

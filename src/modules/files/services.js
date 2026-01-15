@@ -340,6 +340,18 @@ export const getFileByPublicCode = async (publicCode) => {
  * @returns {Promise<Object>} - Lista paginada de archivos
  */
 export const listFiles = async (filters) => {
+    const { showAll = false } = filters;
+    
+    // En modo showAll (God View), no filtramos por organización
+    if (showAll) {
+        const repoFilters = { ...filters, showAll: true };
+        delete repoFilters.organization_id;
+        delete repoFilters.organization_ids;
+        
+        const result = await repository.listFiles(repoFilters);
+        return toPublicFileListDto(result);
+    }
+    
     // Preparar filtros de organización
     let organizationUuid = null;
     let organizationUuids = null;

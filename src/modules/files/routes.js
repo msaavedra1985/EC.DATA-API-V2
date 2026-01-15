@@ -522,9 +522,11 @@ router.post('/:id/link', authenticate, validate(linkFileSchema), async (req, res
 router.get('/', authenticate, enforceActiveOrganization, validate(listFilesSchema), async (req, res, next) => {
     try {
         // Usa la organización del contexto establecido por el middleware
+        // Si showAll=true (God View), no filtra por organización
         const result = await fileServices.listFiles({
             ...req.query,
-            organization_id: req.organizationContext.id
+            organization_id: req.organizationContext.id,
+            showAll: req.organizationContext.showAll || false
         });
 
         res.json({

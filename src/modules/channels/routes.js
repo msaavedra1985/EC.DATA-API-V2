@@ -292,6 +292,7 @@ router.post('/', authenticate, requireRole(['system-admin', 'org-admin']), valid
 router.get('/', authenticate, enforceActiveOrganization, validate(getChannelsSchema), async (req, res, next) => {
     try {
         // Usa la organización del contexto establecido por el middleware
+        // Si showAll=true (God View), no filtra por organización
         const { device_id, channel_type, status, search, limit, offset } = req.query;
         
         const result = await channelServices.listChannels({
@@ -301,7 +302,8 @@ router.get('/', authenticate, enforceActiveOrganization, validate(getChannelsSch
             status,
             search,
             limit,
-            offset
+            offset,
+            showAll: req.organizationContext.showAll || false
         });
         
         // Respuesta con estructura estándar: data[] + meta{}

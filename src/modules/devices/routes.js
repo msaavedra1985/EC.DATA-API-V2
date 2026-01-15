@@ -276,9 +276,11 @@ router.post('/', authenticate, requireRole(['system-admin', 'org-admin']), valid
 router.get('/', authenticate, enforceActiveOrganization, validate(getDevicesSchema), async (req, res, next) => {
     try {
         // Usa la organización del contexto establecido por el middleware
+        // Si showAll=true (God View), no filtra por organización
         const result = await deviceServices.listDevices({
             ...req.query,
-            organization_id: req.organizationContext.id
+            organization_id: req.organizationContext.id,
+            showAll: req.organizationContext.showAll || false
         });
         
         // Respuesta con estructura estándar: data[] + meta{}

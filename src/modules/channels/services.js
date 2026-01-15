@@ -123,6 +123,8 @@ export const getChannelByPublicCode = async (publicCode) => {
  * @returns {Promise<Object>} - Lista de channels paginada
  */
 export const listChannels = async (filters) => {
+    const { showAll = false } = filters;
+    
     // Convertir device_id de public_code a UUID si es necesario
     let deviceUuid = filters.device_id;
     if (filters.device_id && !filters.device_id.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
@@ -134,6 +136,15 @@ export const listChannels = async (filters) => {
             throw error;
         }
         deviceUuid = device.id;
+    }
+    
+    // En modo showAll (God View), no filtramos por organización
+    if (showAll) {
+        const repoFilters = { ...filters, device_id: deviceUuid, showAll: true };
+        delete repoFilters.organization_id;
+        delete repoFilters.organization_ids;
+        
+        return await channelRepository.listChannels(repoFilters);
     }
     
     // Preparar filtros de organización

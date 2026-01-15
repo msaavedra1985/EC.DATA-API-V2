@@ -127,6 +127,17 @@ export const getDeviceByPublicCode = async (publicCode) => {
  * @returns {Promise<Object>} - Lista de devices paginada
  */
 export const listDevices = async (filters) => {
+    const { showAll = false } = filters;
+    
+    // En modo showAll (God View), no filtramos por organización
+    if (showAll) {
+        const repoFilters = { ...filters, showAll: true };
+        delete repoFilters.organization_id;
+        delete repoFilters.organization_ids;
+        
+        return await deviceRepository.listDevices(repoFilters);
+    }
+    
     // Preparar filtros de organización
     let organizationUuid = null;
     let organizationUuids = null;

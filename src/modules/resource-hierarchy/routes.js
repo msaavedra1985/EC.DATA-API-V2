@@ -225,6 +225,7 @@ router.get('/nodes',
     async (req, res, next) => {
         try {
             // Usa la organización del contexto establecido por el middleware
+            // Si showAll=true (God View), no filtra por organización
             const result = await hierarchyServices.listNodes(
                 req.organizationContext.id,
                 {
@@ -234,7 +235,8 @@ router.get('/nodes',
                     parentId: req.query.parent_id,
                     search: req.query.search,
                     isActive: req.query.is_active,
-                    includeCounts: req.query.include_counts
+                    includeCounts: req.query.include_counts,
+                    showAll: req.organizationContext.showAll || false
                 }
             );
             
@@ -362,11 +364,13 @@ router.post('/nodes/batch',
     async (req, res, next) => {
         try {
             // Usa la organización del contexto establecido por el middleware
+            // Si showAll=true (God View), no filtra por organización
             const nodes = await hierarchyServices.batchGetNodes(
                 req.body.ids,
                 { 
                     includeCounts: req.body.include_counts,
-                    organizationId: req.organizationContext.id
+                    organizationId: req.organizationContext.id,
+                    showAll: req.organizationContext.showAll || false
                 }
             );
             
@@ -969,6 +973,7 @@ router.get('/nodes/:id/children',
     async (req, res, next) => {
         try {
             // Usa la organización del contexto establecido por el middleware
+            // Si showAll=true (God View), no filtra por organización
             const result = await hierarchyServices.getNodeChildren(
                 req.params.id,
                 req.organizationContext.id,
@@ -976,7 +981,8 @@ router.get('/nodes/:id/children',
                     limit: req.query.limit,
                     offset: req.query.offset,
                     nodeType: req.query.node_type,
-                    includeCounts: req.query.include_counts
+                    includeCounts: req.query.include_counts,
+                    showAll: req.organizationContext.showAll || false
                 }
             );
             
@@ -1144,12 +1150,14 @@ router.get('/tree',
     async (req, res, next) => {
         try {
             // Usa la organización del contexto establecido por el middleware
+            // Si showAll=true (God View), no filtra por organización
             const tree = await hierarchyServices.getTree(
                 req.organizationContext.id,
                 {
                     rootId: req.query.root_id,
                     maxDepth: req.query.max_depth,
-                    includeCounts: req.query.include_counts
+                    includeCounts: req.query.include_counts,
+                    showAll: req.organizationContext.showAll || false
                 }
             );
             
@@ -1205,6 +1213,7 @@ router.get('/roots',
     async (req, res, next) => {
         try {
             // Usa la organización del contexto establecido por el middleware
+            // Si showAll=true (God View), no filtra por organización
             const result = await hierarchyServices.getNodeChildren(
                 'root',
                 req.organizationContext.id,
@@ -1212,7 +1221,8 @@ router.get('/roots',
                     limit: req.query.limit,
                     offset: req.query.offset,
                     nodeType: req.query.node_type,
-                    includeCounts: req.query.include_counts
+                    includeCounts: req.query.include_counts,
+                    showAll: req.organizationContext.showAll || false
                 }
             );
             

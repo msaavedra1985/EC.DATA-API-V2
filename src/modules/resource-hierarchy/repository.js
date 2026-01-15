@@ -184,7 +184,7 @@ export const findNodeByReferenceId = async (referenceId, organizationId) => {
  * @returns {Promise<Object>} - Lista de hijos y total
  */
 export const getChildren = async (parentId, organizationId, options = {}) => {
-    const { limit = 100, offset = 0, nodeType = null, includeCounts = true } = options;
+    const { limit = 100, offset = 0, nodeType = null, includeCounts = true, showAll = false } = options;
     
     // Seleccionar columnas: incluir conteo de hijos solo si se solicita
     const selectColumns = includeCounts
@@ -192,16 +192,23 @@ export const getChildren = async (parentId, organizationId, options = {}) => {
             WHERE c.parent_id = rh.id AND c.deleted_at IS NULL AND c.is_active = true) as children_count`
         : 'rh.*';
     
+    // Si showAll=true, no filtramos por organización (God View)
     let query = `
         SELECT ${selectColumns}
         FROM resource_hierarchy rh
-        WHERE rh.organization_id = $1
-          AND rh.deleted_at IS NULL
+        WHERE rh.deleted_at IS NULL
           AND rh.is_active = true
     `;
     
-    const replacements = [organizationId];
-    let paramIndex = 2;
+    const replacements = [];
+    let paramIndex = 1;
+    
+    // Solo filtrar por organización si no está en modo showAll
+    if (!showAll && organizationId) {
+        query += ` AND rh.organization_id = $${paramIndex}`;
+        replacements.push(organizationId);
+        paramIndex++;
+    }
     
     // Filtro por parent_id (null para raíces)
     if (parentId === null) {
@@ -218,14 +225,29 @@ export const getChildren = async (parentId, organizationId, options = {}) => {
         paramIndex++;
     }
     
-    // Contar total (sin la subconsulta de children_count)
-    const countQuery = `SELECT COUNT(*) as count FROM resource_hierarchy rh 
-        WHERE rh.organization_id = $1 AND rh.deleted_at IS NULL AND rh.is_active = true
-        ${parentId === null ? 'AND rh.parent_id IS NULL' : `AND rh.parent_id = $2`}
-        ${nodeType ? `AND rh.node_type = $${parentId === null ? 2 : 3}` : ''}`;
-    const countReplacements = parentId === null 
-        ? (nodeType ? [organizationId, nodeType] : [organizationId])
-        : (nodeType ? [organizationId, parentId, nodeType] : [organizationId, parentId]);
+    // Construir query de conteo dinámicamente
+    let countQuery = `SELECT COUNT(*) as count FROM resource_hierarchy rh WHERE rh.deleted_at IS NULL AND rh.is_active = true`;
+    const countReplacements = [];
+    let countParamIndex = 1;
+    
+    if (!showAll && organizationId) {
+        countQuery += ` AND rh.organization_id = $${countParamIndex}`;
+        countReplacements.push(organizationId);
+        countParamIndex++;
+    }
+    
+    if (parentId === null) {
+        countQuery += ` AND rh.parent_id IS NULL`;
+    } else {
+        countQuery += ` AND rh.parent_id = $${countParamIndex}`;
+        countReplacements.push(parentId);
+        countParamIndex++;
+    }
+    
+    if (nodeType) {
+        countQuery += ` AND rh.node_type = $${countParamIndex}`;
+        countReplacements.push(nodeType);
+    }
     const countResult = await sequelize.query(countQuery, {
         bind: countReplacements,
         type: QueryTypes.SELECT
@@ -365,7 +387,7 @@ export const getAncestors = async (nodeId) => {
 export const getTree = async (organizationId, options = {}) => {
     // maxDepth por defecto: 3 niveles para evitar cargas masivas
     // Se puede aumentar hasta 10 o null para carga completa
-    const { rootId = null, maxDepth = 3, limit = 500 } = options;
+    const { rootId = null, maxDepth = 3, limit = 500, showAll = false } = options;
     
     let nodes;
     
@@ -376,18 +398,25 @@ export const getTree = async (organizationId, options = {}) => {
         nodes = rootNode ? [rootNode, ...result.data] : result.data;
     } else {
         // Obtener árbol completo con conteo de hijos y límite de profundidad
+        // Si showAll=true, no filtramos por organización (God View)
         let query = `
             SELECT rh.*,
                    (SELECT COUNT(*) FROM resource_hierarchy c 
                     WHERE c.parent_id = rh.id AND c.deleted_at IS NULL AND c.is_active = true) as children_count
             FROM resource_hierarchy rh
-            WHERE rh.organization_id = $1
-              AND rh.deleted_at IS NULL
+            WHERE rh.deleted_at IS NULL
               AND rh.is_active = true
         `;
         
-        const replacements = [organizationId];
-        let paramIndex = 2;
+        const replacements = [];
+        let paramIndex = 1;
+        
+        // Solo filtrar por organización si no está en modo showAll
+        if (!showAll && organizationId) {
+            query += ` AND rh.organization_id = $${paramIndex}`;
+            replacements.push(organizationId);
+            paramIndex++;
+        }
         
         // Agregar filtro de profundidad si está definido
         if (maxDepth !== null) {
@@ -708,21 +737,29 @@ export const listNodes = async (organizationId, options = {}) => {
         nodeType = null,
         parentId = undefined,
         search = null,
-        isActive = true
+        isActive = true,
+        showAll = false  // Nuevo: si true, no filtra por organización (God View)
     } = options;
     
     // Usar raw query para incluir conteo de hijos
+    // Si showAll=true, no filtramos por organización (para system-admin en God View)
     let query = `
         SELECT rh.*,
                (SELECT COUNT(*) FROM resource_hierarchy c 
                 WHERE c.parent_id = rh.id AND c.deleted_at IS NULL AND c.is_active = true) as children_count
         FROM resource_hierarchy rh
-        WHERE rh.organization_id = $1
-          AND rh.deleted_at IS NULL
+        WHERE rh.deleted_at IS NULL
     `;
     
-    const replacements = [organizationId];
-    let paramIndex = 2;
+    const replacements = [];
+    let paramIndex = 1;
+    
+    // Solo filtrar por organización si no está en modo showAll
+    if (!showAll && organizationId) {
+        query += ` AND rh.organization_id = $${paramIndex}`;
+        replacements.push(organizationId);
+        paramIndex++;
+    }
     
     if (isActive !== null) {
         query += ` AND rh.is_active = $${paramIndex}`;

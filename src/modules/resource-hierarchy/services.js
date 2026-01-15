@@ -141,15 +141,20 @@ export const getNodeByPublicCode = async (publicCode) => {
  * @returns {Promise<Object>} - Lista de hijos
  */
 export const getNodeChildren = async (nodePublicCode, organizationId, options = {}) => {
-    const organizationUuid = await resolveOrganizationId(organizationId);
+    const { showAll = false } = options;
     
-    // Intentar obtener de cache primero
-    const cachedResult = await cache.getCachedChildren(nodePublicCode, organizationUuid, options);
-    if (cachedResult) {
-        return {
-            data: cachedResult.data.map(sanitizeNode),
-            meta: cachedResult.meta
-        };
+    // En modo showAll (God View), no resolvemos ni filtramos por organización
+    const organizationUuid = showAll ? null : await resolveOrganizationId(organizationId);
+    
+    // Intentar obtener de cache primero (solo si hay organización específica)
+    if (!showAll && organizationUuid) {
+        const cachedResult = await cache.getCachedChildren(nodePublicCode, organizationUuid, options);
+        if (cachedResult) {
+            return {
+                data: cachedResult.data.map(sanitizeNode),
+                meta: cachedResult.meta
+            };
+        }
     }
     
     let parentUuid = null;
@@ -165,7 +170,7 @@ export const getNodeChildren = async (nodePublicCode, organizationId, options = 
         parentUuid = parentNode.id;
     }
     
-    const result = await repository.getChildren(parentUuid, organizationUuid, options);
+    const result = await repository.getChildren(parentUuid, organizationUuid, { ...options, showAll });
     
     const response = {
         data: result.data,
@@ -252,13 +257,18 @@ export const getNodeAncestors = async (nodePublicCode) => {
  * @returns {Promise<Array>} - Árbol estructurado
  */
 export const getTree = async (organizationId, options = {}) => {
-    const organizationUuid = await resolveOrganizationId(organizationId);
+    const { showAll = false } = options;
     
-    // Intentar obtener de cache primero
-    const cacheOptions = { rootId: options.rootId, maxDepth: options.maxDepth };
-    const cachedTree = await cache.getCachedTree(organizationUuid, cacheOptions);
-    if (cachedTree) {
-        return sanitizeTree(cachedTree);
+    // En modo showAll (God View), no resolvemos ni filtramos por organización
+    const organizationUuid = showAll ? null : await resolveOrganizationId(organizationId);
+    
+    // Intentar obtener de cache primero (solo si hay organización específica)
+    if (!showAll && organizationUuid) {
+        const cacheOptions = { rootId: options.rootId, maxDepth: options.maxDepth };
+        const cachedTree = await cache.getCachedTree(organizationUuid, cacheOptions);
+        if (cachedTree) {
+            return sanitizeTree(cachedTree);
+        }
     }
     
     let rootUuid = null;
@@ -275,11 +285,15 @@ export const getTree = async (organizationId, options = {}) => {
     
     const tree = await repository.getTree(organizationUuid, {
         rootId: rootUuid,
-        maxDepth: options.maxDepth
+        maxDepth: options.maxDepth,
+        showAll
     });
     
-    // Guardar en cache
-    await cache.cacheTree(organizationUuid, cacheOptions, tree);
+    // Guardar en cache (solo si hay organización específica)
+    if (!showAll && organizationUuid) {
+        const cacheOptions = { rootId: options.rootId, maxDepth: options.maxDepth };
+        await cache.cacheTree(organizationUuid, cacheOptions, tree);
+    }
     
     return sanitizeTree(tree);
 };
@@ -587,21 +601,28 @@ export const deleteNode = async (nodePublicCode, cascade = false, userId, ipAddr
 
 /**
  * Listar nodos de una organización con filtros
+ * Soporta modo God View cuando showAll=true (no filtra por organización)
  * 
- * @param {string} organizationId - ID de la organización
+ * @param {string|null} organizationId - ID de la organización (null si showAll)
  * @param {Object} options - Opciones de filtro y paginación
+ * @param {boolean} options.showAll - Si true, no filtra por organización (God View)
  * @returns {Promise<Object>} - Lista de nodos
  */
 export const listNodes = async (organizationId, options = {}) => {
-    const organizationUuid = await resolveOrganizationId(organizationId);
+    const { showAll = false } = options;
     
-    // Intentar obtener de cache primero
-    const cachedResult = await cache.getCachedList(organizationUuid, options);
-    if (cachedResult) {
-        return {
-            data: cachedResult.data.map(sanitizeNode),
-            meta: cachedResult.meta
-        };
+    // En modo showAll (God View), no resolvemos ni filtramos por organización
+    const organizationUuid = showAll ? null : await resolveOrganizationId(organizationId);
+    
+    // Intentar obtener de cache primero (solo si hay organización específica)
+    if (!showAll && organizationUuid) {
+        const cachedResult = await cache.getCachedList(organizationUuid, options);
+        if (cachedResult) {
+            return {
+                data: cachedResult.data.map(sanitizeNode),
+                meta: cachedResult.meta
+            };
+        }
     }
     
     // Resolver parent_id si se proporciona como public_code
@@ -619,7 +640,8 @@ export const listNodes = async (organizationId, options = {}) => {
     
     const result = await repository.listNodes(organizationUuid, {
         ...options,
-        parentId: parentUuid
+        parentId: parentUuid,
+        showAll
     });
     
     const response = {
