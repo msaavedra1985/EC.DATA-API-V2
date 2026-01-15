@@ -123,7 +123,7 @@ POST /api/v1/api-keys
     "name": "Sistema de Facturación",
     "organization_id": "ORG-xxx",
     "scopes": ["channels:read", "telemetry:read"],
-    "secret": "sk_live_AbCdEfGhIjKlMnOpQrStUvWxYz123456",
+    "secret": "sec_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
     "created_at": "2025-01-05T10:30:00Z"
   },
   "warning": "Guardá el secret de forma segura. No se podrá recuperar después de cerrar esta ventana."
@@ -141,7 +141,7 @@ Enviar client_id y secret en cada petición mediante headers:
 ```http
 GET /api/v1/channels
 X-Client-ID: cli_a1b2c3d4e5f6
-X-Client-Secret: sk_live_AbCdEfGhIjKlMnOpQrStUvWxYz123456
+X-Client-Secret: sec_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ```
 
 ### Diagrama de Autenticación
@@ -250,7 +250,7 @@ POST /api/v1/api-keys/:id/regenerate
   "ok": true,
   "data": {
     "id": "APIKEY-xxx",
-    "new_secret": "sk_live_NuEvO_SeCrEt_123456"
+    "new_secret": "sec_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
   },
   "warning": "El secret anterior ya no es válido"
 }
