@@ -231,22 +231,43 @@ router.post('/login', loginRateLimitMiddleware, validate(loginSchema), async (re
             // Login exitoso: resetear contadores de rate limiting
             await resetLoginCounters(ip, identifier);
 
-            // Obtener organización primaria del usuario
+            // Obtener organización primaria del usuario con su información completa
             const primaryOrg = await organizationService.getPrimaryOrganization(result.user.id);
             const activeOrgId = primaryOrg ? primaryOrg.organization_id : null;
             const primaryOrgId = activeOrgId;
             const canAccessAllOrgs = result.user.role && result.user.role.name === 'system-admin';
+            
+            // Obtener información de la organización primaria (public_code, nombre, logo)
+            let primaryOrgInfo = null;
+            if (primaryOrgId) {
+                const orgDetails = await organizationRepository.findOrganizationByIdInternal(primaryOrgId);
+                if (orgDetails) {
+                    primaryOrgInfo = {
+                        publicCode: orgDetails.public_code,
+                        name: orgDetails.name,
+                        logoUrl: orgDetails.logo_url
+                    };
+                }
+            }
 
             // Crear session_context y cachearlo en Redis
+            // Incluye public_codes para que el frontend no necesite resolverlos
             const sessionContext = {
                 activeOrgId,
+                activeOrgPublicCode: primaryOrgInfo?.publicCode || null,
+                activeOrgName: primaryOrgInfo?.name || null,
+                activeOrgLogoUrl: primaryOrgInfo?.logoUrl || null,
                 primaryOrgId,
+                primaryOrgPublicCode: primaryOrgInfo?.publicCode || null,
+                primaryOrgName: primaryOrgInfo?.name || null,
+                primaryOrgLogoUrl: primaryOrgInfo?.logoUrl || null,
                 canAccessAllOrgs,
                 role: result.user.role?.name || null,
                 email: result.user.email,
                 firstName: result.user.first_name,
                 lastName: result.user.last_name,
-                userId: result.user.id
+                userId: result.user.id,
+                userPublicCode: result.user.public_code || null
             };
 
             await sessionContextCache.setSessionContext(result.user.id, sessionContext);
@@ -999,19 +1020,24 @@ router.post('/switch-org', authenticate, validate(switchOrgSchema), async (req, 
         const userId = req.user.userId;
         const { organization_id } = req.body;
         
-        // Convertir public_code a UUID interno si es necesario
-        let organizationUuid = organization_id;
+        // Obtener información completa de la organización
+        let org;
         if (!organization_id.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
-            // Es public_code, necesitamos obtener el UUID interno
-            const org = await organizationRepository.findOrganizationByPublicCodeInternal(organization_id);
-            if (!org) {
-                const error = new Error('Organización no encontrada');
-                error.status = 404;
-                error.code = 'ORGANIZATION_NOT_FOUND';
-                throw error;
-            }
-            organizationUuid = org.id;
+            // Es public_code
+            org = await organizationRepository.findOrganizationByPublicCodeInternal(organization_id);
+        } else {
+            // Es UUID
+            org = await organizationRepository.findOrganizationByIdInternal(organization_id);
         }
+        
+        if (!org) {
+            const error = new Error('Organización no encontrada');
+            error.status = 404;
+            error.code = 'ORGANIZATION_NOT_FOUND';
+            throw error;
+        }
+        
+        const organizationUuid = org.id;
         
         // Extraer datos de sesión para auditoría
         const sessionData = {
@@ -1021,8 +1047,12 @@ router.post('/switch-org', authenticate, validate(switchOrgSchema), async (req, 
         
         const result = await authServices.switchOrganization(userId, organizationUuid, sessionData);
         
-        // Actualizar session_context en Redis con la nueva activeOrgId (usar UUID interno)
-        const updatedContext = await sessionContextCache.updateActiveOrg(userId, organizationUuid);
+        // Actualizar session_context en Redis con la nueva activeOrgId e info de la org
+        const updatedContext = await sessionContextCache.updateActiveOrg(userId, organizationUuid, {
+            publicCode: org.public_code,
+            name: org.name,
+            logoUrl: org.logo_url
+        });
         
         return successResponse(res, {
             ...result,
@@ -1095,37 +1125,26 @@ router.post('/impersonate-org', authenticate, async (req, res, next) => {
             });
         }
         
-        // Resolver public_code a UUID interno (o viceversa si es UUID)
-        let organizationUuid;
-        let orgPublicCode;
-        
+        // Obtener información completa de la organización a impersonar
+        let org;
         const isUuid = organization_id.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
         
         if (isUuid) {
-            // Es UUID, buscar para obtener public_code
-            const org = await organizationRepository.findOrganizationByIdInternal(organization_id);
-            if (!org) {
-                return errorResponse(res, {
-                    message: 'Organización no encontrada',
-                    status: 404,
-                    code: 'ORGANIZATION_NOT_FOUND'
-                });
-            }
-            organizationUuid = org.id;
-            orgPublicCode = org.public_code;
+            org = await organizationRepository.findOrganizationByIdInternal(organization_id);
         } else {
-            // Es public_code, buscar para obtener UUID
-            const org = await organizationRepository.findOrganizationByPublicCodeInternal(organization_id);
-            if (!org) {
-                return errorResponse(res, {
-                    message: 'Organización no encontrada',
-                    status: 404,
-                    code: 'ORGANIZATION_NOT_FOUND'
-                });
-            }
-            organizationUuid = org.id;
-            orgPublicCode = org.public_code;
+            org = await organizationRepository.findOrganizationByPublicCodeInternal(organization_id);
         }
+        
+        if (!org) {
+            return errorResponse(res, {
+                message: 'Organización no encontrada',
+                status: 404,
+                code: 'ORGANIZATION_NOT_FOUND'
+            });
+        }
+        
+        const organizationUuid = org.id;
+        const orgPublicCode = org.public_code;
         
         // Extraer datos de sesión
         const sessionData = {
@@ -1137,8 +1156,12 @@ router.post('/impersonate-org', authenticate, async (req, res, next) => {
         // Generar nuevos tokens con la org activa (impersonating se calculará automáticamente)
         const result = await authServices.switchOrganization(userId, organizationUuid, sessionData);
         
-        // Actualizar session_context en Redis
-        const updatedContext = await sessionContextCache.updateActiveOrg(userId, organizationUuid);
+        // Actualizar session_context en Redis con info completa de la org
+        const updatedContext = await sessionContextCache.updateActiveOrg(userId, organizationUuid, {
+            publicCode: org.public_code,
+            name: org.name,
+            logoUrl: org.logo_url
+        });
         
         // Log de auditoría para impersonación
         const { logAuditAction } = await import('../../helpers/auditLog.js');

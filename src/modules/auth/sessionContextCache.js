@@ -85,10 +85,14 @@ export const deleteSessionContext = async (userId) => {
  * Usado cuando se hace switch de organización
  * 
  * @param {string} userId - ID del usuario
- * @param {string} newActiveOrgId - Nuevo ID de organización activa
+ * @param {string} newActiveOrgId - Nuevo ID de organización activa (UUID o null)
+ * @param {Object} orgInfo - Información adicional de la organización
+ * @param {string} orgInfo.publicCode - Public code de la org (ej: ORG-xxx)
+ * @param {string} orgInfo.name - Nombre de la organización
+ * @param {string} orgInfo.logoUrl - URL del logo
  * @returns {Promise<Object|null>} - Contexto actualizado o null si falla
  */
-export const updateActiveOrg = async (userId, newActiveOrgId) => {
+export const updateActiveOrg = async (userId, newActiveOrgId, orgInfo = null) => {
     try {
         const context = await getSessionContext(userId);
         
@@ -97,7 +101,22 @@ export const updateActiveOrg = async (userId, newActiveOrgId) => {
             return null;
         }
         
+        // Actualizar activeOrgId
         context.activeOrgId = newActiveOrgId;
+        
+        // Actualizar información de la organización activa
+        if (newActiveOrgId === null) {
+            // Modo God View - sin org activa
+            context.activeOrgPublicCode = null;
+            context.activeOrgName = null;
+            context.activeOrgLogoUrl = null;
+        } else if (orgInfo) {
+            // Con información de org proporcionada
+            context.activeOrgPublicCode = orgInfo.publicCode || null;
+            context.activeOrgName = orgInfo.name || null;
+            context.activeOrgLogoUrl = orgInfo.logoUrl || null;
+        }
+        
         await setSessionContext(userId, context);
         
         logger.debug(`Updated activeOrgId to ${newActiveOrgId} for user ${userId}`, { component: 'session-context-cache' });
