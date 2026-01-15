@@ -297,6 +297,15 @@ export const verifyToken = async (token) => {
             error.code = 'SESSION_REVOKED';
             throw error;
         }
+        
+        // Validar que solo system-admin puede tener activeOrgId null
+        const isSystemAdmin = decoded.role === 'system-admin';
+        if (decoded.activeOrgId === null && !isSystemAdmin) {
+            const error = new Error('auth.token.org_required');
+            error.status = 403;
+            error.code = 'ORGANIZATION_REQUIRED';
+            throw error;
+        }
 
         return {
             userId: user.id,
@@ -306,7 +315,9 @@ export const verifyToken = async (token) => {
             primaryOrgId: decoded.primaryOrgId,
             canAccessAllOrgs: decoded.canAccessAllOrgs || false,
             first_name: user.first_name,
-            last_name: user.last_name
+            last_name: user.last_name,
+            // impersonating solo para system-admin (indica si está actuando como otra org)
+            ...(isSystemAdmin && { impersonating: decoded.impersonating || false })
         };
     } catch (error) {
         if (error.name === 'JsonWebTokenError') {
@@ -510,12 +521,27 @@ const generateTokens = async (user, sessionData = {}) => {
     // Obtener organización primaria del usuario
     const primaryOrg = await organizationService.getPrimaryOrganization(user.id);
     
-    // activeOrgId: usar la especificada en sessionData o la primaria por defecto
-    const activeOrgId = sessionData.activeOrgId || (primaryOrg ? primaryOrg.organization_id : null);
+    // Determinar si es system-admin (puede acceder a todas las orgs y tener activeOrgId null)
+    const isSystemAdmin = user.role && user.role.name === 'system-admin';
+    const canAccessAllOrgs = isSystemAdmin;
+    
+    // activeOrgId: 
+    // - Si es system-admin y no se especifica org, puede ser null (panel admin global)
+    // - Para otros roles, siempre usa la org primaria como fallback
+    let activeOrgId;
+    if (sessionData.activeOrgId !== undefined) {
+        // Se especificó explícitamente (puede ser null para system-admin)
+        activeOrgId = sessionData.activeOrgId;
+    } else {
+        // Usar org primaria por defecto
+        activeOrgId = primaryOrg ? primaryOrg.organization_id : null;
+    }
+    
     const primaryOrgId = primaryOrg ? primaryOrg.organization_id : null;
-
-    // Determinar si puede acceder a todas las orgs (solo system-admin)
-    const canAccessAllOrgs = user.role && user.role.name === 'system-admin';
+    
+    // impersonating: solo para system-admin, indica si está actuando como otra org
+    // Es true cuando system-admin tiene activeOrgId pero no es su org primaria
+    const impersonating = isSystemAdmin && activeOrgId !== null && activeOrgId !== primaryOrgId;
 
     const basePayload = {
         iss: JWT_ISSUER,
@@ -525,7 +551,9 @@ const generateTokens = async (user, sessionData = {}) => {
         primaryOrgId,
         canAccessAllOrgs,
         sessionVersion,
-        role: user.role ? user.role.name : null
+        role: user.role ? user.role.name : null,
+        // impersonating solo se incluye para system-admin
+        ...(isSystemAdmin && { impersonating })
     };
 
     const access_token = jwt.sign(
@@ -838,4 +866,20 @@ export const getUserAvailableOrganizations = async (userId) => {
         userOrganizations: accessibleOrganizations,
         totalAccessible: scope.organizationIds.length
     };
+};
+
+/**
+ * Generar tokens JWT para un usuario (función pública)
+ * Útil para operaciones como exit-impersonation donde se necesita generar tokens
+ * sin pasar por el flujo de login
+ * 
+ * @param {Object} user - Objeto usuario con id, role, etc.
+ * @param {Object} [sessionData] - Datos de la sesión
+ * @param {string} [sessionData.activeOrgId] - ID de org activa (puede ser null para system-admin)
+ * @param {string} [sessionData.userAgent] - User agent
+ * @param {string} [sessionData.ipAddress] - IP del cliente
+ * @returns {Promise<Object>} - { access_token, refresh_token, expires_in, token_type }
+ */
+export const generateTokensForUser = async (user, sessionData = {}) => {
+    return await generateTokens(user, sessionData);
 };

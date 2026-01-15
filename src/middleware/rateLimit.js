@@ -52,17 +52,17 @@ const RATE_LIMITS = {
  * @returns {Object} Configuración de límite
  */
 const getRateLimitConfig = (req) => {
-    // System admin: límite más alto
-    if (req.user && req.user.role && req.user.role.name === 'system-admin') {
+    // Obtener rol del usuario (es string directo, no objeto)
+    const userRole = req.user?.role;
+    
+    // System admin: límite más alto (aunque ahora tiene bypass completo)
+    if (userRole === 'system-admin') {
         return RATE_LIMITS.systemAdmin;
     }
     
     // Org admin o manager: límite alto
-    if (req.user && req.user.role) {
-        const roleName = req.user.role.name;
-        if (roleName === 'org-admin' || roleName === 'org-manager') {
-            return RATE_LIMITS.admin;
-        }
+    if (userRole === 'org-admin' || userRole === 'org-manager') {
+        return RATE_LIMITS.admin;
     }
     
     // Endpoints de autenticación: límite bajo (prevenir brute force)
@@ -125,6 +125,15 @@ export const rateLimitMiddleware = (options = {}) => {
     
     return async (req, res, next) => {
         try {
+            // BYPASS COMPLETO para system-admin
+            // System admins no tienen límite de rate (acceso total a la plataforma)
+            const userRole = req.user?.role;
+            if (userRole === 'system-admin') {
+                // Agregar header indicando bypass
+                res.set('X-RateLimit-Bypass', 'system-admin');
+                return next();
+            }
+            
             // Obtener configuración de límite para este request
             const limitConfig = getRateLimitConfig(req);
             const { windowMs, max, message } = limitConfig;

@@ -508,10 +508,22 @@ router.get('/me', authenticate, async (req, res, next) => {
             ...user,
             role: user.role?.name || null
         };
+        
+        // Agregar información de impersonación para system-admin
+        // Esto permite al frontend mostrar un indicador visual cuando se está impersonando
+        const isSystemAdmin = req.user.role === 'system-admin';
+        const impersonationInfo = isSystemAdmin ? {
+            impersonating: req.user.impersonating || false,
+            // Si está impersonando, incluir public_code de la org (no UUID)
+            impersonatedOrg: req.user.impersonating && req.user.activeOrgId 
+                ? { publicCode: sessionContext?.activeOrgPublicCode || null }
+                : null
+        } : {};
 
         return successResponse(res, { 
             user: userResponse, 
             session_context: sessionContext,
+            ...impersonationInfo,
             message: 'auth.profile.retrieved' 
         });
     } catch (error) {
@@ -1023,6 +1035,220 @@ router.post('/switch-org', authenticate, validate(switchOrgSchema), async (req, 
 
 /**
  * @swagger
+ * /auth/impersonate-org:
+ *   post:
+ *     summary: Impersonar una organización (solo system-admin)
+ *     description: |
+ *       Permite a un system-admin "entrar" a una organización específica para ver/gestionar
+ *       sus recursos como si fuera parte de ella. El JWT resultante tendrá `impersonating: true`.
+ *       
+ *       **Diferencia con switch-org:**
+ *       - switch-org: Cambia entre orgs a las que el usuario pertenece
+ *       - impersonate-org: Permite a system-admin acceder a CUALQUIER org
+ *       
+ *       El frontend debe mostrar un indicador visual cuando `impersonating: true`.
+ *     tags: [Auth]
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - organization_id
+ *             properties:
+ *               organization_id:
+ *                 type: string
+ *                 description: Public code de la organización a impersonar (ej. ORG-XXXXX)
+ *                 example: ORG-ABC123-4
+ *     responses:
+ *       200:
+ *         description: Impersonación exitosa, nuevos tokens emitidos
+ *       403:
+ *         description: Solo system-admin puede usar este endpoint
+ *       404:
+ *         description: Organización no encontrada
+ */
+router.post('/impersonate-org', authenticate, async (req, res, next) => {
+    try {
+        const userId = req.user.userId;
+        const userRole = req.user.role;
+        
+        // Solo system-admin puede impersonar
+        if (userRole !== 'system-admin') {
+            return errorResponse(res, {
+                message: 'auth.permission.denied',
+                status: 403,
+                code: 'SYSTEM_ADMIN_REQUIRED'
+            });
+        }
+        
+        const { organization_id } = req.body;
+        
+        if (!organization_id) {
+            return errorResponse(res, {
+                message: 'organization_id is required',
+                status: 400,
+                code: 'MISSING_ORGANIZATION_ID'
+            });
+        }
+        
+        // Resolver public_code a UUID interno (o viceversa si es UUID)
+        let organizationUuid;
+        let orgPublicCode;
+        
+        const isUuid = organization_id.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
+        
+        if (isUuid) {
+            // Es UUID, buscar para obtener public_code
+            const org = await organizationRepository.findOrganizationByIdInternal(organization_id);
+            if (!org) {
+                return errorResponse(res, {
+                    message: 'Organización no encontrada',
+                    status: 404,
+                    code: 'ORGANIZATION_NOT_FOUND'
+                });
+            }
+            organizationUuid = org.id;
+            orgPublicCode = org.public_code;
+        } else {
+            // Es public_code, buscar para obtener UUID
+            const org = await organizationRepository.findOrganizationByPublicCodeInternal(organization_id);
+            if (!org) {
+                return errorResponse(res, {
+                    message: 'Organización no encontrada',
+                    status: 404,
+                    code: 'ORGANIZATION_NOT_FOUND'
+                });
+            }
+            organizationUuid = org.id;
+            orgPublicCode = org.public_code;
+        }
+        
+        // Extraer datos de sesión
+        const sessionData = {
+            userAgent: req.headers['user-agent'],
+            ipAddress: req.ip || req.connection.remoteAddress,
+            activeOrgId: organizationUuid // Setear la org a impersonar
+        };
+        
+        // Generar nuevos tokens con la org activa (impersonating se calculará automáticamente)
+        const result = await authServices.switchOrganization(userId, organizationUuid, sessionData);
+        
+        // Actualizar session_context en Redis
+        const updatedContext = await sessionContextCache.updateActiveOrg(userId, organizationUuid);
+        
+        // Log de auditoría para impersonación
+        const { logAuditAction } = await import('../../helpers/auditLog.js');
+        await logAuditAction({
+            entityType: 'auth',
+            entityId: userId,
+            action: 'impersonate_started',
+            performedBy: userId,
+            metadata: { 
+                impersonated_org_public_code: orgPublicCode
+            },
+            ipAddress: req.ip,
+            userAgent: req.headers['user-agent'],
+            impersonatedOrgId: organizationUuid
+        });
+        
+        return successResponse(res, {
+            ...result,
+            session_context: updatedContext,
+            impersonating: true,
+            impersonatedOrg: { publicCode: orgPublicCode },
+            message: 'Impersonation started successfully'
+        });
+    } catch (error) {
+        next(error);
+    }
+});
+
+/**
+ * @swagger
+ * /auth/exit-impersonation:
+ *   post:
+ *     summary: Salir del modo impersonación (solo system-admin)
+ *     description: |
+ *       Permite a un system-admin salir del modo impersonación y volver al panel admin global.
+ *       El JWT resultante tendrá `activeOrgId: null` e `impersonating: false`.
+ *     tags: [Auth]
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Salida de impersonación exitosa, nuevos tokens emitidos
+ *       403:
+ *         description: Solo system-admin puede usar este endpoint
+ */
+router.post('/exit-impersonation', authenticate, async (req, res, next) => {
+    try {
+        const userId = req.user.userId;
+        const userRole = req.user.role;
+        
+        // Solo system-admin puede usar este endpoint
+        if (userRole !== 'system-admin') {
+            return errorResponse(res, {
+                message: 'auth.permission.denied',
+                status: 403,
+                code: 'SYSTEM_ADMIN_REQUIRED'
+            });
+        }
+        
+        // Extraer datos de sesión con activeOrgId explícitamente null
+        const sessionData = {
+            userAgent: req.headers['user-agent'],
+            ipAddress: req.ip || req.connection.remoteAddress,
+            activeOrgId: null // Volver a modo admin global
+        };
+        
+        // Obtener usuario para generar tokens
+        const user = await authRepository.findUserById(userId);
+        if (!user) {
+            return errorResponse(res, {
+                message: 'Usuario no encontrado',
+                status: 404,
+                code: 'USER_NOT_FOUND'
+            });
+        }
+        
+        // Generar nuevos tokens sin org activa
+        const tokens = await authServices.generateTokensForUser(user, sessionData);
+        
+        // Actualizar session_context en Redis (null para admin global)
+        const updatedContext = await sessionContextCache.updateActiveOrg(userId, null);
+        
+        // Log de auditoría para fin de impersonación
+        const { logAuditAction } = await import('../../helpers/auditLog.js');
+        await logAuditAction({
+            entityType: 'auth',
+            entityId: userId,
+            action: 'impersonate_ended',
+            performedBy: userId,
+            metadata: { 
+                previous_org_id: req.user.activeOrgId || null
+            },
+            ipAddress: req.ip,
+            userAgent: req.headers['user-agent']
+        });
+        
+        return successResponse(res, {
+            ...tokens,
+            session_context: updatedContext,
+            impersonating: false,
+            impersonatedOrg: null,
+            message: 'Exited impersonation mode successfully'
+        });
+    } catch (error) {
+        next(error);
+    }
+});
+
+/**
+ * @swagger
  * /auth/session-context:
  *   get:
  *     summary: Obtener contexto de sesión actual
@@ -1111,8 +1337,18 @@ router.get('/session-context', authenticate, async (req, res, next) => {
             });
         }
         
+        // Agregar información de impersonación para system-admin
+        const isSystemAdmin = req.user.role === 'system-admin';
+        const impersonationInfo = isSystemAdmin ? {
+            impersonating: req.user.impersonating || false,
+            impersonatedOrg: req.user.impersonating && req.user.activeOrgId 
+                ? { publicCode: sessionContext?.activeOrgPublicCode || null }
+                : null
+        } : {};
+        
         return successResponse(res, { 
             session_context: sessionContext,
+            ...impersonationInfo,
             message: 'Session context retrieved successfully'
         });
     } catch (error) {

@@ -1,7 +1,7 @@
 # EC.DATA API - Enterprise REST API
 
 ## Overview
-EC.DATA API is a Node.js and Express-based REST API for multi-tenant e-commerce platforms. It provides robust backend solutions for complex business operations across diverse market sectors, integrating with Next.js frontends via a BFF pattern. The API prioritizes observability, security, and scalability.
+EC.DATA API is a Node.js and Express-based REST API designed for multi-tenant e-commerce platforms. It provides robust backend solutions for complex business operations across diverse market sectors, integrating with Next.js frontends via a BFF (Backend for Frontend) pattern. The API prioritizes observability, security, scalability, and supports a wide range of features including IoT device management, time-series data handling, and flexible resource hierarchies.
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
@@ -27,7 +27,7 @@ Preferred communication style: Simple, everyday language.
 - Include IP address and user agent for security tracking
 - Never skip audit logging, even in batch operations or background jobs
 
-**Error Logging Standards (MANDATORY):**
+**Error Logging Standards (MANDATORY):
 - **Winston-powered error logging system** with dual transports: PostgreSQL (`error_logs` table) + rotating daily files (`logs/errors-YYYY-MM-DD.log`)
 - **ALL API errors (4xx, 5xx) are automatically logged via global middleware** - Zero configuration required
 - **Correlation tracking:** Both `error_logs` and `audit_logs` support `correlation_id` field to link related errors and audit actions
@@ -68,109 +68,48 @@ Preferred communication style: Simple, everyday language.
 ### Technology Stack
 - **Core:** Express.js 4.x, Node.js 20+ (ESM modules), API versioning (`/api/v1`).
 - **Data:** Sequelize ORM for PostgreSQL, Redis for caching/sessions.
-- **Security:** JWT (Bearer tokens, scopes), Zod for validation, Helmet, bcrypt, Cloudflare Turnstile integration, login rate limiting, resource ownership validation.
-- **Observability:** Pino, Prometheus metrics, database audit logging, request/response logging, Winston for error logging.
+- **Security:** JWT, Zod for validation, Helmet, bcrypt, Cloudflare Turnstile, login rate limiting, resource ownership validation.
+- **Observability:** Pino, Prometheus, database audit logging, Winston for error logging.
 - **Documentation:** Swagger/OpenAPI (`/docs`).
 
 ### Architectural Patterns
 - **Layered Architecture:** Strict separation into Routes, Services, Repositories, and Database layers.
-- **Feature-Based Organization:** Code structured by domain (auth, tenants).
+- **Feature-Based Organization:** Code structured by domain (e.g., auth, tenants).
 - **Response Envelope Pattern:** Consistent `{ ok: true/false, data/error, meta }` structure.
 - **Configuration Management:** Centralized `src/config/env.js`.
 
 ### Performance & Scalability
 - **Caching:** Redis-based caching with configurable TTLs and automatic invalidation.
 - **Compression:** Brotli/gzip compression.
-- **Rate Limiting:** Redis-powered, intelligent rate limiting with role-based limits (including a dual-layer login rate limiter).
+- **Rate Limiting:** Redis-powered, intelligent rate limiting with role-based limits.
 - **Pagination:** Mandatory offset-based pagination (`limit`, `offset`) for list endpoints.
 
 ### Extensibility & Robustness
-- **Identifier System:** UUID v7, human_id, and public_code (opaque, Hashids + Luhn checksum). Public APIs MUST use `public_code`.
-- **Authentication:** JWT-based system with access/refresh tokens, token rotation, theft detection, and RBAC. Refresh tokens are database-persisted and SHA-256 hashed. Hybrid login identifier supporting email, username, or public_code.
-- **RBAC:** Flexible, database-driven RBAC with 7 predefined roles and middleware.
-- **Multi-Tenant Organizations:** Hierarchical organization system with many-to-many user-organization relationships and Redis-cached scope calculation. Organization-scoped filtering on list endpoints.
-- **Session Context Caching:** All session context is cached in Redis and returned via API responses.
-- **Global Audit Logging:** Every CUD operation is logged to the `audit_logs` table using the `auditLog` helper.
-- **Organization Hierarchy:** Supports unlimited depth, root organization, tree navigation, lazy loading, and cycle prevention.
-- **Hybrid Role System:** Combines Global Roles (`users.role_id`) and Organization Roles (`user_organizations.role_in_org`) for granular permissions.
-
-### Request Context Architecture (MANDATORY)
-Los datos contextuales del servidor se inyectan en objetos dedicados del request, **nunca en `req.query`**. Esto separa claramente los datos del cliente vs datos derivados del servidor.
-
-**Estructura estándar de `req` con datos del servidor:**
-```javascript
-req.user = {                    // Datos del JWT (seteado por authenticate middleware)
-    userId: 'uuid',
-    role: 'system-admin',
-    activeOrgId: 'uuid',        // Org activa del JWT
-    primaryOrgId: 'uuid',
-    canAccessAllOrgs: boolean,
-    tokenType: 'access' | 'api_key',
-    scopes: [],                 // Solo para API keys
-    clientId: 'string'          // Solo para API keys
-};
-
-req.organizationContext = {     // Contexto de organización resuelto (seteado por enforceActiveOrganization)
-    id: 'uuid',                 // UUID interno SIEMPRE resuelto
-    publicCode: 'ORG-xxx',      // Public code
-    source: 'jwt' | 'query' | 'api_key',  // Origen del contexto
-    tokenType: 'session' | 'api_key',
-    scopes: [],                 // Permisos para API keys
-    clientId: string | null,    // ID del cliente API
-    showAll: boolean,           // true si admin pidió all=true
-    allowedIds: string[],       // UUIDs permitidos
-    enforced: boolean,          // true si se forzó filtrado
-    canAccessAll: boolean       // true si tiene acceso sin restricciones
-};
-
-req.locale = 'es';              // Idioma detectado (seteado por i18n middleware)
-```
-
-**Reglas de acceso:**
-- `req.query` → Solo datos que envía el cliente (nunca modificar desde el servidor)
-- `req.organizationContext.id` → Para filtrar por organización en los servicios
-- `req.user.activeOrgId` → Valor raw del JWT (puede necesitar resolución)
-
-**Tipos de JWT soportados:**
-| Tipo | Uso | Características |
-|------|-----|-----------------|
-| Session JWT | Web/Frontend | Usuario logueado, `activeOrgId` dinámico |
-| API Key JWT | Clientes externos (M2M) | Organización fija, scopes limitados |
+- **Identifier System:** UUID v7, human_id, and public_code (Hashids + Luhn checksum). Public APIs must use `public_code`.
+- **Authentication:** JWT-based access/refresh tokens with token rotation, theft detection, and RBAC. Hybrid login identifier (email, username, public_code).
+- **RBAC:** Flexible, database-driven RBAC with predefined roles and middleware.
+- **Multi-Tenant Organizations:** Hierarchical organization system with many-to-many user-organization relationships and Redis-cached scope calculation.
+- **Session Context Caching:** All session context cached in Redis and returned via API responses.
+- **Global Audit Logging:** Every CUD operation logged to `audit_logs` table.
+- **Organization Hierarchy:** Supports unlimited depth using PostgreSQL ltree, permission inheritance, soft delete with cascade, and automatic path calculation. Node types include folder, site, channel, with flexible parent-child relationships. Access control is per-node with inheritance.
+- **Admin Panel & Impersonation System:** Dedicated `system-admin` capabilities for global platform management, including God View mode and impersonation of other organizations. This is managed via JWT payload flags and specific API endpoints, with full audit logging for impersonation actions.
+- **Request Context Architecture:** Server-derived contextual data (user, organization, locale) is injected into dedicated `req` objects (`req.user`, `req.organizationContext`, `req.locale`) to maintain a clear separation from client-sent data in `req.query`. Supports both Session JWTs (web/frontend) and API Key JWTs (M2M with limited scopes).
 
 ### Core Modules
-- **Sites Module:** Manages physical locations (offices, branches, warehouses) linked to organizations, including geolocation and address.
-- **Devices Module:** Manages IoT/Edge devices associated with organizations and sites.
-- **Channels Module:** Manages communication channels for devices, including MQTT, HTTP, WebSocket.
-- **Files Module:** Centralized file upload management via Azure Blob Storage with SAS URLs.
-- **Telemetry Module:** Time-series measurement data from Apache Cassandra for IoT measurements. Supports historical and latest data retrieval with various resolutions (raw, 1m, 15m, 60m, daily, monthly). Features multi-language variable definitions and timezone-aware filtering.
-  - **Variables CRUD:** Full REST API for managing telemetry variables (`GET/POST/PUT/DELETE /api/v1/telemetry/variables`)
-    - Filters: search (name/description/column_name), measurementTypeId, isRealtime, isDefault, isActive, showInBilling, showInAnalysis, chartType, aggregationType
-    - Pagination: limit, offset with sortBy/sortOrder
-    - Multi-language translations support (es, en, etc.)
-    - Zod validation, audit logging, cache invalidation on CUD
-- **Resource Hierarchy Module:** Flexible tree-based organization of resources (folders, sites, channels) using PostgreSQL ltree extension.
-  - **Hybrid ltree + parent_id pattern:** ltree for fast ancestor/descendant queries, parent_id for direct navigation
-  - **Path format:** `n<UUID completo sin guiones>` por nivel (33 chars/nivel). Ejemplo: `n019b5bf2e478722f8afbcdc95603e080.n019b94a88f5f74eca5ba8b61082fbf60`
-  - **Node types:** folder, site, channel (extensible without breaking changes)
-  - **Flexible parent-child relationships:** Any node type can be a child of any other node type. This supports "totalizer channels" that aggregate data from sites or groups of channels (e.g., Channel → Site, Channel → Channel, Channel → Folder → Sites)
-  - **Features:** Unlimited depth (ltree soporta 65K labels), permission inheritance, soft delete with cascade, automatic path calculation via DB triggers
-  - **Access control:** Per-node permissions (view, edit, admin) with inheritance to descendants
-  - **REST API:** Full CRUD at `/api/v1/resource-hierarchy/nodes`, tree operations, access management
-  - **Tables:** `resource_hierarchy` (nodes with ltree path), `user_resource_access` (permissions)
-  - **Performance Optimizations:**
-    - Redis caching with TTL (5-15 min) and automatic invalidation on CUD operations
-    - Composite partial indexes for children queries and root nodes
-    - `max_depth` parameter for getTree() to limit tree depth (default 3, max 50)
-    - `include_counts` flag to skip expensive COUNT queries when not needed
-    - Batch endpoint `POST /nodes/batch` to fetch up to 100 nodes in single call
+- **Sites Module:** Manages physical locations linked to organizations.
+- **Devices Module:** Manages IoT/Edge devices.
+- **Channels Module:** Manages communication channels (MQTT, HTTP, WebSocket).
+- **Files Module:** Centralized file upload management via Azure Blob Storage.
+- **Telemetry Module:** Handles time-series measurement data from Apache Cassandra, including CRUD for variables, multi-language support, and timezone-aware filtering.
+- **Resource Hierarchy Module:** Provides a flexible tree-based organization for resources (folders, sites, channels) using PostgreSQL's `ltree` extension for efficient ancestor/descendant queries. Includes a REST API for CRUD operations, tree manipulation, and access management with performance optimizations like Redis caching and indexing.
 
 ## External Dependencies
 
 ### Core Services
 - **PostgreSQL Database:** Managed via Sequelize ORM.
 - **Redis Cache:** For CORS origins, session storage, and application caching.
-- **Azure Blob Storage:** File storage with dual containers (public/private) and SAS URL generation.
-- **Apache Cassandra:** Time-series sensor data storage for IoT measurements. Keyspace `sensores`.
+- **Azure Blob Storage:** File storage with SAS URL generation.
+- **Apache Cassandra:** Time-series sensor data storage (`sensores` keyspace).
 - **Next.js Frontend:** Consumes API via BFF pattern.
 - **Cloudflare Turnstile:** For captcha validation on login.
 
@@ -178,6 +117,5 @@ req.locale = 'es';              // Idioma detectado (seteado por i18n middleware
 - **Testing Framework:** Vitest for unit and integration tests.
 
 ### Monitoring & Observability
-- **Metrics:** Prometheus for HTTP request duration, counts, active connections, and custom metrics.
-- **Logging:** Pino for general application logs; Winston for structured error persistence to PostgreSQL and rotating files; database-backed audit logging (`audit_logs` table); correlation system using `correlation_id`.
-- **Health Checks:** Basic endpoint at `/api/v1/health`.
+- **Metrics:** Prometheus for HTTP request duration, counts, and custom metrics.
+- **Logging:** Pino for general application logs; Winston for structured error persistence to PostgreSQL and files; database-backed audit logging; correlation system using `correlation_id`.

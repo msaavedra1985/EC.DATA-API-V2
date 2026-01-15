@@ -297,6 +297,35 @@ export const enforceActiveOrganization = async (req, res, next) => {
         const activeOrgId = user.activeOrgId;
 
         if (!activeOrgId) {
+            // CASO ESPECIAL: system-admin sin org activa (panel admin global)
+            // En este caso, tiene acceso a todo sin filtro
+            if (user.role === 'system-admin') {
+                req.organizationContext = {
+                    id: null,
+                    publicCode: null,
+                    source: 'jwt',
+                    tokenType: 'session',
+                    scopes: [],
+                    clientId: null,
+                    showAll: true,
+                    allowedIds: [],
+                    enforced: false,
+                    canAccessAll: true,
+                    // Indica que system-admin está en modo admin global (sin impersonar)
+                    impersonating: false
+                };
+
+                orgLogger.debug({
+                    userId: user.userId,
+                    role: user.role,
+                    showAll: true,
+                    canAccessAll: true
+                }, 'System admin in global admin mode (no active organization)');
+
+                return next();
+            }
+            
+            // Otros roles DEBEN tener una org activa
             orgLogger.warn({
                 userId: user.userId,
                 role: user.role,
@@ -319,6 +348,10 @@ export const enforceActiveOrganization = async (req, res, next) => {
                 code: 'ACTIVE_ORGANIZATION_NOT_FOUND'
             });
         }
+        
+        // Determinar si system-admin está impersonando (activeOrgId != primaryOrgId)
+        const isImpersonating = user.role === 'system-admin' && 
+                                user.impersonating === true;
 
         req.organizationContext = {
             id: resolved.uuid,
@@ -330,13 +363,16 @@ export const enforceActiveOrganization = async (req, res, next) => {
             showAll: false,
             allowedIds: [resolved.uuid],
             enforced: true,
-            canAccessAll: false
+            canAccessAll: false,
+            // Para system-admin, indicar si está impersonando otra org
+            ...(user.role === 'system-admin' && { impersonating: isImpersonating })
         };
 
         orgLogger.debug({
             userId: user.userId,
             activeOrgId: resolved.uuid,
-            source: 'jwt'
+            source: 'jwt',
+            ...(isImpersonating && { impersonating: true })
         }, 'Organization context established from JWT activeOrgId');
 
         next();

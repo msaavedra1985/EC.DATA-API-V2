@@ -90,6 +90,17 @@ const AuditLog = sequelize.define(
             type: DataTypes.STRING(100),
             allowNull: true,
             comment: 'ID de correlación para vincular auditorías con errores (opcional)'
+        },
+        impersonated_org_id: {
+            type: DataTypes.UUID,
+            allowNull: true,
+            references: {
+                model: 'organizations',
+                key: 'id'
+            },
+            onUpdate: 'CASCADE',
+            onDelete: 'SET NULL',
+            comment: 'ID de la organización impersonada por system-admin (null si no hay impersonación)'
         }
     },
     {

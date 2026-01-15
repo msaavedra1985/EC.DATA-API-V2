@@ -22,6 +22,7 @@ const auditLogger = logger.child({ component: 'audit' });
  * @param {string|null} params.ipAddress - IP del cliente
  * @param {string|null} params.userAgent - User agent del navegador
  * @param {string|null} params.correlationId - ID de correlación con error_logs (opcional)
+ * @param {string|null} params.impersonatedOrgId - UUID de la org impersonada por system-admin (opcional)
  * @returns {Promise<AuditLog>} Log de auditoría creado
  * 
  * @example
@@ -32,6 +33,18 @@ const auditLogger = logger.child({ component: 'audit' });
  *   action: 'created',
  *   performedBy: req.user.userId,
  *   metadata: { organization_name: org.name },
+ *   ipAddress: req.ip,
+ *   userAgent: req.headers['user-agent']
+ * });
+ * 
+ * @example
+ * // Registrar acción de system-admin impersonando otra org
+ * await logAuditAction({
+ *   entityType: 'resource_hierarchy',
+ *   entityId: node.public_code,
+ *   action: 'created',
+ *   performedBy: req.user.userId,
+ *   impersonatedOrgId: req.organizationContext.impersonating ? req.organizationContext.id : null,
  *   ipAddress: req.ip,
  *   userAgent: req.headers['user-agent']
  * });
@@ -61,7 +74,8 @@ export const logAuditAction = async ({
     metadata = null,
     ipAddress = null,
     userAgent = null,
-    correlationId = null
+    correlationId = null,
+    impersonatedOrgId = null
 }) => {
     try {
         // Validación básica
@@ -81,6 +95,7 @@ export const logAuditAction = async ({
             ip_address: ipAddress,
             user_agent: userAgent,
             correlation_id: correlationId,
+            impersonated_org_id: impersonatedOrgId,
             performed_at: new Date()
         });
 
