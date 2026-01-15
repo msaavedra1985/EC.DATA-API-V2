@@ -272,14 +272,24 @@ router.post('/login', loginRateLimitMiddleware, validate(loginSchema), async (re
 
             await sessionContextCache.setSessionContext(result.user.id, sessionContext);
 
-            // Simplificar role en la respuesta - solo enviar el nombre
+            // Filtrar user a solo campos relevantes para el frontend
+            // NO exponemos: id, role_id, human_id, organization_id, created_at, updated_at, etc.
+            const userResponse = {
+                public_code: result.user.public_code,
+                email: result.user.email,
+                first_name: result.user.first_name,
+                last_name: result.user.last_name,
+                avatar_url: result.user.avatar_url || null,
+                language: result.user.language || 'es',
+                timezone: result.user.timezone || 'America/Lima',
+                role: result.user.role?.name || null,
+                permissions: result.user.role?.permissions || []
+            };
+            
             const responseData = {
                 ...result,
-                user: {
-                    ...result.user,
-                    role: result.user.role?.name || null
-                },
-                session_context: sessionContext,
+                user: userResponse,
+                session_context: sessionContextCache.sanitizeSessionContext(sessionContext),
                 message: 'auth.login.success'
             };
 
@@ -522,28 +532,77 @@ router.get('/me', authenticate, async (req, res, next) => {
         }
 
         // Obtener session_context desde Redis
-        const sessionContext = await sessionContextCache.getSessionContext(userId);
+        let sessionContext = await sessionContextCache.getSessionContext(userId);
+        
+        // Si session_context es null (cache expirado), reconstruirlo desde DB
+        // Esto garantiza que el frontend siempre reciba session_context
+        if (!sessionContext) {
+            const primaryOrg = await organizationService.getPrimaryOrganization(userId);
+            const activeOrgId = primaryOrg ? primaryOrg.organization_id : null;
+            const canAccessAllOrgs = user.role?.name === 'system-admin';
+            
+            // Obtener info de la org primaria
+            let primaryOrgInfo = null;
+            if (activeOrgId) {
+                const orgDetails = await organizationRepository.findOrganizationByIdInternal(activeOrgId);
+                if (orgDetails) {
+                    primaryOrgInfo = {
+                        publicCode: orgDetails.public_code,
+                        name: orgDetails.name,
+                        logoUrl: orgDetails.logo_url
+                    };
+                }
+            }
+            
+            // Reconstruir y cachear session_context
+            sessionContext = {
+                activeOrgId,
+                activeOrgPublicCode: primaryOrgInfo?.publicCode || null,
+                activeOrgName: primaryOrgInfo?.name || null,
+                activeOrgLogoUrl: primaryOrgInfo?.logoUrl || null,
+                primaryOrgId: activeOrgId,
+                primaryOrgPublicCode: primaryOrgInfo?.publicCode || null,
+                primaryOrgName: primaryOrgInfo?.name || null,
+                primaryOrgLogoUrl: primaryOrgInfo?.logoUrl || null,
+                canAccessAllOrgs,
+                role: user.role?.name || null,
+                email: user.email,
+                firstName: user.first_name,
+                lastName: user.last_name,
+                userId: user.id,
+                userPublicCode: user.public_code || null
+            };
+            
+            await sessionContextCache.setSessionContext(userId, sessionContext);
+        }
 
-        // Simplificar role en la respuesta - solo enviar el nombre
+        // Filtrar user a solo campos relevantes para el frontend
+        // NO exponemos: id, role_id, human_id, organization_id, created_at, updated_at, 
+        // deleted_at, email_verified_at, last_login_at, is_active
         const userResponse = {
-            ...user,
-            role: user.role?.name || null
+            public_code: user.public_code,
+            email: user.email,
+            first_name: user.first_name,
+            last_name: user.last_name,
+            avatar_url: user.avatar_url || null,
+            language: user.language || 'es',
+            timezone: user.timezone || 'America/Lima',
+            role: user.role?.name || null,
+            permissions: user.role?.permissions || []
         };
         
         // Agregar información de impersonación para system-admin
-        // Esto permite al frontend mostrar un indicador visual cuando se está impersonando
         const isSystemAdmin = req.user.role === 'system-admin';
         const impersonationInfo = isSystemAdmin ? {
             impersonating: req.user.impersonating || false,
-            // Si está impersonando, incluir public_code de la org (no UUID)
             impersonatedOrg: req.user.impersonating && req.user.activeOrgId 
-                ? { publicCode: sessionContext?.activeOrgPublicCode || null }
+                ? { publicCode: sessionContext.activeOrgPublicCode || null }
                 : null
         } : {};
 
         return successResponse(res, { 
             user: userResponse, 
-            session_context: sessionContext,
+            session_context: sessionContextCache.sanitizeSessionContext(sessionContext),
             ...impersonationInfo,
             message: 'auth.profile.retrieved' 
         });
@@ -1056,7 +1115,7 @@ router.post('/switch-org', authenticate, validate(switchOrgSchema), async (req, 
         
         return successResponse(res, {
             ...result,
-            session_context: updatedContext
+            session_context: sessionContextCache.sanitizeSessionContext(updatedContext)
         });
     } catch (error) {
         next(error);
@@ -1180,7 +1239,7 @@ router.post('/impersonate-org', authenticate, async (req, res, next) => {
         
         return successResponse(res, {
             ...result,
-            session_context: updatedContext,
+            session_context: sessionContextCache.sanitizeSessionContext(updatedContext),
             impersonating: true,
             impersonatedOrg: { publicCode: orgPublicCode },
             message: 'Impersonation started successfully'
@@ -1260,7 +1319,7 @@ router.post('/exit-impersonation', authenticate, async (req, res, next) => {
         
         return successResponse(res, {
             ...tokens,
-            session_context: updatedContext,
+            session_context: sessionContextCache.sanitizeSessionContext(updatedContext),
             impersonating: false,
             impersonatedOrg: null,
             message: 'Exited impersonation mode successfully'
@@ -1370,7 +1429,7 @@ router.get('/session-context', authenticate, async (req, res, next) => {
         } : {};
         
         return successResponse(res, { 
-            session_context: sessionContext,
+            session_context: sessionContextCache.sanitizeSessionContext(sessionContext),
             ...impersonationInfo,
             message: 'Session context retrieved successfully'
         });

@@ -126,3 +126,29 @@ export const updateActiveOrg = async (userId, newActiveOrgId, orgInfo = null) =>
         return null;
     }
 };
+
+/**
+ * Sanitizar session_context para respuestas API
+ * Remueve UUIDs internos y solo expone public_codes y campos seguros
+ * 
+ * @param {Object} context - Session context completo (con UUIDs)
+ * @returns {Object} - Session context sanitizado (solo public_codes)
+ */
+export const sanitizeSessionContext = (context) => {
+    if (!context) return null;
+    
+    return {
+        activeOrgPublicCode: context.activeOrgPublicCode || null,
+        activeOrgName: context.activeOrgName || null,
+        activeOrgLogoUrl: context.activeOrgLogoUrl || null,
+        primaryOrgPublicCode: context.primaryOrgPublicCode || null,
+        primaryOrgName: context.primaryOrgName || null,
+        primaryOrgLogoUrl: context.primaryOrgLogoUrl || null,
+        canAccessAllOrgs: context.canAccessAllOrgs || false,
+        role: context.role || null,
+        email: context.email || null,
+        firstName: context.firstName || null,
+        lastName: context.lastName || null,
+        userPublicCode: context.userPublicCode || null
+    };
+};
