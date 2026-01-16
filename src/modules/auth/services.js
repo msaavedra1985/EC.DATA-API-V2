@@ -227,9 +227,11 @@ export const login = async (identifier, password, sessionData = {}) => {
     // Pasar rememberMe a generateTokens para usar duración extendida si es necesario
     const tokens = await generateTokens(user, sessionData);
     
-    // Guardar session_context en Redis
+    // Guardar session_context en Redis con TTL alineado al refresh token
     const primaryOrg = await organizationService.getPrimaryOrganization(user.id);
-    const { setSessionContext } = await import('./sessionContextCache.js');
+    const { setSessionContext, SESSION_TTL_NORMAL, SESSION_TTL_EXTENDED } = await import('./sessionContextCache.js');
+    const sessionTTL = sessionData.rememberMe ? SESSION_TTL_EXTENDED : SESSION_TTL_NORMAL;
+    
     await setSessionContext(user.id, {
         activeOrgId: sessionData.activeOrgId || (primaryOrg ? primaryOrg.organization_id : null),
         primaryOrgId: primaryOrg ? primaryOrg.organization_id : null,
@@ -239,7 +241,7 @@ export const login = async (identifier, password, sessionData = {}) => {
         firstName: user.first_name,
         lastName: user.last_name,
         userId: user.id
-    });
+    }, sessionTTL);
 
     return {
         user,
@@ -426,7 +428,33 @@ export const refreshAccessToken = async (refreshToken, sessionData = {}) => {
 
         await refreshTokenRepository.revokeToken(refreshToken, 'rotated');
 
-        const tokens = await generateTokens(user, sessionData);
+        // Preservar remember_me del token original para mantener la duración de sesión correcta
+        // Usar Boolean() explícitamente para garantizar tipo booleano
+        const isExtendedSession = Boolean(storedToken.remember_me);
+        const refreshSessionData = {
+            ...sessionData,
+            rememberMe: isExtendedSession
+        };
+        
+        const tokens = await generateTokens(user, refreshSessionData);
+        
+        // Regenerar session_context en Redis durante el refresh
+        // Esto soluciona el problema de que el session_context expiraba antes que el refresh_token
+        // Usar TTL correcto basado en remember_me del token original
+        const primaryOrg = await organizationService.getPrimaryOrganization(userId);
+        const { setSessionContext, SESSION_TTL_NORMAL, SESSION_TTL_EXTENDED } = await import('./sessionContextCache.js');
+        const sessionTTL = isExtendedSession ? SESSION_TTL_EXTENDED : SESSION_TTL_NORMAL;
+        
+        await setSessionContext(userId, {
+            activeOrgId: decoded.activeOrgId || (primaryOrg ? primaryOrg.organization_id : null),
+            primaryOrgId: decoded.primaryOrgId || (primaryOrg ? primaryOrg.organization_id : null),
+            canAccessAllOrgs: decoded.canAccessAllOrgs || false,
+            role: decoded.role || (user.role ? user.role.name : null),
+            email: user.email,
+            firstName: user.first_name,
+            lastName: user.last_name,
+            userId: userId
+        }, sessionTTL);
 
         return tokens;
     } catch (error) {
