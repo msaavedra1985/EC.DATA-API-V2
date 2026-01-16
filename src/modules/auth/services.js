@@ -794,8 +794,10 @@ export const switchOrganization = async (userId, newActiveOrgId, sessionData = {
 
 /**
  * Obtener organizaciones disponibles del usuario
+ * SEGURIDAD: Retorna public_codes en lugar de UUIDs internos
+ * 
  * @param {string} userId - ID del usuario
- * @returns {Promise<Array>} - Lista de organizaciones con detalles
+ * @returns {Promise<Object>} - Lista de organizaciones con detalles (solo public_codes)
  */
 export const getUserAvailableOrganizations = async (userId) => {
     const user = await authRepository.findUserById(userId);
@@ -810,55 +812,105 @@ export const getUserAvailableOrganizations = async (userId) => {
     // Obtener scope organizacional completo
     const scope = await organizationService.getOrganizationScope(userId, user.role.name);
     
-    // Para system-admin, obtener TODAS las organizaciones activas con detalles completos
-    let accessibleOrganizations = scope.userOrganizations;
+    // Importar modelo Organization
+    const Organization = (await import('../organizations/models/Organization.js')).default;
+    
+    // Función helper para mapear org a formato seguro (sin UUIDs)
+    // Recibe un Map de parentId -> parentPublicCode para resolver parent_public_code
+    const mapOrgToSafeFormat = (org, parentPublicCodeMap, directOrgIds, userOrganizations) => ({
+        public_code: org.public_code,
+        slug: org.slug,
+        name: org.name,
+        logo_url: org.logo_url,
+        is_primary: userOrganizations.find(uo => uo.organization_id === org.id)?.is_primary || false,
+        is_active: org.is_active,
+        parent_public_code: org.parent_id ? (parentPublicCodeMap.get(org.parent_id) || null) : null,
+        joined_at: userOrganizations.find(uo => uo.organization_id === org.id)?.joined_at || null,
+        is_direct_member: directOrgIds.includes(org.id)
+    });
+    
+    let accessibleOrganizations = [];
+    const directOrgIds = scope.userOrganizations.map(uo => uo.organization_id);
     
     if (scope.canAccessAll) {
         // system-admin: obtener todas las organizaciones del sistema con detalles
-        const Organization = (await import('../organizations/models/Organization.js')).default;
         const allOrgs = await Organization.findAll({
             where: { is_active: true },
-            attributes: ['id', 'slug', 'name', 'logo_url', 'is_active', 'parent_id'],
+            attributes: ['id', 'public_code', 'slug', 'name', 'logo_url', 'is_active', 'parent_id'],
             order: [['name', 'ASC']]
         });
         
-        // Mapear a formato consistente, marcando cuáles son de membresía directa
-        const directOrgIds = scope.userOrganizations.map(uo => uo.organization_id);
-        accessibleOrganizations = allOrgs.map(org => ({
-            organization_id: org.id,
-            slug: org.slug,
-            name: org.name,
-            logo_url: org.logo_url,
-            is_primary: scope.userOrganizations.find(uo => uo.organization_id === org.id)?.is_primary || false,
-            is_active: org.is_active,
-            parent_id: org.parent_id,
-            joined_at: scope.userOrganizations.find(uo => uo.organization_id === org.id)?.joined_at || null,
-            is_direct_member: directOrgIds.includes(org.id)
-        }));
+        // Crear mapa de id -> public_code para resolver parent_public_code
+        const parentPublicCodeMap = new Map(allOrgs.map(org => [org.id, org.public_code]));
+        
+        // Mapear a formato seguro (sin UUIDs)
+        accessibleOrganizations = allOrgs.map(org => 
+            mapOrgToSafeFormat(org, parentPublicCodeMap, directOrgIds, scope.userOrganizations)
+        );
+        
     } else if (user.role.name === 'org-admin' || user.role.name === 'org-manager') {
         // Para org-admin/org-manager: obtener organizaciones accesibles con detalles
-        const Organization = (await import('../organizations/models/Organization.js')).default;
         const accessibleOrgs = await Organization.findAll({
             where: { 
                 id: scope.organizationIds,
                 is_active: true 
             },
-            attributes: ['id', 'slug', 'name', 'logo_url', 'is_active', 'parent_id'],
+            attributes: ['id', 'public_code', 'slug', 'name', 'logo_url', 'is_active', 'parent_id'],
             order: [['name', 'ASC']]
         });
         
-        const directOrgIds = scope.userOrganizations.map(uo => uo.organization_id);
-        accessibleOrganizations = accessibleOrgs.map(org => ({
-            organization_id: org.id,
-            slug: org.slug,
-            name: org.name,
-            logo_url: org.logo_url,
-            is_primary: scope.userOrganizations.find(uo => uo.organization_id === org.id)?.is_primary || false,
-            is_active: org.is_active,
-            parent_id: org.parent_id,
-            joined_at: scope.userOrganizations.find(uo => uo.organization_id === org.id)?.joined_at || null,
-            is_direct_member: directOrgIds.includes(org.id)
-        }));
+        // Obtener parent_ids únicos que no están en el resultado
+        const parentIds = [...new Set(accessibleOrgs.map(org => org.parent_id).filter(Boolean))];
+        const missingParentIds = parentIds.filter(pid => !accessibleOrgs.some(org => org.id === pid));
+        
+        // Buscar public_codes de parents faltantes
+        let parentPublicCodeMap = new Map(accessibleOrgs.map(org => [org.id, org.public_code]));
+        
+        if (missingParentIds.length > 0) {
+            const parentOrgs = await Organization.findAll({
+                where: { id: missingParentIds },
+                attributes: ['id', 'public_code']
+            });
+            parentOrgs.forEach(org => parentPublicCodeMap.set(org.id, org.public_code));
+        }
+        
+        accessibleOrganizations = accessibleOrgs.map(org => 
+            mapOrgToSafeFormat(org, parentPublicCodeMap, directOrgIds, scope.userOrganizations)
+        );
+        
+    } else {
+        // Para user/viewer: solo sus organizaciones directas
+        const userOrgIds = scope.userOrganizations.map(uo => uo.organization_id);
+        
+        if (userOrgIds.length > 0) {
+            const userOrgs = await Organization.findAll({
+                where: { 
+                    id: userOrgIds,
+                    is_active: true 
+                },
+                attributes: ['id', 'public_code', 'slug', 'name', 'logo_url', 'is_active', 'parent_id'],
+                order: [['name', 'ASC']]
+            });
+            
+            // Obtener parent public_codes
+            const parentIds = [...new Set(userOrgs.map(org => org.parent_id).filter(Boolean))];
+            let parentPublicCodeMap = new Map(userOrgs.map(org => [org.id, org.public_code]));
+            
+            if (parentIds.length > 0) {
+                const missingParentIds = parentIds.filter(pid => !userOrgs.some(org => org.id === pid));
+                if (missingParentIds.length > 0) {
+                    const parentOrgs = await Organization.findAll({
+                        where: { id: missingParentIds },
+                        attributes: ['id', 'public_code']
+                    });
+                    parentOrgs.forEach(org => parentPublicCodeMap.set(org.id, org.public_code));
+                }
+            }
+            
+            accessibleOrganizations = userOrgs.map(org => 
+                mapOrgToSafeFormat(org, parentPublicCodeMap, directOrgIds, scope.userOrganizations)
+            );
+        }
     }
     
     return {

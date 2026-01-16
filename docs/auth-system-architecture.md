@@ -816,6 +816,129 @@ Authorization: Bearer <token-de-admin>
 }
 ```
 
+#### GET /auth/organizations
+
+Lista todas las organizaciones a las que el usuario tiene acceso.
+
+```javascript
+// Response 200
+{
+  "ok": true,
+  "data": {
+    "canAccessAll": false,  // true solo para system-admin
+    "userOrganizations": [
+      {
+        "public_code": "ORG-ABC12-7",
+        "slug": "hoteles-libertador",
+        "name": "Hoteles Libertador",
+        "logo_url": "https://...",
+        "is_primary": true,
+        "is_active": true,
+        "parent_public_code": null,  // O "ORG-PARENT-1" si tiene padre
+        "joined_at": "2024-01-15T10:30:00Z",
+        "is_direct_member": true
+      },
+      {
+        "public_code": "ORG-XYZ99-3",
+        "slug": "hotel-plaza",
+        "name": "Hotel Plaza",
+        "logo_url": null,
+        "is_primary": false,
+        "is_active": true,
+        "parent_public_code": "ORG-ABC12-7",
+        "joined_at": null,  // null si acceso es por jerarquía, no membresía directa
+        "is_direct_member": false
+      }
+    ],
+    "totalAccessible": 2
+  }
+}
+```
+
+> **Nota:** Este endpoint ya NO expone UUIDs internos (`organization_id`, `parent_id`). Solo retorna `public_code` y `parent_public_code`.
+
+---
+
+## 9. Guía: Qué Endpoint Usar y Cuándo
+
+### 9.1 `/auth/me` vs `/auth/session-context`
+
+| Característica | `/auth/me` | `/auth/session-context` |
+|----------------|-----------|------------------------|
+| **Velocidad** | ~50-200ms | ~5-15ms |
+| **Fuente de datos** | PostgreSQL + Redis | Solo Redis |
+| **Retorna user completo** | ✅ Sí | ❌ No |
+| **Retorna session_context** | ✅ Sí | ✅ Sí |
+| **Reconstruye cache si falta** | ✅ Sí | ❌ No (retorna 404) |
+
+**Recomendación:**
+
+```typescript
+// Al cargar la app (primera vez)
+const response = await api.get('/auth/me');
+// Guarda user + session_context
+
+// Para sincronización rápida (polling, después de switch-org)
+const response = await api.get('/auth/session-context');
+// Solo actualiza session_context
+
+// Si /auth/session-context retorna 404, hacer fallback a /auth/me
+if (response.status === 404) {
+  const fullResponse = await api.get('/auth/me');
+}
+```
+
+### 9.2 Switch-org vs Impersonate-org
+
+```mermaid
+flowchart TD
+    A[Usuario quiere cambiar de org] --> B{¿Es system-admin?}
+    
+    B -->|No| C[Usar /auth/switch-org]
+    C --> D[Solo puede cambiar a SUS orgs]
+    
+    B -->|Sí| E{¿La org destino es suya?}
+    E -->|Sí| F[Usar /auth/switch-org]
+    E -->|No| G[Usar /auth/impersonate-org]
+    
+    G --> H[impersonating: true en respuesta]
+    H --> I[Frontend muestra banner de impersonación]
+    
+    I --> J{¿Quiere salir?}
+    J -->|Sí| K[Usar /auth/exit-impersonation]
+    K --> L[Vuelve a God View]
+```
+
+**Resumen rápido:**
+
+| Escenario | Endpoint |
+|-----------|----------|
+| Usuario normal cambia de org | `POST /auth/switch-org` |
+| System-admin cambia a SU org | `POST /auth/switch-org` |
+| System-admin entra a OTRA org | `POST /auth/impersonate-org` |
+| System-admin vuelve a God View | `POST /auth/exit-impersonation` |
+
+**Cómo detectar en el BFF:**
+
+```typescript
+const switchOrg = async (targetOrgPublicCode: string) => {
+  const isSystemAdmin = sessionContext.role === 'system-admin';
+  const isPrimaryOrg = targetOrgPublicCode === sessionContext.primaryOrgPublicCode;
+  
+  if (isSystemAdmin && !isPrimaryOrg) {
+    // System-admin entrando a otra org = impersonar
+    return api.post('/auth/impersonate-org', { 
+      organization_id: targetOrgPublicCode 
+    });
+  } else {
+    // Cambio normal entre orgs propias
+    return api.post('/auth/switch-org', { 
+      organization_id: targetOrgPublicCode 
+    });
+  }
+};
+```
+
 ---
 
 ## Resumen para Implementación Frontend
