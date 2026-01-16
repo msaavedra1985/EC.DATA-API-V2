@@ -5,7 +5,12 @@ import { getCache, setCache, deleteCache } from '../../db/redis/client.js';
 import logger from '../../utils/logger.js';
 
 const CACHE_PREFIX = 'ec:session_context:';
-const CACHE_TTL = 60 * 15; // 15 minutos (igual que el access token)
+
+// TTLs alineados con la duración del refresh_token
+// Sesión normal: 14 días | Sesión extendida (remember_me): 90 días
+export const SESSION_TTL_NORMAL = 60 * 60 * 24 * 14;     // 14 días en segundos
+export const SESSION_TTL_EXTENDED = 60 * 60 * 24 * 90;   // 90 días en segundos
+const DEFAULT_TTL = SESSION_TTL_NORMAL;
 
 /**
  * Guardar contexto de sesión en Redis
@@ -20,16 +25,17 @@ const CACHE_TTL = 60 * 15; // 15 minutos (igual que el access token)
  * @param {string} context.email - Email del usuario
  * @param {string} context.firstName - Nombre del usuario
  * @param {string} context.lastName - Apellido del usuario
+ * @param {number} [ttl] - TTL personalizado en segundos (opcional, default: 14 días)
  * @returns {Promise<boolean>} - true si se guardó correctamente
  */
-export const setSessionContext = async (userId, context) => {
+export const setSessionContext = async (userId, context, ttl = DEFAULT_TTL) => {
     try {
         const key = `${CACHE_PREFIX}${userId}`;
         const value = JSON.stringify(context);
         
-        await setCache(key, value, CACHE_TTL);
+        await setCache(key, value, ttl);
         
-        logger.debug(`Session context cached for user ${userId}`, { component: 'session-context-cache' });
+        logger.debug(`Session context cached for user ${userId} with TTL ${ttl}s`, { component: 'session-context-cache' });
         return true;
     } catch (error) {
         logger.error(`Failed to cache session context for user ${userId}:`, error);
@@ -90,9 +96,10 @@ export const deleteSessionContext = async (userId) => {
  * @param {string} orgInfo.publicCode - Public code de la org (ej: ORG-xxx)
  * @param {string} orgInfo.name - Nombre de la organización
  * @param {string} orgInfo.logoUrl - URL del logo
+ * @param {number} [ttl] - TTL personalizado en segundos (opcional)
  * @returns {Promise<Object|null>} - Contexto actualizado o null si falla
  */
-export const updateActiveOrg = async (userId, newActiveOrgId, orgInfo = null) => {
+export const updateActiveOrg = async (userId, newActiveOrgId, orgInfo = null, ttl = DEFAULT_TTL) => {
     try {
         const context = await getSessionContext(userId);
         
@@ -117,7 +124,7 @@ export const updateActiveOrg = async (userId, newActiveOrgId, orgInfo = null) =>
             context.activeOrgLogoUrl = orgInfo.logoUrl || null;
         }
         
-        await setSessionContext(userId, context);
+        await setSessionContext(userId, context, ttl);
         
         logger.debug(`Updated activeOrgId to ${newActiveOrgId} for user ${userId}`, { component: 'session-context-cache' });
         return context;
