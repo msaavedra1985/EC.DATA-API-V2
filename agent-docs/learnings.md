@@ -36,6 +36,29 @@
 
 ---
 
+## Rate Limiting
+
+### Contador de intentos no se resetea después de login exitoso
+**Fecha**: 2026-01-21
+**Síntoma**: Usuario logueado exitosamente pero en siguiente intento (ej: re-login) recibe error de rate limit
+**Causa**: El middleware de rate limit incrementaba contador antes de validar credenciales, pero no lo reseteaba en login exitoso
+**Solución**: 
+- Llamar `resetLoginCounters(email, ip)` después de login exitoso en el handler
+- El reset elimina las keys de Redis: `login_attempts:email:{email}` y `login_attempts:ip:{ip}`
+**Archivos afectados**: `src/modules/auth/index.js`, `src/middleware/loginRateLimit.js`
+
+### Rate limit por IP afecta a usuarios legítimos en redes compartidas
+**Fecha**: 2026-01-21
+**Síntoma**: Múltiples usuarios en misma oficina (misma IP) se bloquean mutuamente
+**Causa**: Rate limit solo por IP es muy agresivo en redes corporativas/NAT
+**Solución**: 
+- Usar rate limit combinado: IP + email (ambos deben exceder límite)
+- Límites actuales: 5 intentos por email, 20 intentos por IP en ventana de 15 minutos
+- Captcha se requiere después de 3 intentos fallidos (antes del bloqueo)
+**Archivos afectados**: `src/middleware/loginRateLimit.js`
+
+---
+
 ## Database
 
 (Agregar problemas de DB aquí)
