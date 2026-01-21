@@ -15,6 +15,7 @@ REST API Node.js/Express multi-tenant para plataformas e-commerce. Integra con f
 | **Para entender qué existe** | `agent-docs/modules.md` |
 | **Al implementar nuevas features** | `agent-docs/nodejs-best-practices.md` |
 | **Al modificar/consultar endpoints** | `agent-docs/endpoints/{modulo}.md` |
+| **Al trabajar con la base de datos** | `agent-docs/database.dbml.txt` |
 
 ## Índice de Documentación
 
@@ -28,6 +29,7 @@ agent-docs/
 ├── glosario.md           # Términos de dominio (public_code, session_context, etc.)
 ├── learnings.md          # Errores resueltos y gotchas
 ├── nodejs-best-practices.md  # Mejores prácticas Node.js API
+├── database.dbml.txt     # Schema de DB en formato DBML (actualizar con npm run db:dbml)
 └── endpoints/            # Documentación detallada de endpoints
     ├── _template.md      # Template para nuevos módulos
     ├── auth.md           # Autenticación (login, refresh, session)

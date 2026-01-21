@@ -92,7 +92,7 @@ Los ejemplos de request/response usan JSON y son representativos. Los valores re
 | Recurso | Ubicación | Descripción |
 |---------|-----------|-------------|
 | Swagger / OpenAPI | `/docs` (en la API) | Documentación interactiva de endpoints |
-| DBML Schema | `database.dbml.txt` | Diagrama de base de datos |
+| DBML Schema | `agent-docs/database.dbml.txt` | Diagrama de base de datos |
 | replit.md | `replit.md` | Estándares de desarrollo |
 
 ---
@@ -111,7 +111,7 @@ Esta documentación debe actualizarse cuando:
 - [ ] Crear documento en `docs/flujos/XX-nombre.md`
 - [ ] Agregar al índice en este README
 - [ ] Agregar términos nuevos al glosario
-- [ ] Actualizar `database.dbml.txt` si hay cambios de schema
+- [ ] Actualizar `agent-docs/database.dbml.txt` si hay cambios de schema
 - [ ] Actualizar Swagger con anotaciones `@swagger`
 
 ---

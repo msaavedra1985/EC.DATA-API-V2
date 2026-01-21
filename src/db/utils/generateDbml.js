@@ -286,15 +286,15 @@ export const generateDbmlFile = async () => {
         // Generar referencias
         dbmlContent += await generateReferences();
         
-        // Guardar archivo en la raíz del proyecto
-        const outputPath = path.join(process.cwd(), 'database.dbml.txt');
+        // Guardar archivo en agent-docs/ para fácil consulta
+        const outputPath = path.join(process.cwd(), 'agent-docs', 'database.dbml.txt');
         await fs.writeFile(outputPath, dbmlContent, 'utf-8');
         
-        dbLogger.info(`✅ Archivo DBML generado exitosamente: database.dbml.txt`);
+        dbLogger.info(`✅ Archivo DBML generado exitosamente: agent-docs/database.dbml.txt`);
         dbLogger.info(`📍 Ubicación: ${outputPath}`);
         dbLogger.info('💡 Para visualizar:');
         dbLogger.info('   1. Visita https://dbdiagram.io');
-        dbLogger.info('   2. Copia el contenido de database.dbml.txt');
+        dbLogger.info('   2. Copia el contenido de agent-docs/database.dbml.txt');
         dbLogger.info('   3. Pégalo en el editor para ver el diagrama');
         
         await sequelize.close();

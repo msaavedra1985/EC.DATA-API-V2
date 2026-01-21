@@ -76,9 +76,9 @@
 ## Documentation Standards (MANDATORY)
 
 - **Swagger/OpenAPI**: Every new endpoint MUST include formal `@swagger` JSDoc annotations before being considered complete
-- **Database Schema**: After ANY database schema change, MUST run `npm run db:dbml` to update `database.dbml.txt`
+- **Database Schema**: After ANY database schema change, MUST run `npm run db:dbml` to update `agent-docs/database.dbml.txt`
 - **JSDoc Format**: Use OpenAPI 3.0 specification format in comments (schemas, responses, security, examples)
-- **Schema Sync**: The `database.dbml.txt` file must always reflect the current production schema state
+- **Schema Sync**: The `agent-docs/database.dbml.txt` file must always reflect the current production schema state
 
 ## Endpoint Documentation (MANDATORY)
 

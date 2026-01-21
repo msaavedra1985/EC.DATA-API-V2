@@ -692,7 +692,7 @@ Solo `system-admin` tiene este flag en `true`. Significa que puede acceder a TOD
 ## Recursos Adicionales
 
 - **Swagger Docs:** `/docs` - Documentación interactiva de la API
-- **DBML Visualization:** `database.dbml.txt` - Diagrama de base de datos (visualizar en https://dbdiagram.io)
+- **DBML Visualization:** `agent-docs/database.dbml.txt` - Diagrama de base de datos (visualizar en https://dbdiagram.io)
 - **Postman Collection:** Solicitar al equipo backend
 
 ---

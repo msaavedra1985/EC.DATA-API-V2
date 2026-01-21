@@ -379,7 +379,7 @@ El proyecto sigue estándares estrictos de código:
 1. Ejecutar `npm test`
 2. Verificar que `npm run db:migrate` funciona
 3. Actualizar documentación si hay cambios en endpoints
-4. Actualizar `database.dbml.txt` si hay cambios en schema
+4. Actualizar `agent-docs/database.dbml.txt` si hay cambios en schema
 
 ---
 
