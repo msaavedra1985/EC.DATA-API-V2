@@ -14,6 +14,7 @@ REST API Node.js/Express multi-tenant para plataformas e-commerce. Integra con f
 | **Al encontrar términos desconocidos** | `agent-docs/glosario.md` |
 | **Para entender qué existe** | `agent-docs/modules.md` |
 | **Al implementar nuevas features** | `agent-docs/nodejs-best-practices.md` |
+| **Al modificar/consultar endpoints** | `agent-docs/endpoints/{modulo}.md` |
 
 ## Índice de Documentación
 
@@ -26,7 +27,19 @@ agent-docs/
 ├── modules.md            # Módulos implementados y endpoints
 ├── glosario.md           # Términos de dominio (public_code, session_context, etc.)
 ├── learnings.md          # Errores resueltos y gotchas
-└── nodejs-best-practices.md  # Mejores prácticas Node.js API
+├── nodejs-best-practices.md  # Mejores prácticas Node.js API
+└── endpoints/            # Documentación detallada de endpoints
+    ├── _template.md      # Template para nuevos módulos
+    ├── auth.md           # Autenticación (login, refresh, session)
+    ├── users.md          # CRUD usuarios
+    ├── organizations.md  # CRUD organizaciones
+    ├── sites.md          # CRUD sitios
+    ├── devices.md        # CRUD dispositivos
+    ├── channels.md       # CRUD canales
+    ├── files.md          # Upload/download archivos
+    ├── telemetry.md      # Series temporales
+    ├── resource-hierarchy.md  # Árbol de recursos
+    └── error-logs.md     # Logging de errores (público)
 ```
 
 ## Reglas Críticas (Resumen)
@@ -36,6 +49,7 @@ agent-docs/
 3. **Máximo 1000 líneas** por archivo → dividir si se excede
 4. **Comentarios en español**, código en inglés
 5. **"What works, don't touch"** → análisis de impacto antes de modificar código funcional
+6. **Actualizar docs de endpoints** al modificarlos → `agent-docs/endpoints/{modulo}.md`
 
 ## Quick Start
 

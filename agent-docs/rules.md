@@ -80,6 +80,18 @@
 - **JSDoc Format**: Use OpenAPI 3.0 specification format in comments (schemas, responses, security, examples)
 - **Schema Sync**: The `database.dbml.txt` file must always reflect the current production schema state
 
+## Endpoint Documentation (MANDATORY)
+
+> **CRÍTICO**: Documentación desactualizada es peor que no tener documentación
+
+- **Al modificar cualquier endpoint** (request, response, validación, lógica), **DEBE actualizarse** el archivo correspondiente en `agent-docs/endpoints/`
+- Cada archivo de endpoints incluye:
+  - Tabla resumen de endpoints del módulo
+  - Detalle de cada endpoint: método, path, body, respuestas, errores
+  - Notas de implementación (audit log, rate limit, etc.)
+- **Fecha de actualización**: Actualizar el campo "Última actualización" al modificar
+- Esta documentación sirve tanto para LLMs como para desarrolladores humanos
+
 ## File Size Limit
 
 - **Maximum 1000 lines per file** - Split into multiple files if exceeded
