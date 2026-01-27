@@ -14,6 +14,7 @@ import channelsRouter from '../modules/channels/index.js';
 import filesRouter from '../modules/files/index.js';
 import telemetryRouter from '../modules/telemetry/index.js';
 import resourceHierarchyRouter from '../modules/resource-hierarchy/index.js';
+import assetCategoriesRouter from '../modules/asset-categories/index.js';
 
 const router = express.Router();
 
@@ -60,6 +61,9 @@ router.use('/telemetry', telemetryRouter);
 
 // Resource Hierarchy (jerarquía de recursos organizacionales)
 router.use('/resource-hierarchy', resourceHierarchyRouter);
+
+// Asset Categories (tags jerárquicos para clasificar canales)
+router.use('/asset-categories', assetCategoriesRouter);
 
 // Seeding (Testing/Development)
 router.use('/seed', seedRouter);

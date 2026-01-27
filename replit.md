@@ -43,7 +43,8 @@ agent-docs/
     ├── files.md          # Upload/download archivos
     ├── telemetry.md      # Series temporales
     ├── resource-hierarchy.md  # Árbol de recursos
-    └── error-logs.md     # Logging de errores (público)
+    ├── error-logs.md     # Logging de errores (público)
+    └── asset-categories.md  # Tags jerárquicos para canales
 ```
 
 ## Reglas Críticas (Resumen)

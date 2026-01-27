@@ -66,3 +66,14 @@ Sistema de ubicaciones geográficas con natural keys:
 - Seed: `node data/seed/seed-locations.js` (~250 países, ~5000 estados)
 - Library: `country-state-city` para datos ISO actualizados
 - **Pendientes**: Ver [backlog.md](backlog.md#locations-module) para servicios y endpoints faltantes
+
+### asset-categories (Nuevo)
+Sistema de tags jerárquicos para clasificar canales:
+- **Modelo**: AssetCategory con Adjacency List + Materialized Path
+- **Alcances**: `organization` (compartidos) y `user` (personales)
+- **Jerarquía**: N niveles de profundidad (level numérico)
+- **Performance**: Índices en path, scope+org_id, scope+user_id
+- **Métodos**: getDescendants(), getAncestors() usando path
+- **Integración**: Channel.belongsTo(AssetCategory) via `asset_category_id`
+- **Endpoints**: Ver [asset-categories.md](endpoints/asset-categories.md)
+- **Seed**: `node data/seed/seed-asset-categories.js <org_uuid>`
