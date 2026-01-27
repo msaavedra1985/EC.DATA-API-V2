@@ -107,3 +107,9 @@
 - [x] Cache Redis para countries (key: `countries:{lang}`)
 - [x] Instalación librería `country-state-city`
 - [x] Script de seed `data/seed/seed-locations.js`
+- [x] Módulo asset-categories completo (tags jerárquicos para canales)
+  - Migración: tabla asset_categories + constraint scope + asset_category_id en channels
+  - Modelo: AssetCategory con hooks para path/level automáticos
+  - Repository/Services/Routes con CRUD completo
+  - Documentación: agent-docs/endpoints/asset-categories.md
+  - Seed: data/seed/seed-asset-categories.js
