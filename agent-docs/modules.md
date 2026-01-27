@@ -65,3 +65,4 @@ Sistema de ubicaciones geográficas con natural keys:
 - Traducciones: todas las entidades tienen tablas `*_translations` para ES/EN
 - Seed: `node data/seed/seed-locations.js` (~250 países, ~5000 estados)
 - Library: `country-state-city` para datos ISO actualizados
+- **Pendientes**: Ver [backlog.md](backlog.md#locations-module) para servicios y endpoints faltantes
