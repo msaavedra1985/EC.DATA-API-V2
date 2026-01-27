@@ -68,6 +68,12 @@ export const updateOrganizationSchema = z.object({
         .optional()
         .nullable(),
     
+    country_code: z.string()
+        .length(2, 'Country code must be exactly 2 characters (ISO 3166-1 alpha-2)')
+        .toUpperCase()
+        .regex(/^[A-Z]{2}$/, 'Country code must be 2 uppercase letters')
+        .optional(),
+    
     is_active: z.boolean()
         .optional()
 });

@@ -54,13 +54,13 @@ export const createSiteSchema = z.object({
             .string()
             .max(20, 'postal_code no puede exceder 20 caracteres')
             .optional(),
-        country_id: z
-            .number({
-                required_error: 'country_id es requerido',
-                invalid_type_error: 'country_id debe ser un número'
+        country_code: z
+            .string({
+                required_error: 'country_code es requerido'
             })
-            .int('country_id debe ser un entero')
-            .positive('country_id debe ser positivo'),
+            .length(2, 'country_code debe ser exactamente 2 caracteres (ISO 3166-1 alpha-2)')
+            .toUpperCase()
+            .regex(/^[A-Z]{2}$/, 'country_code debe ser 2 letras mayúsculas'),
         timezone: z
             .string()
             .max(100, 'timezone no puede exceder 100 caracteres')
@@ -161,10 +161,11 @@ export const updateSiteSchema = z.object({
             .string()
             .max(20, 'postal_code no puede exceder 20 caracteres')
             .optional(),
-        country_id: z
-            .number()
-            .int('country_id debe ser un entero')
-            .positive('country_id debe ser positivo')
+        country_code: z
+            .string()
+            .length(2, 'country_code debe ser exactamente 2 caracteres (ISO 3166-1 alpha-2)')
+            .toUpperCase()
+            .regex(/^[A-Z]{2}$/, 'country_code debe ser 2 letras mayúsculas')
             .optional(),
         timezone: z
             .string()
@@ -239,9 +240,10 @@ export const listSitesSchema = z.object({
             .string()
             .optional()
             .describe('Solo admins: si es "true", muestra todos los sites sin filtrar por organización'),
-        country_id: z
+        country_code: z
             .string()
-            .transform(val => parseInt(val, 10))
+            .length(2, 'country_code debe ser exactamente 2 caracteres')
+            .toUpperCase()
             .optional(),
         is_active: z
             .string()

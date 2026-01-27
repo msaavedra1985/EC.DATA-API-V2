@@ -36,6 +36,29 @@
 
 ---
 
+## Locations / Countries
+
+### Repository usa findByPk pero PK no es iso_alpha2
+**Fecha**: 2026-01-27
+**Síntoma**: `findCountryByCode` fallaba porque usaba `findByPk(code)` pero PK de countries es `id` (integer), no `iso_alpha2`
+**Causa**: Al migrar a natural keys, se usó `iso_alpha2` como FK en otras tablas pero la PK de `countries` sigue siendo `id` (autoincrement)
+**Solución**: 
+- Usar `findOne({ where: { iso_alpha2: code.toUpperCase() } })` en lugar de `findByPk(code)`
+- El modelo usa `id` como PK pero relaciones usan `sourceKey: 'iso_alpha2'`
+**Archivos afectados**: `src/modules/countries/repository.js`
+
+### Seed de locations muy lento por inserciones individuales
+**Fecha**: 2026-01-27
+**Síntoma**: Script de seed timeout después de 3+ minutos, solo 1000 de ~5000 estados
+**Causa**: El script hacía INSERT individual para cada estado + 2 traducciones
+**Solución**: 
+- Usar batch commits cada 500 estados para evitar transacción larga
+- Considerar batch INSERT con múltiples VALUES para mejor performance
+- Seed ejecutable en background: `nohup node data/seed/seed-locations.js &`
+**Archivos afectados**: `data/seed/seed-locations.js`
+
+---
+
 ## Rate Limiting
 
 ### Contador de intentos no se resetea después de login exitoso

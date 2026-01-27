@@ -33,8 +33,8 @@ export const createSite = async (siteData, userId, ipAddress, userAgent) => {
         organizationUuid = org.id;
     }
     
-    // Validar que el country_id existe
-    const country = await countryRepository.findCountryById(siteData.country_id);
+    // Validar que el country_code existe
+    const country = await countryRepository.findCountryByCode(siteData.country_code);
     if (!country) {
         const error = new Error('País no encontrado');
         error.status = 404;
@@ -69,7 +69,7 @@ export const createSite = async (siteData, userId, ipAddress, userAgent) => {
         changes: { new: site },
         metadata: {
             organization_id: organizationUuid,
-            country_id: siteData.country_id
+            country_code: siteData.country_code
         },
         ipAddress: ipAddress,
         userAgent: userAgent
@@ -191,9 +191,9 @@ export const updateSite = async (publicCode, updateData, userId, ipAddress, user
         throw error;
     }
     
-    // Si se actualiza country_id, validar que existe
-    if (updateData.country_id) {
-        const country = await countryRepository.findCountryById(updateData.country_id);
+    // Si se actualiza country_code, validar que existe
+    if (updateData.country_code) {
+        const country = await countryRepository.findCountryByCode(updateData.country_code);
         if (!country) {
             const error = new Error('País no encontrado');
             error.status = 404;

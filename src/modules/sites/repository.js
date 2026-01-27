@@ -15,7 +15,8 @@ Site.belongsTo(Organization, {
 });
 
 Site.belongsTo(Country, {
-    foreignKey: 'country_id',
+    foreignKey: 'country_code',
+    targetKey: 'iso_alpha2',
     as: 'country'
 });
 
@@ -25,7 +26,8 @@ Organization.hasMany(Site, {
 });
 
 Country.hasMany(Site, {
-    foreignKey: 'country_id',
+    foreignKey: 'country_code',
+    sourceKey: 'iso_alpha2',
     as: 'sites'
 });
 
@@ -169,7 +171,7 @@ export const deleteSite = async (id) => {
 export const listSites = async ({ 
     organization_id,
     organization_ids,
-    country_id,
+    country_code,
     is_active,
     city,
     not_in_hierarchy = false,
@@ -181,7 +183,7 @@ export const listSites = async ({
         return await listSitesNotInHierarchy({
             organization_id,
             organization_ids,
-            country_id,
+            country_code,
             is_active,
             city,
             limit,
@@ -198,8 +200,8 @@ export const listSites = async ({
         where.organization_id = organization_id;
     }
     
-    if (country_id !== undefined) {
-        where.country_id = country_id;
+    if (country_code !== undefined) {
+        where.country_code = country_code;
     }
     
     if (is_active !== undefined) {
@@ -247,7 +249,7 @@ export const listSites = async ({
 const listSitesNotInHierarchy = async ({
     organization_id,
     organization_ids,
-    country_id,
+    country_code,
     is_active,
     city,
     limit = 20,
@@ -268,9 +270,9 @@ const listSitesNotInHierarchy = async ({
         bindIndex++;
     }
     
-    if (country_id !== undefined) {
-        conditions.push(`s.country_id = $${bindIndex}`);
-        bindings.push(country_id);
+    if (country_code !== undefined) {
+        conditions.push(`s.country_code = $${bindIndex}`);
+        bindings.push(country_code);
         bindIndex++;
     }
     
@@ -309,8 +311,7 @@ const listSitesNotInHierarchy = async ({
             o.slug as org_slug,
             o.name as org_name,
             o.logo_url as org_logo_url,
-            c.id as country_id_rel,
-            c.iso_alpha2 as country_iso_alpha2,
+            c.iso_alpha2 as country_code_rel,
             c.iso_alpha3 as country_iso_alpha3,
             c.phone_code as country_phone_code
         FROM sites s
@@ -319,7 +320,7 @@ const listSitesNotInHierarchy = async ({
             AND rh.node_type = 'site' 
             AND rh.deleted_at IS NULL
         LEFT JOIN organizations o ON s.organization_id = o.id
-        LEFT JOIN countries c ON s.country_id = c.id
+        LEFT JOIN countries c ON s.country_code = c.iso_alpha2
         WHERE ${whereClause}
           AND rh.id IS NULL
         ORDER BY s.created_at DESC
@@ -359,9 +360,8 @@ const listSitesNotInHierarchy = async ({
             name: row.org_name,
             logo_url: row.org_logo_url
         } : null,
-        country: row.country_id_rel ? {
-            id: row.country_id_rel,
-            iso_alpha2: row.country_iso_alpha2,
+        country: row.country_code_rel ? {
+            code: row.country_code_rel,
             iso_alpha3: row.country_iso_alpha3,
             phone_code: row.country_phone_code
         } : null,

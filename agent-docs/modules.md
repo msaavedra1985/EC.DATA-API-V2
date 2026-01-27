@@ -51,7 +51,17 @@
 | Módulo | Ubicación | Propósito |
 |--------|-----------|-----------|
 | roles | `src/modules/roles/` | RBAC database-driven |
-| countries | `src/modules/countries/` | Catálogo de países |
+| countries | `src/modules/countries/` | Catálogo de países (ISO 3166-1) |
+| locations | `src/modules/locations/` | Estados/provincias y ciudades |
 | audit | `src/modules/audit/` | Modelo para audit_logs |
 | health | `src/modules/health/` | Health checks (`GET /health`, `GET /health/ready`) |
 | seed | `src/modules/seed/` | Datos iniciales para desarrollo |
+
+### locations (Nuevo)
+Sistema de ubicaciones geográficas con natural keys:
+- **countries**: PK=`id` (autoincrement), FK usa `iso_alpha2` (AR, US, ES)
+- **states**: PK=`code` (natural key: "AR-B", "US-CA")
+- **cities**: PK=`id` (autoincrement, carga on-demand)
+- Traducciones: todas las entidades tienen tablas `*_translations` para ES/EN
+- Seed: `node data/seed/seed-locations.js` (~250 países, ~5000 estados)
+- Library: `country-state-city` para datos ISO actualizados

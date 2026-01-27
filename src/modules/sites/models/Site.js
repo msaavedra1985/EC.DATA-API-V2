@@ -96,16 +96,16 @@ const Site = sequelize.define('Site', {
         allowNull: true,
         comment: 'Código postal'
     },
-    country_id: {
-        type: DataTypes.INTEGER,
+    country_code: {
+        type: DataTypes.STRING(2),
         allowNull: false,
         references: {
             model: 'countries',
-            key: 'id'
+            key: 'iso_alpha2'
         },
         onUpdate: 'CASCADE',
         onDelete: 'RESTRICT',
-        comment: 'FK a tabla countries - país del site'
+        comment: 'FK a countries.iso_alpha2 - código ISO del país (ej: AR, US)'
     },
     // Datos adicionales
     timezone: {
@@ -190,7 +190,7 @@ const Site = sequelize.define('Site', {
             fields: ['organization_id']
         },
         {
-            fields: ['country_id']
+            fields: ['country_code']
         },
         {
             fields: ['is_active']

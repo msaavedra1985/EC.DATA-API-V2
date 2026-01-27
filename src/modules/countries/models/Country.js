@@ -4,7 +4,7 @@ import sequelize from '../../../db/sql/sequelize.js';
 /**
  * Modelo de País
  * Tabla de referencia con códigos ISO 3166-1
- * No usa UUID v7 - es tabla de referencia estática
+ * La PK sigue siendo id (integer) pero las FKs referencian iso_alpha2
  */
 const Country = sequelize.define('Country', {
     id: {
@@ -17,7 +17,7 @@ const Country = sequelize.define('Country', {
         type: DataTypes.STRING(2),
         allowNull: false,
         unique: true,
-        comment: 'Código ISO 3166-1 alpha-2 (ej: AR, US, ES)'
+        comment: 'Código ISO 3166-1 alpha-2 (ej: AR, US, ES) - usado como FK en otras tablas'
     },
     iso_alpha3: {
         type: DataTypes.STRING(3),
@@ -46,7 +46,7 @@ const Country = sequelize.define('Country', {
     tableName: 'countries',
     timestamps: true,
     underscored: true,
-    paranoid: false, // No soft delete para tabla de referencia
+    paranoid: false,
     indexes: [
         {
             fields: ['iso_alpha2']

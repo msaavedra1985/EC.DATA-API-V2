@@ -73,9 +73,10 @@ export const createOrganizationSchema = z.object({
         .optional()
         .nullable(),
     
-    country_id: z.coerce.number()
-        .int('Country ID must be an integer')
-        .positive('Country ID must be a positive number'),
+    country_code: z.string()
+        .length(2, 'Country code must be exactly 2 characters (ISO 3166-1 alpha-2)')
+        .toUpperCase()
+        .regex(/^[A-Z]{2}$/, 'Country code must be 2 uppercase letters'),
     
     is_active: z.boolean()
         .optional()

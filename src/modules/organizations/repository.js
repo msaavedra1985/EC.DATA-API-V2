@@ -163,8 +163,8 @@ export const listOrganizations = async (limit = 50, offset = 0, filters = {}) =>
         where.is_active = filters.is_active;
     }
     
-    if (filters.country_id) {
-        where.country_id = filters.country_id;
+    if (filters.country_code) {
+        where.country_code = filters.country_code;
     }
 
     // Filtro de scope - organizaciones permitidas por permisos
