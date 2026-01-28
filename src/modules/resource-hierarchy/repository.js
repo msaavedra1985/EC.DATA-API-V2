@@ -1154,6 +1154,196 @@ export const batchCreateNodes = async (nodesData, options = {}) => {
     return createdNodes;
 };
 
+/**
+ * Obtener árbol filtrado por categoría de asset
+ * Retorna solo las ramas que contienen nodos (típicamente channels) con el tag especificado
+ * 
+ * Algoritmo:
+ * 1. Encontrar todos los nodos con asset_category_id que coincida (incluyendo subcategorías)
+ * 2. Obtener los paths de esos nodos y extraer todos los IDs de ancestros
+ * 3. Retornar esos nodos estructurados como árbol
+ * 
+ * @param {string} organizationId - UUID de la organización
+ * @param {number} categoryId - ID de la categoría a filtrar
+ * @param {Object} options - Opciones adicionales
+ * @param {boolean} options.includeSubcategories - Si incluir subcategorías del tag (default: true)
+ * @param {number} options.limit - Límite de nodos (default: 500)
+ * @returns {Promise<Array>} - Árbol filtrado
+ */
+export const getFilteredTree = async (organizationId, categoryId, options = {}) => {
+    const { includeSubcategories = true, limit = 500 } = options;
+    
+    // 1. Obtener los IDs de categorías a buscar (la categoría + sus descendientes si aplica)
+    let categoryIds = [categoryId];
+    
+    if (includeSubcategories) {
+        // Obtener path de la categoría para encontrar descendientes
+        const [categoryRow] = await sequelize.query(`
+            SELECT id, path FROM asset_categories WHERE id = $1
+        `, {
+            bind: [categoryId],
+            type: QueryTypes.SELECT
+        });
+        
+        if (categoryRow && categoryRow.path) {
+            // Buscar todas las categorías que tienen el path como prefijo
+            const descendants = await sequelize.query(`
+                SELECT id FROM asset_categories 
+                WHERE path LIKE $1 || '%'
+                  AND is_active = true
+            `, {
+                bind: [categoryRow.path],
+                type: QueryTypes.SELECT
+            });
+            
+            categoryIds = descendants.map(d => d.id);
+        }
+    }
+    
+    if (categoryIds.length === 0) {
+        return [];
+    }
+    
+    // 2. Encontrar todos los nodos que tienen el asset_category_id (típicamente channels)
+    // y obtener sus paths para extraer ancestros
+    const matchingNodesQuery = `
+        SELECT id, path
+        FROM resource_hierarchy
+        WHERE organization_id = $1
+          AND asset_category_id = ANY($2::int[])
+          AND deleted_at IS NULL
+          AND is_active = true
+    `;
+    
+    const matchingNodes = await sequelize.query(matchingNodesQuery, {
+        bind: [organizationId, categoryIds],
+        type: QueryTypes.SELECT
+    });
+    
+    if (matchingNodes.length === 0) {
+        return [];
+    }
+    
+    // 3. Extraer todos los UUIDs de ancestros desde los paths ltree
+    // El path ltree tiene formato: uuid1.uuid2.uuid3 (sin guiones, con underscores en lugar de guiones)
+    // Necesitamos obtener todos los nodos en esos paths
+    const matchingNodeIds = matchingNodes.map(n => n.id);
+    
+    // Usar query SQL para obtener todos los ancestros de los nodos matching
+    // Esto incluye los nodos matching + todos sus padres hasta la raíz
+    const ancestorQuery = `
+        WITH matching AS (
+            SELECT id, path
+            FROM resource_hierarchy
+            WHERE id = ANY($1::uuid[])
+        ),
+        all_ancestor_ids AS (
+            -- Obtener todos los nodos cuyo path es prefijo de algún nodo matching
+            SELECT DISTINCT rh.id
+            FROM resource_hierarchy rh, matching m
+            WHERE m.path <@ rh.path OR m.path @> rh.path
+              AND rh.organization_id = $2
+              AND rh.deleted_at IS NULL
+              AND rh.is_active = true
+        )
+        SELECT rh.*,
+               (SELECT COUNT(*) FROM resource_hierarchy c 
+                WHERE c.parent_id = rh.id 
+                  AND c.deleted_at IS NULL 
+                  AND c.is_active = true
+                  AND (c.asset_category_id = ANY($3::int[]) 
+                       OR EXISTS (
+                           SELECT 1 FROM resource_hierarchy d
+                           WHERE d.path <@ c.path
+                             AND d.asset_category_id = ANY($3::int[])
+                             AND d.deleted_at IS NULL
+                             AND d.is_active = true
+                       ))
+               ) as children_count,
+               CASE WHEN rh.asset_category_id = ANY($3::int[]) THEN true ELSE false END as matches_filter
+        FROM resource_hierarchy rh
+        WHERE rh.id IN (SELECT id FROM all_ancestor_ids)
+        ORDER BY rh.depth ASC, rh.display_order ASC, rh.name ASC
+        LIMIT $4
+    `;
+    
+    const rows = await sequelize.query(ancestorQuery, {
+        bind: [matchingNodeIds, organizationId, categoryIds, limit],
+        type: QueryTypes.SELECT
+    });
+    
+    // 4. Convertir a DTOs y construir árbol
+    const nodes = rows.map(row => {
+        const dto = toNodeDto(row);
+        dto.matches_filter = row.matches_filter;
+        return dto;
+    });
+    
+    return buildTree(nodes, null);
+};
+
+/**
+ * Verificar si un nodo tiene descendientes con cierta categoría
+ * Útil para lazy loading - saber si al expandir un nodo habrá resultados
+ * 
+ * @param {string} nodeId - UUID del nodo padre
+ * @param {number} categoryId - ID de la categoría
+ * @param {boolean} includeSubcategories - Si incluir subcategorías
+ * @returns {Promise<boolean>} - true si hay descendientes con el tag
+ */
+export const hasDescendantsWithCategory = async (nodeId, categoryId, includeSubcategories = true) => {
+    // Obtener IDs de categorías
+    let categoryIds = [categoryId];
+    
+    if (includeSubcategories) {
+        const [categoryRow] = await sequelize.query(`
+            SELECT path FROM asset_categories WHERE id = $1
+        `, {
+            bind: [categoryId],
+            type: QueryTypes.SELECT
+        });
+        
+        if (categoryRow && categoryRow.path) {
+            const descendants = await sequelize.query(`
+                SELECT id FROM asset_categories 
+                WHERE path LIKE $1 || '%' AND is_active = true
+            `, {
+                bind: [categoryRow.path],
+                type: QueryTypes.SELECT
+            });
+            categoryIds = descendants.map(d => d.id);
+        }
+    }
+    
+    // Obtener el path del nodo padre
+    const [node] = await sequelize.query(`
+        SELECT path FROM resource_hierarchy WHERE id = $1 AND deleted_at IS NULL
+    `, {
+        bind: [nodeId],
+        type: QueryTypes.SELECT
+    });
+    
+    if (!node) return false;
+    
+    // Verificar si hay descendientes con el tag
+    const [result] = await sequelize.query(`
+        SELECT EXISTS (
+            SELECT 1 
+            FROM resource_hierarchy
+            WHERE path <@ $1::ltree
+              AND id != $2
+              AND asset_category_id = ANY($3::int[])
+              AND deleted_at IS NULL
+              AND is_active = true
+        ) as has_descendants
+    `, {
+        bind: [node.path, nodeId, categoryIds],
+        type: QueryTypes.SELECT
+    });
+    
+    return result?.has_descendants === true;
+};
+
 export default {
     createNode,
     findNodeByPublicCode,
@@ -1163,6 +1353,8 @@ export default {
     getDescendants,
     getAncestors,
     getTree,
+    getFilteredTree,
+    hasDescendantsWithCategory,
     moveNode,
     updateNode,
     deleteNode,

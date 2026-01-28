@@ -22,7 +22,9 @@ import {
     revokeAccessSchema,
     checkAccessSchema,
     batchGetNodesSchema,
-    batchCreateNodesSchema
+    batchCreateNodesSchema,
+    getFilteredTreeSchema,
+    checkCategoryDescendantsSchema
 } from './dtos/index.js';
 import logger from '../../utils/logger.js';
 
@@ -1164,6 +1166,141 @@ router.get('/tree',
             res.json({
                 ok: true,
                 data: tree
+            });
+        } catch (error) {
+            next(error);
+        }
+    }
+);
+
+/**
+ * @swagger
+ * /api/v1/resource-hierarchy/tree/filter:
+ *   get:
+ *     summary: Obtener árbol filtrado por categoría de asset
+ *     description: |
+ *       Retorna solo las ramas del árbol que contienen nodos con el tag/categoría especificado.
+ *       Los nodos padres (carpetas, sites) se incluyen para mantener la estructura del árbol,
+ *       pero solo aquellos que tienen descendientes con el tag.
+ *       
+ *       Cada nodo incluye `matches_filter: true` si coincide directamente con el filtro.
+ *     tags: [Resource Hierarchy]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: organization_id
+ *         schema:
+ *           type: string
+ *         description: Public code de la organización (opcional, usa la org activa)
+ *       - in: query
+ *         name: category_id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID de la categoría de asset a filtrar
+ *       - in: query
+ *         name: include_subcategories
+ *         schema:
+ *           type: boolean
+ *           default: true
+ *         description: Si incluir subcategorías del tag en el filtro
+ *     responses:
+ *       200:
+ *         description: Árbol filtrado
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/ResourceNodeWithChildren'
+ */
+router.get('/tree/filter',
+    authenticate,
+    enforceActiveOrganization,
+    validate(getFilteredTreeSchema),
+    async (req, res, next) => {
+        try {
+            const tree = await hierarchyServices.getFilteredTree(
+                req.organizationContext.id,
+                req.query.category_id,
+                {
+                    includeSubcategories: req.query.include_subcategories
+                }
+            );
+            
+            res.json({
+                ok: true,
+                data: tree
+            });
+        } catch (error) {
+            next(error);
+        }
+    }
+);
+
+/**
+ * @swagger
+ * /api/v1/resource-hierarchy/nodes/{id}/has-category-descendants:
+ *   get:
+ *     summary: Verificar si un nodo tiene descendientes con cierta categoría
+ *     description: |
+ *       Útil para lazy loading en frontend. Permite saber si al expandir un nodo
+ *       habrá resultados con el filtro aplicado, sin cargar todos los descendientes.
+ *     tags: [Resource Hierarchy]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Public code del nodo a verificar
+ *       - in: query
+ *         name: category_id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID de la categoría de asset
+ *       - in: query
+ *         name: include_subcategories
+ *         schema:
+ *           type: boolean
+ *           default: true
+ *         description: Si incluir subcategorías del tag
+ *     responses:
+ *       200:
+ *         description: Resultado de la verificación
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                 has_descendants:
+ *                   type: boolean
+ */
+router.get('/nodes/:id/has-category-descendants',
+    authenticate,
+    validate(checkCategoryDescendantsSchema),
+    async (req, res, next) => {
+        try {
+            const hasDescendants = await hierarchyServices.hasDescendantsWithCategory(
+                req.params.id,
+                req.query.category_id,
+                req.query.include_subcategories
+            );
+            
+            res.json({
+                ok: true,
+                has_descendants: hasDescendants
             });
         } catch (error) {
             next(error);

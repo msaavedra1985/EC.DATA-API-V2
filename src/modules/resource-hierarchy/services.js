@@ -299,6 +299,50 @@ export const getTree = async (organizationId, options = {}) => {
 };
 
 /**
+ * Obtener árbol filtrado por categoría de asset
+ * Retorna solo las ramas que contienen nodos con el tag especificado
+ * Útil para mostrar solo canales de cierto tipo (ej: "Aire Acondicionado")
+ * 
+ * @param {string} organizationId - Public code o UUID de la organización
+ * @param {number} categoryId - ID de la categoría (asset_category.id)
+ * @param {Object} options - Opciones adicionales
+ * @param {boolean} options.includeSubcategories - Si incluir subcategorías del tag (default: true)
+ * @returns {Promise<Array>} - Árbol filtrado con solo ramas relevantes
+ */
+export const getFilteredTree = async (organizationId, categoryId, options = {}) => {
+    const organizationUuid = await resolveOrganizationId(organizationId);
+    
+    const tree = await repository.getFilteredTree(organizationUuid, categoryId, {
+        includeSubcategories: options.includeSubcategories ?? true,
+        limit: options.limit || 500
+    });
+    
+    return sanitizeTree(tree);
+};
+
+/**
+ * Verificar si un nodo tiene descendientes con cierta categoría
+ * Útil para lazy loading en frontend
+ * 
+ * @param {string} nodePublicCode - Public code del nodo padre
+ * @param {number} categoryId - ID de la categoría
+ * @param {boolean} includeSubcategories - Si incluir subcategorías
+ * @returns {Promise<boolean>} - true si hay descendientes con el tag
+ */
+export const hasDescendantsWithCategory = async (nodePublicCode, categoryId, includeSubcategories = true) => {
+    const node = await repository.findNodeByPublicCodeInternal(nodePublicCode);
+    
+    if (!node) {
+        const error = new Error('Nodo no encontrado');
+        error.status = 404;
+        error.code = 'NODE_NOT_FOUND';
+        throw error;
+    }
+    
+    return await repository.hasDescendantsWithCategory(node.id, categoryId, includeSubcategories);
+};
+
+/**
  * Mover un nodo a un nuevo padre y/o cambiar su display_order
  * Incluye validaciones:
  * - Nodo y nuevo padre existen

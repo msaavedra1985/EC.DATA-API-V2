@@ -179,15 +179,55 @@ Aire Acondicionado (id=1, level=1, path="/1/")
 node data/seed/seed-asset-categories.js <organization_uuid>
 ```
 
-## Integración con Channels
+## Integración con Resource Hierarchy
 
-Un canal puede tener un `asset_category_id` asignado. Para filtrar canales por categoría incluyendo subcategorías:
+El `asset_category_id` está en la tabla `resource_hierarchy`, no en `channels` directamente. 
+Esto permite filtrar el árbol de recursos mostrando solo las ramas que contienen nodos con cierto tag.
 
-```javascript
-import { getCategoryAndDescendantIds } from './modules/asset-categories/services.js';
+### Endpoint de Filtrado
 
-const categoryIds = await getCategoryAndDescendantIds(categoryId);
-const channels = await Channel.findAll({
-  where: { asset_category_id: { [Op.in]: categoryIds } }
-});
+```
+GET /api/v1/resource-hierarchy/tree/filter?category_id=5&include_subcategories=true
+```
+
+Retorna solo las ramas del árbol que contienen nodos con el tag especificado.
+Los nodos que no tienen descendientes con el tag se ocultan.
+
+**Response:**
+```json
+{
+  "ok": true,
+  "data": [
+    {
+      "id": "RES-xxx",
+      "name": "Hotel Central",
+      "node_type": "folder",
+      "matches_filter": false,
+      "children": [
+        {
+          "id": "RES-yyy",
+          "name": "Sensor AC Lobby",
+          "node_type": "channel",
+          "matches_filter": true,
+          "children": []
+        }
+      ]
+    }
+  ]
+}
+```
+
+### Lazy Loading
+
+Para verificar si un nodo tiene descendientes con cierto tag antes de expandirlo:
+
+```
+GET /api/v1/resource-hierarchy/nodes/:id/has-category-descendants?category_id=5
+```
+
+```json
+{
+  "ok": true,
+  "has_descendants": true
+}
 ```

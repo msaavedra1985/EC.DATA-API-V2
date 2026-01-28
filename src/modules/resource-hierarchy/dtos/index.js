@@ -516,6 +516,45 @@ export const batchCreateNodesSchema = z.object({
     })
 });
 
+/**
+ * Schema para obtener árbol filtrado por categoría
+ */
+export const getFilteredTreeSchema = z.object({
+    query: z.object({
+        organization_id: z
+            .string()
+            .min(1, 'organization_id no puede estar vacío')
+            .optional(),
+        category_id: z
+            .string()
+            .transform(val => parseInt(val, 10))
+            .pipe(z.number().int().positive('category_id debe ser un entero positivo')),
+        include_subcategories: z
+            .string()
+            .optional()
+            .transform(val => val !== 'false')
+    })
+});
+
+/**
+ * Schema para verificar si un nodo tiene descendientes con cierta categoría
+ */
+export const checkCategoryDescendantsSchema = z.object({
+    params: z.object({
+        id: z.string().min(1, 'id es requerido')
+    }),
+    query: z.object({
+        category_id: z
+            .string()
+            .transform(val => parseInt(val, 10))
+            .pipe(z.number().int().positive('category_id debe ser un entero positivo')),
+        include_subcategories: z
+            .string()
+            .optional()
+            .transform(val => val !== 'false')
+    })
+});
+
 export default {
     createNodeSchema,
     getNodeSchema,
@@ -532,5 +571,7 @@ export default {
     revokeAccessSchema,
     checkAccessSchema,
     batchGetNodesSchema,
-    batchCreateNodesSchema
+    batchCreateNodesSchema,
+    getFilteredTreeSchema,
+    checkCategoryDescendantsSchema
 };
