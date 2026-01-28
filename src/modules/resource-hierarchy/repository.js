@@ -1238,10 +1238,12 @@ export const getFilteredTree = async (organizationId, categoryId, options = {}) 
             WHERE id = ANY($1::uuid[])
         ),
         all_ancestor_ids AS (
-            -- Obtener todos los nodos cuyo path es prefijo de algún nodo matching
+            -- Obtener todos los nodos que son ancestros O el nodo mismo de los matching
+            -- m.path <@ rh.path = m es descendiente de rh (rh es ancestro de m)
+            -- m.path @> rh.path = m es ancestro de rh (incluir el nodo mismo)
             SELECT DISTINCT rh.id
             FROM resource_hierarchy rh, matching m
-            WHERE m.path <@ rh.path OR m.path @> rh.path
+            WHERE (m.path <@ rh.path OR rh.id = m.id)
               AND rh.organization_id = $2
               AND rh.deleted_at IS NULL
               AND rh.is_active = true

@@ -1,4 +1,4 @@
-// Database Schema - Generated on 2026-01-27T22:14:06.849Z
+// Database Schema - Generated on 2026-01-28T04:09:51.756Z
 // Project: EC.DATA API - Enterprise REST API
 // Use this file at https://dbdiagram.io to visualize the schema
 
@@ -102,10 +102,8 @@ Table channels {
   deleted_at timestamptz // Soft delete timestamp
   ch integer // Número de canal físico usado en Cassandra para identificar mediciones
   measurement_type_id integer // FK a measurement_types - tipo de medición del canal
-  asset_category_id integer // FK a asset_categories - categoría/tag asignado al canal
 
   Indexes {
-    (asset_category_id) [name: 'channels_asset_category_id_idx']
     (channel_type) [name: 'channels_channel_type']
     (channel_type) [name: 'channels_channel_type_idx']
     (device_id, ch) [name: 'channels_device_ch_unique', unique]
@@ -445,14 +443,17 @@ Table resource_hierarchy {
   updated_at timestamptz [not null, default: `now()`]
   deleted_at timestamptz // Fecha de soft delete
   path ltree // Path materializado como ltree para queries rápidas de ancestros/descendientes. Formato: org_<uuid>.node_<uuid>.node_<uuid>
+  asset_category_id integer // FK a asset_categories - tag asignado al nodo (principalmente para node_type=channel)
 
   Indexes {
     (organization_id, parent_id) [name: 'resource_hierarchy_active_not_deleted_idx']
+    (asset_category_id) [name: 'resource_hierarchy_asset_category_idx']
     (parent_id) [name: 'resource_hierarchy_children_count_idx']
     (human_id) [name: 'resource_hierarchy_human_id_key', unique]
     (is_active) [name: 'resource_hierarchy_is_active']
     (is_active) [name: 'resource_hierarchy_is_active_idx']
     (node_type) [name: 'resource_hierarchy_node_type']
+    (node_type, asset_category_id) [name: 'resource_hierarchy_node_type_category_idx']
     (node_type) [name: 'resource_hierarchy_node_type_idx']
     (organization_id, name) [name: 'resource_hierarchy_org_name_idx']
     (organization_id, path) [name: 'resource_hierarchy_org_path_idx']
@@ -713,13 +714,12 @@ Ref: audit_logs.impersonated_org_id > organizations.id [update: cascade, delete:
 Ref: audit_logs.performed_by > users.id [update: cascade, delete: set null]
 Ref: channel_variables.channel_id > channels.id [update: cascade, delete: cascade]
 Ref: channel_variables.variable_id > variables.id [update: cascade, delete: cascade]
-Ref: channels.asset_category_id > asset_categories.id [update: cascade, delete: set null]
 Ref: channels.device_id > devices.organization_id [update: cascade, delete: restrict]
 Ref: channels.device_id > devices.id [update: cascade, delete: restrict]
 Ref: channels.measurement_type_id > measurement_types.id [update: cascade, delete: set null]
-Ref: channels.organization_id > devices.id [update: cascade, delete: restrict]
-Ref: channels.organization_id > organizations.id [update: cascade, delete: restrict]
 Ref: channels.organization_id > devices.organization_id [update: cascade, delete: restrict]
+Ref: channels.organization_id > organizations.id [update: cascade, delete: restrict]
+Ref: channels.organization_id > devices.id [update: cascade, delete: restrict]
 Ref: cities.state_code > states.code [update: cascade, delete: restrict]
 Ref: city_translations.city_id > cities.id [update: cascade, delete: cascade]
 Ref: country_translations.country_code > countries.iso_alpha2 [update: cascade, delete: cascade]
@@ -734,6 +734,7 @@ Ref: organization_resource_counters.organization_id > organizations.id [update: 
 Ref: organizations.country_code > countries.iso_alpha2 [update: cascade, delete: restrict]
 Ref: organizations.parent_id > organizations.id [update: cascade, delete: restrict]
 Ref: refresh_tokens.user_id > users.id [update: cascade, delete: cascade]
+Ref: resource_hierarchy.asset_category_id > asset_categories.id [update: cascade, delete: set null]
 Ref: resource_hierarchy.organization_id > organizations.id [update: cascade, delete: restrict]
 Ref: resource_hierarchy.parent_id > resource_hierarchy.id [update: cascade, delete: restrict]
 Ref: sites.country_code > countries.iso_alpha2 [update: cascade, delete: restrict]
