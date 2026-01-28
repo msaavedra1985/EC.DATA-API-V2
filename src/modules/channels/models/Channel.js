@@ -199,11 +199,6 @@ Channel.associate = (models) => {
         as: 'variables'
     });
 
-    // Channel pertenece a AssetCategory (tag de clasificación)
-    Channel.belongsTo(models.AssetCategory, {
-        foreignKey: 'asset_category_id',
-        as: 'assetCategory'
-    });
 };
 
 export default Channel;

@@ -93,6 +93,15 @@ const ResourceHierarchy = sequelize.define('ResourceHierarchy', {
         defaultValue: 0,
         comment: 'Orden de visualización entre hermanos (menor = primero)'
     },
+    asset_category_id: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        references: {
+            model: 'asset_categories',
+            key: 'id'
+        },
+        comment: 'FK a asset_categories - tag asignado al nodo (principalmente para node_type=channel)'
+    },
     depth: {
         type: DataTypes.INTEGER,
         allowNull: false,
@@ -154,5 +163,23 @@ ResourceHierarchy.belongsTo(ResourceHierarchy, {
     foreignKey: 'parent_id',
     as: 'parent'
 });
+
+/**
+ * Asociaciones con otros modelos
+ * Llamada desde el inicializador de modelos
+ */
+ResourceHierarchy.associate = (models) => {
+    // ResourceHierarchy pertenece a Organization
+    ResourceHierarchy.belongsTo(models.Organization, {
+        foreignKey: 'organization_id',
+        as: 'organization'
+    });
+
+    // ResourceHierarchy pertenece a AssetCategory (tag de clasificación)
+    ResourceHierarchy.belongsTo(models.AssetCategory, {
+        foreignKey: 'asset_category_id',
+        as: 'assetCategory'
+    });
+};
 
 export default ResourceHierarchy;
