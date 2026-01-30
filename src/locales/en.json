@@ -114,5 +114,6 @@
     "invalid input syntax for type integer: \"orgadmin@acme.com\"": "invalid input syntax for type integer: \"orgadmin@acme.com\"",
     "auth.login.captcha_required": "auth.login.captcha_required",
     "auth.login.captcha_invalid": "auth.login.captcha_invalid",
-    "errors.device.not_found": "errors.device.not_found"
+    "errors.device.not_found": "errors.device.not_found",
+    "column site.country_id does not exist": "column site.country_id does not exist"
 }
