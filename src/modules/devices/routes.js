@@ -16,6 +16,7 @@ import {
     deleteDeviceSchema
 } from './dtos/index.js';
 import logger from '../../utils/logger.js';
+import deviceMetadataRoutes from '../device-metadata/routes.js';
 
 // Middleware de validación de ownership para Devices
 // Verifica que el recurso pertenece a una organización accesible por el usuario
@@ -534,5 +535,8 @@ router.delete('/:id', authenticate, requireRole(['system-admin']), validateDevic
         next(error);
     }
 });
+
+// Rutas de device metadata (catálogos para formularios)
+router.use('/', deviceMetadataRoutes);
 
 export default router;

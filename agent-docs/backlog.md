@@ -97,7 +97,33 @@
 
 ---
 
+## Device Metadata Module
+
+### Implementado ✅
+- [x] Migración 7 tablas catálogo + 7 tablas traducción (IDs seriales)
+- [x] Modelos Sequelize con relaciones
+- [x] Seed script con datos iniciales (5 tipos, 21 marcas, 48 modelos, 8 servers, 4 redes, 6 licencias, 4 vigencias)
+- [x] Endpoint GET /devices/metadata con cache Redis
+- [x] Documentación agent-docs/endpoints/device-metadata.md
+
+### Pendiente
+- [ ] CRUDs individuales para administración (si se requiere):
+  - POST/PUT/DELETE para device_types
+  - POST/PUT/DELETE para device_brands
+  - POST/PUT/DELETE para device_models
+  - POST/PUT/DELETE para device_servers
+  - POST/PUT/DELETE para device_networks
+  - POST/PUT/DELETE para device_licenses
+  - POST/PUT/DELETE para device_validity_periods
+- [ ] Invalidación de caché automática en CUD operations
+- [ ] Swagger docs para nuevos endpoints
+
+---
+
 ## Historial de Completados
+
+### 2026-02-04
+- [x] Device Metadata endpoint GET /devices/metadata
 
 ### 2026-01-27
 - [x] Migración country_id → country_code en organizations y sites
