@@ -1,12 +1,12 @@
 # Device Metadata API
 
-Catálogos de datos para formularios de dispositivos. Endpoint optimizado para cargar toda la metadata de una sola vez.
+Catálogos de datos para formularios de dispositivos. Incluye endpoint optimizado para cargar toda la metadata de una sola vez, más CRUDs individuales para administración.
 
-## Endpoints
+## Endpoints Principales
 
 ### GET /api/v1/devices/metadata
 
-Obtiene todos los catálogos de dispositivos en un idioma específico.
+Obtiene todos los catálogos de dispositivos en un idioma específico. Optimizado para cargar formularios.
 
 **Autenticación:** Requerida (Bearer token)
 
@@ -14,7 +14,7 @@ Obtiene todos los catálogos de dispositivos en un idioma específico.
 
 | Parámetro | Tipo | Default | Descripción |
 |-----------|------|---------|-------------|
-| `lang` | string | `es` | Código de idioma (es, en). Si no se proporciona, usa Accept-Language header |
+| `lang` | string | `es` | Código de idioma (es, en) |
 
 #### Response
 
@@ -22,93 +22,149 @@ Obtiene todos los catálogos de dispositivos en un idioma específico.
 {
   "success": true,
   "data": {
-    "device_types": [
-      { "id": 1, "code": "node", "name": "Nodo", "icon": "cpu" },
-      { "id": 2, "code": "ucm", "name": "UCM", "icon": "server" }
-    ],
-    "brands": [
-      { "id": 1, "code": "energycloud", "name": "EnergyCloud" },
-      { "id": 2, "code": "schneider", "name": "Schneider Electric" }
-    ],
-    "models": [
-      { "id": 1, "code": "ECS", "name": "ECS", "brand_id": 1, "brand_code": "energycloud" },
-      { "id": 4, "code": "Dirris A20", "name": "Dirris A20", "brand_id": 2, "brand_code": "socomec" }
-    ],
-    "servers": [
-      { "id": 1, "code": "mqttssl.energycloud.tv", "name": "mqttssl.energycloud.tv", "server_type": "mqttssl", "use_ssl": true }
-    ],
-    "networks": [
-      { "id": 1, "code": "modem_4g", "name": "Modem 4G", "icon": "signal" },
-      { "id": 2, "code": "ethernet", "name": "Ethernet", "icon": "ethernet-port" }
-    ],
-    "licenses": [
-      { "id": 1, "code": "ec_iot", "name": "EC.IoT", "color": "#3B82F6" },
-      { "id": 2, "code": "ec_automation", "name": "EC.Automation", "color": "#10B981" }
-    ],
-    "validity_periods": [
-      { "id": 1, "code": "12_months", "name": "12 meses", "months": 12 },
-      { "id": 4, "code": "enterprise", "name": "Enterprise", "months": null }
-    ]
+    "device_types": [...],
+    "brands": [...],
+    "models": [...],
+    "servers": [...],
+    "networks": [...],
+    "licenses": [...],
+    "validity_periods": [...]
   }
 }
 ```
 
-#### Notas de Implementación
+---
 
-- **Caché Redis:** 1 hora TTL por idioma
-- **Traducción:** Cada entidad tiene tabla de traducciones separada
-- **IDs Seriales:** No se usan UUIDs ni public_codes (datos públicos de catálogo)
+## CRUDs Individuales
+
+Todos los CRUDs siguen el mismo patrón. Lectura requiere autenticación, escritura requiere rol `system-admin`.
+
+### Device Types
+- `GET /devices/types` - Listar tipos
+- `GET /devices/types/:id` - Obtener tipo por ID
+- `POST /devices/types` - Crear tipo (admin)
+- `PUT /devices/types/:id` - Actualizar tipo (admin)
+- `DELETE /devices/types/:id` - Eliminar tipo (admin)
+
+### Device Brands
+- `GET /devices/brands` - Listar marcas
+- `GET /devices/brands/:id` - Obtener marca por ID
+- `POST /devices/brands` - Crear marca (admin)
+- `PUT /devices/brands/:id` - Actualizar marca (admin)
+- `DELETE /devices/brands/:id` - Eliminar marca (admin)
+
+### Device Models
+- `GET /devices/models` - Listar modelos
+- `GET /devices/models/:id` - Obtener modelo por ID
+- `POST /devices/models` - Crear modelo (admin)
+- `PUT /devices/models/:id` - Actualizar modelo (admin)
+- `DELETE /devices/models/:id` - Eliminar modelo (admin)
+
+**Query especial:** `?brand_id=X` para filtrar modelos por marca.
+
+### Device Servers
+- `GET /devices/servers` - Listar servidores
+- `GET /devices/servers/:id` - Obtener servidor por ID
+- `POST /devices/servers` - Crear servidor (admin)
+- `PUT /devices/servers/:id` - Actualizar servidor (admin)
+- `DELETE /devices/servers/:id` - Eliminar servidor (admin)
+
+### Device Networks
+- `GET /devices/networks` - Listar redes
+- `GET /devices/networks/:id` - Obtener red por ID
+- `POST /devices/networks` - Crear red (admin)
+- `PUT /devices/networks/:id` - Actualizar red (admin)
+- `DELETE /devices/networks/:id` - Eliminar red (admin)
+
+### Device Licenses
+- `GET /devices/licenses` - Listar licencias
+- `GET /devices/licenses/:id` - Obtener licencia por ID
+- `POST /devices/licenses` - Crear licencia (admin)
+- `PUT /devices/licenses/:id` - Actualizar licencia (admin)
+- `DELETE /devices/licenses/:id` - Eliminar licencia (admin)
+
+### Device Validity Periods
+- `GET /devices/validity-periods` - Listar períodos
+- `GET /devices/validity-periods/:id` - Obtener período por ID
+- `POST /devices/validity-periods` - Crear período (admin)
+- `PUT /devices/validity-periods/:id` - Actualizar período (admin)
+- `DELETE /devices/validity-periods/:id` - Eliminar período (admin)
 
 ---
 
-### POST /api/v1/devices/metadata/invalidate-cache
+## Query Parameters Comunes
 
-Invalida el caché de metadata.
+| Parámetro | Tipo | Default | Descripción |
+|-----------|------|---------|-------------|
+| `lang` | string | `es` | Código de idioma para nombres |
+| `include_inactive` | string | `false` | Incluir registros inactivos (`true`/`false`) |
 
-**Autenticación:** Requerida (Admin)
+---
 
-#### Request Body
+## Request Body (Create/Update)
 
 ```json
 {
-  "lang": "es"  // Opcional. Si es null/omitido, invalida todos los idiomas
+  "code": "new_item",
+  "icon": "icon-name",
+  "display_order": 10,
+  "is_active": true,
+  "translations": {
+    "es": {
+      "name": "Nombre en español",
+      "description": "Descripción opcional"
+    },
+    "en": {
+      "name": "Name in English",
+      "description": "Optional description"
+    }
+  }
 }
 ```
 
-#### Response
+### Campos específicos por catálogo
+
+| Catálogo | Campos adicionales |
+|----------|-------------------|
+| brands | `logo_url`, `website_url` |
+| models | `device_brand_id` (requerido), `specs` (JSON) |
+| servers | `server_type`, `host`, `port`, `use_ssl` |
+| licenses | `color` (hex) |
+| validity_periods | `months` (null = ilimitado) |
+
+---
+
+## Response (GET por ID con traducciones)
 
 ```json
 {
   "success": true,
-  "message": "Caché invalidado correctamente"
+  "data": {
+    "id": 1,
+    "code": "node",
+    "icon": "cpu",
+    "is_active": true,
+    "display_order": 1,
+    "translations": {
+      "es": { "name": "Nodo", "description": null },
+      "en": { "name": "Node", "description": null }
+    }
+  }
 }
 ```
 
 ---
 
-## Catálogos Disponibles
+## Delete
 
-| Catálogo | Descripción | Campos |
-|----------|-------------|--------|
-| `device_types` | Tipos de dispositivo | id, code, name, icon |
-| `brands` | Marcas | id, code, name, logo_url, website_url |
-| `models` | Modelos (por marca) | id, code, name, brand_id, brand_code, specs |
-| `servers` | Servidores MQTT/FTP | id, code, name, server_type, host, port, use_ssl |
-| `networks` | Tipos de red | id, code, name, icon |
-| `licenses` | Licencias | id, code, name, color |
-| `validity_periods` | Períodos de vigencia | id, code, name, months |
+- Por defecto: soft delete (`is_active = false`)
+- Hard delete: `DELETE /devices/types/1?hard=true`
 
-## Uso en Frontend
+---
 
-```typescript
-// Cargar metadata al iniciar formulario de dispositivo
-const { data } = await api.get('/devices/metadata', {
-  headers: { 'Accept-Language': 'es' }
-});
+## Notas de Implementación
 
-// Usar en selects
-const brandOptions = data.brands.map(b => ({ value: b.id, label: b.name }));
-const modelOptions = data.models
-  .filter(m => m.brand_id === selectedBrandId)
-  .map(m => ({ value: m.id, label: m.name }));
-```
+- **Caché Redis:** GET /metadata cacheado 1 hora por idioma
+- **Invalidación automática:** Cada CUD invalida el caché de metadata
+- **IDs Seriales:** No se usan UUIDs (datos públicos de catálogo)
+- **Permisos:** Lectura = autenticado, Escritura = system-admin

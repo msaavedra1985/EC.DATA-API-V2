@@ -31,26 +31,60 @@ const toDTO = (model) => {
         ...(json.color && { color: json.color }),
         ...(json.months !== undefined && { months: json.months }),
         ...(json.specs && { specs: json.specs }),
-        ...(json.brand && { brand_id: json.brand.id, brand_code: json.brand.code })
+        ...(json.brand && { brand_id: json.brand.id, brand_code: json.brand.code }),
+        is_active: json.is_active,
+        display_order: json.display_order
+    };
+};
+
+/**
+ * Transformar modelo con todas las traducciones a DTO
+ */
+const toDTOWithTranslations = (model) => {
+    const json = model.toJSON();
+    
+    const translations = {};
+    if (json.translations) {
+        for (const tr of json.translations) {
+            translations[tr.lang] = {
+                name: tr.name,
+                description: tr.description || null
+            };
+        }
+    }
+    
+    return {
+        id: json.id,
+        code: json.code,
+        ...(json.icon && { icon: json.icon }),
+        ...(json.logo_url && { logo_url: json.logo_url }),
+        ...(json.website_url && { website_url: json.website_url }),
+        ...(json.server_type && { server_type: json.server_type }),
+        ...(json.host && { host: json.host }),
+        ...(json.port && { port: json.port }),
+        ...(json.use_ssl !== undefined && { use_ssl: json.use_ssl }),
+        ...(json.color && { color: json.color }),
+        ...(json.months !== undefined && { months: json.months }),
+        ...(json.specs && { specs: json.specs }),
+        ...(json.brand && { brand_id: json.brand.id, brand_code: json.brand.code }),
+        ...(json.device_brand_id && { device_brand_id: json.device_brand_id }),
+        is_active: json.is_active,
+        display_order: json.display_order,
+        translations
     };
 };
 
 /**
  * Obtener todo el metadata de dispositivos (con caché)
- * 
- * @param {string} lang - Código de idioma (es, en)
- * @returns {Promise<Object>} - Catálogos completos
  */
 export const getAllMetadata = async (lang = 'es') => {
     const cacheKey = `${CACHE_PREFIX}all:${lang}`;
 
-    // Intentar obtener del caché
     const cached = await getCache(cacheKey);
     if (cached) {
         return cached;
     }
 
-    // Obtener todos los catálogos en paralelo
     const [types, brands, models, servers, networks, licenses, validityPeriods] = await Promise.all([
         repository.getDeviceTypes(lang),
         repository.getDeviceBrands(lang),
@@ -71,7 +105,6 @@ export const getAllMetadata = async (lang = 'es') => {
         validity_periods: validityPeriods.map(toDTO)
     };
 
-    // Guardar en caché
     await setCache(cacheKey, metadata, CACHE_TTL);
 
     return metadata;
@@ -89,4 +122,228 @@ export const invalidateCache = async (lang = null) => {
             deleteCache(`${CACHE_PREFIX}all:en`)
         ]);
     }
+};
+
+// ============================================
+// DEVICE TYPES CRUD
+// ============================================
+
+export const listDeviceTypes = async (lang = 'es', includeInactive = false) => {
+    const types = await repository.getDeviceTypes(lang, includeInactive);
+    return types.map(toDTO);
+};
+
+export const getDeviceTypeById = async (id) => {
+    const type = await repository.findDeviceTypeById(id);
+    if (!type) return null;
+    return toDTOWithTranslations(type);
+};
+
+export const createDeviceType = async (data, translations) => {
+    const type = await repository.createDeviceType(data, translations);
+    await invalidateCache();
+    return toDTOWithTranslations(type);
+};
+
+export const updateDeviceType = async (id, data, translations) => {
+    const type = await repository.updateDeviceType(id, data, translations);
+    await invalidateCache();
+    return toDTOWithTranslations(type);
+};
+
+export const deleteDeviceType = async (id, hard = false) => {
+    await repository.deleteDeviceType(id, hard);
+    await invalidateCache();
+};
+
+// ============================================
+// DEVICE BRANDS CRUD
+// ============================================
+
+export const listDeviceBrands = async (lang = 'es', includeInactive = false) => {
+    const brands = await repository.getDeviceBrands(lang, includeInactive);
+    return brands.map(toDTO);
+};
+
+export const getDeviceBrandById = async (id) => {
+    const brand = await repository.findDeviceBrandById(id);
+    if (!brand) return null;
+    return toDTOWithTranslations(brand);
+};
+
+export const createDeviceBrand = async (data, translations) => {
+    const brand = await repository.createDeviceBrand(data, translations);
+    await invalidateCache();
+    return toDTOWithTranslations(brand);
+};
+
+export const updateDeviceBrand = async (id, data, translations) => {
+    const brand = await repository.updateDeviceBrand(id, data, translations);
+    await invalidateCache();
+    return toDTOWithTranslations(brand);
+};
+
+export const deleteDeviceBrand = async (id, hard = false) => {
+    await repository.deleteDeviceBrand(id, hard);
+    await invalidateCache();
+};
+
+// ============================================
+// DEVICE MODELS CRUD
+// ============================================
+
+export const listDeviceModels = async (lang = 'es', includeInactive = false, brandId = null) => {
+    const models = await repository.getDeviceModels(lang, includeInactive, brandId);
+    return models.map(toDTO);
+};
+
+export const getDeviceModelById = async (id) => {
+    const model = await repository.findDeviceModelById(id);
+    if (!model) return null;
+    return toDTOWithTranslations(model);
+};
+
+export const createDeviceModel = async (data, translations) => {
+    const model = await repository.createDeviceModel(data, translations);
+    await invalidateCache();
+    return toDTOWithTranslations(model);
+};
+
+export const updateDeviceModel = async (id, data, translations) => {
+    const model = await repository.updateDeviceModel(id, data, translations);
+    await invalidateCache();
+    return toDTOWithTranslations(model);
+};
+
+export const deleteDeviceModel = async (id, hard = false) => {
+    await repository.deleteDeviceModel(id, hard);
+    await invalidateCache();
+};
+
+// ============================================
+// DEVICE SERVERS CRUD
+// ============================================
+
+export const listDeviceServers = async (lang = 'es', includeInactive = false) => {
+    const servers = await repository.getDeviceServers(lang, includeInactive);
+    return servers.map(toDTO);
+};
+
+export const getDeviceServerById = async (id) => {
+    const server = await repository.findDeviceServerById(id);
+    if (!server) return null;
+    return toDTOWithTranslations(server);
+};
+
+export const createDeviceServer = async (data, translations) => {
+    const server = await repository.createDeviceServer(data, translations);
+    await invalidateCache();
+    return toDTOWithTranslations(server);
+};
+
+export const updateDeviceServer = async (id, data, translations) => {
+    const server = await repository.updateDeviceServer(id, data, translations);
+    await invalidateCache();
+    return toDTOWithTranslations(server);
+};
+
+export const deleteDeviceServer = async (id, hard = false) => {
+    await repository.deleteDeviceServer(id, hard);
+    await invalidateCache();
+};
+
+// ============================================
+// DEVICE NETWORKS CRUD
+// ============================================
+
+export const listDeviceNetworks = async (lang = 'es', includeInactive = false) => {
+    const networks = await repository.getDeviceNetworks(lang, includeInactive);
+    return networks.map(toDTO);
+};
+
+export const getDeviceNetworkById = async (id) => {
+    const network = await repository.findDeviceNetworkById(id);
+    if (!network) return null;
+    return toDTOWithTranslations(network);
+};
+
+export const createDeviceNetwork = async (data, translations) => {
+    const network = await repository.createDeviceNetwork(data, translations);
+    await invalidateCache();
+    return toDTOWithTranslations(network);
+};
+
+export const updateDeviceNetwork = async (id, data, translations) => {
+    const network = await repository.updateDeviceNetwork(id, data, translations);
+    await invalidateCache();
+    return toDTOWithTranslations(network);
+};
+
+export const deleteDeviceNetwork = async (id, hard = false) => {
+    await repository.deleteDeviceNetwork(id, hard);
+    await invalidateCache();
+};
+
+// ============================================
+// DEVICE LICENSES CRUD
+// ============================================
+
+export const listDeviceLicenses = async (lang = 'es', includeInactive = false) => {
+    const licenses = await repository.getDeviceLicenses(lang, includeInactive);
+    return licenses.map(toDTO);
+};
+
+export const getDeviceLicenseById = async (id) => {
+    const license = await repository.findDeviceLicenseById(id);
+    if (!license) return null;
+    return toDTOWithTranslations(license);
+};
+
+export const createDeviceLicense = async (data, translations) => {
+    const license = await repository.createDeviceLicense(data, translations);
+    await invalidateCache();
+    return toDTOWithTranslations(license);
+};
+
+export const updateDeviceLicense = async (id, data, translations) => {
+    const license = await repository.updateDeviceLicense(id, data, translations);
+    await invalidateCache();
+    return toDTOWithTranslations(license);
+};
+
+export const deleteDeviceLicense = async (id, hard = false) => {
+    await repository.deleteDeviceLicense(id, hard);
+    await invalidateCache();
+};
+
+// ============================================
+// DEVICE VALIDITY PERIODS CRUD
+// ============================================
+
+export const listDeviceValidityPeriods = async (lang = 'es', includeInactive = false) => {
+    const periods = await repository.getDeviceValidityPeriods(lang, includeInactive);
+    return periods.map(toDTO);
+};
+
+export const getDeviceValidityPeriodById = async (id) => {
+    const period = await repository.findDeviceValidityPeriodById(id);
+    if (!period) return null;
+    return toDTOWithTranslations(period);
+};
+
+export const createDeviceValidityPeriod = async (data, translations) => {
+    const period = await repository.createDeviceValidityPeriod(data, translations);
+    await invalidateCache();
+    return toDTOWithTranslations(period);
+};
+
+export const updateDeviceValidityPeriod = async (id, data, translations) => {
+    const period = await repository.updateDeviceValidityPeriod(id, data, translations);
+    await invalidateCache();
+    return toDTOWithTranslations(period);
+};
+
+export const deleteDeviceValidityPeriod = async (id, hard = false) => {
+    await repository.deleteDeviceValidityPeriod(id, hard);
+    await invalidateCache();
 };
