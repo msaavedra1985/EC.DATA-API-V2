@@ -27,6 +27,14 @@ const extractTranslations = (body) => {
     }));
 };
 
+/**
+ * Helper para parsear y validar ID
+ */
+const parseId = (idString) => {
+    const id = parseInt(idString, 10);
+    return isNaN(id) ? null : id;
+};
+
 // ============================================
 // GET ALL METADATA
 // ============================================
@@ -71,8 +79,11 @@ export const listDeviceTypes = async (req, res) => {
 
 export const getDeviceType = async (req, res) => {
     try {
-        const { id } = req.params;
-        const data = await services.getDeviceTypeById(parseInt(id));
+        const id = parseId(req.params.id);
+        if (!id) {
+            return res.status(400).json({ success: false, error: 'ID inválido' });
+        }
+        const data = await services.getDeviceTypeById(id);
         if (!data) {
             return res.status(404).json({ success: false, error: 'Tipo de dispositivo no encontrado' });
         }
@@ -104,7 +115,10 @@ export const createDeviceType = async (req, res) => {
 
 export const updateDeviceType = async (req, res) => {
     try {
-        const { id } = req.params;
+        const id = parseId(req.params.id);
+        if (!id) {
+            return res.status(400).json({ success: false, error: 'ID inválido' });
+        }
         const { code, icon, display_order, is_active } = req.body;
         const translations = extractTranslations(req.body);
         
@@ -114,7 +128,10 @@ export const updateDeviceType = async (req, res) => {
         if (display_order !== undefined) updateData.display_order = display_order;
         if (is_active !== undefined) updateData.is_active = is_active;
         
-        const data = await services.updateDeviceType(parseInt(id), updateData, translations);
+        const data = await services.updateDeviceType(id, updateData, translations);
+        if (!data) {
+            return res.status(404).json({ success: false, error: 'Tipo de dispositivo no encontrado' });
+        }
         return res.json({ success: true, data });
     } catch (error) {
         metadataLogger.error('Error actualizando device type', { error: error.message });
@@ -124,9 +141,15 @@ export const updateDeviceType = async (req, res) => {
 
 export const deleteDeviceType = async (req, res) => {
     try {
-        const { id } = req.params;
+        const id = parseId(req.params.id);
+        if (!id) {
+            return res.status(400).json({ success: false, error: 'ID inválido' });
+        }
         const hard = req.query.hard === 'true';
-        await services.deleteDeviceType(parseInt(id), hard);
+        const result = await services.deleteDeviceType(id, hard);
+        if (!result) {
+            return res.status(404).json({ success: false, error: 'Tipo de dispositivo no encontrado' });
+        }
         return res.json({ success: true, message: 'Tipo de dispositivo eliminado' });
     } catch (error) {
         metadataLogger.error('Error eliminando device type', { error: error.message });
@@ -152,8 +175,11 @@ export const listDeviceBrands = async (req, res) => {
 
 export const getDeviceBrand = async (req, res) => {
     try {
-        const { id } = req.params;
-        const data = await services.getDeviceBrandById(parseInt(id));
+        const id = parseId(req.params.id);
+        if (!id) {
+            return res.status(400).json({ success: false, error: 'ID inválido' });
+        }
+        const data = await services.getDeviceBrandById(id);
         if (!data) {
             return res.status(404).json({ success: false, error: 'Marca no encontrada' });
         }
@@ -185,7 +211,10 @@ export const createDeviceBrand = async (req, res) => {
 
 export const updateDeviceBrand = async (req, res) => {
     try {
-        const { id } = req.params;
+        const id = parseId(req.params.id);
+        if (!id) {
+            return res.status(400).json({ success: false, error: 'ID inválido' });
+        }
         const { code, logo_url, website_url, display_order, is_active } = req.body;
         const translations = extractTranslations(req.body);
         
@@ -196,7 +225,10 @@ export const updateDeviceBrand = async (req, res) => {
         if (display_order !== undefined) updateData.display_order = display_order;
         if (is_active !== undefined) updateData.is_active = is_active;
         
-        const data = await services.updateDeviceBrand(parseInt(id), updateData, translations);
+        const data = await services.updateDeviceBrand(id, updateData, translations);
+        if (!data) {
+            return res.status(404).json({ success: false, error: 'Marca no encontrada' });
+        }
         return res.json({ success: true, data });
     } catch (error) {
         metadataLogger.error('Error actualizando device brand', { error: error.message });
@@ -206,9 +238,15 @@ export const updateDeviceBrand = async (req, res) => {
 
 export const deleteDeviceBrand = async (req, res) => {
     try {
-        const { id } = req.params;
+        const id = parseId(req.params.id);
+        if (!id) {
+            return res.status(400).json({ success: false, error: 'ID inválido' });
+        }
         const hard = req.query.hard === 'true';
-        await services.deleteDeviceBrand(parseInt(id), hard);
+        const result = await services.deleteDeviceBrand(id, hard);
+        if (!result) {
+            return res.status(404).json({ success: false, error: 'Marca no encontrada' });
+        }
         return res.json({ success: true, message: 'Marca eliminada' });
     } catch (error) {
         metadataLogger.error('Error eliminando device brand', { error: error.message });
@@ -235,8 +273,11 @@ export const listDeviceModels = async (req, res) => {
 
 export const getDeviceModel = async (req, res) => {
     try {
-        const { id } = req.params;
-        const data = await services.getDeviceModelById(parseInt(id));
+        const id = parseId(req.params.id);
+        if (!id) {
+            return res.status(400).json({ success: false, error: 'ID inválido' });
+        }
+        const data = await services.getDeviceModelById(id);
         if (!data) {
             return res.status(404).json({ success: false, error: 'Modelo no encontrado' });
         }
@@ -272,7 +313,10 @@ export const createDeviceModel = async (req, res) => {
 
 export const updateDeviceModel = async (req, res) => {
     try {
-        const { id } = req.params;
+        const id = parseId(req.params.id);
+        if (!id) {
+            return res.status(400).json({ success: false, error: 'ID inválido' });
+        }
         const { code, device_brand_id, specs, display_order, is_active } = req.body;
         const translations = extractTranslations(req.body);
         
@@ -283,7 +327,10 @@ export const updateDeviceModel = async (req, res) => {
         if (display_order !== undefined) updateData.display_order = display_order;
         if (is_active !== undefined) updateData.is_active = is_active;
         
-        const data = await services.updateDeviceModel(parseInt(id), updateData, translations);
+        const data = await services.updateDeviceModel(id, updateData, translations);
+        if (!data) {
+            return res.status(404).json({ success: false, error: 'Modelo no encontrado' });
+        }
         return res.json({ success: true, data });
     } catch (error) {
         metadataLogger.error('Error actualizando device model', { error: error.message });
@@ -293,9 +340,15 @@ export const updateDeviceModel = async (req, res) => {
 
 export const deleteDeviceModel = async (req, res) => {
     try {
-        const { id } = req.params;
+        const id = parseId(req.params.id);
+        if (!id) {
+            return res.status(400).json({ success: false, error: 'ID inválido' });
+        }
         const hard = req.query.hard === 'true';
-        await services.deleteDeviceModel(parseInt(id), hard);
+        const result = await services.deleteDeviceModel(id, hard);
+        if (!result) {
+            return res.status(404).json({ success: false, error: 'Modelo no encontrado' });
+        }
         return res.json({ success: true, message: 'Modelo eliminado' });
     } catch (error) {
         metadataLogger.error('Error eliminando device model', { error: error.message });
@@ -321,8 +374,11 @@ export const listDeviceServers = async (req, res) => {
 
 export const getDeviceServer = async (req, res) => {
     try {
-        const { id } = req.params;
-        const data = await services.getDeviceServerById(parseInt(id));
+        const id = parseId(req.params.id);
+        if (!id) {
+            return res.status(400).json({ success: false, error: 'ID inválido' });
+        }
+        const data = await services.getDeviceServerById(id);
         if (!data) {
             return res.status(404).json({ success: false, error: 'Servidor no encontrado' });
         }
@@ -354,7 +410,10 @@ export const createDeviceServer = async (req, res) => {
 
 export const updateDeviceServer = async (req, res) => {
     try {
-        const { id } = req.params;
+        const id = parseId(req.params.id);
+        if (!id) {
+            return res.status(400).json({ success: false, error: 'ID inválido' });
+        }
         const { code, server_type, host, port, use_ssl, display_order, is_active } = req.body;
         const translations = extractTranslations(req.body);
         
@@ -367,7 +426,10 @@ export const updateDeviceServer = async (req, res) => {
         if (display_order !== undefined) updateData.display_order = display_order;
         if (is_active !== undefined) updateData.is_active = is_active;
         
-        const data = await services.updateDeviceServer(parseInt(id), updateData, translations);
+        const data = await services.updateDeviceServer(id, updateData, translations);
+        if (!data) {
+            return res.status(404).json({ success: false, error: 'Servidor no encontrado' });
+        }
         return res.json({ success: true, data });
     } catch (error) {
         metadataLogger.error('Error actualizando device server', { error: error.message });
@@ -377,9 +439,15 @@ export const updateDeviceServer = async (req, res) => {
 
 export const deleteDeviceServer = async (req, res) => {
     try {
-        const { id } = req.params;
+        const id = parseId(req.params.id);
+        if (!id) {
+            return res.status(400).json({ success: false, error: 'ID inválido' });
+        }
         const hard = req.query.hard === 'true';
-        await services.deleteDeviceServer(parseInt(id), hard);
+        const result = await services.deleteDeviceServer(id, hard);
+        if (!result) {
+            return res.status(404).json({ success: false, error: 'Servidor no encontrado' });
+        }
         return res.json({ success: true, message: 'Servidor eliminado' });
     } catch (error) {
         metadataLogger.error('Error eliminando device server', { error: error.message });
@@ -405,8 +473,11 @@ export const listDeviceNetworks = async (req, res) => {
 
 export const getDeviceNetwork = async (req, res) => {
     try {
-        const { id } = req.params;
-        const data = await services.getDeviceNetworkById(parseInt(id));
+        const id = parseId(req.params.id);
+        if (!id) {
+            return res.status(400).json({ success: false, error: 'ID inválido' });
+        }
+        const data = await services.getDeviceNetworkById(id);
         if (!data) {
             return res.status(404).json({ success: false, error: 'Red no encontrada' });
         }
@@ -438,7 +509,10 @@ export const createDeviceNetwork = async (req, res) => {
 
 export const updateDeviceNetwork = async (req, res) => {
     try {
-        const { id } = req.params;
+        const id = parseId(req.params.id);
+        if (!id) {
+            return res.status(400).json({ success: false, error: 'ID inválido' });
+        }
         const { code, icon, display_order, is_active } = req.body;
         const translations = extractTranslations(req.body);
         
@@ -448,7 +522,10 @@ export const updateDeviceNetwork = async (req, res) => {
         if (display_order !== undefined) updateData.display_order = display_order;
         if (is_active !== undefined) updateData.is_active = is_active;
         
-        const data = await services.updateDeviceNetwork(parseInt(id), updateData, translations);
+        const data = await services.updateDeviceNetwork(id, updateData, translations);
+        if (!data) {
+            return res.status(404).json({ success: false, error: 'Red no encontrada' });
+        }
         return res.json({ success: true, data });
     } catch (error) {
         metadataLogger.error('Error actualizando device network', { error: error.message });
@@ -458,9 +535,15 @@ export const updateDeviceNetwork = async (req, res) => {
 
 export const deleteDeviceNetwork = async (req, res) => {
     try {
-        const { id } = req.params;
+        const id = parseId(req.params.id);
+        if (!id) {
+            return res.status(400).json({ success: false, error: 'ID inválido' });
+        }
         const hard = req.query.hard === 'true';
-        await services.deleteDeviceNetwork(parseInt(id), hard);
+        const result = await services.deleteDeviceNetwork(id, hard);
+        if (!result) {
+            return res.status(404).json({ success: false, error: 'Red no encontrada' });
+        }
         return res.json({ success: true, message: 'Red eliminada' });
     } catch (error) {
         metadataLogger.error('Error eliminando device network', { error: error.message });
@@ -486,8 +569,11 @@ export const listDeviceLicenses = async (req, res) => {
 
 export const getDeviceLicense = async (req, res) => {
     try {
-        const { id } = req.params;
-        const data = await services.getDeviceLicenseById(parseInt(id));
+        const id = parseId(req.params.id);
+        if (!id) {
+            return res.status(400).json({ success: false, error: 'ID inválido' });
+        }
+        const data = await services.getDeviceLicenseById(id);
         if (!data) {
             return res.status(404).json({ success: false, error: 'Licencia no encontrada' });
         }
@@ -519,7 +605,10 @@ export const createDeviceLicense = async (req, res) => {
 
 export const updateDeviceLicense = async (req, res) => {
     try {
-        const { id } = req.params;
+        const id = parseId(req.params.id);
+        if (!id) {
+            return res.status(400).json({ success: false, error: 'ID inválido' });
+        }
         const { code, icon, color, display_order, is_active } = req.body;
         const translations = extractTranslations(req.body);
         
@@ -530,7 +619,10 @@ export const updateDeviceLicense = async (req, res) => {
         if (display_order !== undefined) updateData.display_order = display_order;
         if (is_active !== undefined) updateData.is_active = is_active;
         
-        const data = await services.updateDeviceLicense(parseInt(id), updateData, translations);
+        const data = await services.updateDeviceLicense(id, updateData, translations);
+        if (!data) {
+            return res.status(404).json({ success: false, error: 'Licencia no encontrada' });
+        }
         return res.json({ success: true, data });
     } catch (error) {
         metadataLogger.error('Error actualizando device license', { error: error.message });
@@ -540,9 +632,15 @@ export const updateDeviceLicense = async (req, res) => {
 
 export const deleteDeviceLicense = async (req, res) => {
     try {
-        const { id } = req.params;
+        const id = parseId(req.params.id);
+        if (!id) {
+            return res.status(400).json({ success: false, error: 'ID inválido' });
+        }
         const hard = req.query.hard === 'true';
-        await services.deleteDeviceLicense(parseInt(id), hard);
+        const result = await services.deleteDeviceLicense(id, hard);
+        if (!result) {
+            return res.status(404).json({ success: false, error: 'Licencia no encontrada' });
+        }
         return res.json({ success: true, message: 'Licencia eliminada' });
     } catch (error) {
         metadataLogger.error('Error eliminando device license', { error: error.message });
@@ -568,8 +666,11 @@ export const listDeviceValidityPeriods = async (req, res) => {
 
 export const getDeviceValidityPeriod = async (req, res) => {
     try {
-        const { id } = req.params;
-        const data = await services.getDeviceValidityPeriodById(parseInt(id));
+        const id = parseId(req.params.id);
+        if (!id) {
+            return res.status(400).json({ success: false, error: 'ID inválido' });
+        }
+        const data = await services.getDeviceValidityPeriodById(id);
         if (!data) {
             return res.status(404).json({ success: false, error: 'Período no encontrado' });
         }
@@ -601,7 +702,10 @@ export const createDeviceValidityPeriod = async (req, res) => {
 
 export const updateDeviceValidityPeriod = async (req, res) => {
     try {
-        const { id } = req.params;
+        const id = parseId(req.params.id);
+        if (!id) {
+            return res.status(400).json({ success: false, error: 'ID inválido' });
+        }
         const { code, months, display_order, is_active } = req.body;
         const translations = extractTranslations(req.body);
         
@@ -611,7 +715,10 @@ export const updateDeviceValidityPeriod = async (req, res) => {
         if (display_order !== undefined) updateData.display_order = display_order;
         if (is_active !== undefined) updateData.is_active = is_active;
         
-        const data = await services.updateDeviceValidityPeriod(parseInt(id), updateData, translations);
+        const data = await services.updateDeviceValidityPeriod(id, updateData, translations);
+        if (!data) {
+            return res.status(404).json({ success: false, error: 'Período no encontrado' });
+        }
         return res.json({ success: true, data });
     } catch (error) {
         metadataLogger.error('Error actualizando validity period', { error: error.message });
@@ -621,9 +728,15 @@ export const updateDeviceValidityPeriod = async (req, res) => {
 
 export const deleteDeviceValidityPeriod = async (req, res) => {
     try {
-        const { id } = req.params;
+        const id = parseId(req.params.id);
+        if (!id) {
+            return res.status(400).json({ success: false, error: 'ID inválido' });
+        }
         const hard = req.query.hard === 'true';
-        await services.deleteDeviceValidityPeriod(parseInt(id), hard);
+        const result = await services.deleteDeviceValidityPeriod(id, hard);
+        if (!result) {
+            return res.status(404).json({ success: false, error: 'Período no encontrado' });
+        }
         return res.json({ success: true, message: 'Período eliminado' });
     } catch (error) {
         metadataLogger.error('Error eliminando validity period', { error: error.message });

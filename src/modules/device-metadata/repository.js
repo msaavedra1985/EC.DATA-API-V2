@@ -63,8 +63,12 @@ export const createDeviceType = async (data, translations = []) => {
             }));
             await DeviceTypeTranslation.bulkCreate(translationsData, { transaction: t });
         }
+        const result = await DeviceType.findByPk(type.id, {
+            include: [{ model: DeviceTypeTranslation, as: 'translations' }],
+            transaction: t
+        });
         await t.commit();
-        return findDeviceTypeById(type.id);
+        return result;
     } catch (error) {
         await t.rollback();
         throw error;
@@ -74,6 +78,11 @@ export const createDeviceType = async (data, translations = []) => {
 export const updateDeviceType = async (id, data, translations = []) => {
     const t = await sequelize.transaction();
     try {
+        const existing = await DeviceType.findByPk(id, { transaction: t });
+        if (!existing) {
+            await t.rollback();
+            return null;
+        }
         await DeviceType.update(data, { where: { id }, transaction: t });
         if (translations.length > 0) {
             for (const tr of translations) {
@@ -83,8 +92,12 @@ export const updateDeviceType = async (id, data, translations = []) => {
                 }, { transaction: t });
             }
         }
+        const result = await DeviceType.findByPk(id, {
+            include: [{ model: DeviceTypeTranslation, as: 'translations' }],
+            transaction: t
+        });
         await t.commit();
-        return findDeviceTypeById(id);
+        return result;
     } catch (error) {
         await t.rollback();
         throw error;
@@ -92,10 +105,14 @@ export const updateDeviceType = async (id, data, translations = []) => {
 };
 
 export const deleteDeviceType = async (id, hard = false) => {
+    const existing = await DeviceType.findByPk(id);
+    if (!existing) return null;
     if (hard) {
-        return DeviceType.destroy({ where: { id } });
+        await DeviceType.destroy({ where: { id } });
+    } else {
+        await DeviceType.update({ is_active: false }, { where: { id } });
     }
-    return DeviceType.update({ is_active: false }, { where: { id } });
+    return true;
 };
 
 // ============================================
@@ -140,8 +157,12 @@ export const createDeviceBrand = async (data, translations = []) => {
             }));
             await DeviceBrandTranslation.bulkCreate(translationsData, { transaction: t });
         }
+        const result = await DeviceBrand.findByPk(brand.id, {
+            include: [{ model: DeviceBrandTranslation, as: 'translations' }],
+            transaction: t
+        });
         await t.commit();
-        return findDeviceBrandById(brand.id);
+        return result;
     } catch (error) {
         await t.rollback();
         throw error;
@@ -151,6 +172,11 @@ export const createDeviceBrand = async (data, translations = []) => {
 export const updateDeviceBrand = async (id, data, translations = []) => {
     const t = await sequelize.transaction();
     try {
+        const existing = await DeviceBrand.findByPk(id, { transaction: t });
+        if (!existing) {
+            await t.rollback();
+            return null;
+        }
         await DeviceBrand.update(data, { where: { id }, transaction: t });
         if (translations.length > 0) {
             for (const tr of translations) {
@@ -160,8 +186,12 @@ export const updateDeviceBrand = async (id, data, translations = []) => {
                 }, { transaction: t });
             }
         }
+        const result = await DeviceBrand.findByPk(id, {
+            include: [{ model: DeviceBrandTranslation, as: 'translations' }],
+            transaction: t
+        });
         await t.commit();
-        return findDeviceBrandById(id);
+        return result;
     } catch (error) {
         await t.rollback();
         throw error;
@@ -169,10 +199,14 @@ export const updateDeviceBrand = async (id, data, translations = []) => {
 };
 
 export const deleteDeviceBrand = async (id, hard = false) => {
+    const existing = await DeviceBrand.findByPk(id);
+    if (!existing) return null;
     if (hard) {
-        return DeviceBrand.destroy({ where: { id } });
+        await DeviceBrand.destroy({ where: { id } });
+    } else {
+        await DeviceBrand.update({ is_active: false }, { where: { id } });
     }
-    return DeviceBrand.update({ is_active: false }, { where: { id } });
+    return true;
 };
 
 // ============================================
@@ -222,8 +256,15 @@ export const createDeviceModel = async (data, translations = []) => {
             }));
             await DeviceModelTranslation.bulkCreate(translationsData, { transaction: t });
         }
+        const result = await DeviceModel.findByPk(model.id, {
+            include: [
+                { model: DeviceModelTranslation, as: 'translations' },
+                { model: DeviceBrand, as: 'brand', attributes: ['id', 'code'] }
+            ],
+            transaction: t
+        });
         await t.commit();
-        return findDeviceModelById(model.id);
+        return result;
     } catch (error) {
         await t.rollback();
         throw error;
@@ -233,6 +274,11 @@ export const createDeviceModel = async (data, translations = []) => {
 export const updateDeviceModel = async (id, data, translations = []) => {
     const t = await sequelize.transaction();
     try {
+        const existing = await DeviceModel.findByPk(id, { transaction: t });
+        if (!existing) {
+            await t.rollback();
+            return null;
+        }
         await DeviceModel.update(data, { where: { id }, transaction: t });
         if (translations.length > 0) {
             for (const tr of translations) {
@@ -242,8 +288,15 @@ export const updateDeviceModel = async (id, data, translations = []) => {
                 }, { transaction: t });
             }
         }
+        const result = await DeviceModel.findByPk(id, {
+            include: [
+                { model: DeviceModelTranslation, as: 'translations' },
+                { model: DeviceBrand, as: 'brand', attributes: ['id', 'code'] }
+            ],
+            transaction: t
+        });
         await t.commit();
-        return findDeviceModelById(id);
+        return result;
     } catch (error) {
         await t.rollback();
         throw error;
@@ -251,10 +304,14 @@ export const updateDeviceModel = async (id, data, translations = []) => {
 };
 
 export const deleteDeviceModel = async (id, hard = false) => {
+    const existing = await DeviceModel.findByPk(id);
+    if (!existing) return null;
     if (hard) {
-        return DeviceModel.destroy({ where: { id } });
+        await DeviceModel.destroy({ where: { id } });
+    } else {
+        await DeviceModel.update({ is_active: false }, { where: { id } });
     }
-    return DeviceModel.update({ is_active: false }, { where: { id } });
+    return true;
 };
 
 // ============================================
@@ -292,8 +349,12 @@ export const createDeviceServer = async (data, translations = []) => {
             }));
             await DeviceServerTranslation.bulkCreate(translationsData, { transaction: t });
         }
+        const result = await DeviceServer.findByPk(server.id, {
+            include: [{ model: DeviceServerTranslation, as: 'translations' }],
+            transaction: t
+        });
         await t.commit();
-        return findDeviceServerById(server.id);
+        return result;
     } catch (error) {
         await t.rollback();
         throw error;
@@ -303,6 +364,11 @@ export const createDeviceServer = async (data, translations = []) => {
 export const updateDeviceServer = async (id, data, translations = []) => {
     const t = await sequelize.transaction();
     try {
+        const existing = await DeviceServer.findByPk(id, { transaction: t });
+        if (!existing) {
+            await t.rollback();
+            return null;
+        }
         await DeviceServer.update(data, { where: { id }, transaction: t });
         if (translations.length > 0) {
             for (const tr of translations) {
@@ -312,8 +378,12 @@ export const updateDeviceServer = async (id, data, translations = []) => {
                 }, { transaction: t });
             }
         }
+        const result = await DeviceServer.findByPk(id, {
+            include: [{ model: DeviceServerTranslation, as: 'translations' }],
+            transaction: t
+        });
         await t.commit();
-        return findDeviceServerById(id);
+        return result;
     } catch (error) {
         await t.rollback();
         throw error;
@@ -321,10 +391,14 @@ export const updateDeviceServer = async (id, data, translations = []) => {
 };
 
 export const deleteDeviceServer = async (id, hard = false) => {
+    const existing = await DeviceServer.findByPk(id);
+    if (!existing) return null;
     if (hard) {
-        return DeviceServer.destroy({ where: { id } });
+        await DeviceServer.destroy({ where: { id } });
+    } else {
+        await DeviceServer.update({ is_active: false }, { where: { id } });
     }
-    return DeviceServer.update({ is_active: false }, { where: { id } });
+    return true;
 };
 
 // ============================================
@@ -362,8 +436,12 @@ export const createDeviceNetwork = async (data, translations = []) => {
             }));
             await DeviceNetworkTranslation.bulkCreate(translationsData, { transaction: t });
         }
+        const result = await DeviceNetwork.findByPk(network.id, {
+            include: [{ model: DeviceNetworkTranslation, as: 'translations' }],
+            transaction: t
+        });
         await t.commit();
-        return findDeviceNetworkById(network.id);
+        return result;
     } catch (error) {
         await t.rollback();
         throw error;
@@ -373,6 +451,11 @@ export const createDeviceNetwork = async (data, translations = []) => {
 export const updateDeviceNetwork = async (id, data, translations = []) => {
     const t = await sequelize.transaction();
     try {
+        const existing = await DeviceNetwork.findByPk(id, { transaction: t });
+        if (!existing) {
+            await t.rollback();
+            return null;
+        }
         await DeviceNetwork.update(data, { where: { id }, transaction: t });
         if (translations.length > 0) {
             for (const tr of translations) {
@@ -382,8 +465,12 @@ export const updateDeviceNetwork = async (id, data, translations = []) => {
                 }, { transaction: t });
             }
         }
+        const result = await DeviceNetwork.findByPk(id, {
+            include: [{ model: DeviceNetworkTranslation, as: 'translations' }],
+            transaction: t
+        });
         await t.commit();
-        return findDeviceNetworkById(id);
+        return result;
     } catch (error) {
         await t.rollback();
         throw error;
@@ -391,10 +478,14 @@ export const updateDeviceNetwork = async (id, data, translations = []) => {
 };
 
 export const deleteDeviceNetwork = async (id, hard = false) => {
+    const existing = await DeviceNetwork.findByPk(id);
+    if (!existing) return null;
     if (hard) {
-        return DeviceNetwork.destroy({ where: { id } });
+        await DeviceNetwork.destroy({ where: { id } });
+    } else {
+        await DeviceNetwork.update({ is_active: false }, { where: { id } });
     }
-    return DeviceNetwork.update({ is_active: false }, { where: { id } });
+    return true;
 };
 
 // ============================================
@@ -432,8 +523,12 @@ export const createDeviceLicense = async (data, translations = []) => {
             }));
             await DeviceLicenseTranslation.bulkCreate(translationsData, { transaction: t });
         }
+        const result = await DeviceLicense.findByPk(license.id, {
+            include: [{ model: DeviceLicenseTranslation, as: 'translations' }],
+            transaction: t
+        });
         await t.commit();
-        return findDeviceLicenseById(license.id);
+        return result;
     } catch (error) {
         await t.rollback();
         throw error;
@@ -443,6 +538,11 @@ export const createDeviceLicense = async (data, translations = []) => {
 export const updateDeviceLicense = async (id, data, translations = []) => {
     const t = await sequelize.transaction();
     try {
+        const existing = await DeviceLicense.findByPk(id, { transaction: t });
+        if (!existing) {
+            await t.rollback();
+            return null;
+        }
         await DeviceLicense.update(data, { where: { id }, transaction: t });
         if (translations.length > 0) {
             for (const tr of translations) {
@@ -452,8 +552,12 @@ export const updateDeviceLicense = async (id, data, translations = []) => {
                 }, { transaction: t });
             }
         }
+        const result = await DeviceLicense.findByPk(id, {
+            include: [{ model: DeviceLicenseTranslation, as: 'translations' }],
+            transaction: t
+        });
         await t.commit();
-        return findDeviceLicenseById(id);
+        return result;
     } catch (error) {
         await t.rollback();
         throw error;
@@ -461,10 +565,14 @@ export const updateDeviceLicense = async (id, data, translations = []) => {
 };
 
 export const deleteDeviceLicense = async (id, hard = false) => {
+    const existing = await DeviceLicense.findByPk(id);
+    if (!existing) return null;
     if (hard) {
-        return DeviceLicense.destroy({ where: { id } });
+        await DeviceLicense.destroy({ where: { id } });
+    } else {
+        await DeviceLicense.update({ is_active: false }, { where: { id } });
     }
-    return DeviceLicense.update({ is_active: false }, { where: { id } });
+    return true;
 };
 
 // ============================================
@@ -502,8 +610,12 @@ export const createDeviceValidityPeriod = async (data, translations = []) => {
             }));
             await DeviceValidityPeriodTranslation.bulkCreate(translationsData, { transaction: t });
         }
+        const result = await DeviceValidityPeriod.findByPk(period.id, {
+            include: [{ model: DeviceValidityPeriodTranslation, as: 'translations' }],
+            transaction: t
+        });
         await t.commit();
-        return findDeviceValidityPeriodById(period.id);
+        return result;
     } catch (error) {
         await t.rollback();
         throw error;
@@ -513,6 +625,11 @@ export const createDeviceValidityPeriod = async (data, translations = []) => {
 export const updateDeviceValidityPeriod = async (id, data, translations = []) => {
     const t = await sequelize.transaction();
     try {
+        const existing = await DeviceValidityPeriod.findByPk(id, { transaction: t });
+        if (!existing) {
+            await t.rollback();
+            return null;
+        }
         await DeviceValidityPeriod.update(data, { where: { id }, transaction: t });
         if (translations.length > 0) {
             for (const tr of translations) {
@@ -522,8 +639,12 @@ export const updateDeviceValidityPeriod = async (id, data, translations = []) =>
                 }, { transaction: t });
             }
         }
+        const result = await DeviceValidityPeriod.findByPk(id, {
+            include: [{ model: DeviceValidityPeriodTranslation, as: 'translations' }],
+            transaction: t
+        });
         await t.commit();
-        return findDeviceValidityPeriodById(id);
+        return result;
     } catch (error) {
         await t.rollback();
         throw error;
@@ -531,8 +652,12 @@ export const updateDeviceValidityPeriod = async (id, data, translations = []) =>
 };
 
 export const deleteDeviceValidityPeriod = async (id, hard = false) => {
+    const existing = await DeviceValidityPeriod.findByPk(id);
+    if (!existing) return null;
     if (hard) {
-        return DeviceValidityPeriod.destroy({ where: { id } });
+        await DeviceValidityPeriod.destroy({ where: { id } });
+    } else {
+        await DeviceValidityPeriod.update({ is_active: false }, { where: { id } });
     }
-    return DeviceValidityPeriod.update({ is_active: false }, { where: { id } });
+    return true;
 };

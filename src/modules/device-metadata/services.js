@@ -147,13 +147,16 @@ export const createDeviceType = async (data, translations) => {
 
 export const updateDeviceType = async (id, data, translations) => {
     const type = await repository.updateDeviceType(id, data, translations);
+    if (!type) return null;
     await invalidateCache();
     return toDTOWithTranslations(type);
 };
 
 export const deleteDeviceType = async (id, hard = false) => {
-    await repository.deleteDeviceType(id, hard);
+    const result = await repository.deleteDeviceType(id, hard);
+    if (!result) return null;
     await invalidateCache();
+    return true;
 };
 
 // ============================================
@@ -179,13 +182,16 @@ export const createDeviceBrand = async (data, translations) => {
 
 export const updateDeviceBrand = async (id, data, translations) => {
     const brand = await repository.updateDeviceBrand(id, data, translations);
+    if (!brand) return null;
     await invalidateCache();
     return toDTOWithTranslations(brand);
 };
 
 export const deleteDeviceBrand = async (id, hard = false) => {
-    await repository.deleteDeviceBrand(id, hard);
+    const result = await repository.deleteDeviceBrand(id, hard);
+    if (!result) return null;
     await invalidateCache();
+    return true;
 };
 
 // ============================================
@@ -211,13 +217,16 @@ export const createDeviceModel = async (data, translations) => {
 
 export const updateDeviceModel = async (id, data, translations) => {
     const model = await repository.updateDeviceModel(id, data, translations);
+    if (!model) return null;
     await invalidateCache();
     return toDTOWithTranslations(model);
 };
 
 export const deleteDeviceModel = async (id, hard = false) => {
-    await repository.deleteDeviceModel(id, hard);
+    const result = await repository.deleteDeviceModel(id, hard);
+    if (!result) return null;
     await invalidateCache();
+    return true;
 };
 
 // ============================================
@@ -243,13 +252,16 @@ export const createDeviceServer = async (data, translations) => {
 
 export const updateDeviceServer = async (id, data, translations) => {
     const server = await repository.updateDeviceServer(id, data, translations);
+    if (!server) return null;
     await invalidateCache();
     return toDTOWithTranslations(server);
 };
 
 export const deleteDeviceServer = async (id, hard = false) => {
-    await repository.deleteDeviceServer(id, hard);
+    const result = await repository.deleteDeviceServer(id, hard);
+    if (!result) return null;
     await invalidateCache();
+    return true;
 };
 
 // ============================================
@@ -275,13 +287,16 @@ export const createDeviceNetwork = async (data, translations) => {
 
 export const updateDeviceNetwork = async (id, data, translations) => {
     const network = await repository.updateDeviceNetwork(id, data, translations);
+    if (!network) return null;
     await invalidateCache();
     return toDTOWithTranslations(network);
 };
 
 export const deleteDeviceNetwork = async (id, hard = false) => {
-    await repository.deleteDeviceNetwork(id, hard);
+    const result = await repository.deleteDeviceNetwork(id, hard);
+    if (!result) return null;
     await invalidateCache();
+    return true;
 };
 
 // ============================================
@@ -307,13 +322,16 @@ export const createDeviceLicense = async (data, translations) => {
 
 export const updateDeviceLicense = async (id, data, translations) => {
     const license = await repository.updateDeviceLicense(id, data, translations);
+    if (!license) return null;
     await invalidateCache();
     return toDTOWithTranslations(license);
 };
 
 export const deleteDeviceLicense = async (id, hard = false) => {
-    await repository.deleteDeviceLicense(id, hard);
+    const result = await repository.deleteDeviceLicense(id, hard);
+    if (!result) return null;
     await invalidateCache();
+    return true;
 };
 
 // ============================================
@@ -339,11 +357,14 @@ export const createDeviceValidityPeriod = async (data, translations) => {
 
 export const updateDeviceValidityPeriod = async (id, data, translations) => {
     const period = await repository.updateDeviceValidityPeriod(id, data, translations);
+    if (!period) return null;
     await invalidateCache();
     return toDTOWithTranslations(period);
 };
 
 export const deleteDeviceValidityPeriod = async (id, hard = false) => {
-    await repository.deleteDeviceValidityPeriod(id, hard);
+    const result = await repository.deleteDeviceValidityPeriod(id, hard);
+    if (!result) return null;
     await invalidateCache();
+    return true;
 };
