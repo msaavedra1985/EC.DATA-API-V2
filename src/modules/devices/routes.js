@@ -337,6 +337,11 @@ router.get('/', authenticate, enforceActiveOrganization, validate(getDevicesSche
  *       401:
  *         description: No autenticado
  */
+
+// Rutas de device metadata (catálogos para formularios)
+// IMPORTANTE: Debe estar ANTES de las rutas con :id para evitar que "metadata" sea capturado como ID
+router.use('/', deviceMetadataRoutes);
+
 router.get('/:id', authenticate, validateDeviceOwnership, validate(getDeviceByIdSchema), async (req, res, next) => {
     try {
         // El middleware validateDeviceOwnership ya validó el acceso
@@ -535,8 +540,5 @@ router.delete('/:id', authenticate, requireRole(['system-admin']), validateDevic
         next(error);
     }
 });
-
-// Rutas de device metadata (catálogos para formularios)
-router.use('/', deviceMetadataRoutes);
 
 export default router;
