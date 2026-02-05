@@ -35,7 +35,7 @@ export const getDeviceTypes = async (lang = 'es', includeInactive = false) => {
             where: { lang },
             required: false
         }],
-        order: [['display_order', 'ASC']]
+        order: [['name', 'ASC']]
     });
 };
 
@@ -129,7 +129,7 @@ export const getDeviceBrands = async (lang = 'es', includeInactive = false) => {
             where: { lang },
             required: false
         }],
-        order: [['display_order', 'ASC']]
+        order: [['name', 'ASC']]
     });
 };
 
@@ -232,7 +232,7 @@ export const getDeviceModels = async (lang = 'es', includeInactive = false, bran
                 attributes: ['id', 'code']
             }
         ],
-        order: [['display_order', 'ASC']]
+        order: [['name', 'ASC']]
     });
 };
 
@@ -328,7 +328,7 @@ export const getDeviceServers = async (lang = 'es', includeInactive = false) => 
             where: { lang },
             required: false
         }],
-        order: [['display_order', 'ASC']]
+        order: [['name', 'ASC']]
     });
 };
 
@@ -415,7 +415,7 @@ export const getDeviceNetworks = async (lang = 'es', includeInactive = false) =>
             where: { lang },
             required: false
         }],
-        order: [['display_order', 'ASC']]
+        order: [['name', 'ASC']]
     });
 };
 
@@ -502,7 +502,7 @@ export const getDeviceLicenses = async (lang = 'es', includeInactive = false) =>
             where: { lang },
             required: false
         }],
-        order: [['display_order', 'ASC']]
+        order: [['name', 'ASC']]
     });
 };
 
@@ -589,7 +589,7 @@ export const getDeviceValidityPeriods = async (lang = 'es', includeInactive = fa
             where: { lang },
             required: false
         }],
-        order: [['display_order', 'ASC']]
+        order: [['name', 'ASC']]
     });
 };
 
