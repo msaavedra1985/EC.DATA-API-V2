@@ -35,7 +35,7 @@ export const getDeviceTypes = async (lang = 'es', includeInactive = false) => {
             where: { lang },
             required: false
         }],
-        order: [['name', 'ASC']]
+        order: [[{ model: DeviceTypeTranslation, as: 'translations' }, 'name', 'ASC']]
     });
 };
 
@@ -129,7 +129,7 @@ export const getDeviceBrands = async (lang = 'es', includeInactive = false) => {
             where: { lang },
             required: false
         }],
-        order: [['name', 'ASC']]
+        order: [[{ model: DeviceBrandTranslation, as: 'translations' }, 'name', 'ASC']]
     });
 };
 
@@ -232,7 +232,7 @@ export const getDeviceModels = async (lang = 'es', includeInactive = false, bran
                 attributes: ['id', 'code']
             }
         ],
-        order: [['name', 'ASC']]
+        order: [[{ model: DeviceModelTranslation, as: 'translations' }, 'name', 'ASC']]
     });
 };
 
@@ -328,7 +328,7 @@ export const getDeviceServers = async (lang = 'es', includeInactive = false) => 
             where: { lang },
             required: false
         }],
-        order: [['name', 'ASC']]
+        order: [[{ model: DeviceServerTranslation, as: 'translations' }, 'name', 'ASC']]
     });
 };
 
@@ -415,7 +415,7 @@ export const getDeviceNetworks = async (lang = 'es', includeInactive = false) =>
             where: { lang },
             required: false
         }],
-        order: [['name', 'ASC']]
+        order: [[{ model: DeviceNetworkTranslation, as: 'translations' }, 'name', 'ASC']]
     });
 };
 
@@ -502,7 +502,7 @@ export const getDeviceLicenses = async (lang = 'es', includeInactive = false) =>
             where: { lang },
             required: false
         }],
-        order: [['name', 'ASC']]
+        order: [[{ model: DeviceLicenseTranslation, as: 'translations' }, 'name', 'ASC']]
     });
 };
 
@@ -589,7 +589,7 @@ export const getDeviceValidityPeriods = async (lang = 'es', includeInactive = fa
             where: { lang },
             required: false
         }],
-        order: [['name', 'ASC']]
+        order: [[{ model: DeviceValidityPeriodTranslation, as: 'translations' }, 'name', 'ASC']]
     });
 };
 
