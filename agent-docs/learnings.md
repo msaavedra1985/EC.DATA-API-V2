@@ -36,6 +36,20 @@
 
 ---
 
+## Sequelize
+
+### ORDER BY columna inexistente causa error 500
+**Fecha**: 2026-02-05
+**Síntoma**: `GET /devices/metadata` retornaba error 500 con queries SQL inválidos tipo `ORDER BY "DeviceType"."name" ASC`
+**Causa**: Al intentar ordenar alfabéticamente, se usó `order: [['name', 'ASC']]` pero las tablas principales (device_types, device_brands, etc.) no tienen columna `name` - ese campo está en las tablas de traducciones
+**Solución**: 
+- Usar la sintaxis correcta de Sequelize para ordenar por campo de asociación:
+- `order: [[{ model: DeviceTypeTranslation, as: 'translations' }, 'name', 'ASC']]`
+- Esto genera el SQL correcto: `ORDER BY "translations"."name" ASC`
+**Archivos afectados**: `src/modules/device-metadata/repository.js`
+
+---
+
 ## Locations / Countries
 
 ### Repository usa findByPk pero PK no es iso_alpha2
