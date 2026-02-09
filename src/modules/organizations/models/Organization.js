@@ -49,17 +49,6 @@ const Organization = sequelize.define('Organization', {
         onDelete: 'RESTRICT',
         comment: 'FK a organizations - organización padre (null = raíz)'
     },
-    country_code: {
-        type: DataTypes.STRING(2),
-        allowNull: false,
-        references: {
-            model: 'countries',
-            key: 'iso_alpha2'
-        },
-        onUpdate: 'CASCADE',
-        onDelete: 'RESTRICT',
-        comment: 'FK a countries.iso_alpha2 - código ISO del país (ej: AR, US)'
-    },
     logo_url: {
         type: DataTypes.STRING(500),
         allowNull: true,
@@ -122,9 +111,6 @@ const Organization = sequelize.define('Organization', {
         },
         {
             fields: ['parent_id']
-        },
-        {
-            fields: ['country_code']
         },
         {
             fields: ['is_active']

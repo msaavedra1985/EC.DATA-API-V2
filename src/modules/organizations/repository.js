@@ -1,5 +1,8 @@
 import Organization from './models/Organization.js';
+import OrganizationCountry from './models/OrganizationCountry.js';
+import Country from '../countries/models/Country.js';
 import { Op } from 'sequelize';
+import sequelize from '../../db/sql/sequelize.js';
 import { generateUuidV7, generateHumanId, generatePublicCode } from '../../utils/identifiers.js';
 import { toPublicOrganizationDto } from '../../helpers/serializers.js';
 import { 
@@ -14,6 +17,15 @@ import {
  */
 
 /**
+ * Include estándar para cargar países asociados
+ */
+const countriesInclude = {
+    model: OrganizationCountry,
+    as: 'countries',
+    attributes: ['country_code', 'is_primary']
+};
+
+/**
  * Crear nueva organización con identificadores UUID v7
  * Invalida cache de listas al crear
  * 
@@ -21,28 +33,55 @@ import {
  * @returns {Promise<Object>} - Organización creada (sin campos sensibles)
  */
 export const createOrganization = async (data) => {
-    // Generar UUID v7
-    const id = generateUuidV7();
+    const { countries, ...orgData } = data;
     
-    // Generar human_id (scope global para organizations)
-    const humanId = await generateHumanId(Organization, null, null);
+    const transaction = await sequelize.transaction();
     
-    // Generar public_code con prefijo ORG- usando UUID v7
-    const publicCode = generatePublicCode('ORG', id);
-    
-    // Crear organización
-    const organization = await Organization.create({
-        id,
-        human_id: humanId,
-        public_code: publicCode,
-        ...data
-    });
-    
-    // Invalidar cache de listas (nueva organización afecta todas las listas)
-    await invalidateAllOrganizationLists();
-    
-    // Retornar DTO público seguro (public_code como id, sin UUID ni human_id)
-    return toPublicOrganizationDto(organization);
+    try {
+        // Generar UUID v7
+        const id = generateUuidV7();
+        
+        // Generar human_id (scope global para organizations)
+        const humanId = await generateHumanId(Organization, null, null);
+        
+        // Generar public_code con prefijo ORG- usando UUID v7
+        const publicCode = generatePublicCode('ORG', id);
+        
+        // Crear organización
+        const organization = await Organization.create({
+            id,
+            human_id: humanId,
+            public_code: publicCode,
+            ...orgData
+        }, { transaction });
+        
+        // Crear relaciones con países
+        if (countries && countries.length > 0) {
+            const countryRecords = countries.map(c => ({
+                organization_id: id,
+                country_code: c.code,
+                is_primary: c.is_primary || false
+            }));
+            
+            await OrganizationCountry.bulkCreate(countryRecords, { transaction });
+        }
+        
+        await transaction.commit();
+        
+        // Recargar con asociaciones
+        const orgWithCountries = await Organization.findByPk(id, {
+            include: [countriesInclude]
+        });
+        
+        // Invalidar cache de listas (nueva organización afecta todas las listas)
+        await invalidateAllOrganizationLists();
+        
+        // Retornar DTO público seguro (public_code como id, sin UUID ni human_id)
+        return toPublicOrganizationDto(orgWithCountries);
+    } catch (error) {
+        await transaction.rollback();
+        throw error;
+    }
 };
 
 /**
@@ -53,7 +92,8 @@ export const createOrganization = async (data) => {
  */
 export const findOrganizationByPublicCode = async (publicCode) => {
     const organization = await Organization.findOne({
-        where: { public_code: publicCode }
+        where: { public_code: publicCode },
+        include: [countriesInclude]
     });
     
     if (!organization) {
@@ -85,7 +125,8 @@ export const findOrganizationByPublicCodeInternal = async (publicCode) => {
  */
 export const findOrganizationByHumanId = async (humanId) => {
     const organization = await Organization.findOne({
-        where: { human_id: humanId }
+        where: { human_id: humanId },
+        include: [countriesInclude]
     });
     
     if (!organization) {
@@ -114,7 +155,9 @@ export const findOrganizationByIdInternal = async (id) => {
  * @returns {Promise<Object|null>} - Organización o null
  */
 export const findOrganizationById = async (id) => {
-    const organization = await Organization.findByPk(id);
+    const organization = await Organization.findByPk(id, {
+        include: [countriesInclude]
+    });
     
     if (!organization) {
         return null;
@@ -131,7 +174,8 @@ export const findOrganizationById = async (id) => {
  */
 export const findOrganizationBySlug = async (slug) => {
     const organization = await Organization.findOne({
-        where: { slug }
+        where: { slug },
+        include: [countriesInclude]
     });
     
     if (!organization) {
@@ -162,10 +206,6 @@ export const listOrganizations = async (limit = 50, offset = 0, filters = {}) =>
     if (filters.is_active !== undefined) {
         where.is_active = filters.is_active;
     }
-    
-    if (filters.country_code) {
-        where.country_code = filters.country_code;
-    }
 
     // Filtro de scope - organizaciones permitidas por permisos
     if (filters.organization_ids && Array.isArray(filters.organization_ids)) {
@@ -184,12 +224,33 @@ export const listOrganizations = async (limit = 50, offset = 0, filters = {}) =>
     if (filters.parent_id) {
         where.parent_id = filters.parent_id;
     }
+
+    // Filtro por country_code a través de organization_countries
+    const include = [countriesInclude];
+    let orgIds;
+    if (filters.country_code) {
+        const countryOrgs = await OrganizationCountry.findAll({
+            where: { country_code: filters.country_code },
+            attributes: ['organization_id'],
+            raw: true
+        });
+        orgIds = countryOrgs.map(co => co.organization_id);
+        if (where.id) {
+            // Intersectar con filtro de scope existente
+            const existingIds = where.id[Op.in] || [];
+            where.id = { [Op.in]: orgIds.filter(id => existingIds.includes(id)) };
+        } else {
+            where.id = { [Op.in]: orgIds };
+        }
+    }
     
     const { count, rows } = await Organization.findAndCountAll({
         where,
+        include,
         limit,
         offset,
-        order: [['created_at', 'DESC']]
+        order: [['created_at', 'DESC']],
+        distinct: true
     });
     
     const result = {
@@ -214,23 +275,61 @@ export const listOrganizations = async (limit = 50, offset = 0, filters = {}) =>
  * @returns {Promise<Object>} - Organización actualizada
  */
 export const updateOrganization = async (id, updates) => {
-    const organization = await Organization.findByPk(id);
+    const { countries, ...orgUpdates } = updates;
     
-    if (!organization) {
-        return null;
+    const transaction = await sequelize.transaction();
+    
+    try {
+        const organization = await Organization.findByPk(id);
+        
+        if (!organization) {
+            await transaction.rollback();
+            return null;
+        }
+        
+        // No permitir actualizar id, human_id, o public_code
+        delete orgUpdates.id;
+        delete orgUpdates.human_id;
+        delete orgUpdates.public_code;
+        
+        // Actualizar campos de la organización
+        if (Object.keys(orgUpdates).length > 0) {
+            await organization.update(orgUpdates, { transaction });
+        }
+        
+        // Actualizar países si se proporcionan
+        if (countries && countries.length > 0) {
+            // Eliminar relaciones existentes
+            await OrganizationCountry.destroy({
+                where: { organization_id: id },
+                transaction
+            });
+            
+            // Crear nuevas relaciones
+            const countryRecords = countries.map(c => ({
+                organization_id: id,
+                country_code: c.code,
+                is_primary: c.is_primary || false
+            }));
+            
+            await OrganizationCountry.bulkCreate(countryRecords, { transaction });
+        }
+        
+        await transaction.commit();
+        
+        // Recargar con asociaciones
+        const orgWithCountries = await Organization.findByPk(id, {
+            include: [countriesInclude]
+        });
+        
+        // Invalidar cache de listas (la actualización puede cambiar ordenamiento/filtros)
+        await invalidateAllOrganizationLists();
+        
+        return toPublicOrganizationDto(orgWithCountries);
+    } catch (error) {
+        await transaction.rollback();
+        throw error;
     }
-    
-    // No permitir actualizar id, human_id, o public_code
-    delete updates.id;
-    delete updates.human_id;
-    delete updates.public_code;
-    
-    await organization.update(updates);
-    
-    // Invalidar cache de listas (la actualización puede cambiar ordenamiento/filtros)
-    await invalidateAllOrganizationLists();
-    
-    return toPublicOrganizationDto(organization);
 };
 
 /**
@@ -262,7 +361,8 @@ export const deleteOrganization = async (id) => {
  */
 export const getRootOrganization = async () => {
     const organization = await Organization.findOne({
-        where: { parent_id: null }
+        where: { parent_id: null },
+        include: [countriesInclude]
     });
     
     if (!organization) {
@@ -281,6 +381,7 @@ export const getRootOrganization = async () => {
 export const getChildOrganizations = async (parentId) => {
     const organizations = await Organization.findAll({
         where: { parent_id: parentId, is_active: true },
+        include: [countriesInclude],
         order: [['name', 'ASC']]
     });
     

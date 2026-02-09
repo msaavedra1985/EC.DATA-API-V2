@@ -4,6 +4,17 @@
 import { z } from 'zod';
 
 /**
+ * Schema para un país en el array de countries
+ */
+const countrySchema = z.object({
+    code: z.string()
+        .length(2, 'Country code must be exactly 2 characters (ISO 3166-1 alpha-2)')
+        .toUpperCase()
+        .regex(/^[A-Z]{2}$/, 'Country code must be 2 uppercase letters'),
+    is_primary: z.boolean().optional().default(false)
+});
+
+/**
  * Schema Zod para actualizar una organización
  * Todos los campos son opcionales (PATCH semántica)
  */
@@ -64,18 +75,42 @@ export const updateOrganizationSchema = z.object({
         .nullable(),
     
     config: z.object({})
-        .passthrough() // Permitir cualquier estructura JSON
+        .passthrough()
         .optional()
         .nullable(),
     
-    country_code: z.string()
-        .length(2, 'Country code must be exactly 2 characters (ISO 3166-1 alpha-2)')
-        .toUpperCase()
-        .regex(/^[A-Z]{2}$/, 'Country code must be 2 uppercase letters')
+    countries: z.array(countrySchema)
+        .min(1, 'At least one country is required')
         .optional(),
+    
+    selected_users: z.any().optional(),
     
     is_active: z.boolean()
         .optional()
+}).transform((data) => {
+    // Eliminar selected_users (no se procesa)
+    const { selected_users, ...rest } = data;
+    
+    // Si se envían countries, validar y ajustar primary
+    if (rest.countries && rest.countries.length > 0) {
+        if (rest.countries.length === 1) {
+            rest.countries[0].is_primary = true;
+        }
+        
+        const primaryCount = rest.countries.filter(c => c.is_primary).length;
+        if (primaryCount === 0) {
+            rest.countries[0].is_primary = true;
+        }
+    }
+    
+    return rest;
+}).refine((data) => {
+    if (!data.countries) return true;
+    const primaryCount = data.countries.filter(c => c.is_primary).length;
+    return primaryCount === 1;
+}, {
+    message: 'Exactly one country must be marked as primary',
+    path: ['countries']
 });
 
 /**

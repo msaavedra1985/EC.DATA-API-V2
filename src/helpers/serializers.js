@@ -49,7 +49,17 @@ export const toPublicOrganizationDto = (org, options = {}) => {
         // Metadata
         logo_url: org.logo_url || null,
         website: org.website || null,
-        country_id: org.country_id || null,
+        
+        // Países asociados (relación muchos-a-muchos)
+        countries: (org.countries || []).map(oc => ({
+            code: oc.country_code,
+            is_primary: oc.is_primary
+        })),
+        primary_country: (() => {
+            const countries = org.countries || [];
+            const primary = countries.find(c => c.is_primary);
+            return primary ? primary.country_code : (countries.length > 0 ? countries[0].country_code : null);
+        })(),
         
         // Estado
         is_active: org.is_active

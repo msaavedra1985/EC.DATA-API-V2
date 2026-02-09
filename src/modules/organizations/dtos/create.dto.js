@@ -4,6 +4,17 @@
 import { z } from 'zod';
 
 /**
+ * Schema para un país en el array de countries
+ */
+const countrySchema = z.object({
+    code: z.string()
+        .length(2, 'Country code must be exactly 2 characters (ISO 3166-1 alpha-2)')
+        .toUpperCase()
+        .regex(/^[A-Z]{2}$/, 'Country code must be 2 uppercase letters'),
+    is_primary: z.boolean().optional().default(false)
+});
+
+/**
  * Schema Zod para crear una organización
  * Validaciones:
  * - name: requerido, string 2-200 caracteres
@@ -12,6 +23,7 @@ import { z } from 'zod';
  * - parent_id: opcional, public_code del padre
  * - description: opcional, texto hasta 5000 caracteres
  * - config: opcional, objeto JSON
+ * - countries: requerido, array de objetos {code, is_primary}
  */
 export const createOrganizationSchema = z.object({
     name: z.string()
@@ -69,18 +81,41 @@ export const createOrganizationSchema = z.object({
         .nullable(),
     
     config: z.object({})
-        .passthrough() // Permitir cualquier estructura JSON
+        .passthrough()
         .optional()
         .nullable(),
     
-    country_code: z.string()
-        .length(2, 'Country code must be exactly 2 characters (ISO 3166-1 alpha-2)')
-        .toUpperCase()
-        .regex(/^[A-Z]{2}$/, 'Country code must be 2 uppercase letters'),
+    countries: z.array(countrySchema)
+        .min(1, 'At least one country is required'),
+    
+    selected_users: z.any().optional(),
     
     is_active: z.boolean()
         .optional()
         .default(true)
+}).transform((data) => {
+    // Eliminar selected_users (no se procesa)
+    const { selected_users, ...rest } = data;
+    
+    // Si solo hay un país, auto-asignar como primary
+    if (rest.countries.length === 1) {
+        rest.countries[0].is_primary = true;
+    }
+    
+    // Validar que exactamente un país sea primary
+    const primaryCount = rest.countries.filter(c => c.is_primary).length;
+    if (primaryCount === 0) {
+        // Si ninguno es primary, asignar el primero
+        rest.countries[0].is_primary = true;
+    }
+    
+    return rest;
+}).refine((data) => {
+    const primaryCount = data.countries.filter(c => c.is_primary).length;
+    return primaryCount === 1;
+}, {
+    message: 'Exactly one country must be marked as primary',
+    path: ['countries']
 });
 
 /**
