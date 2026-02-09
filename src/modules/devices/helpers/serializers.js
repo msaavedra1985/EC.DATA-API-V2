@@ -50,7 +50,7 @@ export const toPublicDeviceDto = (device) => {
             id: device.site.public_code, // Exponer public_code como id
             name: device.site.name,
             city: device.site.city,
-            country_id: device.site.country_id
+            country_code: device.site.country_code
         };
     }
     

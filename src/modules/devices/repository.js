@@ -47,7 +47,7 @@ export const createDevice = async (deviceData) => {
             {
                 model: Site,
                 as: 'site',
-                attributes: ['id', 'public_code', 'name', 'city', 'country_id']
+                attributes: ['id', 'public_code', 'name', 'city', 'country_code']
             }
         ]
     });
@@ -73,7 +73,7 @@ export const findDeviceByPublicCode = async (publicCode) => {
             {
                 model: Site,
                 as: 'site',
-                attributes: ['id', 'public_code', 'name', 'city', 'country_id']
+                attributes: ['id', 'public_code', 'name', 'city', 'country_code']
             }
         ]
     });
@@ -133,7 +133,7 @@ export const updateDevice = async (id, updateData) => {
             {
                 model: Site,
                 as: 'site',
-                attributes: ['id', 'public_code', 'name', 'city', 'country_id']
+                attributes: ['id', 'public_code', 'name', 'city', 'country_code']
             }
         ]
     });
@@ -171,7 +171,7 @@ export const softDeleteDevice = async (id, transaction = null) => {
             {
                 model: Site,
                 as: 'site',
-                attributes: ['id', 'public_code', 'name', 'city', 'country_id']
+                attributes: ['id', 'public_code', 'name', 'city', 'country_code']
             }
         ],
         transaction
@@ -251,7 +251,7 @@ export const listDevices = async ({
             {
                 model: Site,
                 as: 'site',
-                attributes: ['id', 'public_code', 'name', 'city', 'country_id']
+                attributes: ['id', 'public_code', 'name', 'city', 'country_code']
             }
         ],
         limit: parseInt(limit),
