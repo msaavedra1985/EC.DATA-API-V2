@@ -608,7 +608,10 @@ router.get('/validate-slug', authenticate, async (req, res) => {
  *                     description: "Enterprise data solutions and backend infrastructure"
  *                     logo_url: "https://storage.azure.com/logos/ecdata.png"
  *                     website: "https://ec.data"
- *                     country_id: "US"
+ *                     countries:
+ *                       - code: "US"
+ *                         is_primary: true
+ *                     primary_country: "US"
  *                     is_active: true
  *                     has_parent: false
  *                     created_at: "2025-10-01T10:00:00Z"
@@ -910,10 +913,27 @@ router.post('/validate', async (req, res) => {
  *                 type: string
  *                 description: Public code de la organización padre (opcional)
  *                 example: "ORG-1A2B3C"
- *               country_id:
- *                 type: string
- *                 description: ID del país
- *                 example: "MX"
+ *               countries:
+ *                 type: array
+ *                 description: Países donde opera la organización (mínimo 1, exactamente 1 primary)
+ *                 items:
+ *                   type: object
+ *                   required:
+ *                     - code
+ *                   properties:
+ *                     code:
+ *                       type: string
+ *                       description: Código ISO 3166-1 alpha-2 del país
+ *                       example: "MX"
+ *                     is_primary:
+ *                       type: boolean
+ *                       description: Indica si es el país principal
+ *                       example: true
+ *                 example:
+ *                   - code: "MX"
+ *                     is_primary: true
+ *                   - code: "CO"
+ *                     is_primary: false
  *               tax_id:
  *                 type: string
  *                 description: RFC o Tax ID
@@ -985,8 +1005,8 @@ router.post('/validate', async (req, res) => {
  *                       example:
  *                         - path: ["name"]
  *                           message: "Required"
- *                         - path: ["country_id"]
- *                           message: "Invalid country code"
+ *                         - path: ["countries"]
+ *                           message: "At least one country is required"
  *       401:
  *         description: No autenticado - Token JWT faltante o inválido
  *         content:
@@ -1245,8 +1265,18 @@ router.post('/', authenticate, requireOrgPermission('create'), async (req, res) 
  *               parent_id:
  *                 type: string
  *                 description: Public code del nuevo padre
- *               country_id:
- *                 type: string
+ *               countries:
+ *                 type: array
+ *                 description: Países donde opera la organización
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     code:
+ *                       type: string
+ *                       example: "MX"
+ *                     is_primary:
+ *                       type: boolean
+ *                       example: true
  *               tax_id:
  *                 type: string
  *               email:

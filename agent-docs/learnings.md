@@ -25,6 +25,24 @@
 
 ---
 
+## Organizaciones
+
+### country_code migrado a organization_countries (many-to-many)
+**Fecha**: 2026-02-09
+**Síntoma**: Organizations solo soportaba un país (country_code en tabla organizations)
+**Causa**: Requerimiento de negocio - organizaciones operan en múltiples países
+**Solución**: 
+- Nueva tabla `organization_countries` (organization_id, country_code, is_primary)
+- Migración `20260209180000` elimina `organizations.country_code` y migra datos existentes a la nueva tabla marcando como is_primary
+- DTOs aceptan `countries: [{code, is_primary}]` - mínimo 1, exactamente 1 primary
+- `selected_users` se acepta en el payload pero se stripea (no se procesa aún)
+- Serializer devuelve `countries` array + `primary_country` field
+- Si solo hay 1 país se auto-asigna como primary
+
+**Archivos afectados**: `src/db/migrations/20260209180000-create-organization-countries-table.cjs`, `src/modules/organizations/models/OrganizationCountry.js`, `src/modules/organizations/models/Organization.js`, `src/modules/organizations/dtos/create.dto.js`, `src/modules/organizations/dtos/update.dto.js`, `src/modules/organizations/repository.js`, `src/helpers/serializers.js`
+
+---
+
 ## Template para nuevos entries
 
 ### [Título descriptivo del problema]

@@ -1,6 +1,6 @@
 # Organizations Endpoints
 
-> **Última actualización**: 2026-01-21
+> **Última actualización**: 2026-02-09
 > 
 > **IMPORTANTE**: Este archivo DEBE actualizarse cuando se modifique cualquier endpoint de organizaciones.
 
@@ -117,11 +117,13 @@
 {
   "name": "Hotel Cusco",
   "description": "Sucursal en Cusco",
-  "type": "hotel",
-  "parent_public_code": "ORG-XXXXX-X",
-  "settings": {
-    "timezone": "America/Lima",
-    "currency": "PEN"
+  "parent_id": "ORG-XXXXX-X",
+  "countries": [
+    { "code": "PE", "is_primary": true },
+    { "code": "CO", "is_primary": false }
+  ],
+  "config": {
+    "business": { "industry": "hospitality" }
   }
 }
 ```
@@ -129,11 +131,19 @@
 **Campos**:
 | Campo | Tipo | Requerido | Descripción |
 |-------|------|-----------|-------------|
-| name | string | Sí | Nombre de la organización |
-| description | string | No | Descripción |
-| type | string | No | Tipo: corporation, hotel, restaurant, etc. |
-| parent_public_code | string | No | Public code del padre (para jerarquía) |
-| settings | object | No | Configuraciones personalizadas |
+| name | string | Sí | Nombre (2-200 chars) |
+| slug | string | No | Slug único (auto-generado si no se envía) |
+| description | string | No | Descripción (hasta 5000 chars) |
+| parent_id | string | No | Public code del padre (para jerarquía) |
+| countries | array | Sí | Países donde opera (mínimo 1) |
+| countries[].code | string | Sí | Código ISO 3166-1 alpha-2 (ej: "MX", "PE") |
+| countries[].is_primary | boolean | No | Si es el país principal (exactamente 1 debe ser true) |
+| tax_id | string | No | RFC o Tax ID |
+| email | string | No | Email de contacto |
+| phone | string | No | Teléfono |
+| address | string | No | Dirección |
+| logo_url | string | No | URL del logo |
+| config | object | No | Configuraciones personalizadas JSON |
 
 **Respuesta exitosa** (201):
 ```json
@@ -142,7 +152,12 @@
   "data": {
     "public_code": "ORG-ZZZZZ-Z",
     "name": "Hotel Cusco",
-    "parent_public_code": "ORG-XXXXX-X"
+    "parent_public_code": "ORG-XXXXX-X",
+    "countries": [
+      { "code": "PE", "is_primary": true },
+      { "code": "CO", "is_primary": false }
+    ],
+    "primary_country": "PE"
   }
 }
 ```
@@ -150,7 +165,10 @@
 **Notas**:
 - Audit log: CREATE
 - Genera public_code automáticamente
-- Si tiene `parent_public_code`, hereda permisos del padre
+- Si tiene `parent_id`, hereda permisos del padre
+- Si solo se envía 1 país, se marca automáticamente como primary
+- Si ningún país es primary, el primero se asigna como primary
+- `selected_users` se acepta pero se ignora (no se procesa aún)
 
 ---
 
@@ -165,8 +183,12 @@
 {
   "name": "Hotel Cusco - Centro",
   "description": "Nueva descripción",
-  "settings": {
-    "timezone": "America/Lima"
+  "countries": [
+    { "code": "PE", "is_primary": true },
+    { "code": "CL", "is_primary": false }
+  ],
+  "config": {
+    "business": { "industry": "hospitality" }
   }
 }
 ```
@@ -177,14 +199,20 @@
   "ok": true,
   "data": {
     "public_code": "ORG-ZZZZZ-Z",
-    "name": "Hotel Cusco - Centro"
+    "name": "Hotel Cusco - Centro",
+    "countries": [
+      { "code": "PE", "is_primary": true },
+      { "code": "CL", "is_primary": false }
+    ],
+    "primary_country": "PE"
   }
 }
 ```
 
 **Notas**:
 - Audit log: UPDATE con changes
-- No se puede cambiar el `parent_public_code` (usar endpoint específico)
+- Al enviar `countries`, reemplaza todos los países (delete + insert)
+- Mismas validaciones que en creación (mínimo 1 país, exactamente 1 primary)
 
 ---
 
