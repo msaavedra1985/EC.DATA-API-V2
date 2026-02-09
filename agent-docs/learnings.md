@@ -89,6 +89,112 @@
 - Seed ejecutable en background: `nohup node data/seed/seed-locations.js &`
 **Archivos afectados**: `data/seed/seed-locations.js`
 
+### Proceso completo de seed geográfico (estados + ciudades)
+**Fecha**: 2026-02-09
+
+**Fuente de datos**: [CountryStateCity](https://github.com/dr5hn/countries-states-cities-database) por dr5hn
+- Repositorio con datos ISO actualizados de 250 países, 5,296 estados y 153,000+ ciudades
+- Incluye traducciones en múltiples idiomas (es, en, fr, de, pt, ja, ko, zh, etc.)
+- Licencia: Open Database License (ODbL)
+- API pública: `https://raw.githubusercontent.com/dr5hn/countries-states-cities-database/master/`
+
+**Archivos fuente en el repositorio de CountryStateCity**:
+- `json/states.json` - Todos los estados con traducciones (usado para estados)
+- `json/cities.json` - Todas las ciudades con traducciones (usado para ciudades)
+- Ambos incluyen traducciones en: es, en, fr, de, pt, ja, ko, zh, ar, etc.
+
+**Archivos procesados en nuestro proyecto**:
+1. `data/geo/states.json` - 5,296 estados en formato slim con traducciones ES/EN
+   - Formato: `[{name, iso2, country_code, latitude, longitude, type, translations: {es, en}}]`
+   - Generado desde: `json/states.json` del repo CountryStateCity
+   - Procesamiento: se extrajo solo los campos necesarios y traducciones ES/EN
+
+2. `data/geo/cities/{CC}.json` - 218 archivos, uno por país (ej: `MX.json`, `AR.json`)
+   - Formato: `[{name, state_code, latitude, longitude, population, timezone, type, translations: {es, en}}]`
+   - Generado desde: `json/cities.json` del repo CountryStateCity
+   - Procesamiento: se descargó `cities.json` (~185MB), se agrupó por `country_code` y se guardó un archivo por país con campos reducidos
+   - `state_code` es el código LOCAL del estado (ej: "AGU"), NO el código completo (ej: "MX-AGU")
+   - Para buscar ciudades de "MX-AGU": abrir `MX.json` y filtrar por `state_code === "AGU"`
+   - Total: ~30MB en disco repartidos en 218 archivos
+
+**Procedimiento original de descarga y procesamiento**:
+```bash
+# 1. Descargar estados (liviano, ~5MB)
+curl -o /tmp/states.json https://raw.githubusercontent.com/dr5hn/countries-states-cities-database/master/json/states.json
+
+# 2. Procesar estados: extraer campos slim + traducciones ES/EN → data/geo/states.json
+# (se usó un script Node.js ad-hoc que mapeó cada estado a formato slim)
+
+# 3. Descargar ciudades (pesado, ~185MB)
+curl -o /tmp/cities.json https://raw.githubusercontent.com/dr5hn/countries-states-cities-database/master/json/cities.json
+
+# 4. Splitear ciudades por país → data/geo/cities/{CC}.json
+# Script ad-hoc: lee /tmp/cities.json, agrupa por country_code,
+# mapea cada ciudad a formato slim con traducciones ES/EN,
+# escribe un archivo JSON por país
+```
+
+**Scripts de seed (estados a DB)**:
+- `npm run db:seed:geo` → ejecuta `node src/db/seeders/run-geo.js`
+- El seeder (`src/db/seeders/geo-data.seeder.js`) lee `data/geo/states.json` y hace:
+  1. Consulta estados existentes en DB para evitar duplicados
+  2. Inserta estados faltantes con `bulkCreate` en batches de 500
+  3. Inserta traducciones ES/EN para cada estado nuevo
+  4. Resultado: 5,375 estados en DB (1,000 originales + 4,375 nuevos)
+- Las ciudades NO se insertan en DB - se sirven on-demand desde los JSONs
+
+**Cómo agregar un nuevo idioma (ej: portugués "pt")**:
+
+Paso 1 - Descargar fuentes actualizadas:
+```bash
+curl -o /tmp/states.json https://raw.githubusercontent.com/dr5hn/countries-states-cities-database/master/json/states.json
+curl -o /tmp/cities.json https://raw.githubusercontent.com/dr5hn/countries-states-cities-database/master/json/cities.json
+```
+
+Paso 2 - Actualizar `data/geo/states.json` con las traducciones del nuevo idioma:
+```javascript
+// Leer states.json del repo (tiene todas las traducciones)
+// Para cada estado en nuestro data/geo/states.json:
+//   buscar el estado en el JSON fuente por iso2 + country_code
+//   agregar translations.pt = fuente.translations.pt || fuente.name
+// Guardar data/geo/states.json actualizado
+```
+
+Paso 3 - Actualizar `data/geo/cities/{CC}.json` con las traducciones del nuevo idioma:
+```javascript
+// Leer cities.json del repo (tiene todas las traducciones)
+// Para cada archivo data/geo/cities/{CC}.json:
+//   para cada ciudad, buscar en el JSON fuente por name + state_code + country_code
+//   agregar translations.pt = fuente.translations.pt || fuente.name
+// Guardar cada archivo actualizado
+```
+
+Paso 4 - Insertar traducciones de estados en DB:
+```javascript
+// Leer data/geo/states.json actualizado
+// Para cada estado que tenga translations.pt:
+//   INSERT INTO state_translations (state_code, lang, name) VALUES (code, 'pt', translations.pt)
+//   Usar bulkCreate con ignoreDuplicates para evitar conflictos
+// Usar el mismo patrón que geo-data.seeder.js
+```
+
+Paso 5 - Actualizar código:
+- Agregar `'pt'` al array `validLangs` en `src/modules/locations/routes.js`
+- Agregar `'pt'` al array `validLangs` en `src/modules/countries/routes.js` si aplica
+- Invalidar cache Redis: borrar keys `states:*` y `cities:*`
+
+**Cache Redis**:
+- Estados: key `states:{CC}:{lang}` (ej: `states:MX:es`), TTL 1 hora
+- Ciudades: key `cities:{stateCode}:{lang}` (ej: `cities:MX-AGU:es`), TTL 1 hora
+
+**Archivos del módulo**:
+- `src/modules/locations/repository.js` - Queries Sequelize para estados desde DB
+- `src/modules/locations/services.js` - Cache Redis + lectura de JSONs para ciudades
+- `src/modules/locations/routes.js` - Endpoints públicos (sin auth)
+- `src/modules/locations/index.js` - Export del router
+- `src/db/seeders/geo-data.seeder.js` - Seeder de estados
+- `src/db/seeders/run-geo.js` - Runner del seeder
+
 ---
 
 ## Rate Limiting
