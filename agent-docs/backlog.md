@@ -12,53 +12,16 @@
 
 ## Locations Module
 
-### Seed de Datos
-- [ ] Completar seed de estados/provincias
-  - Script: `node data/seed/seed-locations.js`
-  - Verificar conteo actual: `SELECT COUNT(*) FROM states;`
-  - Total esperado: ~5000 estados (librería country-state-city)
-  - Pendiente: Optimizar con batch INSERT para mejor performance
+### Completado ✅
+- [x] Seed de estados: `npm run db:seed:geo` - 5,375 estados con traducciones ES/EN
+- [x] Repository: `getStatesByCountry(countryCode, lang)`, `getStateByCode(code)`
+- [x] Service con cache Redis: `states:{countryCode}:{lang}` TTL 1h
+- [x] Ciudades on-demand desde JSONs locales: `data/geo/cities/{CC}.json` (153k+ ciudades)
+- [x] Endpoints: `GET /locations/countries/:countryCode/states`, `GET /locations/states/:stateCode/cities`
 
-### Estados (States)
-- [ ] Crear `src/modules/locations/repository.js` con funciones:
-  - `getStatesByCountry(countryCode, lang)` - Listar estados de un país
-  - `getStateByCode(code)` - Obtener estado por código (ej: AR-B)
-- [ ] Crear `src/modules/locations/services.js` con cache Redis:
-  - Key pattern: `states:{countryCode}:{lang}` (ej: `states:AR:es`)
-  - TTL: 1 hora (datos estáticos)
-  - Función `invalidateStatesCache(countryCode)`
-- [ ] Crear `src/modules/locations/routes.js` con endpoints:
-  - `GET /api/v1/locations/countries/:countryCode/states` - Estados por país
-
-### Ciudades (Cities)
-- [ ] Crear funciones en repository:
-  - `getCitiesByState(stateCode, lang)` - Listar ciudades de un estado
-  - `getCityById(id)` - Obtener ciudad por ID
-  - `createCity(cityData, translations)` - Crear ciudad con traducciones
-  - `updateCity(id, cityData, translations)` - Actualizar ciudad y traducciones
-- [ ] Crear servicios con cache Redis:
-  - Key pattern: `cities:{stateCode}:{lang}` (ej: `cities:AR-B:es`)
-  - TTL: 30 minutos (ciudades pueden agregarse)
-  - Invalidación automática en create/update
-- [ ] Crear endpoints:
-  - `GET /api/v1/locations/states/:stateCode/cities` - Ciudades por estado
-  - `POST /api/v1/locations/cities` - Crear ciudad (con traducciones)
-  - `PUT /api/v1/locations/cities/:id` - Actualizar ciudad
-
-### Multi-idioma Automático
-- [ ] Implementar helper para inserción multi-idioma en un request:
-  ```javascript
-  // Ejemplo de request body esperado:
-  {
-    "state_code": "AR-B",
-    "name": "Mar del Plata", // nombre principal
-    "translations": {
-      "es": "Mar del Plata",
-      "en": "Mar del Plata"
-    }
-  }
-  ```
-- [ ] Validar que siempre se incluya traducción ES (idioma principal)
+### Pendientes
+- [ ] CRUD de ciudades en DB (crear/actualizar ciudades personalizadas por organización)
+- [ ] Endpoint `GET /api/v1/locations/states/:stateCode` - Detalle de un estado
 
 ---
 

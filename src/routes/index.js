@@ -8,6 +8,7 @@ import usersRouter from '../modules/users/index.js';
 import rolesRouter from '../modules/roles/index.js';
 import errorLogsRouter from '../modules/error-logs/index.js';
 import countriesRouter from '../modules/countries/index.js';
+import locationsRouter from '../modules/locations/index.js';
 import sitesRouter from '../modules/sites/index.js';
 import devicesRouter from '../modules/devices/index.js';
 import channelsRouter from '../modules/channels/index.js';
@@ -40,6 +41,9 @@ router.use('/roles', rolesRouter);
 
 // Countries (público - datos de referencia)
 router.use('/countries', countriesRouter);
+
+// Locations (público - estados y ciudades)
+router.use('/locations', locationsRouter);
 
 // Error Logs (público - sin autenticación requerida)
 router.use('/error-logs', errorLogsRouter);

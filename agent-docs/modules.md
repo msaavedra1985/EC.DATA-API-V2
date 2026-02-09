@@ -57,15 +57,16 @@
 | health | `src/modules/health/` | Health checks (`GET /health`, `GET /health/ready`) |
 | seed | `src/modules/seed/` | Datos iniciales para desarrollo |
 
-### locations (Nuevo)
+### locations
 Sistema de ubicaciones geográficas con natural keys:
-- **countries**: PK=`id` (autoincrement), FK usa `iso_alpha2` (AR, US, ES)
-- **states**: PK=`code` (natural key: "AR-B", "US-CA")
-- **cities**: PK=`id` (autoincrement, carga on-demand)
-- Traducciones: todas las entidades tienen tablas `*_translations` para ES/EN
-- Seed: `node data/seed/seed-locations.js` (~250 países, ~5000 estados)
-- Library: `country-state-city` para datos ISO actualizados
-- **Pendientes**: Ver [backlog.md](backlog.md#locations-module) para servicios y endpoints faltantes
+- **countries**: PK=`id` (autoincrement), FK usa `iso_alpha2` (AR, US, ES) - 250 países
+- **states**: PK=`code` (natural key: "AR-B", "US-CA", "MX-AGU") - 5,375 estados en DB
+- **cities**: Servidas on-demand desde JSONs locales `data/geo/cities/{CC}.json` - 153k+ ciudades
+- Traducciones: países y estados en tablas `*_translations` para ES/EN; ciudades con traducciones inline en JSON
+- Seed estados: `npm run db:seed:geo` (desde `data/geo/states.json`)
+- Cache Redis: `states:{CC}:{lang}` y `cities:{stateCode}:{lang}` TTL 1h
+- Endpoints: `GET /locations/countries/:cc/states`, `GET /locations/states/:code/cities`
+- Fuente: CountryStateCity (github.com/dr5hn/countries-states-cities-database)
 
 ### asset-categories (Nuevo)
 Sistema de tags jerárquicos para clasificar canales:
