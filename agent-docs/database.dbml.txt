@@ -1,4 +1,4 @@
-// Database Schema - Generated on 2026-02-09T17:53:10.188Z
+// Database Schema - Generated on 2026-02-09T19:34:45.440Z
 // Project: EC.DATA API - Enterprise REST API
 // Use this file at https://dbdiagram.io to visualize the schema
 
@@ -117,45 +117,6 @@ Table channels {
     (public_code) [name: 'channels_public_code_key', unique]
     (status) [name: 'channels_status']
     (status) [name: 'channels_status_idx']
-  }
-}
-
-// Ciudades - cargadas on-demand, no pre-pobladas
-Table cities {
-  id integer [pk, not null, increment] // ID autoincremental - no existe estándar ISO para ciudades
-  state_code varchar(10) [not null] // FK a states.code (ej: AR-B)
-  name varchar(200) [not null] // Nombre de la ciudad (nombre principal/oficial)
-  zip_code varchar(20) // Código postal principal
-  latitude numeric // Latitud GPS
-  longitude numeric // Longitud GPS
-  population integer // Población estimada
-  timezone varchar(100) // Zona horaria (ej: America/Argentina/Buenos_Aires)
-  is_capital boolean [not null, default: false] // Si es capital del estado/provincia
-  is_active boolean [not null, default: true] // Indica si la ciudad está activa
-  created_at timestamptz [not null, default: `now()`]
-  updated_at timestamptz [not null, default: `now()`]
-
-  Indexes {
-    (latitude, longitude) [name: 'cities_coordinates_idx']
-    (is_active) [name: 'cities_is_active_idx']
-    (name) [name: 'cities_name_idx']
-    (state_code) [name: 'cities_state_code_idx']
-    (zip_code) [name: 'cities_zip_code_idx']
-  }
-}
-
-// Traducciones de nombres de ciudades
-Table city_translations {
-  id integer [pk, not null, increment]
-  city_id integer [not null] // FK a cities.id
-  lang varchar(5) [not null] // Código de idioma (es, en, pt)
-  name varchar(200) [not null] // Nombre de la ciudad en el idioma
-  created_at timestamptz [not null, default: `now()`]
-  updated_at timestamptz [not null, default: `now()`]
-
-  Indexes {
-    (lang) [name: 'city_translations_lang_idx']
-    (city_id, lang) [name: 'unique_city_id_lang', unique]
   }
 }
 
@@ -746,6 +707,7 @@ Table state_translations {
   updated_at timestamptz [not null, default: `now()`]
 
   Indexes {
+    (lang) [name: 'state_translations_lang']
     (lang) [name: 'state_translations_lang_idx']
     (state_code, lang) [name: 'unique_state_code_lang', unique]
   }
@@ -764,7 +726,9 @@ Table states {
   updated_at timestamptz [not null, default: `now()`]
 
   Indexes {
+    (country_code) [name: 'states_country_code']
     (country_code) [name: 'states_country_code_idx']
+    (is_active) [name: 'states_is_active']
     (is_active) [name: 'states_is_active_idx']
   }
 }
@@ -918,14 +882,12 @@ Ref: audit_logs.impersonated_org_id > organizations.id [update: cascade, delete:
 Ref: audit_logs.performed_by > users.id [update: cascade, delete: set null]
 Ref: channel_variables.channel_id > channels.id [update: cascade, delete: cascade]
 Ref: channel_variables.variable_id > variables.id [update: cascade, delete: cascade]
-Ref: channels.device_id > devices.organization_id [update: cascade, delete: restrict]
 Ref: channels.device_id > devices.id [update: cascade, delete: restrict]
+Ref: channels.device_id > devices.organization_id [update: cascade, delete: restrict]
 Ref: channels.measurement_type_id > measurement_types.id [update: cascade, delete: set null]
 Ref: channels.organization_id > devices.id [update: cascade, delete: restrict]
-Ref: channels.organization_id > devices.organization_id [update: cascade, delete: restrict]
 Ref: channels.organization_id > organizations.id [update: cascade, delete: restrict]
-Ref: cities.state_code > states.code [update: cascade, delete: restrict]
-Ref: city_translations.city_id > cities.id [update: cascade, delete: cascade]
+Ref: channels.organization_id > devices.organization_id [update: cascade, delete: restrict]
 Ref: country_translations.country_code > countries.iso_alpha2 [update: cascade, delete: cascade]
 Ref: device_brand_translations.device_brand_id > device_brands.id [update: cascade, delete: cascade]
 Ref: device_license_translations.device_license_id > device_licenses.id [update: cascade, delete: cascade]

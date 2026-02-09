@@ -61,7 +61,8 @@
 Sistema de ubicaciones geográficas con natural keys:
 - **countries**: PK=`id` (autoincrement), FK usa `iso_alpha2` (AR, US, ES) - 250 países
 - **states**: PK=`code` (natural key: "AR-B", "US-CA", "MX-AGU") - 5,375 estados en DB
-- **cities**: Servidas on-demand desde JSONs locales `data/geo/cities/{CC}.json` - 153k+ ciudades
+- **cities**: NO están en DB - servidas on-demand desde JSONs locales `data/geo/cities/{CC}.json` (~153k ciudades)
+- En entidades (sites, devices, etc.) las ciudades se guardan como texto plano (`city`, `state_code`, `country_code`)
 - Traducciones: países y estados en tablas `*_translations` para ES/EN; ciudades con traducciones inline en JSON
 - Seed estados: `npm run db:seed:geo` (desde `data/geo/states.json`)
 - Cache Redis: `states:{CC}:{lang}` y `cities:{stateCode}:{lang}` TTL 1h

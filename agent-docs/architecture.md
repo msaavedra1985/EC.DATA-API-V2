@@ -198,6 +198,83 @@ root
 - **Audit Trail**: Todas las acciones de impersonación quedan logueadas
 - **JWT Flags**: `isImpersonating`, `originalUserId` en payload
 
+## Datos Geográficos (Países, Estados, Ciudades)
+
+### Almacenamiento por nivel
+
+| Nivel | Almacenamiento | Cantidad | Traducciones |
+|-------|---------------|----------|--------------|
+| Países | DB (tabla `countries` + `country_translations`) | ~250 | ES/EN en DB |
+| Estados | DB (tabla `states` + `state_translations`) | ~5,375 | ES/EN en DB |
+| Ciudades | Archivos JSON locales (`data/geo/cities/{CC}.json`) | ~153,000 | ES/EN inline en JSON |
+
+### Patrón de uso de ciudades en entidades
+
+Las ciudades **NO se almacenan en la base de datos**. Se sirven on-demand desde archivos JSON para que el frontend arme selectores de ubicación.
+
+Cuando una entidad (site, device, etc.) necesita guardar su ubicación geográfica, se guarda como **texto plano**:
+
+```
+Tabla sites (u otra entidad):
+  city          VARCHAR(200)   → "Aguascalientes" (nombre de la ciudad)
+  state_code    VARCHAR(10)    → "MX-AGU" (código completo del estado)
+  country_code  VARCHAR(2)     → "MX" (código ISO alpha-2 del país)
+```
+
+### Flujo frontend: Selección de ubicación
+
+```
+1. GET /api/v1/countries?lang=es
+   → Usuario selecciona país (ej: México → "MX")
+
+2. GET /api/v1/locations/countries/MX/states?lang=es
+   → Usuario selecciona estado (ej: Aguascalientes → "MX-AGU")
+
+3. GET /api/v1/locations/states/MX-AGU/cities?lang=es
+   → Usuario selecciona ciudad (ej: Aguascalientes)
+
+4. POST /api/v1/sites (o la entidad que sea)
+   → Body: { city: "Aguascalientes", state_code: "MX-AGU", country_code: "MX", ... }
+```
+
+### Traducción de ciudad según idioma del usuario
+
+Con el `state_code` guardado se puede obtener el nombre traducido:
+
+```
+GET /api/v1/locations/states/MX-AGU/cities?lang=en
+→ Devuelve todas las ciudades de ese estado con nombres en inglés
+→ Frontend busca la que coincide con el nombre guardado
+```
+
+En la práctica, la mayoría de nombres de ciudades son iguales en todos los idiomas. Las diferencias aparecen en ciudades con alfabetos distintos (ej: asiáticas).
+
+### Filtrado por ciudad en consultas
+
+Como la ciudad se guarda como texto, las consultas son directas:
+
+```sql
+-- Equipos en una ciudad específica
+SELECT * FROM sites WHERE city = 'Aguascalientes' AND state_code = 'MX-AGU';
+
+-- Equipos en un estado
+SELECT * FROM sites WHERE state_code = 'MX-AGU';
+
+-- Equipos en un país
+SELECT * FROM sites WHERE country_code = 'MX';
+```
+
+### Cache Redis para datos geográficos
+
+| Dato | Key pattern | TTL | Fuente |
+|------|-------------|-----|--------|
+| Estados de un país | `states:{CC}:{lang}` | 1 hora | DB |
+| Ciudades de un estado | `cities:{stateCode}:{lang}` | 1 hora | JSON local |
+
+### Agregar idiomas
+
+Ver `agent-docs/learnings.md` → sección "Proceso completo de seed geográfico" para instrucciones detalladas de cómo agregar un nuevo idioma.
+
 ## External Services Integration
 
 ```
