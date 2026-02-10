@@ -11,6 +11,7 @@ import { validateUpdateOrganization } from './dtos/update.dto.js';
 import { validateBatchDelete, validateGenerateUploadUrl, validateSlug } from './dtos/batchDelete.dto.js';
 import { getDeletePreview, cascadeDelete } from './helpers/cascadeDelete.js';
 import { getChildren, getDescendants, getHierarchyTree, wouldCreateCycle, getDepth, getTreeLevels } from './helpers/hierarchy.js';
+import { normalizeToSlug, generateUniqueSlug, findSuggestion } from './helpers/slug.js';
 import { generatePresignedUploadUrl } from '../../helpers/azureBlobStorage.js';
 import { logAuditAction } from '../../helpers/auditLog.js';
 import { 
@@ -540,12 +541,15 @@ router.get('/validate-slug', authenticate, async (req, res) => {
         validateSlug({ slug });
 
         const existing = await orgRepository.findOrganizationBySlug(slug);
+        const available = !existing;
+        const suggestion = available ? null : await findSuggestion(slug);
 
         res.json({
             ok: true,
             data: {
                 slug,
-                available: !existing
+                available,
+                ...(suggestion && { suggestion })
             }
         });
     } catch (error) {
@@ -1133,28 +1137,9 @@ router.post('/', authenticate, requireOrgPermission('create'), async (req, res) 
         // Validar datos
         const validatedData = validateCreateOrganization(req.body);
         
-        // Auto-generar slug si no viene
-        if (!validatedData.slug) {
-            validatedData.slug = validatedData.name
-                .toLowerCase()
-                .normalize('NFD')
-                .replace(/[\u0300-\u036f]/g, '')
-                .replace(/[^a-z0-9]+/g, '-')
-                .replace(/^-+|-+$/g, '');
-        }
-
-        // Verificar que el slug no exista
-        const existingSlug = await orgRepository.findOrganizationBySlug(validatedData.slug);
-        if (existingSlug) {
-            return res.status(409).json({
-                ok: false,
-                error: {
-                    code: 'SLUG_EXISTS',
-                    message: 'Slug already exists',
-                    details: { slug: validatedData.slug }
-                }
-            });
-        }
+        // Generar slug único (auto-genera desde nombre si no viene)
+        const slugBase = validatedData.slug || validatedData.name;
+        validatedData.slug = await generateUniqueSlug(slugBase);
 
         // Validar parent_id si viene
         let parentOrg = null;
@@ -1478,19 +1463,9 @@ router.put('/:id', authenticate, requireOrgPermission('edit'), async (req, res) 
             });
         }
 
-        // Si se actualiza el slug, verificar que no exista
+        // Si se actualiza el slug, generar uno único excluyendo la org actual
         if (validatedData.slug && validatedData.slug !== organization.slug) {
-            const existingSlug = await orgRepository.findOrganizationBySlug(validatedData.slug);
-            if (existingSlug) {
-                return res.status(409).json({
-                    ok: false,
-                    error: {
-                        code: 'SLUG_EXISTS',
-                        message: 'Slug already exists',
-                        details: { slug: validatedData.slug }
-                    }
-                });
-            }
+            validatedData.slug = await generateUniqueSlug(validatedData.slug, organization.id);
         }
 
         // Si se actualiza parent_id, validar
@@ -2794,152 +2769,6 @@ router.get('/:id/subtree', authenticate, requireOrgPermission('view'), async (re
             error: {
                 code: 'INTERNAL_ERROR',
                 message: 'Error getting subtree'
-            }
-        });
-    }
-});
-
-/**
- * @swagger
- * /api/v1/organizations/validate-slug:
- *   get:
- *     summary: Validar si un slug está disponible
- *     description: Verifica si un slug está disponible para usar en una nueva organización o para renombrar existente.
- *     tags: [Organizations]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: query
- *         name: slug
- *         required: true
- *         description: Slug a validar
- *         schema:
- *           type: string
- *           pattern: '^[a-z0-9-]+$'
- *           example: "acme-corporation"
- *     responses:
- *       200:
- *         description: Validación completada
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 ok:
- *                   type: boolean
- *                   example: true
- *                 data:
- *                   type: object
- *                   properties:
- *                     slug:
- *                       type: string
- *                     available:
- *                       type: boolean
- *                       description: true si está disponible, false si ya existe
- *                   example:
- *                     slug: "acme-corporation"
- *                     available: true
- *       400:
- *         description: Slug no proporcionado o formato inválido
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 ok:
- *                   type: boolean
- *                   example: false
- *                 error:
- *                   type: object
- *                   properties:
- *                     code:
- *                       type: string
- *                       example: "VALIDATION_ERROR"
- *                     message:
- *                       type: string
- *                       example: "Invalid slug format"
- *       401:
- *         description: No autenticado - Token JWT faltante o inválido
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 ok:
- *                   type: boolean
- *                   example: false
- *                 error:
- *                   type: object
- *                   properties:
- *                     code:
- *                       type: string
- *                       example: "UNAUTHORIZED"
- *                     message:
- *                       type: string
- *                       example: "Authentication required"
- *       500:
- *         description: Error interno del servidor
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 ok:
- *                   type: boolean
- *                   example: false
- *                 error:
- *                   type: object
- *                   properties:
- *                     code:
- *                       type: string
- *                       example: "INTERNAL_ERROR"
- *                     message:
- *                       type: string
- *                       example: "Error validating slug"
- */
-router.get('/validate-slug', authenticate, async (req, res) => {
-    try {
-        const { slug } = req.query;
-        
-        if (!slug) {
-            return res.status(400).json({
-                ok: false,
-                error: {
-                    code: 'MISSING_SLUG',
-                    message: 'Slug parameter is required'
-                }
-            });
-        }
-
-        validateSlug({ slug });
-
-        const existing = await orgRepository.findOrganizationBySlug(slug);
-
-        res.json({
-            ok: true,
-            data: {
-                slug,
-                available: !existing
-            }
-        });
-    } catch (error) {
-        if (error.name === 'ZodError') {
-            return res.status(400).json({
-                ok: false,
-                error: {
-                    code: 'VALIDATION_ERROR',
-                    message: 'Invalid slug format',
-                    details: error.errors
-                }
-            });
-        }
-
-        orgLogger.error({ err: error }, 'Error validating slug');
-        res.status(500).json({
-            ok: false,
-            error: {
-                code: 'INTERNAL_ERROR',
-                message: 'Error validating slug'
             }
         });
     }
