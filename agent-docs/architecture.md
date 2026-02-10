@@ -275,6 +275,82 @@ SELECT * FROM sites WHERE country_code = 'MX';
 
 Ver `agent-docs/learnings.md` → sección "Proceso completo de seed geográfico" para instrucciones detalladas de cómo agregar un nuevo idioma.
 
+## Resiliencia Redis
+
+### Estrategia de fallback
+
+El cliente Redis (`src/db/redis/client.js`) implementa un sistema de resiliencia con 3 capas:
+
+```
+┌────────────────────────────────────────────────────────┐
+│                  Redis Client                            │
+│                                                          │
+│  Inicio ──▶ Conectar Redis                               │
+│              │                                           │
+│              ├─ OK ──▶ modo: redis                       │
+│              │         health check cada 60s (PING)      │
+│              │                                           │
+│              └─ FAIL ──▶ modo: in-memory (Map)           │
+│                          reconexión cada 30s             │
+│                                                          │
+│  Runtime:                                                │
+│  ┌─────────────────────────────────────────────┐         │
+│  │ Evento end/error/PING fail                  │         │
+│  │  → activar fallback en memoria              │         │
+│  │  → programar reconexión periódica (30s)     │         │
+│  │  → operaciones siguen funcionando (Map)     │         │
+│  └─────────────────────────────────────────────┘         │
+│  ┌─────────────────────────────────────────────┐         │
+│  │ Reconexión exitosa                          │         │
+│  │  → desactivar fallback                      │         │
+│  │  → reactivar health check                   │         │
+│  │  → operaciones vuelven a Redis              │         │
+│  └─────────────────────────────────────────────┘         │
+└────────────────────────────────────────────────────────┘
+```
+
+### Comportamiento por entorno
+
+| Escenario | Desarrollo | Producción |
+|-----------|------------|------------|
+| Redis no disponible al inicio | Fallback en memoria + reconexión | Throw (obligatorio) |
+| Redis se cae en runtime | Fallback en memoria + reconexión | Fallback en memoria + reconexión |
+| Operación individual falla | Fallback silencioso + activar reconexión | Fallback silencioso + activar reconexión |
+
+### Configuración de tiempos
+
+| Parámetro | Valor | Descripción |
+|-----------|-------|-------------|
+| `RECONNECT_INTERVAL_MS` | 30s | Tiempo entre intentos de reconexión |
+| `HEALTH_CHECK_INTERVAL_MS` | 60s | Intervalo del PING periódico |
+| `PING_TIMEOUT_MS` | 5s | Timeout para considerar PING fallido |
+| `connectTimeout` | 10s | Timeout de conexión inicial |
+
+### Endpoint de monitoreo
+
+`GET /api/v1/health` reporta el estado de Redis:
+
+```json
+{
+  "services": {
+    "redis": {
+      "status": "connected",      // "connected" | "fallback"
+      "mode": "redis",            // "redis" | "in-memory"
+      "reconnecting": false,      // true si hay intento de reconexión activo
+      "inMemoryKeys": null        // número de keys en memoria (solo en fallback)
+    }
+  }
+}
+```
+
+### Notas importantes
+
+- **Fallback en memoria NO persiste datos**: si Redis se cae, las keys en memoria se pierden al reiniciar el proceso
+- **Reconexión limpia el cliente anterior**: antes de reconectar, se hace `disconnect()` del cliente viejo para evitar leaks
+- **Todas las operaciones pasan por el wrapper**: ningún módulo accede a `redisClient` directamente
+- **setCache con error guarda en memoria**: si un SET falla en Redis, los datos se guardan en el Map local como respaldo inmediato
+- **graceful shutdown**: `closeRedis()` cancela timers de reconexión y health check antes de cerrar
+
 ## External Services Integration
 
 ```

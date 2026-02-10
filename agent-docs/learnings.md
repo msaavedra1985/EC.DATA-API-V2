@@ -60,6 +60,23 @@
 
 ---
 
+### Resiliencia Redis implementada
+**Fecha**: 2026-02-10
+**Síntoma**: Si Redis se caía después de estar conectado, el sistema no activaba el fallback en memoria ni intentaba reconectar (tenía `reconnectStrategy: false` sin alternativa)
+**Causa**: El cliente solo manejaba el caso de "Redis no disponible al inicio" pero no el caso de "Redis se cae en runtime"
+**Solución**: 
+- Agregar listener para evento `end` que activa fallback en memoria
+- Implementar reconexión periódica cada 30s cuando Redis no está disponible
+- Health check con PING cada 60s para detectar conexiones zombie
+- En operaciones individuales que fallan (GET, SET), activar fallback + programar reconexión
+- En `setCache`, si Redis falla, guardar el dato en el Map de memoria como respaldo inmediato
+- `getRedisStatus()` expone estado para el endpoint `/health`
+- Graceful shutdown limpia timers antes de cerrar
+
+**Archivos afectados**: `src/db/redis/client.js`, `src/modules/health/index.js`, `agent-docs/architecture.md`
+
+---
+
 ### Content-Type duplicado causa body vacío
 **Fecha**: 2026-02-10
 **Síntoma**: POST /organizations retorna 400 con `name` y `countries` como `undefined` aunque el payload es correcto
