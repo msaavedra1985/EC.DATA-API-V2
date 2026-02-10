@@ -1130,17 +1130,6 @@ router.post('/validate', async (req, res) => {
  */
 router.post('/', authenticate, requireOrgPermission('create'), async (req, res) => {
     try {
-        // DEBUG: diagnóstico de body parsing (temporal)
-        orgLogger.debug({
-            contentType: req.headers['content-type'],
-            bodyType: typeof req.body,
-            bodyIsNull: req.body === null,
-            bodyIsUndefined: req.body === undefined,
-            bodyKeys: req.body ? Object.keys(req.body) : [],
-            bodyRaw: req.body,
-            contentLength: req.headers['content-length'],
-        }, 'DEBUG: POST /organizations - request info');
-
         // Validar datos
         const validatedData = validateCreateOrganization(req.body);
         

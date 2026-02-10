@@ -73,8 +73,8 @@ export const createOrganization = async (data) => {
             include: [countriesInclude]
         });
         
-        // Invalidar cache de listas (nueva organización afecta todas las listas)
-        await invalidateAllOrganizationLists();
+        // Invalidar cache de listas (fire-and-forget, no bloquear respuesta)
+        invalidateAllOrganizationLists().catch(() => {});
         
         // Retornar DTO público seguro (public_code como id, sin UUID ni human_id)
         return toPublicOrganizationDto(orgWithCountries);

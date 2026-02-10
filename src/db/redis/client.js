@@ -264,28 +264,26 @@ export const scanAndDelete = async (pattern) => {
     }
     
     try {
-        let cursor = '0';
+        let cursor = 0;
         let deletedCount = 0;
         const keysToDelete = [];
         
-        // SCAN iterativo para encontrar todas las keys que coinciden
         do {
             const result = await redisClient.scan(cursor, {
                 MATCH: pattern,
                 COUNT: 100
             });
             
-            cursor = result.cursor;
+            cursor = Number(result.cursor);
             const keys = result.keys;
             
             if (keys.length > 0) {
                 keysToDelete.push(...keys);
             }
-        } while (cursor !== '0');
+        } while (cursor !== 0);
         
-        // Eliminar keys en batch (spread para node-redis)
         if (keysToDelete.length > 0) {
-            await redisClient.del(...keysToDelete);
+            await redisClient.del(keysToDelete);
             deletedCount = keysToDelete.length;
         }
         

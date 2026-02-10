@@ -43,6 +43,32 @@
 
 ---
 
+### scanAndDelete loop infinito por comparación de tipos
+**Fecha**: 2026-02-10
+**Síntoma**: POST /organizations crea la organización correctamente (INSERT + COMMIT exitosos) pero nunca responde al frontend, causando timeout
+**Causa**: En `scanAndDelete()` del cliente Redis, el cursor SCAN se comparaba como string (`cursor !== '0'`) pero node-redis v4 retorna `cursor` como número. La comparación estricta `0 !== '0'` siempre es `true`, creando un loop infinito de SCAN.
+**Solución**: 
+- Cambiar `let cursor = '0'` a `let cursor = 0` (número)
+- Cambiar comparación a `cursor !== 0` (número)
+- Agregar `Number(result.cursor)` para garantizar el tipo
+- Cambiar `redisClient.del(...keysToDelete)` a `redisClient.del(keysToDelete)` (array directo)
+- Hacer `invalidateAllOrganizationLists()` fire-and-forget en `createOrganization` para que no bloquee la respuesta
+
+**Archivos afectados**: `src/db/redis/client.js`, `src/modules/organizations/repository.js`
+
+**Nota**: Este bug afectaba a TODAS las funciones que usan `scanAndDelete`: organizations/cache.js, resource-hierarchy/cache.js, telemetry/cache.js, auth/rolesCache.js
+
+---
+
+### Content-Type duplicado causa body vacío
+**Fecha**: 2026-02-10
+**Síntoma**: POST /organizations retorna 400 con `name` y `countries` como `undefined` aunque el payload es correcto
+**Causa**: Frontend envía header `Content-Type: application/json, application/json` (duplicado). Express `json()` middleware no reconoce este valor y no parsea el body, dejando `req.body = {}`
+**Solución**: Corregir en el cliente HTTP del frontend (Axios interceptor probablemente agrega `Content-Type` manualmente cuando Axios ya lo pone por default)
+**Diagnóstico**: Se confirmó con logs de debug temporales que mostraron `bodyKeys: []` y `bodyRaw: {}` con `contentLength: "243"` - el body llega pero no se parsea
+
+---
+
 ## Template para nuevos entries
 
 ### [Título descriptivo del problema]
