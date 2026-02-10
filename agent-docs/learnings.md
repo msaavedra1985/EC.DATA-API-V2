@@ -277,7 +277,15 @@ Paso 5 - Actualizar código:
 
 ## Validación / DTOs
 
-(Agregar problemas de validación aquí)
+### Slug duplicado por doble disparo de React StrictMode
+**Fecha**: 2026-02-10
+**Síntoma**: Error `SLUG_EXISTS` al crear organización, aunque el slug no existía previamente
+**Causa**: React en modo desarrollo (`StrictMode`) ejecuta `useEffect` dos veces, disparando dos POST simultáneos. El segundo falla porque el primero ya creó el slug
+**Solución**: 
+- Backend: Implementar `generateUniqueSlug()` que auto-genera slugs únicos (atria → atria-2 → atria-3) en vez de rechazar duplicados
+- Helper en `src/modules/organizations/helpers/slug.js`
+- Aplica tanto en creación (POST) como actualización (PUT)
+- Endpoint `validate-slug` ahora devuelve campo `suggestion` cuando el slug está tomado
 
 ---
 
