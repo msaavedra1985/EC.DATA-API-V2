@@ -20,8 +20,7 @@ import {
     DeviceValidityPeriod,
     DeviceValidityPeriodTranslation
 } from './models/index.js';
-import MeasurementType from '../telemetry/models/MeasurementType.js';
-import MeasurementTypeTranslation from '../telemetry/models/MeasurementTypeTranslation.js';
+import { MeasurementType, MeasurementTypeTranslation } from '../telemetry/models/index.js';
 
 // ============================================
 // DEVICE TYPES
