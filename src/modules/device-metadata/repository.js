@@ -20,7 +20,7 @@ import {
     DeviceValidityPeriod,
     DeviceValidityPeriodTranslation
 } from './models/index.js';
-import { MeasurementType, MeasurementTypeTranslation } from '../telemetry/models/index.js';
+import { MeasurementType, MeasurementTypeTranslation, Variable, VariableTranslation } from '../telemetry/models/index.js';
 
 // ============================================
 // DEVICE TYPES
@@ -677,5 +677,22 @@ export const getMeasurementTypes = async (lang = 'es') => {
             required: false
         }],
         order: [['id', 'ASC']]
+    });
+};
+
+// ============================================
+// VARIABLES (catálogo compartido desde telemetry)
+// ============================================
+
+export const getVariables = async (lang = 'es') => {
+    return Variable.findAll({
+        where: { is_active: true },
+        include: [{
+            model: VariableTranslation,
+            as: 'translations',
+            where: { lang },
+            required: false
+        }],
+        order: [['measurement_type_id', 'ASC'], ['display_order', 'ASC NULLS LAST']]
     });
 };

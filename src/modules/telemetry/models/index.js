@@ -21,6 +21,28 @@ MeasurementTypeTranslation.belongsTo(MeasurementType, {
     as: 'measurementType'
 });
 
+MeasurementType.hasMany(Variable, {
+    foreignKey: 'measurement_type_id',
+    as: 'variables',
+    onDelete: 'RESTRICT'
+});
+
+Variable.belongsTo(MeasurementType, {
+    foreignKey: 'measurement_type_id',
+    as: 'measurementType'
+});
+
+Variable.hasMany(VariableTranslation, {
+    foreignKey: 'variable_id',
+    as: 'translations',
+    onDelete: 'CASCADE'
+});
+
+VariableTranslation.belongsTo(Variable, {
+    foreignKey: 'variable_id',
+    as: 'variable'
+});
+
 export {
     MeasurementType,
     MeasurementTypeTranslation,
