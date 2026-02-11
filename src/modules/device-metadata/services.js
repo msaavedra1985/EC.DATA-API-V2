@@ -90,6 +90,32 @@ const toMeasurementTypeDTO = (model) => {
     };
 };
 
+const toVariableDTO = (model, mtCodeMap) => {
+    const json = model.toJSON();
+    const translation = json.translations?.[0] || {};
+
+    return {
+        id: json.id,
+        measurement_type_code: mtCodeMap.get(json.measurement_type_id) || null,
+        column_name: json.column_name,
+        name: translation.name || json.column_name,
+        description: translation.description || null,
+        unit: json.unit,
+        chart_type: json.chart_type,
+        axis_name: json.axis_name,
+        axis_id: json.axis_id,
+        axis_min: json.axis_min,
+        axis_function: json.axis_function,
+        aggregation_type: json.aggregation_type,
+        display_order: json.display_order,
+        show_in_billing: json.show_in_billing,
+        show_in_analysis: json.show_in_analysis,
+        is_realtime: json.is_realtime,
+        is_default: json.is_default,
+        is_active: json.is_active
+    };
+};
+
 /**
  * Obtener todo el metadata de dispositivos (con caché)
  */
@@ -101,7 +127,7 @@ export const getAllMetadata = async (lang = 'es') => {
         return cached;
     }
 
-    const [types, brands, models, servers, networks, licenses, validityPeriods, measurementTypes] = await Promise.all([
+    const [types, brands, models, servers, networks, licenses, validityPeriods, measurementTypes, variables] = await Promise.all([
         repository.getDeviceTypes(lang),
         repository.getDeviceBrands(lang),
         repository.getDeviceModels(lang),
@@ -109,8 +135,11 @@ export const getAllMetadata = async (lang = 'es') => {
         repository.getDeviceNetworks(lang),
         repository.getDeviceLicenses(lang),
         repository.getDeviceValidityPeriods(lang),
-        repository.getMeasurementTypes(lang)
+        repository.getMeasurementTypes(lang),
+        repository.getVariables(lang)
     ]);
+
+    const mtCodeMap = new Map(measurementTypes.map(mt => [mt.id, mt.code]));
 
     const metadata = {
         device_types: types.map(toDTO),
@@ -120,7 +149,8 @@ export const getAllMetadata = async (lang = 'es') => {
         networks: networks.map(toDTO),
         licenses: licenses.map(toDTO),
         validity_periods: validityPeriods.map(toDTO),
-        measurement_types: measurementTypes.map(toMeasurementTypeDTO)
+        measurement_types: measurementTypes.map(toMeasurementTypeDTO),
+        variables: variables.map(v => toVariableDTO(v, mtCodeMap))
     };
 
     await setCache(cacheKey, metadata, CACHE_TTL);
