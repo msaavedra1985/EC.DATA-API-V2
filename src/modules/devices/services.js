@@ -89,7 +89,7 @@ export const createDevice = async (deviceData, userId, ipAddress, userAgent) => 
         metadata: {
             organization_id: organizationUuid,
             site_id: siteUuid || null,
-            device_type: deviceData.device_type
+            device_type_id: deviceData.device_type_id
         },
         ipAddress: ipAddress,
         userAgent: userAgent
@@ -392,7 +392,7 @@ export const deleteDevice = async (publicCode, userId, ipAddress, userAgent) => 
                 channels_affected: allChannels.length,
                 channel_updates: channelUpdates,
                 device_name: deviceInternal.name,
-                device_type: deviceInternal.device_type
+                device_type_id: deviceInternal.device_type_id
             },
             ipAddress: ipAddress,
             userAgent: userAgent

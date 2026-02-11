@@ -4,10 +4,19 @@
 import Device from './models/Device.js';
 import Organization from '../organizations/models/Organization.js';
 import Site from '../sites/models/Site.js';
+import DeviceType from '../device-metadata/models/DeviceType.js';
+import DeviceBrand from '../device-metadata/models/DeviceBrand.js';
+import DeviceModel from '../device-metadata/models/DeviceModel.js';
+import DeviceServer from '../device-metadata/models/DeviceServer.js';
+import DeviceNetwork from '../device-metadata/models/DeviceNetwork.js';
+import DeviceLicense from '../device-metadata/models/DeviceLicense.js';
+import DeviceValidityPeriod from '../device-metadata/models/DeviceValidityPeriod.js';
 import { toPublicDeviceDto } from './helpers/serializers.js';
 import { Op } from 'sequelize';
 
-// Definir relaciones de Sequelize
+// --- Definir relaciones de Sequelize ---
+
+// Relaciones principales
 Device.belongsTo(Organization, {
     foreignKey: 'organization_id',
     as: 'organization'
@@ -28,6 +37,94 @@ Site.hasMany(Device, {
     as: 'devices'
 });
 
+// Relaciones con catálogos de equipos
+Device.belongsTo(DeviceType, {
+    foreignKey: 'device_type_id',
+    as: 'deviceType'
+});
+
+Device.belongsTo(DeviceBrand, {
+    foreignKey: 'brand_id',
+    as: 'brand'
+});
+
+Device.belongsTo(DeviceModel, {
+    foreignKey: 'model_id',
+    as: 'model'
+});
+
+Device.belongsTo(DeviceServer, {
+    foreignKey: 'server_id',
+    as: 'server'
+});
+
+Device.belongsTo(DeviceNetwork, {
+    foreignKey: 'network_id',
+    as: 'network'
+});
+
+Device.belongsTo(DeviceLicense, {
+    foreignKey: 'license_id',
+    as: 'license'
+});
+
+Device.belongsTo(DeviceValidityPeriod, {
+    foreignKey: 'validity_period_id',
+    as: 'validityPeriod'
+});
+
+/**
+ * Includes comunes para queries de device con relaciones
+ * Incluye organización, sitio y los 7 catálogos
+ */
+const deviceIncludes = [
+    {
+        model: Organization,
+        as: 'organization',
+        attributes: ['id', 'public_code', 'slug', 'name', 'logo_url']
+    },
+    {
+        model: Site,
+        as: 'site',
+        attributes: ['id', 'public_code', 'name', 'city', 'country_code']
+    },
+    {
+        model: DeviceType,
+        as: 'deviceType',
+        attributes: ['id', 'code', 'icon']
+    },
+    {
+        model: DeviceBrand,
+        as: 'brand',
+        attributes: ['id', 'code']
+    },
+    {
+        model: DeviceModel,
+        as: 'model',
+        attributes: ['id', 'code']
+    },
+    {
+        model: DeviceServer,
+        as: 'server',
+        attributes: ['id', 'code']
+    },
+    {
+        model: DeviceNetwork,
+        as: 'network',
+        attributes: ['id', 'code']
+    },
+    {
+        model: DeviceLicense,
+        as: 'license',
+        attributes: ['id', 'code']
+    },
+    {
+        model: DeviceValidityPeriod,
+        as: 'validityPeriod',
+        attributes: ['id', 'code']
+    }
+];
+
 /**
  * Crear un nuevo device
  * @param {Object} deviceData - Datos del device
@@ -37,20 +134,7 @@ export const createDevice = async (deviceData) => {
     const device = await Device.create(deviceData);
     
     // Recargar con relaciones
-    await device.reload({
-        include: [
-            {
-                model: Organization,
-                as: 'organization',
-                attributes: ['id', 'public_code', 'slug', 'name', 'logo_url']
-            },
-            {
-                model: Site,
-                as: 'site',
-                attributes: ['id', 'public_code', 'name', 'city', 'country_code']
-            }
-        ]
-    });
+    await device.reload({ include: deviceIncludes });
     
     return toPublicDeviceDto(device);
 };
@@ -64,18 +148,7 @@ export const createDevice = async (deviceData) => {
 export const findDeviceByPublicCode = async (publicCode) => {
     const device = await Device.findOne({
         where: { public_code: publicCode },
-        include: [
-            {
-                model: Organization,
-                as: 'organization',
-                attributes: ['id', 'public_code', 'slug', 'name', 'logo_url']
-            },
-            {
-                model: Site,
-                as: 'site',
-                attributes: ['id', 'public_code', 'name', 'city', 'country_code']
-            }
-        ]
+        include: deviceIncludes
     });
     
     if (!device) {
@@ -123,20 +196,7 @@ export const updateDevice = async (id, updateData) => {
     await device.update(updateData);
     
     // Recargar con relaciones
-    await device.reload({
-        include: [
-            {
-                model: Organization,
-                as: 'organization',
-                attributes: ['id', 'public_code', 'slug', 'name', 'logo_url']
-            },
-            {
-                model: Site,
-                as: 'site',
-                attributes: ['id', 'public_code', 'name', 'city', 'country_code']
-            }
-        ]
-    });
+    await device.reload({ include: deviceIncludes });
     
     return toPublicDeviceDto(device);
 };
@@ -162,18 +222,7 @@ export const softDeleteDevice = async (id, transaction = null) => {
     
     // Recargar con relaciones para serializar
     await device.reload({
-        include: [
-            {
-                model: Organization,
-                as: 'organization',
-                attributes: ['id', 'public_code', 'slug', 'name', 'logo_url']
-            },
-            {
-                model: Site,
-                as: 'site',
-                attributes: ['id', 'public_code', 'name', 'city', 'country_code']
-            }
-        ],
+        include: deviceIncludes,
         transaction
     });
     
@@ -199,14 +248,14 @@ export const deleteDevice = async (id) => {
 /**
  * Listar devices con filtros y paginación
  * @param {Object} options - Opciones de filtrado y paginación
- * @returns {Promise<Object>} - { devices: [...], total, page, limit }
+ * @returns {Promise<Object>} - { items, total, page, limit }
  */
 export const listDevices = async ({ 
     organization_id,
-    organization_ids,  // Array de UUIDs para filtrar múltiples organizaciones
+    organization_ids,
     site_id,
     status,
-    device_type,
+    device_type_id,
     search,
     limit = 20, 
     offset = 0 
@@ -228,8 +277,9 @@ export const listDevices = async ({
         where.status = status;
     }
     
-    if (device_type !== undefined) {
-        where.device_type = device_type;
+    // Filtrar por tipo de equipo (FK a catálogo)
+    if (device_type_id !== undefined) {
+        where.device_type_id = device_type_id;
     }
     
     // Búsqueda por nombre o serial_number
@@ -242,18 +292,7 @@ export const listDevices = async ({
     
     const { count, rows } = await Device.findAndCountAll({
         where,
-        include: [
-            {
-                model: Organization,
-                as: 'organization',
-                attributes: ['id', 'public_code', 'slug', 'name', 'logo_url']
-            },
-            {
-                model: Site,
-                as: 'site',
-                attributes: ['id', 'public_code', 'name', 'city', 'country_code']
-            }
-        ],
+        include: deviceIncludes,
         limit: parseInt(limit),
         offset: parseInt(offset),
         order: [['created_at', 'DESC']]

@@ -9,6 +9,7 @@
  * - Nunca exponer el UUID interno en APIs públicas
  * - Siempre usar public_code como 'id' en respuestas
  * - UUIDs solo para operaciones internas de base de datos
+ * - IDs de catálogo (integers) se exponen directamente (no son sensibles)
  * 
  * @param {Device} device - Modelo Sequelize Device
  * @returns {Object} - DTO público para respuestas API
@@ -17,37 +18,110 @@ export const toPublicDeviceDto = (device) => {
     if (!device) return null;
     
     const dto = {
-        id: device.public_code, // CRÍTICO: exponer public_code como 'id'
+        id: device.public_code,
         name: device.name,
         description: device.description,
-        device_type: device.device_type,
         status: device.status,
         firmware_version: device.firmware_version,
         serial_number: device.serial_number,
         ip_address: device.ip_address,
         mac_address: device.mac_address,
-        location_hint: device.location_hint,
+        topic: device.topic,
+        location_name: device.location_name,
+        physical_location: device.physical_location,
+        electrical_location: device.electrical_location,
+        latitude: device.latitude ? parseFloat(device.latitude) : null,
+        longitude: device.longitude ? parseFloat(device.longitude) : null,
+        city: device.city,
+        timezone: device.timezone,
+        installation_date: device.installation_date,
+        warranty_months: device.warranty_months,
+        expiration_date: device.expiration_date,
         last_seen_at: device.last_seen_at,
         metadata: device.metadata || {},
         is_active: device.is_active,
         created_at: device.created_at,
         updated_at: device.updated_at
     };
-    
-    // Incluir organization si está presente
+
+    // --- Catálogos (exponer id + datos traducidos) ---
+    if (device.deviceType) {
+        dto.device_type = {
+            id: device.deviceType.id,
+            code: device.deviceType.code,
+            icon: device.deviceType.icon
+        };
+    } else {
+        dto.device_type_id = device.device_type_id;
+    }
+
+    if (device.brand) {
+        dto.brand = {
+            id: device.brand.id,
+            code: device.brand.code
+        };
+    } else {
+        dto.brand_id = device.brand_id;
+    }
+
+    if (device.model) {
+        dto.model = {
+            id: device.model.id,
+            code: device.model.code
+        };
+    } else {
+        dto.model_id = device.model_id;
+    }
+
+    if (device.server) {
+        dto.server = {
+            id: device.server.id,
+            code: device.server.code
+        };
+    } else {
+        dto.server_id = device.server_id;
+    }
+
+    if (device.network) {
+        dto.network = {
+            id: device.network.id,
+            code: device.network.code
+        };
+    } else {
+        dto.network_id = device.network_id;
+    }
+
+    if (device.license) {
+        dto.license = {
+            id: device.license.id,
+            code: device.license.code
+        };
+    } else {
+        dto.license_id = device.license_id;
+    }
+
+    if (device.validityPeriod) {
+        dto.validity_period = {
+            id: device.validityPeriod.id,
+            code: device.validityPeriod.code
+        };
+    } else {
+        dto.validity_period_id = device.validity_period_id;
+    }
+
+    // --- Relaciones principales ---
     if (device.organization) {
         dto.organization = {
-            id: device.organization.public_code, // Exponer public_code como id
+            id: device.organization.public_code,
             slug: device.organization.slug,
             name: device.organization.name,
             logo_url: device.organization.logo_url
         };
     }
     
-    // Incluir site si está presente
     if (device.site) {
         dto.site = {
-            id: device.site.public_code, // Exponer public_code como id
+            id: device.site.public_code,
             name: device.site.name,
             city: device.site.city,
             country_code: device.site.country_code

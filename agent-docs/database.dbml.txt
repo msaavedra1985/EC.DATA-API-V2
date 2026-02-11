@@ -1,4 +1,4 @@
-// Database Schema - Generated on 2026-02-11T17:01:53.621Z
+// Database Schema - Generated on 2026-02-11T19:13:18.720Z
 // Project: EC.DATA API - Enterprise REST API
 // Use this file at https://dbdiagram.io to visualize the schema
 
@@ -353,13 +353,11 @@ Table devices {
   site_id uuid // FK a sites - ubicación física del dispositivo (opcional)
   name varchar(200) [not null] // Nombre del dispositivo (ej: "Sensor Temp Sala 1")
   description text // Descripción del dispositivo
-  device_type enum_devices_device_type [not null] // Tipo de dispositivo: sensor, gateway, controller, edge, virtual, other
   status enum_devices_status [not null] // Estado del dispositivo: active, inactive, maintenance, decommissioned
   firmware_version varchar(50) // Versión del firmware instalado (ej: "v2.5.1")
   serial_number varchar(100) // Número de serie del dispositivo
   ip_address varchar(45) // Dirección IP del dispositivo (IPv4 o IPv6)
   mac_address varchar(17) // Dirección MAC del dispositivo (ej: "00:1A:2B:3C:4D:5E")
-  location_hint varchar(200) // Pista de ubicación física (ej: "Rack 3, Slot 5")
   last_seen_at timestamptz // Última vez que el dispositivo se comunicó con el sistema
   metadata jsonb // Metadatos adicionales en formato JSON
   is_active boolean [not null, default: true] // Indica si el dispositivo está activo
@@ -367,23 +365,45 @@ Table devices {
   updated_at timestamptz [not null, default: `now()`]
   deleted_at timestamptz // Soft delete timestamp
   timezone varchar(50) // Zona horaria del dispositivo en formato IANA (ej: America/Lima, UTC)
+  device_type_id integer // FK a device_types - tipo de equipo (catálogo)
+  brand_id integer // FK a device_brands - marca del equipo
+  model_id integer // FK a device_models - modelo del equipo
+  server_id integer // FK a device_servers - servidor de comunicación
+  network_id integer // FK a device_networks - tipo de red
+  license_id integer // FK a device_licenses - tipo de licencia
+  validity_period_id integer // FK a device_validity_periods - período de vigencia
+  topic varchar(500) // Topic MQTT del equipo (ej: ecdata/ups/eaton-001)
+  location_name varchar(200) // Nombre de ubicación (ej: Edificio Principal)
+  physical_location varchar(200) // Ubicación física (ej: Piso 3, Sala de servidores)
+  electrical_location varchar(200) // Ubicación eléctrica (ej: Tablero principal TGD)
+  latitude numeric // Latitud GPS del equipo
+  longitude numeric // Longitud GPS del equipo
+  city varchar(100) // Ciudad donde se encuentra el equipo
+  installation_date date // Fecha de instalación del equipo
+  warranty_months integer // Meses de garantía del equipo
+  expiration_date date // Fecha de expiración de la licencia/servicio
 
   Indexes {
+    (brand_id) [name: 'devices_brand_id_idx']
     (deleted_at) [name: 'devices_deleted_at_idx']
-    (device_type) [name: 'devices_device_type']
-    (device_type) [name: 'devices_device_type_idx']
+    (device_type_id) [name: 'devices_device_type_id_idx']
     (human_id) [name: 'devices_human_id_key', unique]
     (id, organization_id) [name: 'devices_id_organization_id_idx', unique]
+    (license_id) [name: 'devices_license_id_idx']
+    (model_id) [name: 'devices_model_id_idx']
+    (network_id) [name: 'devices_network_id_idx']
     (organization_id, name) [name: 'devices_org_name_unique', unique]
     (organization_id) [name: 'devices_organization_id']
     (organization_id) [name: 'devices_organization_id_idx']
     (public_code) [name: 'devices_public_code_key', unique]
     (serial_number) [name: 'devices_serial_number', unique]
     (serial_number) [name: 'devices_serial_number_idx', unique]
+    (server_id) [name: 'devices_server_id_idx']
     (site_id) [name: 'devices_site_id']
     (site_id) [name: 'devices_site_id_idx']
     (status) [name: 'devices_status']
     (status) [name: 'devices_status_idx']
+    (validity_period_id) [name: 'devices_validity_period_id_idx']
   }
 }
 
@@ -863,8 +883,10 @@ Table variables {
   is_active boolean [not null, default: true] // Indica si la variable está activa
   created_at timestamptz [not null, default: `now()`]
   updated_at timestamptz [not null, default: `now()`]
+  code varchar(50) [unique, not null] // Código slug inmutable con prefijo del tipo (ej: ee_power, iot_temperature)
 
   Indexes {
+    (code) [name: 'variables_code_key', unique]
     (display_order) [name: 'variables_display_order']
     (display_order) [name: 'variables_display_order_idx']
     (is_active) [name: 'variables_is_active']
@@ -884,12 +906,12 @@ Ref: audit_logs.impersonated_org_id > organizations.id [update: cascade, delete:
 Ref: audit_logs.performed_by > users.id [update: cascade, delete: set null]
 Ref: channel_variables.channel_id > channels.id [update: cascade, delete: cascade]
 Ref: channel_variables.variable_id > variables.id [update: cascade, delete: cascade]
-Ref: channels.device_id > devices.id [update: cascade, delete: restrict]
 Ref: channels.device_id > devices.organization_id [update: cascade, delete: restrict]
+Ref: channels.device_id > devices.id [update: cascade, delete: restrict]
 Ref: channels.measurement_type_id > measurement_types.id [update: cascade, delete: set null]
-Ref: channels.organization_id > devices.id [update: cascade, delete: restrict]
-Ref: channels.organization_id > organizations.id [update: cascade, delete: restrict]
 Ref: channels.organization_id > devices.organization_id [update: cascade, delete: restrict]
+Ref: channels.organization_id > organizations.id [update: cascade, delete: restrict]
+Ref: channels.organization_id > devices.id [update: cascade, delete: restrict]
 Ref: country_translations.country_code > countries.iso_alpha2 [update: cascade, delete: cascade]
 Ref: device_brand_translations.device_brand_id > device_brands.id [update: cascade, delete: cascade]
 Ref: device_license_translations.device_license_id > device_licenses.id [update: cascade, delete: cascade]
@@ -899,8 +921,15 @@ Ref: device_network_translations.device_network_id > device_networks.id [update:
 Ref: device_server_translations.device_server_id > device_servers.id [update: cascade, delete: cascade]
 Ref: device_type_translations.device_type_id > device_types.id [update: cascade, delete: cascade]
 Ref: device_validity_period_translations.device_validity_period_id > device_validity_periods.id [update: cascade, delete: cascade]
+Ref: devices.brand_id > device_brands.id [update: cascade, delete: set null]
+Ref: devices.device_type_id > device_types.id [update: cascade, delete: set null]
+Ref: devices.license_id > device_licenses.id [update: cascade, delete: set null]
+Ref: devices.model_id > device_models.id [update: cascade, delete: set null]
+Ref: devices.network_id > device_networks.id [update: cascade, delete: set null]
 Ref: devices.organization_id > organizations.id [update: cascade, delete: restrict]
+Ref: devices.server_id > device_servers.id [update: cascade, delete: set null]
 Ref: devices.site_id > sites.id [update: cascade, delete: set null]
+Ref: devices.validity_period_id > device_validity_periods.id [update: cascade, delete: set null]
 Ref: error_logs.organization_id > organizations.id [update: cascade, delete: set null]
 Ref: error_logs.user_id > users.id [update: cascade, delete: set null]
 Ref: file_uploads.organization_id > organizations.id [update: cascade, delete: restrict]
