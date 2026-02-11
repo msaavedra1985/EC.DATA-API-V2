@@ -16,6 +16,12 @@ const MeasurementType = sequelize.define('MeasurementType', {
         autoIncrement: true,
         comment: 'ID incremental - clave primaria'
     },
+    code: {
+        type: DataTypes.STRING(50),
+        allowNull: false,
+        unique: true,
+        comment: 'Código slug inmutable en inglés (ej: electric_energy, iot_control)'
+    },
     table_prefix: {
         type: DataTypes.STRING(20),
         allowNull: false,

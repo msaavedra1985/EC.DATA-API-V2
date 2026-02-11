@@ -1,4 +1,4 @@
-// Database Schema - Generated on 2026-02-09T19:34:45.440Z
+// Database Schema - Generated on 2026-02-11T17:01:53.621Z
 // Project: EC.DATA API - Enterprise REST API
 // Use this file at https://dbdiagram.io to visualize the schema
 
@@ -493,8 +493,10 @@ Table measurement_types {
   is_active boolean [not null, default: true] // Indica si el tipo de medición está activo
   created_at timestamptz [not null, default: `now()`]
   updated_at timestamptz [not null, default: `now()`]
+  code varchar(50) [unique, not null] // Código slug inmutable en inglés (ej: electric_energy, iot_control)
 
   Indexes {
+    (code) [name: 'measurement_types_code_key', unique]
     (is_active) [name: 'measurement_types_is_active']
     (is_active) [name: 'measurement_types_is_active_idx']
     (table_prefix) [name: 'measurement_types_table_prefix']

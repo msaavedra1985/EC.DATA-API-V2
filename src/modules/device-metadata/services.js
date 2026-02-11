@@ -83,8 +83,9 @@ const toMeasurementTypeDTO = (model) => {
 
     return {
         id: json.id,
+        code: json.code,
         table_prefix: json.table_prefix,
-        name: translation.name || `Type ${json.id}`,
+        name: translation.name || json.code || `Type ${json.id}`,
         is_active: json.is_active
     };
 };
