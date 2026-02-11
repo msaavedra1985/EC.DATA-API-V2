@@ -96,6 +96,7 @@ const toVariableDTO = (model) => {
 
     return {
         id: json.id,
+        code: json.code || null,
         measurement_type_id: json.measurement_type_id,
         column_name: json.column_name,
         name: translation.name || json.column_name,

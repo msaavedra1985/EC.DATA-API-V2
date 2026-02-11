@@ -18,6 +18,12 @@ const Variable = sequelize.define('Variable', {
         autoIncrement: true,
         comment: 'ID incremental - clave primaria'
     },
+    code: {
+        type: DataTypes.STRING(50),
+        allowNull: false,
+        unique: true,
+        comment: 'Código slug inmutable con prefijo del tipo (ej: ee_power, iot_temperature)'
+    },
     measurement_type_id: {
         type: DataTypes.INTEGER,
         allowNull: false,
