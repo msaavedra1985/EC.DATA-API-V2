@@ -20,6 +20,8 @@ import {
     DeviceValidityPeriod,
     DeviceValidityPeriodTranslation
 } from './models/index.js';
+import MeasurementType from '../telemetry/models/MeasurementType.js';
+import MeasurementTypeTranslation from '../telemetry/models/MeasurementTypeTranslation.js';
 
 // ============================================
 // DEVICE TYPES
@@ -660,4 +662,21 @@ export const deleteDeviceValidityPeriod = async (id, hard = false) => {
         await DeviceValidityPeriod.update({ is_active: false }, { where: { id } });
     }
     return true;
+};
+
+// ============================================
+// MEASUREMENT TYPES (catálogo compartido desde telemetry)
+// ============================================
+
+export const getMeasurementTypes = async (lang = 'es') => {
+    return MeasurementType.findAll({
+        where: { is_active: true },
+        include: [{
+            model: MeasurementTypeTranslation,
+            as: 'translations',
+            where: { lang },
+            required: false
+        }],
+        order: [['id', 'ASC']]
+    });
 };

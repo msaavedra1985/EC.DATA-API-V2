@@ -75,6 +75,21 @@ const toDTOWithTranslations = (model) => {
 };
 
 /**
+ * Transformar MeasurementType a DTO
+ */
+const toMeasurementTypeDTO = (model) => {
+    const json = model.toJSON();
+    const translation = json.translations?.[0] || {};
+
+    return {
+        id: json.id,
+        table_prefix: json.table_prefix,
+        name: translation.name || `Type ${json.id}`,
+        is_active: json.is_active
+    };
+};
+
+/**
  * Obtener todo el metadata de dispositivos (con caché)
  */
 export const getAllMetadata = async (lang = 'es') => {
@@ -85,14 +100,15 @@ export const getAllMetadata = async (lang = 'es') => {
         return cached;
     }
 
-    const [types, brands, models, servers, networks, licenses, validityPeriods] = await Promise.all([
+    const [types, brands, models, servers, networks, licenses, validityPeriods, measurementTypes] = await Promise.all([
         repository.getDeviceTypes(lang),
         repository.getDeviceBrands(lang),
         repository.getDeviceModels(lang),
         repository.getDeviceServers(lang),
         repository.getDeviceNetworks(lang),
         repository.getDeviceLicenses(lang),
-        repository.getDeviceValidityPeriods(lang)
+        repository.getDeviceValidityPeriods(lang),
+        repository.getMeasurementTypes(lang)
     ]);
 
     const metadata = {
@@ -102,7 +118,8 @@ export const getAllMetadata = async (lang = 'es') => {
         servers: servers.map(toDTO),
         networks: networks.map(toDTO),
         licenses: licenses.map(toDTO),
-        validity_periods: validityPeriods.map(toDTO)
+        validity_periods: validityPeriods.map(toDTO),
+        measurement_types: measurementTypes.map(toMeasurementTypeDTO)
     };
 
     await setCache(cacheKey, metadata, CACHE_TTL);

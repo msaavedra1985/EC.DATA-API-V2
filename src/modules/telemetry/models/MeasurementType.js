@@ -8,7 +8,6 @@ import sequelize from '../../../db/sql/sequelize.js';
  * El campo 'table_prefix' indica el prefijo de tabla en Cassandra:
  * - '' (vacío): tablas de energía eléctrica (1m_t_datos, 60m_t_datos)
  * - 'sim': tablas IoT (sim1m_t_datos, sim60m_t_datos)
- * - 'btu': tablas BTU (btu1m_t_datos)
  */
 const MeasurementType = sequelize.define('MeasurementType', {
     id: {
@@ -21,7 +20,7 @@ const MeasurementType = sequelize.define('MeasurementType', {
         type: DataTypes.STRING(20),
         allowNull: false,
         defaultValue: '',
-        comment: 'Prefijo de tablas en Cassandra (vacío=energía, sim=IoT, btu=BTU)'
+        comment: 'Prefijo de tablas en Cassandra (vacío=energía, sim=IoT)'
     },
     is_active: {
         type: DataTypes.BOOLEAN,
