@@ -17,38 +17,40 @@ export const toPublicChannelDto = (channel) => {
     if (!channel) return null;
     
     const dto = {
-        id: channel.public_code, // CRÍTICO: exponer public_code como 'id'
+        id: channel.public_code,
         name: channel.name,
         description: channel.description,
-        channel_type: channel.channel_type,
-        protocol: channel.protocol,
-        direction: channel.direction,
+        ch: channel.ch,
+        measurement_type_id: channel.measurement_type_id,
+        phase_system: channel.phase_system,
+        phase: channel.phase,
+        process: channel.process,
         status: channel.status,
-        endpoint_url: channel.endpoint_url,
-        config: channel.config || {},
-        credentials_ref: channel.credentials_ref,
-        priority: channel.priority,
         last_sync_at: channel.last_sync_at,
         metadata: channel.metadata || {},
         is_active: channel.is_active,
         created_at: channel.created_at,
         updated_at: channel.updated_at
     };
+
+    if (channel.measurementType) {
+        dto.measurement_type = {
+            id: channel.measurementType.id,
+            code: channel.measurementType.code
+        };
+    }
     
-    // Incluir device si está presente
     if (channel.device) {
         dto.device = {
-            id: channel.device.public_code, // Exponer public_code como id
+            id: channel.device.public_code,
             name: channel.device.name,
-            device_type: channel.device.device_type,
             status: channel.device.status
         };
     }
     
-    // Incluir organization si está presente
     if (channel.organization) {
         dto.organization = {
-            id: channel.organization.public_code, // Exponer public_code como id
+            id: channel.organization.public_code,
             slug: channel.organization.slug,
             name: channel.organization.name,
             logo_url: channel.organization.logo_url

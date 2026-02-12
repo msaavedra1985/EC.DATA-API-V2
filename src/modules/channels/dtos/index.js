@@ -4,12 +4,6 @@
 import { z } from 'zod';
 
 /**
- * Regex para validación de URLs
- * Soporta http, https, mqtt, mqtts, ws, wss, coap, coaps, tcp, udp
- */
-const urlRegex = /^(https?|mqtt|mqtts|ws|wss|coap|coaps|tcp|udp):\/\/.+/i;
-
-/**
  * Schema para crear un nuevo channel
  * POST /channels
  */
@@ -30,52 +24,41 @@ export const createChannelSchema = z.object({
             .string()
             .max(5000, 'description no puede exceder 5000 caracteres')
             .optional(),
-        channel_type: z
-            .enum(['mqtt', 'http', 'websocket', 'coap', 'modbus', 'opcua', 'bacnet', 'lorawan', 'sigfox', 'other'], {
-                errorMap: () => ({ message: 'channel_type debe ser: mqtt, http, websocket, coap, modbus, opcua, bacnet, lorawan, sigfox, o other' })
-            })
-            .default('other'),
-        protocol: z
-            .enum(['mqtt', 'http', 'https', 'ws', 'wss', 'coap', 'coaps', 'modbus_tcp', 'modbus_rtu', 'opcua', 'bacnet_ip', 'lorawan', 'sigfox', 'tcp', 'udp', 'other'], {
-                errorMap: () => ({ message: 'protocol debe ser: mqtt, http, https, ws, wss, coap, coaps, modbus_tcp, modbus_rtu, opcua, bacnet_ip, lorawan, sigfox, tcp, udp, o other' })
-            })
-            .default('other'),
-        direction: z
-            .enum(['inbound', 'outbound', 'bidirectional'], {
-                errorMap: () => ({ message: 'direction debe ser: inbound, outbound, o bidirectional' })
-            })
-            .default('bidirectional'),
+        ch: z
+            .number({ invalid_type_error: 'ch debe ser un número' })
+            .int('ch debe ser un entero')
+            .min(0, 'ch debe ser mayor o igual a 0')
+            .optional()
+            .nullable(),
+        measurement_type_id: z
+            .number({ invalid_type_error: 'measurement_type_id debe ser un número' })
+            .int('measurement_type_id debe ser un entero')
+            .positive('measurement_type_id debe ser positivo')
+            .optional()
+            .nullable(),
+        phase_system: z
+            .number({ invalid_type_error: 'phase_system debe ser un número' })
+            .int('phase_system debe ser un entero')
+            .min(0, 'phase_system debe ser 0, 1 o 3')
+            .max(3, 'phase_system debe ser 0, 1 o 3')
+            .optional()
+            .nullable(),
+        phase: z
+            .number({ invalid_type_error: 'phase debe ser un número' })
+            .int('phase debe ser un entero')
+            .min(1, 'phase debe estar entre 1 y 3')
+            .max(3, 'phase debe estar entre 1 y 3')
+            .optional()
+            .nullable(),
+        process: z
+            .boolean()
+            .optional()
+            .default(true),
         status: z
             .enum(['active', 'inactive', 'error', 'disabled'], {
                 errorMap: () => ({ message: 'status debe ser: active, inactive, error, o disabled' })
             })
             .default('active'),
-        endpoint_url: z
-            .string()
-            .max(500, 'endpoint_url no puede exceder 500 caracteres')
-            .refine((val) => {
-                if (!val) return true; // Permitir vacío si es opcional
-                return urlRegex.test(val);
-            }, {
-                message: 'endpoint_url debe ser una URL válida (ej: mqtt://broker.example.com:1883, https://api.example.com)'
-            })
-            .optional(),
-        config: z
-            .record(z.any())
-            .optional(),
-        credentials_ref: z
-            .string()
-            .max(100, 'credentials_ref no puede exceder 100 caracteres')
-            .optional(),
-        priority: z
-            .number({
-                invalid_type_error: 'priority debe ser un número'
-            })
-            .int('priority debe ser un número entero')
-            .min(1, 'priority debe ser al menos 1')
-            .max(10, 'priority no puede exceder 10')
-            .default(5)
-            .optional(),
         metadata: z
             .record(z.any())
             .optional(),
@@ -88,7 +71,7 @@ export const createChannelSchema = z.object({
 
 /**
  * Schema para actualizar un channel
- * PUT /channels/:id
+ * PATCH /channels/:id
  */
 export const updateChannelSchema = z.object({
     params: z.object({
@@ -108,50 +91,39 @@ export const updateChannelSchema = z.object({
             .string()
             .max(5000, 'description no puede exceder 5000 caracteres')
             .optional(),
-        channel_type: z
-            .enum(['mqtt', 'http', 'websocket', 'coap', 'modbus', 'opcua', 'bacnet', 'lorawan', 'sigfox', 'other'], {
-                errorMap: () => ({ message: 'channel_type debe ser: mqtt, http, websocket, coap, modbus, opcua, bacnet, lorawan, sigfox, o other' })
-            })
-            .optional(),
-        protocol: z
-            .enum(['mqtt', 'http', 'https', 'ws', 'wss', 'coap', 'coaps', 'modbus_tcp', 'modbus_rtu', 'opcua', 'bacnet_ip', 'lorawan', 'sigfox', 'tcp', 'udp', 'other'], {
-                errorMap: () => ({ message: 'protocol debe ser: mqtt, http, https, ws, wss, coap, coaps, modbus_tcp, modbus_rtu, opcua, bacnet_ip, lorawan, sigfox, tcp, udp, o other' })
-            })
-            .optional(),
-        direction: z
-            .enum(['inbound', 'outbound', 'bidirectional'], {
-                errorMap: () => ({ message: 'direction debe ser: inbound, outbound, o bidirectional' })
-            })
+        ch: z
+            .number()
+            .int()
+            .min(0)
+            .optional()
+            .nullable(),
+        measurement_type_id: z
+            .number()
+            .int()
+            .positive()
+            .optional()
+            .nullable(),
+        phase_system: z
+            .number()
+            .int()
+            .min(0)
+            .max(3)
+            .optional()
+            .nullable(),
+        phase: z
+            .number()
+            .int()
+            .min(1)
+            .max(3)
+            .optional()
+            .nullable(),
+        process: z
+            .boolean()
             .optional(),
         status: z
             .enum(['active', 'inactive', 'error', 'disabled'], {
                 errorMap: () => ({ message: 'status debe ser: active, inactive, error, o disabled' })
             })
-            .optional(),
-        endpoint_url: z
-            .string()
-            .max(500, 'endpoint_url no puede exceder 500 caracteres')
-            .refine((val) => {
-                if (!val) return true;
-                return urlRegex.test(val);
-            }, {
-                message: 'endpoint_url debe ser una URL válida (ej: mqtt://broker.example.com:1883, https://api.example.com)'
-            })
-            .optional(),
-        config: z
-            .record(z.any())
-            .optional(),
-        credentials_ref: z
-            .string()
-            .max(100, 'credentials_ref no puede exceder 100 caracteres')
-            .optional(),
-        priority: z
-            .number({
-                invalid_type_error: 'priority debe ser un número'
-            })
-            .int('priority debe ser un número entero')
-            .min(1, 'priority debe ser al menos 1')
-            .max(10, 'priority no puede exceder 10')
             .optional(),
         metadata: z
             .record(z.any())
@@ -165,12 +137,6 @@ export const updateChannelSchema = z.object({
 /**
  * Schema para obtener channels con filtros
  * GET /channels
- * 
- * Comportamiento del filtro por organización:
- * - Sin filtro: Usa la organización activa del usuario (del JWT)
- * - Con organization_id: Filtra por esa organización (si tiene acceso)
- * - Con all=true: Solo admins, muestra todos los channels accesibles (org-admins limitados a su scope)
- * - organization_ids: Array interno usado por el middleware (no expuesto a clientes)
  */
 export const getChannelsSchema = z.object({
     query: z.object({
@@ -188,8 +154,12 @@ export const getChannelsSchema = z.object({
             .string()
             .optional()
             .describe('Solo admins: si es "true", muestra todos los channels sin filtrar por organización'),
-        channel_type: z
-            .enum(['mqtt', 'http', 'websocket', 'coap', 'modbus', 'opcua', 'bacnet', 'lorawan', 'sigfox', 'other'])
+        measurement_type_id: z
+            .string()
+            .transform((val) => parseInt(val, 10))
+            .refine((val) => !isNaN(val) && val > 0, {
+                message: 'measurement_type_id debe ser un entero positivo'
+            })
             .optional(),
         status: z
             .enum(['active', 'inactive', 'error', 'disabled'])

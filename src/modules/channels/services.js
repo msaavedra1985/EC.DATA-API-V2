@@ -84,8 +84,7 @@ export const createChannel = async (channelData, userId, ipAddress, userAgent) =
         changes: { new: channel },
         metadata: {
             device_id: deviceUuid,
-            organization_id: organizationUuid,
-            channel_type: channelData.channel_type
+            organization_id: organizationUuid
         },
         ipAddress: ipAddress,
         userAgent: userAgent

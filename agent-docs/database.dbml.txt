@@ -1,4 +1,4 @@
-// Database Schema - Generated on 2026-02-12T00:09:06.152Z
+// Database Schema - Generated on 2026-02-12T13:32:54.904Z
 // Project: EC.DATA API - Enterprise REST API
 // Use this file at https://dbdiagram.io to visualize the schema
 
@@ -86,14 +86,7 @@ Table channels {
   organization_id uuid [not null] // FK a organizations - desnormalización para integridad cross-tenant
   name varchar(200) [not null] // Nombre del canal (ej: "MQTT Sensor Data")
   description text // Descripción del canal
-  channel_type channel_type [not null] // Tipo de canal: mqtt, http, websocket, coap, modbus, opcua, bacnet, lorawan, sigfox, other
-  protocol channel_protocol [not null] // Protocolo de comunicación: mqtt, http, https, ws, wss, coap, coaps, modbus_tcp, modbus_rtu, opcua, bacnet_ip, lorawan, sigfox, tcp, udp, other
-  direction channel_direction [not null] // Dirección de comunicación: inbound, outbound, bidirectional
   status channel_status [not null] // Estado del canal: active, inactive, error, disabled
-  endpoint_url varchar(500) // URL del endpoint de comunicación (ej: mqtt://broker.example.com:1883)
-  config jsonb // Configuración del canal en formato JSON (topic, QoS, keep-alive, etc.)
-  credentials_ref varchar(100) // Referencia a credenciales almacenadas de forma segura (no almacenar secretos aquí)
-  priority integer [not null] // Prioridad del canal (1-10, donde 10 es la más alta)
   last_sync_at timestamptz // Última vez que el canal se sincronizó/comunicó
   metadata jsonb // Metadatos adicionales en formato JSON
   is_active boolean [not null, default: true] // Indica si el canal está activo
@@ -102,10 +95,11 @@ Table channels {
   deleted_at timestamptz // Soft delete timestamp
   ch integer // Número de canal físico usado en Cassandra para identificar mediciones
   measurement_type_id integer // FK a measurement_types - tipo de medición del canal
+  phase_system integer // Sistema eléctrico: 0=N/A, 1=monofásico, 3=trifásico
+  phase integer // Fase que lee el canal: 1, 2 o 3
+  process boolean [not null, default: true] // Si se procesan los datos del canal
 
   Indexes {
-    (channel_type) [name: 'channels_channel_type']
-    (channel_type) [name: 'channels_channel_type_idx']
     (device_id, ch) [name: 'channels_device_ch_unique', unique]
     (device_id) [name: 'channels_device_id']
     (device_id) [name: 'channels_device_id_idx']

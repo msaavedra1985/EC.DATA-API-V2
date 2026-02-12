@@ -4,6 +4,7 @@
 import Channel from './models/Channel.js';
 import Device from '../devices/models/Device.js';
 import Organization from '../organizations/models/Organization.js';
+import MeasurementType from '../telemetry/models/MeasurementType.js';
 import { toPublicChannelDto } from './helpers/serializers.js';
 import { Op, QueryTypes } from 'sequelize';
 import sequelize from '../../db/sql/sequelize.js';
@@ -19,6 +20,11 @@ Channel.belongsTo(Organization, {
     as: 'organization'
 });
 
+Channel.belongsTo(MeasurementType, {
+    foreignKey: 'measurement_type_id',
+    as: 'measurementType'
+});
+
 Device.hasMany(Channel, {
     foreignKey: 'device_id',
     as: 'channels'
@@ -29,6 +35,27 @@ Organization.hasMany(Channel, {
     as: 'channels'
 });
 
+const deviceInclude = {
+    model: Device,
+    as: 'device',
+    attributes: ['id', 'public_code', 'name', 'status']
+};
+
+const organizationInclude = {
+    model: Organization,
+    as: 'organization',
+    attributes: ['id', 'public_code', 'slug', 'name', 'logo_url']
+};
+
+const measurementTypeInclude = {
+    model: MeasurementType,
+    as: 'measurementType',
+    attributes: ['id', 'code'],
+    required: false
+};
+
+const defaultIncludes = [deviceInclude, organizationInclude, measurementTypeInclude];
+
 /**
  * Crear un nuevo channel
  * @param {Object} channelData - Datos del channel
@@ -37,21 +64,7 @@ Organization.hasMany(Channel, {
 export const createChannel = async (channelData) => {
     const channel = await Channel.create(channelData);
     
-    // Recargar con relaciones
-    await channel.reload({
-        include: [
-            {
-                model: Device,
-                as: 'device',
-                attributes: ['id', 'public_code', 'name', 'device_type', 'status']
-            },
-            {
-                model: Organization,
-                as: 'organization',
-                attributes: ['id', 'public_code', 'slug', 'name', 'logo_url']
-            }
-        ]
-    });
+    await channel.reload({ include: defaultIncludes });
     
     return toPublicChannelDto(channel);
 };
@@ -65,18 +78,7 @@ export const createChannel = async (channelData) => {
 export const findChannelByPublicCode = async (publicCode) => {
     const channel = await Channel.findOne({
         where: { public_code: publicCode },
-        include: [
-            {
-                model: Device,
-                as: 'device',
-                attributes: ['id', 'public_code', 'name', 'device_type', 'status']
-            },
-            {
-                model: Organization,
-                as: 'organization',
-                attributes: ['id', 'public_code', 'slug', 'name', 'logo_url']
-            }
-        ]
+        include: defaultIncludes
     });
     
     if (!channel) {
@@ -123,21 +125,7 @@ export const updateChannel = async (id, updateData) => {
     
     await channel.update(updateData);
     
-    // Recargar con relaciones
-    await channel.reload({
-        include: [
-            {
-                model: Device,
-                as: 'device',
-                attributes: ['id', 'public_code', 'name', 'device_type', 'status']
-            },
-            {
-                model: Organization,
-                as: 'organization',
-                attributes: ['id', 'public_code', 'slug', 'name', 'logo_url']
-            }
-        ]
-    });
+    await channel.reload({ include: defaultIncludes });
     
     return toPublicChannelDto(channel);
 };
@@ -154,7 +142,7 @@ export const deleteChannel = async (id) => {
         return false;
     }
     
-    await channel.destroy(); // Soft delete por paranoid: true
+    await channel.destroy();
     return true;
 };
 
@@ -170,20 +158,19 @@ export const listChannels = async ({
     device_id, 
     organization_id,
     organization_ids,
-    channel_type,
+    measurement_type_id,
     status,
     search,
     not_in_hierarchy = false,
     limit = 20, 
     offset = 0 
 }) => {
-    // Si se requiere filtrar por not_in_hierarchy, usamos raw SQL
     if (not_in_hierarchy) {
         return await listChannelsNotInHierarchy({
             device_id,
             organization_id,
             organization_ids,
-            channel_type,
+            measurement_type_id,
             status,
             search,
             limit,
@@ -191,7 +178,6 @@ export const listChannels = async ({
         });
     }
     
-    // Flujo normal con Sequelize ORM
     const where = {};
     
     if (device_id !== undefined) {
@@ -203,9 +189,9 @@ export const listChannels = async ({
     } else if (organization_id !== undefined && organization_id !== null) {
         where.organization_id = organization_id;
     }
-    
-    if (channel_type !== undefined) {
-        where.channel_type = channel_type;
+
+    if (measurement_type_id !== undefined) {
+        where.measurement_type_id = measurement_type_id;
     }
     
     if (status !== undefined) {
@@ -215,24 +201,13 @@ export const listChannels = async ({
     if (search) {
         where[Op.or] = [
             { name: { [Op.iLike]: `%${search}%` } },
-            { endpoint_url: { [Op.iLike]: `%${search}%` } }
+            { description: { [Op.iLike]: `%${search}%` } }
         ];
     }
     
     const { count, rows } = await Channel.findAndCountAll({
         where,
-        include: [
-            {
-                model: Device,
-                as: 'device',
-                attributes: ['id', 'public_code', 'name', 'device_type', 'status']
-            },
-            {
-                model: Organization,
-                as: 'organization',
-                attributes: ['id', 'public_code', 'slug', 'name', 'logo_url']
-            }
-        ],
+        include: defaultIncludes,
         limit: parseInt(limit),
         offset: parseInt(offset),
         order: [['created_at', 'DESC']]
@@ -257,7 +232,7 @@ const listChannelsNotInHierarchy = async ({
     device_id,
     organization_id,
     organization_ids,
-    channel_type,
+    measurement_type_id,
     status,
     search,
     limit = 20,
@@ -267,7 +242,6 @@ const listChannelsNotInHierarchy = async ({
     const bindings = [];
     let bindIndex = 1;
     
-    // Filtros de organización
     if (organization_ids && Array.isArray(organization_ids) && organization_ids.length > 0) {
         conditions.push(`c.organization_id = ANY($${bindIndex}::uuid[])`);
         bindings.push(organization_ids);
@@ -283,10 +257,10 @@ const listChannelsNotInHierarchy = async ({
         bindings.push(device_id);
         bindIndex++;
     }
-    
-    if (channel_type) {
-        conditions.push(`c.channel_type = $${bindIndex}`);
-        bindings.push(channel_type);
+
+    if (measurement_type_id) {
+        conditions.push(`c.measurement_type_id = $${bindIndex}`);
+        bindings.push(measurement_type_id);
         bindIndex++;
     }
     
@@ -297,14 +271,13 @@ const listChannelsNotInHierarchy = async ({
     }
     
     if (search) {
-        conditions.push(`(c.name ILIKE $${bindIndex} OR c.endpoint_url ILIKE $${bindIndex})`);
+        conditions.push(`(c.name ILIKE $${bindIndex} OR c.description ILIKE $${bindIndex})`);
         bindings.push(`%${search}%`);
         bindIndex++;
     }
     
     const whereClause = conditions.join(' AND ');
     
-    // Query para contar total
     const countQuery = `
         SELECT COUNT(DISTINCT c.id) as total
         FROM channels c
@@ -316,20 +289,20 @@ const listChannelsNotInHierarchy = async ({
           AND rh.id IS NULL
     `;
     
-    // Query para obtener datos con relaciones
     const dataQuery = `
         SELECT 
             c.*,
             d.id as device_id_rel,
             d.public_code as device_public_code,
             d.name as device_name,
-            d.device_type as device_type,
             d.status as device_status,
             o.id as org_id_rel,
             o.public_code as org_public_code,
             o.slug as org_slug,
             o.name as org_name,
-            o.logo_url as org_logo_url
+            o.logo_url as org_logo_url,
+            mt.id as mt_id,
+            mt.code as mt_code
         FROM channels c
         LEFT JOIN resource_hierarchy rh 
             ON rh.reference_id = c.public_code 
@@ -337,6 +310,7 @@ const listChannelsNotInHierarchy = async ({
             AND rh.deleted_at IS NULL
         LEFT JOIN devices d ON c.device_id = d.id
         LEFT JOIN organizations o ON c.organization_id = o.id
+        LEFT JOIN measurement_types mt ON c.measurement_type_id = mt.id
         WHERE ${whereClause}
           AND rh.id IS NULL
         ORDER BY c.created_at DESC
@@ -353,20 +327,26 @@ const listChannelsNotInHierarchy = async ({
     
     const total = parseInt(countResult[0]?.total || 0);
     
-    // Transformar resultados a formato DTO
     const items = dataResult.map(row => ({
         id: row.public_code,
         name: row.name,
-        channel_type: row.channel_type,
-        endpoint_url: row.endpoint_url,
+        description: row.description,
+        ch: row.ch,
+        measurement_type_id: row.measurement_type_id,
+        phase_system: row.phase_system,
+        phase: row.phase,
+        process: row.process,
         status: row.status,
-        priority: row.priority,
+        last_sync_at: row.last_sync_at,
         metadata: row.metadata,
         is_active: row.is_active,
+        measurement_type: row.mt_id ? {
+            id: row.mt_id,
+            code: row.mt_code
+        } : null,
         device: row.device_id_rel ? {
             id: row.device_public_code,
             name: row.device_name,
-            device_type: row.device_type,
             status: row.device_status
         } : null,
         organization: row.org_id_rel ? {

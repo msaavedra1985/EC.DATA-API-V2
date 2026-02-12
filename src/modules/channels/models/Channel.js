@@ -2,7 +2,7 @@ import { DataTypes } from 'sequelize';
 import sequelize from '../../../db/sql/sequelize.js';
 
 /**
- * Modelo de Channel (Canal de Comunicación de Dispositivo)
+ * Modelo de Channel (Canal / Punto de Medición)
  * Usa sistema triple identificador: UUID v7 + human_id + public_code
  * 
  * - id: UUID v7 (clave primaria, usado en FKs)
@@ -14,8 +14,8 @@ import sequelize from '../../../db/sql/sequelize.js';
  * - Garantiza integridad referencial cross-tenant sin JOINs costosos
  * - Desnormalización estratégica: organization_id se duplica para optimización
  * 
- * Representa un canal de comunicación (MQTT, HTTP, WebSocket, etc.) que
- * un dispositivo utiliza para enviar/recibir datos.
+ * Representa un punto de medición de un dispositivo (canal eléctrico, sensor IoT, etc.)
+ * Cada canal puede leer una o más variables a través de channel_variables.
  */
 const Channel = sequelize.define('Channel', {
     id: {
@@ -54,75 +54,12 @@ const Channel = sequelize.define('Channel', {
     name: {
         type: DataTypes.STRING(200),
         allowNull: false,
-        comment: 'Nombre del canal (ej: "MQTT Sensor Data")'
+        comment: 'Nombre del canal (ej: "Edificio 1 - Lado Derecho")'
     },
     description: {
         type: DataTypes.TEXT,
         allowNull: true,
         comment: 'Descripción del canal'
-    },
-    channel_type: {
-        type: DataTypes.ENUM('mqtt', 'http', 'websocket', 'coap', 'modbus', 'opcua', 'bacnet', 'lorawan', 'sigfox', 'other'),
-        allowNull: false,
-        defaultValue: 'other',
-        comment: 'Tipo de canal: mqtt, http, websocket, coap, modbus, opcua, bacnet, lorawan, sigfox, other'
-    },
-    protocol: {
-        type: DataTypes.ENUM('mqtt', 'http', 'https', 'ws', 'wss', 'coap', 'coaps', 'modbus_tcp', 'modbus_rtu', 'opcua', 'bacnet_ip', 'lorawan', 'sigfox', 'tcp', 'udp', 'other'),
-        allowNull: false,
-        defaultValue: 'other',
-        comment: 'Protocolo de comunicación'
-    },
-    direction: {
-        type: DataTypes.ENUM('inbound', 'outbound', 'bidirectional'),
-        allowNull: false,
-        defaultValue: 'bidirectional',
-        comment: 'Dirección de comunicación: inbound, outbound, bidirectional'
-    },
-    status: {
-        type: DataTypes.ENUM('active', 'inactive', 'error', 'disabled'),
-        allowNull: false,
-        defaultValue: 'active',
-        comment: 'Estado del canal: active, inactive, error, disabled'
-    },
-    endpoint_url: {
-        type: DataTypes.STRING(500),
-        allowNull: true,
-        comment: 'URL del endpoint de comunicación (ej: mqtt://broker.example.com:1883)'
-    },
-    config: {
-        type: DataTypes.JSONB,
-        allowNull: true,
-        defaultValue: {},
-        comment: 'Configuración del canal en formato JSON (topic, QoS, keep-alive, etc.)'
-    },
-    credentials_ref: {
-        type: DataTypes.STRING(100),
-        allowNull: true,
-        comment: 'Referencia a credenciales almacenadas de forma segura (no almacenar secretos aquí)'
-    },
-    priority: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
-        defaultValue: 5,
-        comment: 'Prioridad del canal (1-10, donde 10 es la más alta)'
-    },
-    last_sync_at: {
-        type: DataTypes.DATE,
-        allowNull: true,
-        comment: 'Última vez que el canal se sincronizó/comunicó'
-    },
-    metadata: {
-        type: DataTypes.JSONB,
-        allowNull: true,
-        defaultValue: {},
-        comment: 'Metadatos adicionales en formato JSON'
-    },
-    is_active: {
-        type: DataTypes.BOOLEAN,
-        allowNull: false,
-        defaultValue: true,
-        comment: 'Indica si el canal está activo'
     },
     ch: {
         type: DataTypes.INTEGER,
@@ -139,6 +76,45 @@ const Channel = sequelize.define('Channel', {
         onUpdate: 'CASCADE',
         onDelete: 'SET NULL',
         comment: 'FK a measurement_types - tipo de medición del canal'
+    },
+    phase_system: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        comment: 'Sistema eléctrico: 0=N/A, 1=monofásico, 3=trifásico'
+    },
+    phase: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        comment: 'Fase que lee el canal: 1, 2 o 3'
+    },
+    process: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: true,
+        comment: 'Si se procesan los datos del canal'
+    },
+    status: {
+        type: DataTypes.ENUM('active', 'inactive', 'error', 'disabled'),
+        allowNull: false,
+        defaultValue: 'active',
+        comment: 'Estado del canal: active, inactive, error, disabled'
+    },
+    last_sync_at: {
+        type: DataTypes.DATE,
+        allowNull: true,
+        comment: 'Última vez que el canal reportó datos'
+    },
+    metadata: {
+        type: DataTypes.JSONB,
+        allowNull: true,
+        defaultValue: {},
+        comment: 'Metadatos adicionales en formato JSON'
+    },
+    is_active: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: true,
+        comment: 'Indica si el canal está activo'
     }
 }, {
     tableName: 'channels',
@@ -156,7 +132,8 @@ const Channel = sequelize.define('Channel', {
             fields: ['status']
         },
         {
-            fields: ['channel_type']
+            fields: ['measurement_type_id'],
+            name: 'channels_measurement_type_id_idx'
         },
         {
             fields: ['device_id', 'name'],
@@ -173,25 +150,21 @@ const Channel = sequelize.define('Channel', {
  * Relaciones del modelo Channel
  */
 Channel.associate = (models) => {
-    // Channel pertenece a Device
     Channel.belongsTo(models.Device, {
         foreignKey: 'device_id',
         as: 'device'
     });
 
-    // Channel pertenece a Organization
     Channel.belongsTo(models.Organization, {
         foreignKey: 'organization_id',
         as: 'organization'
     });
 
-    // Channel pertenece a MeasurementType
     Channel.belongsTo(models.MeasurementType, {
         foreignKey: 'measurement_type_id',
         as: 'measurementType'
     });
 
-    // Channel tiene muchas variables (a través de channel_variables)
     Channel.belongsToMany(models.Variable, {
         through: models.ChannelVariable,
         foreignKey: 'channel_id',
