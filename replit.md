@@ -17,6 +17,7 @@ REST API Node.js/Express multi-tenant para plataformas e-commerce. Integra con f
 | **Al modificar/consultar endpoints** | `agent-docs/endpoints/{modulo}.md` |
 | **Al trabajar con la base de datos** | `agent-docs/database.dbml.txt` |
 | **Para ver tareas pendientes** | `agent-docs/backlog.md` |
+| **Al migrar datos de plataforma legacy** | `agent-docs/migration-guide.md` |
 
 ## Índice de Documentación
 
@@ -30,6 +31,7 @@ agent-docs/
 ├── glosario.md           # Términos de dominio (public_code, session_context, etc.)
 ├── learnings.md          # Errores resueltos y gotchas
 ├── backlog.md            # Tareas pendientes por módulo
+├── migration-guide.md    # Guía de migración legacy SQL Server → PostgreSQL
 ├── nodejs-best-practices.md  # Mejores prácticas Node.js API
 ├── database.dbml.txt     # Schema de DB en formato DBML (actualizar con npm run db:dbml)
 └── endpoints/            # Documentación detallada de endpoints

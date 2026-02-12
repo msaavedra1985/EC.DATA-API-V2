@@ -289,6 +289,62 @@ Paso 5 - Actualizar código:
 
 ---
 
+## Migración de Datos (Legacy SQL Server → PostgreSQL)
+
+### FOR UPDATE no permite funciones de agregación en PostgreSQL
+**Fecha**: 2026-02-12
+**Síntoma**: `FOR UPDATE is not allowed with aggregate functions` al ejecutar `SELECT MAX(human_id) FROM devices FOR UPDATE`
+**Causa**: PostgreSQL no permite `FOR UPDATE` con funciones de agregación (MAX, COUNT, SUM, etc.) porque FOR UPDATE bloquea filas individuales, pero los aggregates no operan sobre filas individuales
+**Solución**: 
+- Usar `LOCK TABLE "devices" IN EXCLUSIVE MODE` antes del SELECT con MAX()
+- Esto bloquea toda la tabla durante la transacción, evitando colisiones de human_id
+- Alternativa: usar secuencias de DB (pero human_id no es autoincremental por diseño)
+
+**Archivos afectados**: `scripts/migrate-sirenis.js`
+
+---
+
+### Script de migración debe ser idempotente
+**Fecha**: 2026-02-12
+**Síntoma**: Re-ejecutar el script duplicaba todos los datos (devices, channels, channel_variables)
+**Causa**: No había guardia de idempotencia - el script siempre creaba nuevos UUIDs y public_codes
+**Solución**: 
+- Agregar check previo: `SELECT COUNT(*) FROM devices WHERE organization_id = :orgId`
+- Si hay datos, informar y no insertar (sugerir `--clean` para re-ejecutar)
+- Flag `--clean` borra datos de la organización antes de re-insertar
+- La limpieza se ejecuta en transacción separada del insert para no perder datos si falla
+
+---
+
+### Validar mapeos contra la DB antes de insertar
+**Fecha**: 2026-02-12
+**Síntoma**: Riesgo de insertar variable_id incorrectos si cambian los catálogos
+**Causa**: Los mapeos (VARIABLE_MAP, MEASUREMENT_TYPE_MAP) eran hardcoded sin validación
+**Solución**: 
+- Antes de insertar, consultar la tabla `variables` y verificar que cada newId tenga el code y unit esperados
+- Lo mismo con `measurement_types`
+- Si alguno no coincide, el script falla con mensaje claro antes de insertar nada
+
+---
+
+### Mapeo de campos entre plataformas
+**Fecha**: 2026-02-12
+**Contexto**: Referencia rápida de mapeo de campos para migración legacy → nueva plataforma
+**Equipos → Devices**:
+- `nombre` → `name`, `uuid` → `uuid`, `mac` → `mac_address`
+- `timezone` → `timezone`, `lat/lon` → `latitude/longitude`
+- `topic` → `topic`, `activo === '1'` → `status: 'active'`
+- `equiposMarcaId` → `brand_id`, `equiposModeloId` → `model_id`
+- `lastReport` → `last_seen_at` (filtrar fechas `1899-*`)
+- Campos nuevos sin equivalente: `site_id`, `device_type_id`, `server_id`, `network_id`, `license_id`, etc.
+**Canales → Channels**:
+- `nombre` → `name`, `ch` → `ch`, `sistema` → `phase_system`, `fase` → `phase`
+- `procesar === '1'` → `process: true`, `lastReport` → `last_sync_at`
+- `tipoMedicionId` → `measurement_type_id` (requiere mapeo: 1→1, 3→2, 4→3, 6→4)
+- Se agrega `organization_id` por diseño de la nueva plataforma (reduce JOINs)
+
+---
+
 ## Performance
 
 (Agregar problemas de performance aquí)
