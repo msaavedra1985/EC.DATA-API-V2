@@ -21,6 +21,12 @@ const macAddressRegex = /^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$/;
  */
 export const createDeviceSchema = z.object({
     body: z.object({
+        uuid: z
+            .string()
+            .max(36, 'uuid no puede exceder 36 caracteres')
+            .regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i, 'uuid debe tener formato UUID válido')
+            .optional()
+            .nullable(),
         organization_id: z
             .string({
                 required_error: 'organization_id es requerido'
@@ -215,6 +221,12 @@ export const updateDeviceSchema = z.object({
             .min(1, 'ID del device no puede estar vacío')
     }),
     body: z.object({
+        uuid: z
+            .string()
+            .max(36)
+            .regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i, 'uuid debe tener formato UUID válido')
+            .optional()
+            .nullable(),
         site_id: z
             .string()
             .min(1, 'site_id no puede estar vacío')

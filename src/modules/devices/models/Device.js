@@ -30,6 +30,12 @@ const Device = sequelize.define('Device', {
         unique: true,
         comment: 'ID público opaco (ej: DEV-7K9D2-X) - previene enumeración'
     },
+    uuid: {
+        type: DataTypes.STRING(36),
+        allowNull: true,
+        unique: true,
+        comment: 'UUID operativo/externo - asignado por técnicos en campo o sistemas externos'
+    },
     organization_id: {
         type: DataTypes.UUID,
         allowNull: false,

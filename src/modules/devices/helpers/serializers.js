@@ -19,6 +19,7 @@ export const toPublicDeviceDto = (device) => {
     
     const dto = {
         id: device.public_code,
+        uuid: device.uuid || null,
         name: device.name,
         description: device.description,
         status: device.status,

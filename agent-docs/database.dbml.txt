@@ -1,4 +1,4 @@
-// Database Schema - Generated on 2026-02-11T19:13:18.720Z
+// Database Schema - Generated on 2026-02-12T00:09:06.152Z
 // Project: EC.DATA API - Enterprise REST API
 // Use this file at https://dbdiagram.io to visualize the schema
 
@@ -382,6 +382,7 @@ Table devices {
   installation_date date // Fecha de instalación del equipo
   warranty_months integer // Meses de garantía del equipo
   expiration_date date // Fecha de expiración de la licencia/servicio
+  uuid varchar(36) [unique] // UUID operativo/externo - asignado por técnicos en campo o sistemas externos
 
   Indexes {
     (brand_id) [name: 'devices_brand_id_idx']
@@ -403,6 +404,8 @@ Table devices {
     (site_id) [name: 'devices_site_id_idx']
     (status) [name: 'devices_status']
     (status) [name: 'devices_status_idx']
+    (uuid) [name: 'devices_uuid_key', unique]
+    (uuid) [name: 'devices_uuid_unique_idx', unique]
     (validity_period_id) [name: 'devices_validity_period_id_idx']
   }
 }
