@@ -16,6 +16,7 @@
 | telemetry | `src/modules/telemetry/` | Series temporales (Cassandra) | [endpoints/telemetry.md](endpoints/telemetry.md) |
 | resource-hierarchy | `src/modules/resource-hierarchy/` | Árbol ltree | [endpoints/resource-hierarchy.md](endpoints/resource-hierarchy.md) |
 | error-logs | `src/modules/error-logs/` | Logging errores frontend | [endpoints/error-logs.md](endpoints/error-logs.md) |
+| dashboards | `src/modules/dashboards/` | Dashboards & Analytics multipágina | (endpoints pendientes) |
 
 ## Archivos Clave por Módulo
 
@@ -68,6 +69,19 @@ Sistema de ubicaciones geográficas con natural keys:
 - Cache Redis: `states:{CC}:{lang}` y `cities:{stateCode}:{lang}` TTL 1h
 - Endpoints: `GET /locations/countries/:cc/states`, `GET /locations/states/:code/cities`
 - Fuente: CountryStateCity (github.com/dr5hn/countries-states-cities-database)
+
+### dashboards (Nuevo)
+Módulo de Dashboards & Analytics multipágina:
+- **8 tablas**: dashboards, dashboard_pages, widgets, widget_data_sources, dashboard_groups, dashboard_group_items, dashboard_collaborators, dashboard_group_collaborators
+- **Entidades públicas**: Dashboard (DSH-xxx), DashboardGroup (DGR-xxx) con public_code
+- **Widgets**: Configuración híbrida JSON + relacional (layout JSONB, style_config JSONB, data_config JSONB)
+- **Data Sources**: Vinculan widgets con recursos reales (entity_type: channel, device, site, resource_hierarchy)
+- **Playlists**: DashboardGroup agrupa dashboards con orden (DashboardGroupItem)
+- **ACLs**: Permisos granulares viewer/editor por dashboard y por grupo
+- **Cascade**: Borrar dashboard → borra páginas, widgets, data sources, permisos
+- **Paranoid**: Soft delete en dashboards y dashboard_groups
+- **Modelos**: `src/modules/dashboards/models/` (8 archivos)
+- **Migración**: `20260213100000-create-dashboards-module.cjs`
 
 ### asset-categories (Nuevo)
 Sistema de tags jerárquicos para clasificar canales:

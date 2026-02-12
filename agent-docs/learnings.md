@@ -345,6 +345,31 @@ Paso 5 - Actualizar código:
 
 ---
 
+## Migraciones vs sequelize.sync()
+
+### Síntoma
+Migración falla con `ERROR: relation "xxx_idx" already exists` al ejecutar `npm run db:migrate`.
+
+### Causa
+El servidor usa `sequelize.sync({ alter: false })` en `src/db/sql/sequelize.js` al iniciar. Si los modelos Sequelize tienen `indexes` definidos, sync crea las tablas e índices antes que la migración CLI. Cuando la migración intenta crear los mismos índices con `addIndex`, PostgreSQL rechaza porque ya existen.
+
+### Solución
+Usar un helper `safeAddIndex` en las migraciones que ignore errores "already exists":
+
+```javascript
+const safeAddIndex = async (table, fields, options) => {
+  try {
+    await queryInterface.addIndex(table, fields, options);
+  } catch (e) {
+    if (!e.message.includes('already exists')) throw e;
+  }
+};
+```
+
+**Aplicado en**: `20260213100000-create-dashboards-module.cjs`
+
+---
+
 ## Performance
 
 (Agregar problemas de performance aquí)
