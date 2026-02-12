@@ -186,7 +186,45 @@ try {
 - [ ] Verificar que `brand_id` y `model_id` existen en sus tablas (o dejar null)
 - [ ] Hacer backup de la DB antes de ejecutar
 
-## 6. Checklist Post-Migración
+## 6. UUID Operacional y Telemetría (Cassandra)
+
+### El campo `uuid` en devices
+
+Cada dispositivo migrado tiene un **UUID operacional** en el campo `devices.uuid`. Este es el UUID que:
+- El equipo físico usa para identificarse
+- Cassandra usa como **partition key** en todas las tablas de telemetría
+- Es diferente al `id` de PostgreSQL (UUID v7 autogenerado)
+
+### Flujo de resolución UUID para Cassandra
+
+Cuando el API necesita buscar datos en Cassandra, el `metadataRepository` resuelve el UUID con esta prioridad:
+
+```
+1. devices.metadata->>'legacy_uuid'  ← Migraciones especiales (raro)
+2. devices.uuid                      ← UUID operacional del equipo (caso estándar)  
+3. devices.id                        ← Fallback para dispositivos nativos
+```
+
+**Archivo**: `src/modules/telemetry/repositories/metadataRepository.js` línea ~209
+
+### Ejemplo con Sirenis
+
+```
+Canal: CHN-oKOrYcKlw0Z-8 (Edificio 1 - Lado Derecho)
+├── device.id (PG):    019c52d3-c07e-725f-ac03-f93e8921ef61  ← UUID v7, solo para relaciones internas
+├── device.uuid:       948ca6a5-3a00-4591-a409-1115ce1fc686  ← UUID que Cassandra conoce ✓
+└── legacy_uuid:       null                                   ← No aplica en este caso
+```
+
+El sistema selecciona `948ca6a5...` como UUID para queries CQL porque es el `uuid` operacional.
+
+### Implicación para futuras migraciones
+
+Al migrar equipos, **siempre** cargar el campo `uuid` con el UUID que el equipo usa en la plataforma legacy. Este es el mismo UUID con el que los datos históricos están guardados en Cassandra.
+
+---
+
+## 7. Checklist Post-Migración
 
 - [ ] Verificar conteos: `SELECT COUNT(*) FROM devices/channels/channel_variables WHERE org_id = X`
 - [ ] Verificar sample de datos: nombres, UUIDs, MACs, variables asignadas
@@ -197,7 +235,7 @@ try {
 
 ---
 
-## 7. Organizaciones Migradas
+## 8. Organizaciones Migradas
 
 | Organización | Fecha | Devices | Channels | Ch_Variables | Script |
 |---|---|---|---|---|---|
