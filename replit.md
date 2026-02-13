@@ -46,7 +46,8 @@ agent-docs/
     ├── telemetry.md      # Series temporales
     ├── resource-hierarchy.md  # Árbol de recursos
     ├── error-logs.md     # Logging de errores (público)
-    └── asset-categories.md  # Tags jerárquicos para canales
+    ├── asset-categories.md  # Tags jerárquicos para canales
+    └── dashboards.md     # Dashboards multi-página, widgets, grupos, colaboradores
 ```
 
 ## Reglas Críticas (Resumen)

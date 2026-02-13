@@ -1,0 +1,551 @@
+// modules/dashboards/repository.js
+// Capa de acceso a datos para Dashboards
+
+import Dashboard from './models/Dashboard.js';
+import DashboardPage from './models/DashboardPage.js';
+import Widget from './models/Widget.js';
+import WidgetDataSource from './models/WidgetDataSource.js';
+import DashboardGroup from './models/DashboardGroup.js';
+import DashboardGroupItem from './models/DashboardGroupItem.js';
+import DashboardCollaborator from './models/DashboardCollaborator.js';
+import DashboardGroupCollaborator from './models/DashboardGroupCollaborator.js';
+import Organization from '../organizations/models/Organization.js';
+import User from '../auth/models/User.js';
+import { Op } from 'sequelize';
+import {
+    toPublicDashboardDto,
+    toPublicGroupDto,
+    toPublicPageDto,
+    toPublicWidgetDto,
+    toPublicDataSourceDto,
+    toPublicCollaboratorDto,
+    toPublicGroupCollaboratorDto
+} from './helpers/serializers.js';
+
+// --- Includes comunes ---
+
+const organizationInclude = {
+    model: Organization,
+    as: 'organization',
+    attributes: ['id', 'public_code', 'slug', 'name', 'logo_url']
+};
+
+const ownerInclude = {
+    model: User,
+    as: 'owner',
+    attributes: ['id', 'public_code', 'email', 'first_name', 'last_name']
+};
+
+const userInclude = {
+    model: User,
+    as: 'user',
+    attributes: ['id', 'public_code', 'email', 'first_name', 'last_name']
+};
+
+const dataSourceInclude = {
+    model: WidgetDataSource,
+    as: 'dataSources'
+};
+
+const widgetWithDataSourcesInclude = {
+    model: Widget,
+    as: 'widgets',
+    include: [dataSourceInclude]
+};
+
+const pageWithWidgetsInclude = {
+    model: DashboardPage,
+    as: 'pages',
+    include: [widgetWithDataSourcesInclude],
+    order: [['order_index', 'ASC']]
+};
+
+const collaboratorWithUserInclude = {
+    model: DashboardCollaborator,
+    as: 'collaborators',
+    include: [userInclude]
+};
+
+const groupCollaboratorWithUserInclude = {
+    model: DashboardGroupCollaborator,
+    as: 'collaborators',
+    include: [userInclude]
+};
+
+const dashboardListIncludes = [organizationInclude, ownerInclude];
+
+const dashboardFullIncludes = [
+    organizationInclude,
+    ownerInclude,
+    pageWithWidgetsInclude,
+    collaboratorWithUserInclude
+];
+
+const groupListIncludes = [organizationInclude, ownerInclude];
+
+const groupFullIncludes = [
+    organizationInclude,
+    ownerInclude,
+    {
+        model: Dashboard,
+        as: 'dashboards',
+        attributes: ['id', 'public_code', 'name', 'description'],
+        through: { attributes: ['order_index'] }
+    },
+    groupCollaboratorWithUserInclude
+];
+
+// =============================================
+// Dashboard CRUD
+// =============================================
+
+export const findAllDashboards = async ({
+    organizationId,
+    ownerId,
+    isPublic,
+    search,
+    limit = 20,
+    offset = 0
+}) => {
+    const where = {};
+
+    if (organizationId !== undefined && organizationId !== null) {
+        where.organization_id = organizationId;
+    }
+
+    if (ownerId !== undefined && ownerId !== null) {
+        where.owner_id = ownerId;
+    }
+
+    if (isPublic !== undefined && isPublic !== null) {
+        where.is_public = isPublic;
+    }
+
+    if (search) {
+        where[Op.or] = [
+            { name: { [Op.iLike]: `%${search}%` } },
+            { description: { [Op.iLike]: `%${search}%` } }
+        ];
+    }
+
+    const { count, rows } = await Dashboard.findAndCountAll({
+        where,
+        include: dashboardListIncludes,
+        limit: parseInt(limit),
+        offset: parseInt(offset),
+        order: [['created_at', 'DESC']]
+    });
+
+    return {
+        items: rows.map(dashboard => toPublicDashboardDto(dashboard)),
+        total: count
+    };
+};
+
+export const findDashboardByPublicCode = async (publicCode) => {
+    return await Dashboard.findOne({
+        where: { public_code: publicCode },
+        include: dashboardFullIncludes
+    });
+};
+
+export const findDashboardByPublicCodeInternal = async (publicCode) => {
+    return await Dashboard.findOne({
+        where: { public_code: publicCode },
+        include: [organizationInclude]
+    });
+};
+
+export const findDashboardById = async (id) => {
+    return await Dashboard.findByPk(id, {
+        include: [organizationInclude]
+    });
+};
+
+export const createDashboard = async (data) => {
+    const dashboard = await Dashboard.create(data);
+    await dashboard.reload({ include: dashboardListIncludes });
+    return toPublicDashboardDto(dashboard);
+};
+
+export const updateDashboard = async (id, data) => {
+    const dashboard = await Dashboard.findByPk(id);
+
+    if (!dashboard) {
+        return null;
+    }
+
+    await dashboard.update(data);
+    await dashboard.reload({ include: dashboardListIncludes });
+    return toPublicDashboardDto(dashboard);
+};
+
+export const deleteDashboard = async (id) => {
+    const dashboard = await Dashboard.findByPk(id);
+
+    if (!dashboard) {
+        return false;
+    }
+
+    await dashboard.destroy();
+    return true;
+};
+
+// =============================================
+// Page CRUD
+// =============================================
+
+export const findPagesByDashboardId = async (dashboardId) => {
+    const pages = await DashboardPage.findAll({
+        where: { dashboard_id: dashboardId },
+        include: [widgetWithDataSourcesInclude],
+        order: [['order_index', 'ASC']]
+    });
+
+    return pages.map(page => toPublicPageDto(page));
+};
+
+export const findPageById = async (pageId) => {
+    return await DashboardPage.findByPk(pageId, {
+        include: [widgetWithDataSourcesInclude]
+    });
+};
+
+export const createPage = async (data) => {
+    const page = await DashboardPage.create(data);
+    return toPublicPageDto(page);
+};
+
+export const updatePage = async (pageId, data) => {
+    const page = await DashboardPage.findByPk(pageId);
+
+    if (!page) {
+        return null;
+    }
+
+    await page.update(data);
+    return toPublicPageDto(page);
+};
+
+export const deletePage = async (pageId) => {
+    const page = await DashboardPage.findByPk(pageId);
+
+    if (!page) {
+        return false;
+    }
+
+    await page.destroy({ force: true });
+    return true;
+};
+
+// =============================================
+// Widget CRUD
+// =============================================
+
+export const findWidgetsByPageId = async (pageId) => {
+    const widgets = await Widget.findAll({
+        where: { dashboard_page_id: pageId },
+        include: [dataSourceInclude],
+        order: [['order_index', 'ASC']]
+    });
+
+    return widgets.map(widget => toPublicWidgetDto(widget));
+};
+
+export const findWidgetById = async (widgetId) => {
+    return await Widget.findByPk(widgetId, {
+        include: [dataSourceInclude]
+    });
+};
+
+export const createWidget = async (data) => {
+    const widget = await Widget.create(data);
+    await widget.reload({ include: [dataSourceInclude] });
+    return toPublicWidgetDto(widget);
+};
+
+export const updateWidget = async (widgetId, data) => {
+    const widget = await Widget.findByPk(widgetId);
+
+    if (!widget) {
+        return null;
+    }
+
+    await widget.update(data);
+    await widget.reload({ include: [dataSourceInclude] });
+    return toPublicWidgetDto(widget);
+};
+
+export const deleteWidget = async (widgetId) => {
+    const widget = await Widget.findByPk(widgetId);
+
+    if (!widget) {
+        return false;
+    }
+
+    await widget.destroy({ force: true });
+    return true;
+};
+
+// =============================================
+// DataSource CRUD
+// =============================================
+
+export const findDataSourcesByWidgetId = async (widgetId) => {
+    const dataSources = await WidgetDataSource.findAll({
+        where: { widget_id: widgetId },
+        order: [['order_index', 'ASC']]
+    });
+
+    return dataSources.map(ds => toPublicDataSourceDto(ds));
+};
+
+export const createDataSource = async (data) => {
+    const dataSource = await WidgetDataSource.create(data);
+    return toPublicDataSourceDto(dataSource);
+};
+
+export const updateDataSource = async (dataSourceId, data) => {
+    const dataSource = await WidgetDataSource.findByPk(dataSourceId);
+
+    if (!dataSource) {
+        return null;
+    }
+
+    await dataSource.update(data);
+    return toPublicDataSourceDto(dataSource);
+};
+
+export const deleteDataSource = async (dataSourceId) => {
+    const dataSource = await WidgetDataSource.findByPk(dataSourceId);
+
+    if (!dataSource) {
+        return false;
+    }
+
+    await dataSource.destroy({ force: true });
+    return true;
+};
+
+// =============================================
+// Group CRUD
+// =============================================
+
+export const findAllGroups = async ({
+    organizationId,
+    search,
+    limit = 20,
+    offset = 0
+}) => {
+    const where = {};
+
+    if (organizationId !== undefined && organizationId !== null) {
+        where.organization_id = organizationId;
+    }
+
+    if (search) {
+        where[Op.or] = [
+            { name: { [Op.iLike]: `%${search}%` } },
+            { description: { [Op.iLike]: `%${search}%` } }
+        ];
+    }
+
+    const { count, rows } = await DashboardGroup.findAndCountAll({
+        where,
+        include: groupListIncludes,
+        limit: parseInt(limit),
+        offset: parseInt(offset),
+        order: [['created_at', 'DESC']]
+    });
+
+    return {
+        items: rows.map(group => toPublicGroupDto(group)),
+        total: count
+    };
+};
+
+export const findGroupByPublicCode = async (publicCode) => {
+    return await DashboardGroup.findOne({
+        where: { public_code: publicCode },
+        include: groupFullIncludes
+    });
+};
+
+export const findGroupByPublicCodeInternal = async (publicCode) => {
+    return await DashboardGroup.findOne({
+        where: { public_code: publicCode },
+        include: [organizationInclude]
+    });
+};
+
+export const findGroupById = async (id) => {
+    return await DashboardGroup.findByPk(id, {
+        include: [organizationInclude]
+    });
+};
+
+export const createGroup = async (data) => {
+    const group = await DashboardGroup.create(data);
+    await group.reload({ include: groupListIncludes });
+    return toPublicGroupDto(group);
+};
+
+export const updateGroup = async (id, data) => {
+    const group = await DashboardGroup.findByPk(id);
+
+    if (!group) {
+        return null;
+    }
+
+    await group.update(data);
+    await group.reload({ include: groupListIncludes });
+    return toPublicGroupDto(group);
+};
+
+export const deleteGroup = async (id) => {
+    const group = await DashboardGroup.findByPk(id);
+
+    if (!group) {
+        return false;
+    }
+
+    await group.destroy();
+    return true;
+};
+
+// =============================================
+// Group Items
+// =============================================
+
+export const addDashboardToGroup = async (data) => {
+    return await DashboardGroupItem.create(data);
+};
+
+export const removeDashboardFromGroup = async (groupId, dashboardId) => {
+    const item = await DashboardGroupItem.findOne({
+        where: {
+            dashboard_group_id: groupId,
+            dashboard_id: dashboardId
+        }
+    });
+
+    if (!item) {
+        return false;
+    }
+
+    await item.destroy({ force: true });
+    return true;
+};
+
+export const findGroupItem = async (groupId, dashboardId) => {
+    return await DashboardGroupItem.findOne({
+        where: {
+            dashboard_group_id: groupId,
+            dashboard_id: dashboardId
+        }
+    });
+};
+
+// =============================================
+// Collaborators (Dashboard)
+// =============================================
+
+export const findCollaboratorsByDashboardId = async (dashboardId) => {
+    const collaborators = await DashboardCollaborator.findAll({
+        where: { dashboard_id: dashboardId },
+        include: [userInclude]
+    });
+
+    return collaborators.map(c => toPublicCollaboratorDto(c));
+};
+
+export const addCollaborator = async (data) => {
+    const collaborator = await DashboardCollaborator.create(data);
+    await collaborator.reload({ include: [userInclude] });
+    return toPublicCollaboratorDto(collaborator);
+};
+
+export const updateCollaborator = async (collaboratorId, data) => {
+    const collaborator = await DashboardCollaborator.findByPk(collaboratorId);
+
+    if (!collaborator) {
+        return null;
+    }
+
+    await collaborator.update(data);
+    await collaborator.reload({ include: [userInclude] });
+    return toPublicCollaboratorDto(collaborator);
+};
+
+export const removeCollaborator = async (collaboratorId) => {
+    const collaborator = await DashboardCollaborator.findByPk(collaboratorId);
+
+    if (!collaborator) {
+        return false;
+    }
+
+    await collaborator.destroy({ force: true });
+    return true;
+};
+
+export const findCollaborator = async (dashboardId, userId) => {
+    return await DashboardCollaborator.findOne({
+        where: {
+            dashboard_id: dashboardId,
+            user_id: userId
+        },
+        include: [userInclude]
+    });
+};
+
+// =============================================
+// Collaborators (Group)
+// =============================================
+
+export const findGroupCollaboratorsByGroupId = async (groupId) => {
+    const collaborators = await DashboardGroupCollaborator.findAll({
+        where: { dashboard_group_id: groupId },
+        include: [userInclude]
+    });
+
+    return collaborators.map(c => toPublicGroupCollaboratorDto(c));
+};
+
+export const addGroupCollaborator = async (data) => {
+    const collaborator = await DashboardGroupCollaborator.create(data);
+    await collaborator.reload({ include: [userInclude] });
+    return toPublicGroupCollaboratorDto(collaborator);
+};
+
+export const updateGroupCollaborator = async (collaboratorId, data) => {
+    const collaborator = await DashboardGroupCollaborator.findByPk(collaboratorId);
+
+    if (!collaborator) {
+        return null;
+    }
+
+    await collaborator.update(data);
+    await collaborator.reload({ include: [userInclude] });
+    return toPublicGroupCollaboratorDto(collaborator);
+};
+
+export const removeGroupCollaborator = async (collaboratorId) => {
+    const collaborator = await DashboardGroupCollaborator.findByPk(collaboratorId);
+
+    if (!collaborator) {
+        return false;
+    }
+
+    await collaborator.destroy({ force: true });
+    return true;
+};
+
+export const findGroupCollaborator = async (groupId, userId) => {
+    return await DashboardGroupCollaborator.findOne({
+        where: {
+            dashboard_group_id: groupId,
+            user_id: userId
+        },
+        include: [userInclude]
+    });
+};

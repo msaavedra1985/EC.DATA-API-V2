@@ -16,6 +16,7 @@ import filesRouter from '../modules/files/index.js';
 import telemetryRouter from '../modules/telemetry/index.js';
 import resourceHierarchyRouter from '../modules/resource-hierarchy/index.js';
 import assetCategoriesRouter from '../modules/asset-categories/index.js';
+import { dashboardRouter, groupRouter } from '../modules/dashboards/index.js';
 
 const router = express.Router();
 
@@ -68,6 +69,12 @@ router.use('/resource-hierarchy', resourceHierarchyRouter);
 
 // Asset Categories (tags jerárquicos para clasificar canales)
 router.use('/asset-categories', assetCategoriesRouter);
+
+// Dashboards (dashboards multi-página con widgets y analytics)
+router.use('/dashboards', dashboardRouter);
+
+// Dashboard Groups (agrupaciones/playlists de dashboards)
+router.use('/dashboard-groups', groupRouter);
 
 // Seeding (Testing/Development)
 router.use('/seed', seedRouter);

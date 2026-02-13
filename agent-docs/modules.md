@@ -16,7 +16,7 @@
 | telemetry | `src/modules/telemetry/` | Series temporales (Cassandra) | [endpoints/telemetry.md](endpoints/telemetry.md) |
 | resource-hierarchy | `src/modules/resource-hierarchy/` | Árbol ltree | [endpoints/resource-hierarchy.md](endpoints/resource-hierarchy.md) |
 | error-logs | `src/modules/error-logs/` | Logging errores frontend | [endpoints/error-logs.md](endpoints/error-logs.md) |
-| dashboards | `src/modules/dashboards/` | Dashboards & Analytics multipágina | (endpoints pendientes) |
+| dashboards | `src/modules/dashboards/` | Dashboards & Analytics multipágina | [endpoints/dashboards.md](endpoints/dashboards.md) |
 
 ## Archivos Clave por Módulo
 
@@ -93,3 +93,14 @@ Sistema de tags jerárquicos para clasificar canales:
 - **Integración**: Channel.belongsTo(AssetCategory) via `asset_category_id`
 - **Endpoints**: Ver [asset-categories.md](endpoints/asset-categories.md)
 - **Seed**: `node data/seed/seed-asset-categories.js <org_uuid>`
+
+### dashboards (Nuevo)
+Dashboards multi-página con widgets y analytics:
+- **Modelos**: Dashboard, DashboardPage, Widget, WidgetDataSource, DashboardGroup, DashboardGroupItem, DashboardCollaborator, DashboardGroupCollaborator
+- **Public codes**: DSH-XXXXX-X (dashboards), DGR-XXXXX-X (grupos)
+- **Widgets**: line_chart, bar_chart, gauge, stat_card, table, map, heatmap, pie_chart, area_chart, scatter_chart
+- **Data sources**: entity_type (channel/device/site/resource_hierarchy) + entity_id (public_code)
+- **ACL**: Colaboradores con roles viewer/editor por dashboard y por grupo
+- **Cache**: Redis con prefijos ec:v1:dashboards:list: y ec:v1:dashboard-groups:list:
+- **Endpoints**: Ver [dashboards.md](endpoints/dashboards.md)
+- **Rutas**: `/api/v1/dashboards/*` y `/api/v1/dashboard-groups/*`
