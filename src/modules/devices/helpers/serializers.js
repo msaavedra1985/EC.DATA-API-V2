@@ -128,6 +128,17 @@ export const toPublicDeviceDto = (device) => {
             country_code: device.site.country_code
         };
     }
+
+    if (device.channels && Array.isArray(device.channels)) {
+        dto.channels = device.channels.map(ch => ({
+            id: ch.public_code,
+            name: ch.name,
+            description: ch.description || null,
+            status: ch.status,
+            measurement_type_id: ch.measurement_type_id || null,
+            unit: ch.unit || null
+        }));
+    }
     
     return dto;
 };

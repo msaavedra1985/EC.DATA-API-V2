@@ -4,6 +4,8 @@
 import Device from './models/Device.js';
 import Organization from '../organizations/models/Organization.js';
 import Site from '../sites/models/Site.js';
+import Channel from '../channels/models/Channel.js';
+import '../channels/repository.js';
 import DeviceType from '../device-metadata/models/DeviceType.js';
 import DeviceBrand from '../device-metadata/models/DeviceBrand.js';
 import DeviceModel from '../device-metadata/models/DeviceModel.js';
@@ -257,6 +259,7 @@ export const listDevices = async ({
     status,
     device_type_id,
     search,
+    include_channels = false,
     limit = 20, 
     offset = 0 
 }) => {
@@ -290,9 +293,21 @@ export const listDevices = async ({
         ];
     }
     
+    const includes = [...deviceIncludes];
+
+    if (include_channels) {
+        includes.push({
+            model: Channel,
+            as: 'channels',
+            attributes: ['id', 'public_code', 'name', 'description', 'status', 'measurement_type_id', 'unit'],
+            required: false
+        });
+    }
+
     const { count, rows } = await Device.findAndCountAll({
         where,
-        include: deviceIncludes,
+        include: includes,
+        distinct: true,
         limit: parseInt(limit),
         offset: parseInt(offset),
         order: [['created_at', 'DESC']]

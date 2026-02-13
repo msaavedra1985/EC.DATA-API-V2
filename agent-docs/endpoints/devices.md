@@ -25,11 +25,15 @@
 **Query Parameters**:
 | Param | Tipo | Default | Descripción |
 |-------|------|---------|-------------|
-| limit | number | 20 | Máximo de resultados |
+| limit | number | 20 | Máximo de resultados (1-100) |
 | offset | number | 0 | Offset para paginación |
-| site_public_code | string | - | Filtrar por sitio |
-| type | string | - | Filtrar por tipo de dispositivo |
-| status | string | - | Filtrar por estado (online, offline) |
+| site_id | string | - | Filtrar por sitio (public_code) |
+| device_type_id | number | - | Filtrar por tipo de dispositivo (FK catálogo) |
+| status | string | - | Filtrar por estado (active, inactive, maintenance, decommissioned) |
+| search | string | - | Buscar por nombre o serial_number (iLike) |
+| include_channels | string | false | Si `true`, incluye array de canales del dispositivo |
+| is_active | string | - | Filtrar por activo/inactivo (`true`/`false`) |
+| all | string | - | Solo admins: `true` muestra devices de todas las orgs |
 
 **Respuesta exitosa** (200):
 ```json
@@ -37,23 +41,48 @@
   "ok": true,
   "data": [
     {
-      "public_code": "DEV-XXXXX-X",
+      "id": "DEV-XXXXX-X",
       "name": "Sensor Temperatura Lobby",
-      "type": "temperature_sensor",
       "serial_number": "SN-12345",
-      "status": "online",
-      "last_seen": "2025-01-21T10:30:00Z",
-      "site_public_code": "SIT-XXXXX-X",
+      "status": "active",
+      "last_seen_at": "2025-01-21T10:30:00Z",
+      "organization": {
+        "id": "ORG-XXXXX-X",
+        "slug": "hotel-libertador",
+        "name": "Hotel Libertador",
+        "logo_url": null
+      },
+      "site": {
+        "id": "SIT-XXXXX-X",
+        "name": "Lobby Principal",
+        "city": "Lima",
+        "country_code": "PE"
+      },
+      "channels": [
+        {
+          "id": "CHN-XXXXX-X",
+          "name": "Temperatura Ambiente",
+          "description": "Canal de temperatura",
+          "status": "active",
+          "measurement_type_id": 1,
+          "unit": "°C"
+        }
+      ],
       "is_active": true
     }
   ],
   "meta": {
     "total": 25,
-    "limit": 20,
-    "offset": 0
+    "page": 1,
+    "limit": 20
   }
 }
 ```
+
+**Notas**:
+- `channels` solo se incluye si `include_channels=true`
+- `organization` siempre se incluye con datos básicos (id, slug, name, logo_url)
+- Paginación usa `distinct: true` para conteo correcto con JOINs
 
 ---
 

@@ -399,6 +399,10 @@ export const getDevicesSchema = z.object({
             .string()
             .max(200, 'search no puede exceder 200 caracteres')
             .optional(),
+        include_channels: z
+            .string()
+            .transform((val) => val === 'true')
+            .optional(),
         limit: z
             .string()
             .transform((val) => parseInt(val, 10))
