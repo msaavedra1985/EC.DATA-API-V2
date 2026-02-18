@@ -29,11 +29,14 @@ const userLogger = pino({ name: 'users-routes' });
  */
 router.get('/', authenticate, requireRole(['system-admin', 'org-admin', 'org-manager']), async (req, res, next) => {
     try {
-        const { limit = 20, offset = 0, search, role, organization_id, is_active } = req.query;
+        const { page, limit = 20, offset = 0, search, role, organization_id, is_active } = req.query;
         
         // Validar y sanitizar parámetros de paginación
         const parsedLimit = Math.min(Math.max(parseInt(limit) || 20, 1), 100);
-        const parsedOffset = Math.max(parseInt(offset) || 0, 0);
+        let parsedOffset = Math.max(parseInt(offset) || 0, 0);
+        if (page && parseInt(page) >= 1) {
+            parsedOffset = (parseInt(page) - 1) * parsedLimit;
+        }
         
         const scope = await userServices.getUserScope(req.user.userId, req.user.role);
         
@@ -725,11 +728,14 @@ router.delete('/:id/organizations/:orgId', authenticate, requireRole(['system-ad
 router.get('/:id/audit-logs', authenticate, async (req, res, next) => {
     try {
         const { id } = req.params;
-        const { limit = 20, offset = 0, entity_type, action } = req.query;
+        const { page, limit = 20, offset = 0, entity_type, action } = req.query;
         
-        // Validar parámetros de paginación
+        // Validar y sanitizar parámetros de paginación
         const parsedLimit = Math.min(Math.max(parseInt(limit) || 20, 1), 100);
-        const parsedOffset = Math.max(parseInt(offset) || 0, 0);
+        let parsedOffset = Math.max(parseInt(offset) || 0, 0);
+        if (page && parseInt(page) >= 1) {
+            parsedOffset = (parseInt(page) - 1) * parsedLimit;
+        }
         
         // Obtener modelo para UUID (necesitamos UUID interno)
         const userModel = await userRepository.getUserModelById(id, false);

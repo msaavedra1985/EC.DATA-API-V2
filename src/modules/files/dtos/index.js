@@ -223,6 +223,13 @@ export const listFilesSchema = z.object({
         search: z.string()
             .optional()
             .describe('Búsqueda en nombre de archivo'),
+        page: z
+            .string()
+            .transform((val) => parseInt(val, 10))
+            .refine((val) => !isNaN(val) && val >= 1, {
+                message: 'page debe ser un entero mayor o igual a 1'
+            })
+            .optional(),
         limit: z.string()
             .transform(val => parseInt(val, 10))
             .pipe(z.number().int().min(1).max(100).default(20))
@@ -233,6 +240,12 @@ export const listFilesSchema = z.object({
             .pipe(z.number().int().min(0).default(0))
             .optional()
             .describe('Offset para paginación')
+    }).transform((data) => {
+        if (data.page !== undefined && data.page >= 1) {
+            const limit = data.limit || 20;
+            return { ...data, offset: (data.page - 1) * limit };
+        }
+        return data;
     })
 });
 

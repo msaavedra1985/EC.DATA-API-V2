@@ -403,6 +403,13 @@ export const getDevicesSchema = z.object({
             .string()
             .transform((val) => val === 'true')
             .optional(),
+        page: z
+            .string()
+            .transform((val) => parseInt(val, 10))
+            .refine((val) => !isNaN(val) && val >= 1, {
+                message: 'page debe ser un entero mayor o igual a 1'
+            })
+            .optional(),
         limit: z
             .string()
             .transform((val) => parseInt(val, 10))
@@ -419,6 +426,12 @@ export const getDevicesSchema = z.object({
             })
             .optional()
             .default('0')
+    }).transform((data) => {
+        if (data.page !== undefined && data.page >= 1) {
+            const limit = data.limit || 20;
+            return { ...data, offset: (data.page - 1) * limit };
+        }
+        return data;
     })
 });
 

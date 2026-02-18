@@ -78,6 +78,7 @@ const listFiltersSchema = z.object({
     showInAnalysis: z.coerce.boolean().optional(),
     chartType: chartTypeEnum.optional(),
     aggregationType: aggregationTypeEnum.optional(),
+    page: z.coerce.number().int().min(1).optional(),
     limit: z.coerce.number().int().min(1).max(100).optional().default(50),
     offset: z.coerce.number().int().min(0).optional().default(0),
     sortBy: z.enum(['id', 'display_order', 'column_name', 'name', 'measurement_type_id', 'created_at', 'updated_at']).optional().default('display_order'),
@@ -101,7 +102,12 @@ export const listVariables = async (filters = {}) => {
         throw error;
     }
 
-    const result = await variablesRepository.findAll(validation.data);
+    const validatedData = { ...validation.data };
+    if (validatedData.page !== undefined && validatedData.page >= 1) {
+        validatedData.offset = (validatedData.page - 1) * validatedData.limit;
+    }
+
+    const result = await variablesRepository.findAll(validatedData);
     
     logger.debug({ 
         filters: validation.data, 

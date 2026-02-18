@@ -94,6 +94,13 @@ export const getDashboardsSchema = z.object({
             .string()
             .transform((val) => val === 'true')
             .optional(),
+        page: z
+            .string()
+            .transform((val) => parseInt(val, 10))
+            .refine((val) => !isNaN(val) && val >= 1, {
+                message: 'page debe ser un entero mayor o igual a 1'
+            })
+            .optional(),
         limit: z
             .string()
             .transform((val) => parseInt(val, 10))
@@ -110,6 +117,12 @@ export const getDashboardsSchema = z.object({
             })
             .optional()
             .default('0')
+    }).transform((data) => {
+        if (data.page !== undefined && data.page >= 1) {
+            const limit = data.limit || 20;
+            return { ...data, offset: (data.page - 1) * limit };
+        }
+        return data;
     })
 });
 
@@ -518,6 +531,13 @@ export const getGroupsSchema = z.object({
             .string()
             .max(200, 'search no puede exceder 200 caracteres')
             .optional(),
+        page: z
+            .string()
+            .transform((val) => parseInt(val, 10))
+            .refine((val) => !isNaN(val) && val >= 1, {
+                message: 'page debe ser un entero mayor o igual a 1'
+            })
+            .optional(),
         limit: z
             .string()
             .transform((val) => parseInt(val, 10))
@@ -534,6 +554,12 @@ export const getGroupsSchema = z.object({
             })
             .optional()
             .default('0')
+    }).transform((data) => {
+        if (data.page !== undefined && data.page >= 1) {
+            const limit = data.limit || 20;
+            return { ...data, offset: (data.page - 1) * limit };
+        }
+        return data;
     })
 });
 

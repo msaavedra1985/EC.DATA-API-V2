@@ -186,7 +186,13 @@ const orgLogger = logger.child({ component: 'organizations' });
  */
 router.get('/', authenticate, async (req, res) => {
     try {
-        const { limit = 20, offset = 0, search, parent_id, active_only = 'true' } = req.query;
+        const { page, limit = 20, offset = 0, search, parent_id, active_only = 'true' } = req.query;
+        
+        const parsedLimit = Math.min(Math.max(parseInt(limit) || 20, 1), 100);
+        let parsedOffset = Math.max(parseInt(offset) || 0, 0);
+        if (page && parseInt(page) >= 1) {
+            parsedOffset = (parseInt(page) - 1) * parsedLimit;
+        }
         
         // Obtener scope del usuario
         const scope = await orgServices.getOrganizationScope(req.user.userId, req.user.role);
@@ -205,8 +211,8 @@ router.get('/', authenticate, async (req, res) => {
 
         // Buscar organizaciones con scope aplicado
         const result = await orgRepository.listOrganizations(
-            parseInt(limit),
-            parseInt(offset),
+            parsedLimit,
+            parsedOffset,
             filters
         );
 

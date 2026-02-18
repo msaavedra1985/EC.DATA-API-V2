@@ -257,6 +257,13 @@ export const listSitesSchema = z.object({
             .transform(val => val === 'true')
             .optional()
             .describe('Si es "true", muestra solo sites que NO están en ninguna jerarquía de recursos'),
+        page: z
+            .string()
+            .transform((val) => parseInt(val, 10))
+            .refine((val) => !isNaN(val) && val >= 1, {
+                message: 'page debe ser un entero mayor o igual a 1'
+            })
+            .optional(),
         limit: z
             .string()
             .transform(val => parseInt(val, 10))
@@ -267,6 +274,12 @@ export const listSitesSchema = z.object({
             .transform(val => parseInt(val, 10))
             .optional()
             .default('0')
+    }).transform((data) => {
+        if (data.page !== undefined && data.page >= 1) {
+            const limit = data.limit || 20;
+            return { ...data, offset: (data.page - 1) * limit };
+        }
+        return data;
     })
 });
 

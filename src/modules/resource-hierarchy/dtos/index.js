@@ -21,7 +21,14 @@ const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}
 /**
  * Schema base para paginación
  */
-const paginationSchema = z.object({
+const paginationBaseSchema = z.object({
+    page: z
+        .string()
+        .transform((val) => parseInt(val, 10))
+        .refine((val) => !isNaN(val) && val >= 1, {
+            message: 'page debe ser un entero mayor o igual a 1'
+        })
+        .optional(),
     limit: z
         .string()
         .optional()
@@ -33,6 +40,14 @@ const paginationSchema = z.object({
         .transform(val => val ? parseInt(val, 10) : 0)
         .pipe(z.number().int().min(0))
 });
+
+const pageToOffsetTransform = (data) => {
+    if (data.page !== undefined && data.page >= 1) {
+        const limit = data.limit || 50;
+        return { ...data, offset: (data.page - 1) * limit };
+    }
+    return data;
+};
 
 /**
  * Schema para crear un nuevo nodo
@@ -194,7 +209,7 @@ export const moveNodeSchema = z.object({
  * Solo system-admin puede especificar organization_id para ver otra organización
  */
 export const listNodesSchema = z.object({
-    query: paginationSchema.extend({
+    query: paginationBaseSchema.extend({
         organization_id: z
             .string()
             .min(1, 'organization_id no puede estar vacío')
@@ -224,7 +239,7 @@ export const listNodesSchema = z.object({
             .optional()
             .transform(val => val !== 'false' && val !== '0')
             .default('true')
-    })
+    }).transform(pageToOffsetTransform)
 });
 
 /**
@@ -239,7 +254,7 @@ export const getChildrenSchema = z.object({
             })
             .min(1, 'ID del nodo no puede estar vacío')
     }),
-    query: paginationSchema.extend({
+    query: paginationBaseSchema.extend({
         node_type: z
             .enum(nodeTypes, {
                 errorMap: () => ({ message: 'node_type debe ser: folder, site, o channel' })
@@ -250,7 +265,7 @@ export const getChildrenSchema = z.object({
             .optional()
             .transform(val => val !== 'false' && val !== '0')
             .default('true')
-    })
+    }).transform(pageToOffsetTransform)
 });
 
 /**
@@ -265,7 +280,7 @@ export const getDescendantsSchema = z.object({
             })
             .min(1, 'ID del nodo no puede estar vacío')
     }),
-    query: paginationSchema.extend({
+    query: paginationBaseSchema.extend({
         node_type: z
             .enum(nodeTypes, {
                 errorMap: () => ({ message: 'node_type debe ser: folder, site, o channel' })
@@ -276,7 +291,7 @@ export const getDescendantsSchema = z.object({
             .optional()
             .transform(val => val ? parseInt(val, 10) : null)
             .pipe(z.number().int().min(1).max(50).nullable())
-    })
+    }).transform(pageToOffsetTransform)
 });
 
 /**
@@ -328,7 +343,7 @@ export const getTreeSchema = z.object({
  * Solo system-admin puede especificar organization_id para ver otra organización
  */
 export const getRootsSchema = z.object({
-    query: paginationSchema.extend({
+    query: paginationBaseSchema.extend({
         organization_id: z
             .string()
             .min(1, 'organization_id no puede estar vacío')
@@ -338,7 +353,7 @@ export const getRootsSchema = z.object({
                 errorMap: () => ({ message: 'node_type debe ser: folder, site, o channel' })
             })
             .optional()
-    })
+    }).transform(pageToOffsetTransform)
 });
 
 // ============ SCHEMAS DE ACCESO ============
