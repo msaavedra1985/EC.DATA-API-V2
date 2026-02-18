@@ -527,3 +527,36 @@
 - En impersonate-org: `activeOrgPublicCode` = org impersonada, `primaryOrgPublicCode` = org primaria del admin
 - En exit-impersonation: `activeOrgPublicCode` = null (God View)
 - El frontend usa `primaryOrgPublicCode` para detectar si el admin está volviendo a su org primaria
+
+---
+
+## Seguridad: Hardening Multi-Organización (2026-02-18)
+
+### Audit Trail en cambios de organización
+Los siguientes endpoints registran audit log con `logAuditAction`:
+- **switch-org**: Acción `SWITCH_ORG` con `fromOrgId`, `toOrgId`, `toOrgPublicCode`
+- **impersonate-org**: Acción `IMPERSONATE_ORG` con `targetOrgId`, `targetOrgPublicCode`, `adminUserId`
+- **exit-impersonation**: Acción `EXIT_IMPERSONATION` con `fromOrgId`, `fromOrgPublicCode`
+
+Cada audit log incluye: `userId`, `ipAddress`, `userAgent` vía `extractAuditInfo(req)`
+
+### Validación de organización activa
+`enforceActiveOrganization` middleware verifica:
+- Que la org no esté soft-deleted (`deleted_at IS NULL`)
+- Que la org esté activa (`is_active = true`)
+- Helper `isOrgInactive(org)` centraliza ambas verificaciones
+- Respuesta 403 con código `ORGANIZATION_INACTIVE` si falla
+
+### Cache Redis para resolución de organización
+- Cache bidireccional `UUID ↔ public_code` con TTL de 5 min
+- Keys: `org:resolve:uuid:{uuid}`, `org:resolve:code:{publicCode}`
+- Invalidación automática en update/delete de organizaciones
+- Best-effort: fallback a DB si Redis falla
+
+### Rate limiting por organización
+- 600 requests/minuto por organización (configurable)
+- Key Redis: `ratelimit:org:{orgId}`
+- Headers: `X-Org-RateLimit-Limit`, `X-Org-RateLimit-Remaining`, `X-Org-RateLimit-Reset`
+- Respuesta 429 con `Retry-After` header y código `ORG_RATE_LIMIT_EXCEEDED`
+- System-admin con `canAccessAll` bypass
+- Helper: `enforceOrgWithRateLimit()` combina org enforcement + rate limit

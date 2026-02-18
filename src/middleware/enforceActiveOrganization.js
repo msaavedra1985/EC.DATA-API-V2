@@ -5,6 +5,7 @@
 
 import { canAccessOrganization, getOrganizationScope } from '../modules/organizations/services.js';
 import * as orgRepository from '../modules/organizations/repository.js';
+import { getCache, setCache, deleteCache } from '../db/redis/client.js';
 import { errorResponse } from '../utils/response.js';
 import logger from '../utils/logger.js';
 
@@ -16,26 +17,120 @@ const ADMIN_ROLES = ['system-admin', 'org-admin'];
 // Regex para validar formato UUID
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+// Cache de resolución de org: TTL 5 minutos
+const ORG_RESOLVE_CACHE_PREFIX = 'ec:org_resolve:';
+const ORG_RESOLVE_TTL = 300;
+
 /**
  * Resuelve un ID de organización (public_code o UUID) a su UUID interno
+ * Usa cache Redis (TTL 5 min) para evitar query a DB en cada request
  * 
  * @param {string} orgId - Public code o UUID de la organización
- * @returns {Promise<{uuid: string, publicCode: string}|null>} - UUID y public_code resueltos o null si no existe
+ * @returns {Promise<{uuid: string, publicCode: string, isActive: boolean, isDeleted: boolean}|null>}
  */
 const resolveOrganizationId = async (orgId) => {
     if (!orgId) return null;
     
-    const isUuid = UUID_REGEX.test(orgId);
-    
-    if (isUuid) {
-        // Ya es UUID, obtener public_code si es posible
-        const org = await orgRepository.findOrganizationByIdInternal(orgId);
-        return org ? { uuid: orgId, publicCode: org.public_code } : null;
+    // Intentar leer desde cache Redis
+    const cacheKey = `${ORG_RESOLVE_CACHE_PREFIX}${orgId}`;
+    try {
+        const cached = await getCache(cacheKey);
+        if (cached) {
+            const parsed = typeof cached === 'string' ? JSON.parse(cached) : cached;
+            if (parsed && parsed.uuid) return parsed;
+        }
+    } catch {
+        // Si cache falla, continuar con DB
     }
     
-    // Es public_code, buscar organización
-    const org = await orgRepository.findOrganizationByPublicCodeInternal(orgId);
-    return org ? { uuid: org.id, publicCode: org.public_code } : null;
+    const isUuid = UUID_REGEX.test(orgId);
+    let org;
+    
+    if (isUuid) {
+        org = await orgRepository.findOrganizationByIdInternal(orgId);
+    } else {
+        org = await orgRepository.findOrganizationByPublicCodeInternal(orgId);
+    }
+    
+    if (!org) return null;
+    
+    const result = { 
+        uuid: org.id, 
+        publicCode: org.public_code,
+        isActive: org.is_active !== false,
+        isDeleted: !!org.deleted_at
+    };
+    
+    // Guardar en cache (por UUID y por public_code para ambas vías de lookup)
+    try {
+        const serialized = JSON.stringify(result);
+        await setCache(cacheKey, serialized, ORG_RESOLVE_TTL);
+        // Cache bidireccional: si buscaron por public_code, cachear también por UUID y viceversa
+        const altKey = isUuid 
+            ? `${ORG_RESOLVE_CACHE_PREFIX}${org.public_code}`
+            : `${ORG_RESOLVE_CACHE_PREFIX}${org.id}`;
+        await setCache(altKey, serialized, ORG_RESOLVE_TTL);
+    } catch {
+        // Cache es best-effort, no bloquear si falla
+    }
+    
+    return result;
+};
+
+/**
+ * Invalida el cache de resolución de una organización
+ * Llamar cuando se modifique is_active, deleted_at, o public_code de una org
+ * 
+ * @param {string} orgUuid - UUID de la organización
+ * @param {string} orgPublicCode - Public code de la organización
+ */
+export const invalidateOrgResolveCache = async (orgUuid, orgPublicCode) => {
+    try {
+        if (orgUuid) await deleteCache(`${ORG_RESOLVE_CACHE_PREFIX}${orgUuid}`);
+        if (orgPublicCode) await deleteCache(`${ORG_RESOLVE_CACHE_PREFIX}${orgPublicCode}`);
+    } catch {
+        // Best-effort
+    }
+};
+
+/**
+ * Valida que una organización resuelta esté activa y no eliminada
+ * 
+ * @param {Object} resolved - Resultado de resolveOrganizationId
+ * @param {Object} res - Express response
+ * @param {Object} logContext - Contexto para logging
+ * @returns {boolean} true si la org es inválida (ya se envió respuesta), false si está OK
+ */
+const isOrgInactive = (resolved, res, logContext = {}) => {
+    if (resolved.isDeleted) {
+        orgLogger.warn({
+            ...logContext,
+            organizationId: resolved.uuid
+        }, 'Attempt to access deleted organization');
+
+        errorResponse(res, {
+            message: 'auth.organization.inactive',
+            status: 403,
+            code: 'ORGANIZATION_INACTIVE'
+        });
+        return true;
+    }
+
+    if (!resolved.isActive) {
+        orgLogger.warn({
+            ...logContext,
+            organizationId: resolved.uuid
+        }, 'Attempt to access inactive organization');
+
+        errorResponse(res, {
+            message: 'auth.organization.inactive',
+            status: 403,
+            code: 'ORGANIZATION_INACTIVE'
+        });
+        return true;
+    }
+
+    return false;
 };
 
 /**
@@ -125,6 +220,8 @@ export const enforceActiveOrganization = async (req, res, next) => {
                     code: 'ORGANIZATION_NOT_FOUND'
                 });
             }
+
+            if (isOrgInactive(resolved, res, { clientId: user.clientId, path: req.path })) return;
 
             // Establecer contexto para API key
             req.organizationContext = {
@@ -249,6 +346,8 @@ export const enforceActiveOrganization = async (req, res, next) => {
                 });
             }
 
+            if (isOrgInactive(resolved, res, { userId: user.userId, role: user.role, path: req.path })) return;
+
             // Verificar que el usuario tiene acceso a esta organización
             const hasAccess = await canAccessOrganization(
                 user.userId,
@@ -348,6 +447,8 @@ export const enforceActiveOrganization = async (req, res, next) => {
                 code: 'ACTIVE_ORGANIZATION_NOT_FOUND'
             });
         }
+
+        if (isOrgInactive(resolved, res, { userId: user.userId, role: user.role, path: req.path })) return;
         
         // Determinar si system-admin está impersonando (activeOrgId != primaryOrgId)
         const isImpersonating = user.role === 'system-admin' && 
@@ -380,6 +481,28 @@ export const enforceActiveOrganization = async (req, res, next) => {
         orgLogger.error({ err: error }, 'Error establishing organization context');
         next(error);
     }
+};
+
+/**
+ * Middleware combinado: enforceActiveOrganization + rate limit por organización
+ * Aplica rate limiting basado en organizationContext.id después de establecer el contexto
+ * 
+ * @param {Object} [rateLimitOptions] - Opciones para orgRateLimitMiddleware
+ * @returns {Function[]} Array de middlewares para usar con router
+ */
+export const enforceOrgWithRateLimit = (rateLimitOptions = {}) => {
+    // Importación lazy para evitar dependencia circular
+    let orgRateLimit = null;
+    
+    const rateLimit = async (req, res, next) => {
+        if (!orgRateLimit) {
+            const mod = await import('./rateLimit.js');
+            orgRateLimit = mod.orgRateLimitMiddleware(rateLimitOptions);
+        }
+        return orgRateLimit(req, res, next);
+    };
+    
+    return [enforceActiveOrganization, rateLimit];
 };
 
 export default enforceActiveOrganization;

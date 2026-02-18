@@ -281,6 +281,44 @@ export const deleteCache = async key => {
     }
 };
 
+/**
+ * Incrementa atómicamente un contador en Redis y establece TTL solo en la primera creación
+ * Usa INCR + EXPIRE para operaciones atómicas y race-free
+ * @param {string} key - Clave de Redis
+ * @param {number} ttl - TTL en segundos (solo se aplica cuando el key es nuevo)
+ * @returns {Promise<number>} Nuevo valor del contador
+ */
+export const incrWithTTL = async (key, ttl) => {
+    if (!isRedisAvailable) {
+        cleanExpiredMemoryCache();
+        const current = inMemoryCache.get(key) || 0;
+        const newVal = current + 1;
+        inMemoryCache.set(key, newVal);
+        if (!inMemoryTTLs.has(key)) {
+            inMemoryTTLs.set(key, Date.now() + (ttl * 1000));
+        }
+        return newVal;
+    }
+
+    try {
+        const newCount = await redisClient.incr(key);
+        if (newCount === 1) {
+            await redisClient.expire(key, ttl);
+        }
+        return newCount;
+    } catch (error) {
+        dbLogger.error(error, 'Redis INCR error');
+        activateFallback(`INCR error: ${error.message}`);
+        const current = inMemoryCache.get(key) || 0;
+        const newVal = current + 1;
+        inMemoryCache.set(key, newVal);
+        if (!inMemoryTTLs.has(key)) {
+            inMemoryTTLs.set(key, Date.now() + (ttl * 1000));
+        }
+        return newVal;
+    }
+};
+
 export const isConnected = () => isRedisAvailable;
 
 const ensurePrefix = (key) => {

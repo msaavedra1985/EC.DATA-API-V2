@@ -20,6 +20,7 @@ import * as authRepository from './repository.js';
 import * as sessionContextCache from './sessionContextCache.js';
 import * as organizationService from '../organizations/services.js';
 import * as organizationRepository from '../organizations/repository.js';
+import { logAuditAction, extractAuditInfo } from '../../helpers/auditLog.js';
 
 const router = express.Router();
 
@@ -1169,6 +1170,20 @@ router.post('/switch-org', authenticate, validate(switchOrgSchema), async (req, 
             await sessionContextCache.setSessionContext(userId, updatedContext);
         }
         
+        // Audit log para switch de organización
+        logAuditAction({
+            entityType: 'auth',
+            entityId: req.user.userId,
+            action: 'organization_switched',
+            performedBy: req.user.userId,
+            metadata: {
+                previous_org_id: req.user.activeOrgId || null,
+                new_org_public_code: org.public_code,
+                new_org_name: org.name
+            },
+            ...extractAuditInfo(req)
+        });
+        
         return successResponse(res, {
             ...result,
             session_context: sessionContextCache.sanitizeSessionContext(updatedContext)
@@ -1311,18 +1326,17 @@ router.post('/impersonate-org', authenticate, async (req, res, next) => {
         
         await sessionContextCache.setSessionContext(userId, updatedContext);
         
-        // Log de auditoría para impersonación
-        const { logAuditAction } = await import('../../helpers/auditLog.js');
-        await logAuditAction({
+        // Audit log para inicio de impersonación
+        logAuditAction({
             entityType: 'auth',
             entityId: userId,
             action: 'impersonate_started',
             performedBy: userId,
             metadata: { 
-                impersonated_org_public_code: orgPublicCode
+                impersonated_org_public_code: orgPublicCode,
+                impersonated_org_name: org.name
             },
-            ipAddress: req.ip,
-            userAgent: req.headers['user-agent'],
+            ...extractAuditInfo(req),
             impersonatedOrgId: organizationUuid
         });
         
@@ -1425,9 +1439,8 @@ router.post('/exit-impersonation', authenticate, async (req, res, next) => {
         
         await sessionContextCache.setSessionContext(userId, updatedContext);
         
-        // Log de auditoría para fin de impersonación
-        const { logAuditAction } = await import('../../helpers/auditLog.js');
-        await logAuditAction({
+        // Audit log para fin de impersonación
+        logAuditAction({
             entityType: 'auth',
             entityId: userId,
             action: 'impersonate_ended',
@@ -1435,8 +1448,7 @@ router.post('/exit-impersonation', authenticate, async (req, res, next) => {
             metadata: { 
                 previous_org_id: req.user.activeOrgId || null
             },
-            ipAddress: req.ip,
-            userAgent: req.headers['user-agent']
+            ...extractAuditInfo(req)
         });
         
         return successResponse(res, {

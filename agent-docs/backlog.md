@@ -83,6 +83,26 @@
 
 ---
 
+## Auth Security Hardening
+
+### Completado ✅ (2026-02-18)
+- [x] Audit trail en switch-org, impersonate-org, exit-impersonation
+- [x] Validación org activa/no-deleted en enforceActiveOrganization middleware
+- [x] Cache Redis para resolveOrganizationId (TTL 5min, bidireccional)
+- [x] Invalidación de cache en update/delete de organizaciones
+- [x] Rate limiting por organización (600 req/min, headers estándar, 429 con Retry-After)
+- [x] Helper `enforceOrgWithRateLimit()` para combinar enforcement + rate limit
+- [x] Traducciones i18n (ES/EN) para errores de rate limit y org inactiva
+
+### Pendiente
+- [ ] Refactor auth/index.js (1563 líneas) → dividir en sub-módulos
+- [ ] Refactor auth/services.js (1037 líneas) → dividir en sub-módulos
+- [ ] Tests unitarios para orgRateLimitMiddleware
+- [ ] Tests unitarios para enforceActiveOrganization (validación is_active/deleted_at)
+- [ ] Documentación OpenAPI/Swagger para nuevos headers de rate limit
+
+---
+
 ## Historial de Completados
 
 ### 2026-02-04

@@ -21,6 +21,7 @@ import {
     cacheOrganizationHierarchy,
     getCachedOrganizationHierarchy 
 } from './cache.js';
+import { invalidateOrgResolveCache } from '../../middleware/enforceActiveOrganization.js';
 import logger from '../../utils/logger.js';
 import { generateUuidV7, generateHumanId, generatePublicCode } from '../../utils/identifiers.js';
 import Organization from './models/Organization.js';
@@ -1510,8 +1511,9 @@ router.put('/:id', authenticate, requireOrgPermission('edit'), async (req, res) 
             userAgent: req.get('user-agent')
         });
 
-        // Invalidar caché
+        // Invalidar cachés
         await invalidateOrganizationCache(id, organization.parent_id);
+        await invalidateOrgResolveCache(req.organizationInternal.id, organization.public_code);
 
         res.json({
             ok: true,
@@ -1909,8 +1911,9 @@ router.delete('/:id', authenticate, requireOrgPermission('delete'), async (req, 
             userAgent: req.get('user-agent')
         });
 
-        // Invalidar caché
+        // Invalidar cachés
         await invalidateOrganizationCache(id, organization.parent_id);
+        await invalidateOrgResolveCache(req.organizationInternal.id, organization.public_code);
 
         orgLogger.info({ orgId: id, membershipsRemoved: membershipsCount }, 'Organization deleted');
 

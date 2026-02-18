@@ -391,7 +391,31 @@ const safeAddIndex = async (table, fields, options) => {
 
 ## Performance
 
-(Agregar problemas de performance aquí)
+### Redis cache para resolveOrganizationId
+**Fecha**: 2026-02-18
+**Síntoma**: Cada request autenticado hacía un query a DB para resolver `public_code → UUID` en `resolveOrganizationId`
+**Solución**: 
+- Cache bidireccional en Redis: `org:resolve:uuid:{uuid}` → publicCode y `org:resolve:code:{publicCode}` → uuid
+- TTL de 5 minutos (300s)
+- Best-effort: si Redis falla, se cae a DB sin bloquear
+- Función `invalidateOrgResolveCache(uuid, publicCode)` exportada para invalidar en update/delete
+- Invalidación llamada desde `organizations/routes.js` en handlers de update y delete
+
+**Archivos afectados**: `src/middleware/enforceActiveOrganization.js`, `src/modules/organizations/routes.js`
+
+### Rate limiting por organización
+**Fecha**: 2026-02-18
+**Síntoma**: No había límite de requests por organización, solo por usuario/IP
+**Solución**: 
+- `orgRateLimitMiddleware` en `src/middleware/rateLimit.js` con key `ratelimit:org:{orgId}`
+- Default: 600 requests/minuto por organización
+- Headers: `X-Org-RateLimit-Limit`, `X-Org-RateLimit-Remaining`, `X-Org-RateLimit-Reset`
+- `Retry-After` header en respuesta 429
+- Skip para `canAccessAll` (system-admin sin org específica)
+- Helper `enforceOrgWithRateLimit()` en enforceActiveOrganization.js combina ambos middlewares
+- Best-effort: si Redis falla, no bloquea requests
+
+**Archivos afectados**: `src/middleware/rateLimit.js`, `src/middleware/enforceActiveOrganization.js`
 
 ---
 
