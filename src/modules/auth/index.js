@@ -534,33 +534,52 @@ router.get('/me', authenticate, async (req, res, next) => {
         // Obtener session_context desde Redis
         let sessionContext = await sessionContextCache.getSessionContext(userId);
         
-        // Si session_context es null (cache expirado), reconstruirlo desde DB
+        // Si session_context es null (cache expirado), reconstruirlo desde DB + JWT
         // Esto garantiza que el frontend siempre reciba session_context
         if (!sessionContext) {
             const primaryOrg = await organizationService.getPrimaryOrganization(userId);
-            const activeOrgId = primaryOrg ? primaryOrg.organization_id : null;
+            const primaryOrgId = primaryOrg ? primaryOrg.organization_id : null;
             const canAccessAllOrgs = user.role?.name === 'system-admin';
+            
+            // CRÍTICO: Usar activeOrgId del JWT, NO asumir que siempre es la org primaria
+            // Cuando el system-admin está impersonando, activeOrgId del JWT es la org impersonada
+            const activeOrgId = req.user.activeOrgId !== undefined ? req.user.activeOrgId : primaryOrgId;
             
             // Obtener info de la org primaria
             let primaryOrgInfo = null;
-            if (activeOrgId) {
-                const orgDetails = await organizationRepository.findOrganizationByIdInternal(activeOrgId);
-                if (orgDetails) {
+            if (primaryOrgId) {
+                const primaryOrgDetails = await organizationRepository.findOrganizationByIdInternal(primaryOrgId);
+                if (primaryOrgDetails) {
                     primaryOrgInfo = {
-                        publicCode: orgDetails.public_code,
-                        name: orgDetails.name,
-                        logoUrl: orgDetails.logo_url
+                        publicCode: primaryOrgDetails.public_code,
+                        name: primaryOrgDetails.name,
+                        logoUrl: primaryOrgDetails.logo_url
                     };
                 }
+            }
+            
+            // Obtener info de la org activa (puede ser diferente a la primaria si está impersonando)
+            let activeOrgInfo = null;
+            if (activeOrgId && activeOrgId !== primaryOrgId) {
+                const activeOrgDetails = await organizationRepository.findOrganizationByIdInternal(activeOrgId);
+                if (activeOrgDetails) {
+                    activeOrgInfo = {
+                        publicCode: activeOrgDetails.public_code,
+                        name: activeOrgDetails.name,
+                        logoUrl: activeOrgDetails.logo_url
+                    };
+                }
+            } else if (activeOrgId && activeOrgId === primaryOrgId) {
+                activeOrgInfo = primaryOrgInfo;
             }
             
             // Reconstruir y cachear session_context
             sessionContext = {
                 activeOrgId,
-                activeOrgPublicCode: primaryOrgInfo?.publicCode || null,
-                activeOrgName: primaryOrgInfo?.name || null,
-                activeOrgLogoUrl: primaryOrgInfo?.logoUrl || null,
-                primaryOrgId: activeOrgId,
+                activeOrgPublicCode: activeOrgInfo?.publicCode || null,
+                activeOrgName: activeOrgInfo?.name || null,
+                activeOrgLogoUrl: activeOrgInfo?.logoUrl || null,
+                primaryOrgId,
                 primaryOrgPublicCode: primaryOrgInfo?.publicCode || null,
                 primaryOrgName: primaryOrgInfo?.name || null,
                 primaryOrgLogoUrl: primaryOrgInfo?.logoUrl || null,
@@ -577,8 +596,6 @@ router.get('/me', authenticate, async (req, res, next) => {
         }
 
         // Filtrar user a solo campos relevantes para el frontend
-        // NO exponemos: id, role_id, human_id, organization_id, created_at, updated_at, 
-        // deleted_at, email_verified_at, last_login_at, is_active
         const userResponse = {
             public_code: user.public_code,
             email: user.email,
@@ -1107,11 +1124,50 @@ router.post('/switch-org', authenticate, validate(switchOrgSchema), async (req, 
         const result = await authServices.switchOrganization(userId, organizationUuid, sessionData);
         
         // Actualizar session_context en Redis con la nueva activeOrgId e info de la org
-        const updatedContext = await sessionContextCache.updateActiveOrg(userId, organizationUuid, {
+        // Si updateActiveOrg falla (cache expirado), reconstruir contexto completo
+        let updatedContext = await sessionContextCache.updateActiveOrg(userId, organizationUuid, {
             publicCode: org.public_code,
             name: org.name,
             logoUrl: org.logo_url
         });
+        
+        if (!updatedContext) {
+            const user = await authRepository.findUserById(userId);
+            const primaryOrg = await organizationService.getPrimaryOrganization(userId);
+            const primaryOrgId = primaryOrg ? primaryOrg.organization_id : null;
+            
+            let primaryOrgInfo = null;
+            if (primaryOrgId) {
+                const primaryOrgDetails = await organizationRepository.findOrganizationByIdInternal(primaryOrgId);
+                if (primaryOrgDetails) {
+                    primaryOrgInfo = {
+                        publicCode: primaryOrgDetails.public_code,
+                        name: primaryOrgDetails.name,
+                        logoUrl: primaryOrgDetails.logo_url
+                    };
+                }
+            }
+            
+            updatedContext = {
+                activeOrgId: organizationUuid,
+                activeOrgPublicCode: org.public_code,
+                activeOrgName: org.name,
+                activeOrgLogoUrl: org.logo_url || null,
+                primaryOrgId,
+                primaryOrgPublicCode: primaryOrgInfo?.publicCode || null,
+                primaryOrgName: primaryOrgInfo?.name || null,
+                primaryOrgLogoUrl: primaryOrgInfo?.logoUrl || null,
+                canAccessAllOrgs: user?.role?.name === 'system-admin',
+                role: user?.role?.name || null,
+                email: user?.email || null,
+                firstName: user?.first_name || null,
+                lastName: user?.last_name || null,
+                userId,
+                userPublicCode: user?.public_code || null
+            };
+            
+            await sessionContextCache.setSessionContext(userId, updatedContext);
+        }
         
         return successResponse(res, {
             ...result,
@@ -1215,12 +1271,45 @@ router.post('/impersonate-org', authenticate, async (req, res, next) => {
         // Generar nuevos tokens con la org activa (impersonating se calculará automáticamente)
         const result = await authServices.switchOrganization(userId, organizationUuid, sessionData);
         
-        // Actualizar session_context en Redis con info completa de la org
-        const updatedContext = await sessionContextCache.updateActiveOrg(userId, organizationUuid, {
-            publicCode: org.public_code,
-            name: org.name,
-            logoUrl: org.logo_url
-        });
+        // Reconstruir session_context completo en Redis (no depender de updateActiveOrg que falla si cache expirado)
+        const existingContext = await sessionContextCache.getSessionContext(userId);
+        const user = await authRepository.findUserById(userId);
+        const primaryOrg = await organizationService.getPrimaryOrganization(userId);
+        const primaryOrgId = primaryOrg ? primaryOrg.organization_id : null;
+        
+        // Obtener info de la org primaria
+        let primaryOrgInfo = null;
+        if (primaryOrgId) {
+            const primaryOrgDetails = await organizationRepository.findOrganizationByIdInternal(primaryOrgId);
+            if (primaryOrgDetails) {
+                primaryOrgInfo = {
+                    publicCode: primaryOrgDetails.public_code,
+                    name: primaryOrgDetails.name,
+                    logoUrl: primaryOrgDetails.logo_url
+                };
+            }
+        }
+        
+        const updatedContext = {
+            ...(existingContext || {}),
+            activeOrgId: organizationUuid,
+            activeOrgPublicCode: org.public_code,
+            activeOrgName: org.name,
+            activeOrgLogoUrl: org.logo_url || null,
+            primaryOrgId,
+            primaryOrgPublicCode: primaryOrgInfo?.publicCode || null,
+            primaryOrgName: primaryOrgInfo?.name || null,
+            primaryOrgLogoUrl: primaryOrgInfo?.logoUrl || null,
+            canAccessAllOrgs: true,
+            role: user?.role?.name || 'system-admin',
+            email: user?.email || existingContext?.email || null,
+            firstName: user?.first_name || existingContext?.firstName || null,
+            lastName: user?.last_name || existingContext?.lastName || null,
+            userId,
+            userPublicCode: user?.public_code || existingContext?.userPublicCode || null
+        };
+        
+        await sessionContextCache.setSessionContext(userId, updatedContext);
         
         // Log de auditoría para impersonación
         const { logAuditAction } = await import('../../helpers/auditLog.js');
@@ -1300,8 +1389,41 @@ router.post('/exit-impersonation', authenticate, async (req, res, next) => {
         // Generar nuevos tokens sin org activa
         const tokens = await authServices.generateTokensForUser(user, sessionData);
         
-        // Actualizar session_context en Redis (null para admin global)
-        const updatedContext = await sessionContextCache.updateActiveOrg(userId, null);
+        // Reconstruir session_context completo para modo admin global (sin org activa)
+        const primaryOrg = await organizationService.getPrimaryOrganization(userId);
+        const primaryOrgId = primaryOrg ? primaryOrg.organization_id : null;
+        
+        let primaryOrgInfo = null;
+        if (primaryOrgId) {
+            const primaryOrgDetails = await organizationRepository.findOrganizationByIdInternal(primaryOrgId);
+            if (primaryOrgDetails) {
+                primaryOrgInfo = {
+                    publicCode: primaryOrgDetails.public_code,
+                    name: primaryOrgDetails.name,
+                    logoUrl: primaryOrgDetails.logo_url
+                };
+            }
+        }
+        
+        const updatedContext = {
+            activeOrgId: null,
+            activeOrgPublicCode: null,
+            activeOrgName: null,
+            activeOrgLogoUrl: null,
+            primaryOrgId,
+            primaryOrgPublicCode: primaryOrgInfo?.publicCode || null,
+            primaryOrgName: primaryOrgInfo?.name || null,
+            primaryOrgLogoUrl: primaryOrgInfo?.logoUrl || null,
+            canAccessAllOrgs: true,
+            role: user.role?.name || 'system-admin',
+            email: user.email,
+            firstName: user.first_name,
+            lastName: user.last_name,
+            userId,
+            userPublicCode: user.public_code || null
+        };
+        
+        await sessionContextCache.setSessionContext(userId, updatedContext);
         
         // Log de auditoría para fin de impersonación
         const { logAuditAction } = await import('../../helpers/auditLog.js');

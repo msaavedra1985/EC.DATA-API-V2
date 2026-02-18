@@ -23,6 +23,25 @@
 
 **Archivos afectados**: `src/modules/auth/services.js`, `src/modules/auth/sessionContextCache.js`
 
+### session_context null o campos null en impersonate-org y /me
+**Fecha**: 2026-02-18
+**Síntoma**: POST /impersonate-org devuelve `session_context: null`. GET /me estando impersonando devuelve `activeOrgPublicCode: null` y `impersonatedOrg.publicCode: null`. `primaryOrgPublicCode` siempre null.
+**Causa**: Múltiples problemas:
+1. Login y refresh NO poblaban campos `*PublicCode`, `*Name`, `*LogoUrl` en el session_context de Redis
+2. `/me` al reconstruir cache asumía `activeOrgId = primaryOrgId` en vez de leer `req.user.activeOrgId` del JWT
+3. `updateActiveOrg()` retornaba null si no había cache previo en Redis, y ese null se pasaba a `sanitizeSessionContext()`
+4. `switchOrganization()` llamaba `updateActiveOrg()` sin pasar orgInfo (publicCode, name, logoUrl)
+**Solución**: 
+- Login y refresh ahora resuelven info pública de org primaria y activa antes de guardar session_context
+- `/me` usa `req.user.activeOrgId` del JWT como fuente de verdad para la org activa
+- `/me` resuelve org activa y primaria por separado (pueden ser diferentes durante impersonación)
+- `impersonate-org` y `exit-impersonation` reconstruyen session_context completo (no dependen de `updateActiveOrg`)
+- `switch-org` tiene fallback: si `updateActiveOrg` retorna null, reconstruye contexto completo
+- `switchOrganization` en services.js ahora pasa orgInfo al `updateActiveOrg`
+- Agregados `public_code` y `logo_url` a los attributes del query en `switchOrganization`
+
+**Archivos afectados**: `src/modules/auth/services.js`, `src/modules/auth/index.js`
+
 ---
 
 ## Organizaciones

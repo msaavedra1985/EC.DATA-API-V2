@@ -1,6 +1,6 @@
 # Auth Endpoints
 
-> **Última actualización**: 2026-01-21
+> **Última actualización**: 2026-02-18
 > 
 > **IMPORTANTE**: Este archivo DEBE actualizarse cuando se modifique cualquier endpoint de autenticación.
 
@@ -18,7 +18,7 @@
 | GET | `/api/v1/auth/organizations` | Organizaciones del usuario | Sí |
 | POST | `/api/v1/auth/switch-org` | Cambiar organización activa | Sí |
 | POST | `/api/v1/auth/impersonate-org` | Impersonar organización | Sí (system-admin) |
-| POST | `/api/v1/auth/stop-impersonation` | Detener impersonación | Sí |
+| POST | `/api/v1/auth/exit-impersonation` | Detener impersonación | Sí |
 
 ---
 
@@ -239,27 +239,42 @@
       "email": "user@example.com",
       "first_name": "Juan",
       "last_name": "Pérez",
-      "role": "user"
+      "avatar_url": null,
+      "language": "es",
+      "timezone": "America/Lima",
+      "role": "user",
+      "permissions": []
     },
     "session_context": {
-      "active_org": {
-        "public_code": "ORG-XXXXX-X",
-        "name": "Mi Organización"
-      },
-      "primary_org": {
-        "public_code": "ORG-XXXXX-X",
-        "name": "Mi Organización"
-      },
-      "can_access_all_orgs": false
-    }
+      "activeOrgPublicCode": "ORG-XXXXX-X",
+      "activeOrgName": "Mi Organización",
+      "activeOrgLogoUrl": "https://...",
+      "primaryOrgPublicCode": "ORG-XXXXX-X",
+      "primaryOrgName": "Mi Organización",
+      "primaryOrgLogoUrl": "https://...",
+      "canAccessAllOrgs": false,
+      "role": "user",
+      "email": "user@example.com",
+      "firstName": "Juan",
+      "lastName": "Pérez",
+      "userPublicCode": "USR-XXXXX-X"
+    },
+    "impersonating": false,
+    "impersonatedOrg": null
   }
 }
 ```
 
+**Campos de impersonación** (solo para system-admin):
+- `impersonating`: boolean, true si está impersonando otra org
+- `impersonatedOrg.publicCode`: public_code de la org impersonada (null si no impersona)
+
 **Notas**:
 - **Lento**: ~50-200ms (consulta DB + reconstruye cache)
 - Usar solo como fallback cuando `/session-context` retorna 404
-- Reconstruye session_context en Redis
+- Reconstruye session_context en Redis si el cache expiró
+- Cuando reconstruye, usa `activeOrgId` del JWT para determinar la org activa correcta (no asume org primaria)
+- `primaryOrgPublicCode` siempre se resuelve desde DB, incluso durante impersonación
 
 ---
 
@@ -340,7 +355,7 @@
 **Body**:
 ```json
 {
-  "organization_public_code": "ORG-XXXXX-X"
+  "organization_id": "ORG-XXXXX-X"
 }
 ```
 
@@ -350,9 +365,23 @@
   "ok": true,
   "data": {
     "access_token": "eyJhbG...",
-    "active_org": {
-      "public_code": "ORG-XXXXX-X",
-      "name": "Hotel Lima"
+    "refresh_token": "eyJhbG...",
+    "expires_in": "15m",
+    "token_type": "Bearer",
+    "active_organization_id": "uuid",
+    "session_context": {
+      "activeOrgPublicCode": "ORG-XXXXX-X",
+      "activeOrgName": "Hotel Lima",
+      "activeOrgLogoUrl": "https://...",
+      "primaryOrgPublicCode": "ORG-YYYYY-Y",
+      "primaryOrgName": "Mi Org Primaria",
+      "primaryOrgLogoUrl": "https://...",
+      "canAccessAllOrgs": false,
+      "role": "user",
+      "email": "user@example.com",
+      "firstName": "Juan",
+      "lastName": "Pérez",
+      "userPublicCode": "USR-XXXXX-X"
     }
   }
 }
@@ -361,12 +390,14 @@
 **Errores**:
 | Status | Código | Descripción |
 |--------|--------|-------------|
-| 403 | ACCESS_DENIED | Usuario no pertenece a esa organización |
-| 404 | ORG_NOT_FOUND | Organización no existe |
+| 403 | ORGANIZATION_ACCESS_DENIED | Usuario no pertenece a esa organización |
+| 404 | ORGANIZATION_NOT_FOUND | Organización no existe |
 
 **Notas**:
-- Genera nuevo access_token con `activeOrgId` actualizado
-- Actualiza session_context en Redis
+- Acepta `organization_id` como public_code (ORG-xxx) o UUID
+- Genera nuevos tokens JWT con `activeOrgId` actualizado
+- Actualiza session_context completo en Redis con info pública de la org
+- Si el cache de Redis estaba expirado, lo reconstruye completamente
 
 ---
 
@@ -379,7 +410,7 @@
 **Body**:
 ```json
 {
-  "organization_public_code": "ORG-XXXXX-X"
+  "organization_id": "ORG-XXXXX-X"
 }
 ```
 
@@ -389,9 +420,27 @@
   "ok": true,
   "data": {
     "access_token": "eyJhbG...",
-    "impersonating": {
-      "public_code": "ORG-XXXXX-X",
-      "name": "Hotel Lima"
+    "refresh_token": "eyJhbG...",
+    "expires_in": "15m",
+    "token_type": "Bearer",
+    "active_organization_id": "uuid",
+    "session_context": {
+      "activeOrgPublicCode": "ORG-XXXXX-X",
+      "activeOrgName": "Hotel Lima",
+      "activeOrgLogoUrl": "https://...",
+      "primaryOrgPublicCode": "ORG-YYYYY-Y",
+      "primaryOrgName": "Admin Org",
+      "primaryOrgLogoUrl": null,
+      "canAccessAllOrgs": true,
+      "role": "system-admin",
+      "email": "admin@example.com",
+      "firstName": "Admin",
+      "lastName": "User",
+      "userPublicCode": "USR-XXXXX-X"
+    },
+    "impersonating": true,
+    "impersonatedOrg": {
+      "publicCode": "ORG-XXXXX-X"
     }
   }
 }
@@ -400,21 +449,24 @@
 **Errores**:
 | Status | Código | Descripción |
 |--------|--------|-------------|
-| 403 | FORBIDDEN | No es system-admin |
-| 404 | ORG_NOT_FOUND | Organización no existe |
+| 403 | SYSTEM_ADMIN_REQUIRED | No es system-admin |
+| 404 | ORGANIZATION_NOT_FOUND | Organización no existe |
 
 **Notas**:
 - Solo disponible para `system-admin`
-- JWT incluye `isImpersonating: true` y `originalUserId`
+- JWT incluye `impersonating: true` en el payload
+- session_context siempre se reconstruye completo (no depende de cache previo)
+- `activeOrgPublicCode` refleja la org impersonada
+- `primaryOrgPublicCode` refleja la org primaria del admin (para lógica de exit-impersonation en frontend)
 - **Audit log obligatorio** para todas las acciones durante impersonación
 
 ---
 
-## POST /api/v1/auth/stop-impersonation
+## POST /api/v1/auth/exit-impersonation
 
-**Propósito**: Detener impersonación y volver a God View
+**Propósito**: Detener impersonación y volver a God View (admin global)
 
-**Autenticación**: Bearer JWT (durante impersonación)
+**Autenticación**: Bearer JWT (durante impersonación, requiere `system-admin`)
 
 **Respuesta exitosa** (200):
 ```json
@@ -422,10 +474,56 @@
   "ok": true,
   "data": {
     "access_token": "eyJhbG...",
-    "message": "Impersonación terminada"
+    "refresh_token": "eyJhbG...",
+    "expires_in": "15m",
+    "token_type": "Bearer",
+    "session_context": {
+      "activeOrgPublicCode": null,
+      "activeOrgName": null,
+      "activeOrgLogoUrl": null,
+      "primaryOrgPublicCode": "ORG-YYYYY-Y",
+      "primaryOrgName": "Admin Org",
+      "primaryOrgLogoUrl": null,
+      "canAccessAllOrgs": true,
+      "role": "system-admin",
+      "email": "admin@example.com",
+      "firstName": "Admin",
+      "lastName": "User",
+      "userPublicCode": "USR-XXXXX-X"
+    },
+    "impersonating": false,
+    "impersonatedOrg": null
   }
 }
 ```
 
 **Notas**:
 - Vuelve al estado de God View (`activeOrgId: null`, `canAccessAllOrgs: true`)
+- session_context se reconstruye completo con `primaryOrgPublicCode` poblado
+- `activeOrgPublicCode` queda null (sin org activa = modo admin global)
+
+---
+
+## Campos de session_context (referencia)
+
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| activeOrgPublicCode | string\|null | Public code de la org activa actual |
+| activeOrgName | string\|null | Nombre de la org activa |
+| activeOrgLogoUrl | string\|null | URL del logo de la org activa |
+| primaryOrgPublicCode | string\|null | Public code de la org primaria del usuario |
+| primaryOrgName | string\|null | Nombre de la org primaria |
+| primaryOrgLogoUrl | string\|null | URL del logo de la org primaria |
+| canAccessAllOrgs | boolean | true solo para system-admin |
+| role | string | Nombre del rol del usuario |
+| email | string | Email del usuario |
+| firstName | string | Nombre del usuario |
+| lastName | string | Apellido del usuario |
+| userPublicCode | string | Public code del usuario |
+
+**Reglas de negocio**:
+- En login: `activeOrgPublicCode` = org primaria del usuario
+- En switch-org: `activeOrgPublicCode` = org seleccionada
+- En impersonate-org: `activeOrgPublicCode` = org impersonada, `primaryOrgPublicCode` = org primaria del admin
+- En exit-impersonation: `activeOrgPublicCode` = null (God View)
+- El frontend usa `primaryOrgPublicCode` para detectar si el admin está volviendo a su org primaria

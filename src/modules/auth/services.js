@@ -232,15 +232,49 @@ export const login = async (identifier, password, sessionData = {}) => {
     const { setSessionContext, SESSION_TTL_NORMAL, SESSION_TTL_EXTENDED } = await import('./sessionContextCache.js');
     const sessionTTL = sessionData.rememberMe ? SESSION_TTL_EXTENDED : SESSION_TTL_NORMAL;
     
+    const primaryOrgId = primaryOrg ? primaryOrg.organization_id : null;
+    const activeOrgId = sessionData.activeOrgId || primaryOrgId;
+    
+    // Resolver info pública de la org primaria
+    let primaryOrgInfo = null;
+    if (primaryOrgId) {
+        const Organization = (await import('../organizations/models/Organization.js')).default;
+        const orgDetails = await Organization.findByPk(primaryOrgId, {
+            attributes: ['public_code', 'name', 'logo_url']
+        });
+        if (orgDetails) {
+            primaryOrgInfo = { publicCode: orgDetails.public_code, name: orgDetails.name, logoUrl: orgDetails.logo_url };
+        }
+    }
+    
+    // Resolver info pública de la org activa (si es diferente a la primaria)
+    let activeOrgInfo = primaryOrgInfo;
+    if (activeOrgId && activeOrgId !== primaryOrgId) {
+        const Organization = (await import('../organizations/models/Organization.js')).default;
+        const orgDetails = await Organization.findByPk(activeOrgId, {
+            attributes: ['public_code', 'name', 'logo_url']
+        });
+        if (orgDetails) {
+            activeOrgInfo = { publicCode: orgDetails.public_code, name: orgDetails.name, logoUrl: orgDetails.logo_url };
+        }
+    }
+    
     await setSessionContext(user.id, {
-        activeOrgId: sessionData.activeOrgId || (primaryOrg ? primaryOrg.organization_id : null),
-        primaryOrgId: primaryOrg ? primaryOrg.organization_id : null,
+        activeOrgId,
+        activeOrgPublicCode: activeOrgInfo?.publicCode || null,
+        activeOrgName: activeOrgInfo?.name || null,
+        activeOrgLogoUrl: activeOrgInfo?.logoUrl || null,
+        primaryOrgId,
+        primaryOrgPublicCode: primaryOrgInfo?.publicCode || null,
+        primaryOrgName: primaryOrgInfo?.name || null,
+        primaryOrgLogoUrl: primaryOrgInfo?.logoUrl || null,
         canAccessAllOrgs: user.role && user.role.name === 'system-admin',
         role: user.role ? user.role.name : null,
         email: user.email,
         firstName: user.first_name,
         lastName: user.last_name,
-        userId: user.id
+        userId: user.id,
+        userPublicCode: user.public_code || null
     }, sessionTTL);
 
     return {
@@ -445,15 +479,49 @@ export const refreshAccessToken = async (refreshToken, sessionData = {}) => {
         const { setSessionContext, SESSION_TTL_NORMAL, SESSION_TTL_EXTENDED } = await import('./sessionContextCache.js');
         const sessionTTL = isExtendedSession ? SESSION_TTL_EXTENDED : SESSION_TTL_NORMAL;
         
+        const refreshPrimaryOrgId = decoded.primaryOrgId || (primaryOrg ? primaryOrg.organization_id : null);
+        const refreshActiveOrgId = decoded.activeOrgId || refreshPrimaryOrgId;
+        
+        // Resolver info pública de la org primaria
+        let refreshPrimaryOrgInfo = null;
+        if (refreshPrimaryOrgId) {
+            const Organization = (await import('../organizations/models/Organization.js')).default;
+            const orgDetails = await Organization.findByPk(refreshPrimaryOrgId, {
+                attributes: ['public_code', 'name', 'logo_url']
+            });
+            if (orgDetails) {
+                refreshPrimaryOrgInfo = { publicCode: orgDetails.public_code, name: orgDetails.name, logoUrl: orgDetails.logo_url };
+            }
+        }
+        
+        // Resolver info pública de la org activa
+        let refreshActiveOrgInfo = refreshPrimaryOrgInfo;
+        if (refreshActiveOrgId && refreshActiveOrgId !== refreshPrimaryOrgId) {
+            const Organization = (await import('../organizations/models/Organization.js')).default;
+            const orgDetails = await Organization.findByPk(refreshActiveOrgId, {
+                attributes: ['public_code', 'name', 'logo_url']
+            });
+            if (orgDetails) {
+                refreshActiveOrgInfo = { publicCode: orgDetails.public_code, name: orgDetails.name, logoUrl: orgDetails.logo_url };
+            }
+        }
+        
         await setSessionContext(userId, {
-            activeOrgId: decoded.activeOrgId || (primaryOrg ? primaryOrg.organization_id : null),
-            primaryOrgId: decoded.primaryOrgId || (primaryOrg ? primaryOrg.organization_id : null),
+            activeOrgId: refreshActiveOrgId,
+            activeOrgPublicCode: refreshActiveOrgInfo?.publicCode || null,
+            activeOrgName: refreshActiveOrgInfo?.name || null,
+            activeOrgLogoUrl: refreshActiveOrgInfo?.logoUrl || null,
+            primaryOrgId: refreshPrimaryOrgId,
+            primaryOrgPublicCode: refreshPrimaryOrgInfo?.publicCode || null,
+            primaryOrgName: refreshPrimaryOrgInfo?.name || null,
+            primaryOrgLogoUrl: refreshPrimaryOrgInfo?.logoUrl || null,
             canAccessAllOrgs: decoded.canAccessAllOrgs || false,
             role: decoded.role || (user.role ? user.role.name : null),
             email: user.email,
             firstName: user.first_name,
             lastName: user.last_name,
-            userId: userId
+            userId: userId,
+            userPublicCode: user.public_code || null
         }, sessionTTL);
 
         return tokens;
@@ -769,7 +837,7 @@ export const switchOrganization = async (userId, newActiveOrgId, sessionData = {
     // Importación dinámica para evitar dependencias circulares
     const Organization = (await import('../organizations/models/Organization.js')).default;
     const targetOrg = await Organization.findByPk(newActiveOrgId, {
-        attributes: ['id', 'is_active', 'name']
+        attributes: ['id', 'is_active', 'name', 'public_code', 'logo_url']
     });
     
     // Error 404: Organización no existe
@@ -810,9 +878,13 @@ export const switchOrganization = async (userId, newActiveOrgId, sessionData = {
     // Invalidar cache de scope organizacional
     await organizationService.invalidateUserOrgScope(userId);
     
-    // Actualizar session_context en Redis con la nueva org activa
+    // Actualizar session_context en Redis con la nueva org activa e info completa
     const { updateActiveOrg } = await import('./sessionContextCache.js');
-    await updateActiveOrg(userId, newActiveOrgId);
+    await updateActiveOrg(userId, newActiveOrgId, {
+        publicCode: targetOrg.public_code,
+        name: targetOrg.name,
+        logoUrl: targetOrg.logo_url
+    });
     
     return {
         ...tokens,
