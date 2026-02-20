@@ -291,16 +291,18 @@ export const getAndDeleteCache = async key => {
     }
 
     try {
-        const value = await redisClient.getDel(key);
+        // Usar GET + DEL como alternativa a GETDEL (no disponible en Redis < 6.2)
+        const value = await redisClient.get(key);
         if (!value) return null;
+        await redisClient.del(key);
         try {
             return JSON.parse(value);
         } catch {
             return value;
         }
     } catch (error) {
-        dbLogger.error(error, 'Redis GETDEL error');
-        activateFallback(`GETDEL error: ${error.message}`);
+        dbLogger.error(error, 'Redis GET+DEL error');
+        activateFallback(`GET+DEL error: ${error.message}`);
         return null;
     }
 };
