@@ -257,7 +257,7 @@ export const initializeWebSocket = (httpServer) => {
     httpServer.on('upgrade', (request, socket, head) => {
         const pathname = new URL(request.url, `http://${request.headers.host}`).pathname;
 
-        if (pathname === '/ws') {
+        if (pathname === '/ws' || pathname === '/api/ws') {
             handleUpgrade(request, socket, head);
         } else {
             socket.destroy();
@@ -266,7 +266,7 @@ export const initializeWebSocket = (httpServer) => {
 
     wss.on('connection', handleConnection);
 
-    logger.info('✅ WebSocket server inicializado en /ws');
+    logger.info('✅ WebSocket server inicializado en /ws y /api/ws');
     return wss;
 };
 

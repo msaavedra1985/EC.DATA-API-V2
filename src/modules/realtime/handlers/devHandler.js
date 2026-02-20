@@ -10,6 +10,7 @@ import { config } from '../../../config/env.js';
 import logger from '../../../utils/logger.js';
 
 const devSubscriptions = new Map();
+let idleSweepTimer = null;
 
 const processMqttForDev = (mqttData) => {
     const { topic, deviceUuid, payload, brokerIndex } = mqttData;
@@ -25,11 +26,16 @@ const processMqttForDev = (mqttData) => {
         const { ws, deviceUuid: subscribedUuid, sessionId } = subscription;
 
         if (ws.readyState !== 1) {
+            unsubscribeFromDevice(subscribedUuid);
+            removeSubscription(sessionId, 'dev-mqtt', subscribedUuid);
             devSubscriptions.delete(subKey);
+            logger.debug({ sessionId, deviceUuid: subscribedUuid }, 'EC:DEV → Suscripción limpiada (WS cerrado durante procesamiento MQTT)');
             continue;
         }
 
         if (subscribedUuid !== deviceUuid) continue;
+
+        subscription.lastDataAt = Date.now();
 
         const outMsg = {
             type: `EC:DEV:MQTT:DATA`,
@@ -116,7 +122,10 @@ const handleMqttSubscribe = (ws, message, parsed, session) => {
         sessionId: session.sessionId,
         deviceUuid,
         subscribedAt: new Date().toISOString(),
+        lastDataAt: Date.now(),
     });
+
+    ensureIdleSweep();
 
     addSubscription(session.sessionId, {
         type: 'dev-mqtt',
@@ -272,6 +281,66 @@ export const handleDevMessage = (ws, message, parsed, session) => {
                 requestId: message.requestId,
             };
     }
+};
+
+const sweepIdleDevSubscriptions = () => {
+    const now = Date.now();
+    const idleTimeout = config.realtime.subscriptionIdleTimeout;
+    let cleaned = 0;
+
+    for (const [subKey, subscription] of devSubscriptions) {
+        const { ws, sessionId, deviceUuid, lastDataAt } = subscription;
+
+        if (ws.readyState !== 1) {
+            unsubscribeFromDevice(deviceUuid);
+            devSubscriptions.delete(subKey);
+            cleaned++;
+            continue;
+        }
+
+        const idleMs = now - (lastDataAt || 0);
+        if (idleMs > idleTimeout) {
+            try {
+                ws.send(JSON.stringify({
+                    type: 'EC:DEV:MQTT:IDLE_TIMEOUT',
+                    payload: {
+                        deviceUuid,
+                        idleSeconds: Math.round(idleMs / 1000),
+                        message: `Subscription auto-removed: no data received for ${Math.round(idleMs / 1000)}s`,
+                    },
+                    timestamp: new Date().toISOString(),
+                }));
+            } catch { /* ws puede estar cerrándose */ }
+
+            unsubscribeFromDevice(deviceUuid);
+            removeSubscription(sessionId, 'dev-mqtt', deviceUuid);
+            devSubscriptions.delete(subKey);
+            cleaned++;
+
+            logger.info({
+                sessionId,
+                deviceUuid,
+                idleSeconds: Math.round(idleMs / 1000),
+            }, 'EC:DEV → Suscripción removida por idle timeout');
+        }
+    }
+
+    if (devSubscriptions.size === 0 && idleSweepTimer) {
+        clearInterval(idleSweepTimer);
+        idleSweepTimer = null;
+        logger.debug('EC:DEV → Idle sweep detenido (sin suscripciones activas)');
+    }
+
+    if (cleaned > 0) {
+        logger.info({ cleaned, remaining: devSubscriptions.size }, 'EC:DEV → Idle sweep completado');
+    }
+};
+
+const ensureIdleSweep = () => {
+    if (idleSweepTimer) return;
+    const interval = config.realtime.subscriptionIdleSweepInterval;
+    idleSweepTimer = setInterval(sweepIdleDevSubscriptions, interval);
+    logger.debug({ intervalMs: interval }, 'EC:DEV → Idle sweep iniciado');
 };
 
 export const cleanupDevSubscriptions = (sessionId) => {

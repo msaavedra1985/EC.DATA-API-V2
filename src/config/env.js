@@ -135,6 +135,10 @@ export const config = {
         maxMessagesPerMinute: parseInt(process.env.WS_MAX_MESSAGES_PER_MINUTE || '60', 10),
         // Tamaño máximo de mensaje WS en bytes (64KB)
         maxPayloadSize: parseInt(process.env.WS_MAX_PAYLOAD_SIZE || '65536', 10),
+        // Idle timeout para suscripciones MQTT sin datos (en ms, default 5 minutos)
+        subscriptionIdleTimeout: parseInt(process.env.WS_SUBSCRIPTION_IDLE_TIMEOUT || '300000', 10),
+        // Intervalo del sweep de suscripciones idle (en ms, default 60 segundos)
+        subscriptionIdleSweepInterval: parseInt(process.env.WS_SUBSCRIPTION_IDLE_SWEEP_INTERVAL || '60000', 10),
     },
 };
 

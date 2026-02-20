@@ -5,9 +5,11 @@ import { addSubscription, removeSubscription } from '../services/sessionService.
 import { subscribeToDevice, unsubscribeFromDevice, onMessage, removeMessageCallback } from '../mqtt/client.js';
 import sequelize from '../../../db/sql/sequelize.js';
 import { QueryTypes } from 'sequelize';
+import { config } from '../../../config/env.js';
 import logger from '../../../utils/logger.js';
 
 const dashboardSubscriptions = new Map();
+let idleSweepTimer = null;
 
 const intToHex = (num) => {
     const hex = (num >>> 0).toString(16);
@@ -99,7 +101,12 @@ const processMqttForDashboards = (mqttData) => {
         const { ws, dashboardId, devices, channels } = subscription;
 
         if (ws.readyState !== 1) {
+            for (const device of devices) {
+                if (device.uuid) unsubscribeFromDevice(device.uuid);
+            }
+            removeSubscription(subscription.sessionId, 'DASHBOARD', dashboardId);
             dashboardSubscriptions.delete(subKey);
+            logger.debug({ sessionId: subscription.sessionId, dashboardId }, 'Dashboard → Suscripción limpiada (WS cerrado durante procesamiento MQTT)');
             continue;
         }
 
@@ -158,6 +165,8 @@ const processMqttForDashboards = (mqttData) => {
         }
 
         if (dataPoints.length === 0) continue;
+
+        subscription.lastDataAt = Date.now();
 
         const outMsg = {
             type: `EC:DASHBOARD:${dashboardId}:DATA:${matchingDevice.publicCode}`,
@@ -242,9 +251,11 @@ const handleSubscribe = async (ws, message, parsed, session) => {
         sessionId: session.sessionId,
         devices,
         channels,
+        lastDataAt: Date.now(),
     });
 
     ensureMqttCallback();
+    ensureIdleSweep();
 
     // Suscribir a MQTT solo los devices únicos
     for (const device of devices) {
@@ -350,6 +361,70 @@ export const handleDashboardMessage = async (ws, message, parsed, session) => {
                 requestId: message.requestId,
             };
     }
+};
+
+const sweepIdleDashboardSubscriptions = () => {
+    const now = Date.now();
+    const idleTimeout = config.realtime.subscriptionIdleTimeout;
+    let cleaned = 0;
+
+    for (const [subKey, subscription] of dashboardSubscriptions) {
+        const { ws, sessionId, dashboardId, devices, lastDataAt } = subscription;
+
+        if (ws.readyState !== 1) {
+            for (const device of devices) {
+                if (device.uuid) unsubscribeFromDevice(device.uuid);
+            }
+            dashboardSubscriptions.delete(subKey);
+            cleaned++;
+            continue;
+        }
+
+        const idleMs = now - (lastDataAt || 0);
+        if (idleMs > idleTimeout) {
+            try {
+                ws.send(JSON.stringify({
+                    type: `EC:DASHBOARD:${dashboardId}:IDLE_TIMEOUT`,
+                    payload: {
+                        dashboardId,
+                        idleSeconds: Math.round(idleMs / 1000),
+                        message: `Subscription auto-removed: no data received for ${Math.round(idleMs / 1000)}s`,
+                    },
+                    timestamp: new Date().toISOString(),
+                }));
+            } catch { /* ws puede estar cerrándose */ }
+
+            for (const device of devices) {
+                if (device.uuid) unsubscribeFromDevice(device.uuid);
+            }
+            removeSubscription(sessionId, 'DASHBOARD', dashboardId);
+            dashboardSubscriptions.delete(subKey);
+            cleaned++;
+
+            logger.info({
+                sessionId,
+                dashboardId,
+                idleSeconds: Math.round(idleMs / 1000),
+            }, 'Dashboard → Suscripción removida por idle timeout');
+        }
+    }
+
+    if (dashboardSubscriptions.size === 0 && idleSweepTimer) {
+        clearInterval(idleSweepTimer);
+        idleSweepTimer = null;
+        logger.debug('Dashboard → Idle sweep detenido (sin suscripciones activas)');
+    }
+
+    if (cleaned > 0) {
+        logger.info({ cleaned, remaining: dashboardSubscriptions.size }, 'Dashboard → Idle sweep completado');
+    }
+};
+
+const ensureIdleSweep = () => {
+    if (idleSweepTimer) return;
+    const interval = config.realtime.subscriptionIdleSweepInterval;
+    idleSweepTimer = setInterval(sweepIdleDashboardSubscriptions, interval);
+    logger.debug({ intervalMs: interval }, 'Dashboard → Idle sweep iniciado');
 };
 
 export const cleanupDashboardSubscriptions = (sessionId) => {
