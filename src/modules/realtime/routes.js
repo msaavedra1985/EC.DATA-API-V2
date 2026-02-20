@@ -105,6 +105,9 @@ router.post('/token', authenticate, async (req, res) => {
 
         // Determinar servicios permitidos según rol
         const allServices = ['SYSTEM', 'DASHBOARD', 'NOTIFY', 'IOT', 'CHATBOT'];
+        if (config.env === 'development') {
+            allServices.push('DEV');
+        }
         const requestedServices = req.body?.services || [];
 
         let allowedServices = ['SYSTEM'];
@@ -114,6 +117,9 @@ router.post('/token', authenticate, async (req, res) => {
             allowedServices.push('DASHBOARD', 'NOTIFY');
             if (requestedServices.includes('IOT')) {
                 allowedServices.push('IOT');
+            }
+            if (config.env === 'development' && ['admin', 'superadmin', 'system-admin'].includes(role) && requestedServices.includes('DEV')) {
+                allowedServices.push('DEV');
             }
         }
 

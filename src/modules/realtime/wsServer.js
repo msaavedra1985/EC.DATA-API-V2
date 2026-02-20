@@ -9,6 +9,7 @@ import { handleDashboardMessage, cleanupDashboardSubscriptions } from './handler
 import { handleNotifyMessage } from './handlers/notifyHandler.js';
 import { handleIotMessage } from './handlers/iotHandler.js';
 import { handleChatbotMessage } from './handlers/chatbotHandler.js';
+import { handleDevMessage, cleanupDevSubscriptions } from './handlers/devHandler.js';
 import { config } from '../../config/env.js';
 import logger from '../../utils/logger.js';
 
@@ -208,6 +209,7 @@ const handleConnection = (ws, request) => {
 
         if (ws.sessionId) {
             cleanupDashboardSubscriptions(ws.sessionId);
+            cleanupDevSubscriptions(ws.sessionId);
         }
         await cleanupSystemSession(ws);
     });
@@ -232,6 +234,11 @@ export const initializeWebSocket = (httpServer) => {
     registerHandler('NOTIFY', handleNotifyMessage);
     registerHandler('IOT', handleIotMessage);
     registerHandler('CHATBOT', handleChatbotMessage);
+
+    if (config.env === 'development') {
+        registerHandler('DEV', handleDevMessage);
+        logger.info('🔧 Servicio EC:DEV registrado (solo development)');
+    }
 
     httpServer.on('upgrade', (request, socket, head) => {
         const pathname = new URL(request.url, `http://${request.headers.host}`).pathname;
