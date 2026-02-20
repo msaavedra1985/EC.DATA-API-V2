@@ -17,6 +17,7 @@ import telemetryRouter from '../modules/telemetry/index.js';
 import resourceHierarchyRouter from '../modules/resource-hierarchy/index.js';
 import assetCategoriesRouter from '../modules/asset-categories/index.js';
 import { dashboardRouter, groupRouter } from '../modules/dashboards/index.js';
+import { realtimeRouter } from '../modules/realtime/index.js';
 
 const router = express.Router();
 
@@ -75,6 +76,9 @@ router.use('/dashboards', dashboardRouter);
 
 // Dashboard Groups (agrupaciones/playlists de dashboards)
 router.use('/dashboard-groups', groupRouter);
+
+// Realtime (WebSocket token + status)
+router.use('/realtime', realtimeRouter);
 
 // Seeding (Testing/Development)
 router.use('/seed', seedRouter);

@@ -103,6 +103,31 @@
 
 ---
 
+## Realtime Module (WebSocket + MQTT)
+
+### Completado ✅ (2026-02-20)
+- [x] Estructura del módulo realtime: carpetas, archivos base, configuración MQTT en env.js
+- [x] Cliente MQTT centralizado: conexión a 3 brokers, deduplicación, subscribe/unsubscribe dinámico
+- [x] Servicio de token efímero: generación crypto, Redis con TTL 5min, single-use
+- [x] Endpoint REST POST /api/v1/realtime/token
+- [x] WS server centralizado: upgrade handler en /ws, validación token efímero
+- [x] Handler EC:SYSTEM: AUTH, PING/PONG, gestión sesiones WS
+- [x] Handler EC:DASHBOARD: SUBSCRIBE/UNSUBSCRIBE, integración MQTT→WS
+- [x] Placeholders: notifyHandler, iotHandler, chatbotHandler
+- [x] Integración en src/index.js: MQTT init, WS mount, ruta REST /realtime
+
+### Pendiente (Fases Futuras)
+- [ ] Fase 3: Dashboard integration completa (filtrado avanzado de datos MQTT, transformación hex→decimal)
+- [ ] Fase 4: EC:NOTIFY handler completo (notificaciones push, alertas, badges)
+- [ ] Fase 5: EC:IOT handler completo (control bidireccional de equipos via MQTT publish)
+- [ ] Fase 6: EC:CHATBOT handler con streaming (integración LLM)
+- [ ] Fase 7: Multi-node scalability (Redis pub/sub para WS broadcast entre instancias)
+- [ ] Tests unitarios para tokenService, systemHandler, dashboardHandler
+- [ ] Documentación endpoint agent-docs/endpoints/realtime.md
+- [ ] Swagger/OpenAPI para POST /api/v1/realtime/token
+
+---
+
 ## Historial de Completados
 
 ### 2026-02-04

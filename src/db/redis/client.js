@@ -281,6 +281,30 @@ export const deleteCache = async key => {
     }
 };
 
+export const getAndDeleteCache = async key => {
+    if (!isRedisAvailable) {
+        cleanExpiredMemoryCache();
+        const value = inMemoryCache.get(key) || null;
+        inMemoryCache.delete(key);
+        inMemoryTTLs.delete(key);
+        return value;
+    }
+
+    try {
+        const value = await redisClient.getDel(key);
+        if (!value) return null;
+        try {
+            return JSON.parse(value);
+        } catch {
+            return value;
+        }
+    } catch (error) {
+        dbLogger.error(error, 'Redis GETDEL error');
+        activateFallback(`GETDEL error: ${error.message}`);
+        return null;
+    }
+};
+
 /**
  * Incrementa atómicamente un contador en Redis y establece TTL solo en la primera creación
  * Usa INCR + EXPIRE para operaciones atómicas y race-free

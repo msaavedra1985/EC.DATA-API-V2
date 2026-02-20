@@ -6,6 +6,7 @@ import { initializeRedis, closeRedis } from './db/redis/client.js';
 import { initCassandra, closeCassandra, hasCredentials } from './db/cassandra/client.js';
 import { startTokenCleanupScheduler } from './utils/cleanupTokens.js';
 import { warmUpTelemetryCache } from './modules/telemetry/index.js';
+import { initializeMqtt, closeMqtt, initializeWebSocket, closeWebSocket } from './modules/realtime/index.js';
 import logger from './utils/logger.js';
 
 // Importar todos los modelos en orden de dependencias (necesario para Sequelize.sync())
@@ -64,7 +65,7 @@ const startServer = async () => {
         // Crear aplicación Express (incluye Swagger y métricas)
         const app = createApp();
 
-        // Iniciar servidor HTTP en 0.0.0.0:5000 (preparado para Socket.io)
+        // Iniciar servidor HTTP en 0.0.0.0:5000
         const server = app.listen(config.port, '0.0.0.0', () => {
             logger.info(`
 ╔════════════════════════════════════════════════════════════╗
@@ -77,11 +78,22 @@ const startServer = async () => {
 ║  Health:       ${`${config.apiUrl}/api/v1/health`.padEnd(43)} ║
 ║  Docs:         ${config.env === 'development' ? `${config.apiUrl}/docs`.padEnd(43) : 'N/A (production)'.padEnd(43)} ║
 ║  Metrics:      ${config.env === 'development' ? `${config.apiUrl}/metrics`.padEnd(43) : 'N/A (production)'.padEnd(43)} ║
+║  WebSocket:    ${`${config.apiUrl.replace('http', 'ws')}/ws`.padEnd(43)} ║
 ║                                                            ║
 ║  Status:       ✅ Server running successfully             ║
 ╚════════════════════════════════════════════════════════════╝
             `);
         });
+
+        // Inicializar WebSocket server sobre el mismo HTTP server
+        initializeWebSocket(server);
+
+        // Inicializar conexiones MQTT a brokers IoT (no-bloqueante)
+        try {
+            initializeMqtt();
+        } catch (mqttError) {
+            logger.warn({ err: mqttError }, '⚠️  MQTT initialization failed (non-critical)');
+        }
 
         // Manejo de señales para graceful shutdown
         const gracefulShutdown = async signal => {
@@ -96,6 +108,8 @@ const startServer = async () => {
                 }
                 
                 // Cerrar conexiones a servicios externos
+                closeWebSocket();
+                await closeMqtt();
                 await closeDatabase();
                 await closeRedis();
                 await closeCassandra();

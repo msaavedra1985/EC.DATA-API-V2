@@ -419,6 +419,19 @@ const safeAddIndex = async (table, fields, options) => {
 
 ---
 
+## Neon Database
+
+### Endpoint deshabilitado por inactividad (cold start)
+**Fecha**: 2026-02-20
+**Síntoma**: `SequelizeConnectionError: The endpoint has been disabled. Enable it using Neon API and retry.` (código XX000)
+**Causa**: Neon deshabilita endpoints tras períodos de inactividad. El cold start puede tardar varios minutos o requerir re-provisionar la DB.
+**Solución**:
+- Se agregó retry logic con backoff en `initializeDatabase()` (5 intentos, delay incremental 3s→15s)
+- Si persiste: usar `create_postgresql_database_tool` para re-provisionar, o esperar y reiniciar
+- El error es transitorio y no relacionado con el código de la aplicación
+
+---
+
 ## Deployment
 
 (Agregar problemas de deployment aquí)

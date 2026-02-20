@@ -93,6 +93,49 @@ export const config = {
         // Permite deshabilitar captcha en desarrollo (TURNSTILE_ENABLED=false)
         enabled: process.env.TURNSTILE_ENABLED !== 'false',
     },
+
+    // MQTT Brokers para datos IoT en tiempo real
+    // 3 brokers activos funcionando como load balancer (suscripción a los 3)
+    mqtt: {
+        brokers: [
+            {
+                url: process.env.MQTT_BROKER_1_URL || null,
+                username: process.env.MQTT_BROKER_1_USER || null,
+                password: process.env.MQTT_BROKER_1_PASS || null,
+            },
+            {
+                url: process.env.MQTT_BROKER_2_URL || null,
+                username: process.env.MQTT_BROKER_2_USER || null,
+                password: process.env.MQTT_BROKER_2_PASS || null,
+            },
+            {
+                url: process.env.MQTT_BROKER_3_URL || null,
+                username: process.env.MQTT_BROKER_3_USER || null,
+                password: process.env.MQTT_BROKER_3_PASS || null,
+            },
+        ],
+        topicPrefix: process.env.MQTT_TOPIC_PREFIX || 'Solution',
+    },
+
+    // WebSocket / Realtime
+    realtime: {
+        // URL del WS server que el BFF usará para conectarse (vista interna)
+        wsUrl: process.env.WS_URL || 'wss://ws.ecdata-backend.com/ws',
+        // TTL del token efímero en segundos (5 minutos)
+        ephemeralTokenTTL: parseInt(process.env.WS_EPHEMERAL_TOKEN_TTL || '300', 10),
+        // Heartbeat interval en ms (30 segundos)
+        heartbeatInterval: parseInt(process.env.WS_HEARTBEAT_INTERVAL || '30000', 10),
+        // Timeout para considerar conexión muerta (90 segundos sin heartbeat)
+        heartbeatTimeout: parseInt(process.env.WS_HEARTBEAT_TIMEOUT || '90000', 10),
+        // Máximo de conexiones simultáneas por usuario
+        maxConnectionsPerUser: parseInt(process.env.WS_MAX_CONNECTIONS_PER_USER || '3', 10),
+        // Máximo de suscripciones activas por conexión
+        maxSubscriptionsPerConnection: parseInt(process.env.WS_MAX_SUBSCRIPTIONS || '10', 10),
+        // Rate limit: máximo de mensajes entrantes por conexión por minuto
+        maxMessagesPerMinute: parseInt(process.env.WS_MAX_MESSAGES_PER_MINUTE || '60', 10),
+        // Tamaño máximo de mensaje WS en bytes (64KB)
+        maxPayloadSize: parseInt(process.env.WS_MAX_PAYLOAD_SIZE || '65536', 10),
+    },
 };
 
 /**
