@@ -246,6 +246,13 @@ export const handleDevMessage = (ws, message, parsed, session) => {
 
     const action = parsed.action;
 
+    logger.info({
+        action,
+        sessionId: session.sessionId,
+        role,
+        payload: message.payload ? JSON.stringify(message.payload).slice(0, 200) : null,
+    }, `🔧 EC:DEV → ${action}`);
+
     switch (action) {
         case 'MQTT:SUBSCRIBE':
             return handleMqttSubscribe(ws, message, parsed, session);

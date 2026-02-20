@@ -161,6 +161,15 @@ const handleConnection = (ws, request) => {
 
             totalMessagesReceived++;
 
+            logger.info({
+                type: message.type,
+                sessionId: ws.sessionId || 'no-session',
+                userId: ws.userData?.userId,
+                hasPayload: !!message.payload,
+                payloadKeys: message.payload ? Object.keys(message.payload) : [],
+                requestId: message.requestId,
+            }, `📨 WS IN: ${message.type}`);
+
             // Verificar autenticación para todo excepto EC:SYSTEM:AUTH y EC:SYSTEM:PING
             if (!ws.session && message.type !== 'EC:SYSTEM:AUTH' && message.type !== 'EC:SYSTEM:PING') {
                 sendMessage(ws, {
@@ -179,6 +188,11 @@ const handleConnection = (ws, request) => {
             const response = await routeMessage(ws, message, ws.session);
 
             if (response) {
+                logger.info({
+                    type: response.type,
+                    sessionId: ws.sessionId || 'no-session',
+                    responseCode: response.payload?.code,
+                }, `📤 WS OUT: ${response.type}`);
                 sendMessage(ws, response);
             }
         } catch (error) {
