@@ -244,6 +244,54 @@ router.patch('/:id', authenticate, enforceActiveOrganization, validate(updateDas
 
 /**
  * @swagger
+ * /api/v1/dashboards/{id}/home:
+ *   put:
+ *     summary: Marcar dashboard como home
+ *     description: Marca un dashboard como el "home" del usuario en la organización. Solo puede haber uno por usuario+org.
+ *     tags: [Dashboards]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Public code del dashboard
+ *     responses:
+ *       200:
+ *         description: Dashboard marcado como home exitosamente
+ *       401:
+ *         description: No autenticado
+ *       403:
+ *         description: Sin permisos (solo el owner)
+ *       404:
+ *         description: Dashboard no encontrado
+ */
+router.put('/:id/home', authenticate, enforceActiveOrganization, async (req, res, next) => {
+    try {
+        const result = await dashboardServices.setHomeDashboard(
+            req.params.id,
+            req.user.userId,
+            req.ip,
+            req.headers['user-agent']
+        );
+
+        return successResponse(res, result);
+    } catch (error) {
+        if (error.status) {
+            return errorResponse(res, {
+                message: error.message,
+                status: error.status,
+                code: error.code
+            });
+        }
+        next(error);
+    }
+});
+
+/**
+ * @swagger
  * /api/v1/dashboards/{id}:
  *   delete:
  *     summary: Eliminar un dashboard (soft delete)

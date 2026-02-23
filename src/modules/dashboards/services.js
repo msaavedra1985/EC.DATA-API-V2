@@ -285,6 +285,58 @@ export const deleteDashboard = async (publicCode, userId, ipAddress, userAgent) 
   logger.info({ dashboardId: dashboardInternal.id, userId }, 'Dashboard deleted successfully');
 };
 
+/**
+ * Marcar un dashboard como "home" para el usuario en la organización
+ * Solo puede haber 1 home por usuario+org. El owner del dashboard es quien lo setea.
+ * @param {string} publicCode - Public code del dashboard
+ * @param {string} userId - UUID del usuario
+ * @param {string} ipAddress - IP del usuario
+ * @param {string} userAgent - User agent del usuario
+ * @returns {Promise<Object>} - Dashboard actualizado
+ */
+export const setHomeDashboard = async (publicCode, userId, ipAddress, userAgent) => {
+  const dashboardInternal = await dashboardRepository.findDashboardByPublicCodeInternal(publicCode);
+
+  if (!dashboardInternal) {
+    const error = new Error('Dashboard no encontrado');
+    error.status = 404;
+    error.code = 'DASHBOARD_NOT_FOUND';
+    throw error;
+  }
+
+  if (dashboardInternal.owner_id !== userId) {
+    const error = new Error('Solo el propietario puede marcar este dashboard como home');
+    error.status = 403;
+    error.code = 'FORBIDDEN';
+    throw error;
+  }
+
+  const result = await dashboardRepository.setHomeDashboard(
+    dashboardInternal.id,
+    userId,
+    dashboardInternal.organization_id
+  );
+
+  await logAuditAction({
+    entityType: 'dashboard',
+    entityId: publicCode,
+    action: 'set_home',
+    performedBy: userId,
+    changes: { is_home: { old: false, new: true } },
+    metadata: {
+      organization_id: dashboardInternal.organization_id
+    },
+    ipAddress,
+    userAgent
+  });
+
+  await invalidateDashboardCache();
+
+  logger.info({ dashboardId: dashboardInternal.id, userId }, 'Dashboard set as home');
+
+  return result;
+};
+
 // =============================================
 // Page CRUD
 // =============================================

@@ -15,6 +15,9 @@ const entityTypeEnum = ['channel', 'device', 'site', 'resource_hierarchy'];
 
 const collaboratorRoleEnum = ['viewer', 'editor'];
 
+const dashboardSizeEnum = ['FREE', 'HD', 'VERTICAL', 'CUSTOM'];
+const dashboardPositioningEnum = ['AUTO', 'FLOAT'];
+
 // =============================================
 // DASHBOARDS
 // =============================================
@@ -42,8 +45,64 @@ export const createDashboardSchema = z.object({
         is_public: z
             .boolean()
             .optional()
-            .default(false)
-    })
+            .default(false),
+        size: z
+            .enum(dashboardSizeEnum, {
+                errorMap: () => ({ message: `size debe ser uno de: ${dashboardSizeEnum.join(', ')}` })
+            })
+            .optional()
+            .default('FREE'),
+        positioning: z
+            .enum(dashboardPositioningEnum, {
+                errorMap: () => ({ message: `positioning debe ser uno de: ${dashboardPositioningEnum.join(', ')}` })
+            })
+            .optional()
+            .default('AUTO'),
+        custom_width: z
+            .number()
+            .int('custom_width debe ser un entero')
+            .min(800, 'custom_width mínimo es 800')
+            .max(3840, 'custom_width máximo es 3840')
+            .nullable()
+            .optional()
+            .default(null),
+        custom_height: z
+            .number()
+            .int('custom_height debe ser un entero')
+            .min(600, 'custom_height mínimo es 600')
+            .max(2160, 'custom_height máximo es 2160')
+            .nullable()
+            .optional()
+            .default(null),
+        settings: z
+            .object({
+                forceK: z.boolean().optional().default(false),
+                backgroundImage: z.string().url('backgroundImage debe ser una URL válida').nullable().optional().default(null)
+            })
+            .optional()
+            .default({}),
+        template_id: z
+            .string()
+            .nullable()
+            .optional()
+            .default(null)
+    }).refine(
+        (data) => {
+            if (data.size === 'CUSTOM') {
+                return data.custom_width != null && data.custom_height != null;
+            }
+            return true;
+        },
+        { message: 'custom_width y custom_height son requeridos cuando size es CUSTOM', path: ['custom_width'] }
+    ).refine(
+        (data) => {
+            if (data.size !== 'CUSTOM') {
+                return data.custom_width == null && data.custom_height == null;
+            }
+            return true;
+        },
+        { message: 'custom_width y custom_height solo son válidos cuando size es CUSTOM', path: ['custom_width'] }
+    )
 });
 
 /**
@@ -76,8 +135,54 @@ export const updateDashboardSchema = z.object({
             .optional(),
         is_active: z
             .boolean()
+            .optional(),
+        size: z
+            .enum(dashboardSizeEnum, {
+                errorMap: () => ({ message: `size debe ser uno de: ${dashboardSizeEnum.join(', ')}` })
+            })
+            .optional(),
+        positioning: z
+            .enum(dashboardPositioningEnum, {
+                errorMap: () => ({ message: `positioning debe ser uno de: ${dashboardPositioningEnum.join(', ')}` })
+            })
+            .optional(),
+        custom_width: z
+            .number()
+            .int('custom_width debe ser un entero')
+            .min(800, 'custom_width mínimo es 800')
+            .max(3840, 'custom_width máximo es 3840')
+            .nullable()
+            .optional(),
+        custom_height: z
+            .number()
+            .int('custom_height debe ser un entero')
+            .min(600, 'custom_height mínimo es 600')
+            .max(2160, 'custom_height máximo es 2160')
+            .nullable()
+            .optional(),
+        settings: z
+            .object({
+                forceK: z.boolean().optional(),
+                backgroundImage: z.string().url('backgroundImage debe ser una URL válida').nullable().optional()
+            })
             .optional()
-    })
+    }).refine(
+        (data) => {
+            if (data.size === 'CUSTOM') {
+                return data.custom_width != null && data.custom_height != null;
+            }
+            return true;
+        },
+        { message: 'custom_width y custom_height son requeridos cuando size es CUSTOM', path: ['custom_width'] }
+    ).refine(
+        (data) => {
+            if (data.size !== undefined && data.size !== 'CUSTOM') {
+                return data.custom_width == null && data.custom_height == null;
+            }
+            return true;
+        },
+        { message: 'custom_width y custom_height solo son válidos cuando size es CUSTOM', path: ['custom_width'] }
+    )
 });
 
 /**

@@ -12,6 +12,7 @@ import DashboardGroupCollaborator from './models/DashboardGroupCollaborator.js';
 import Organization from '../organizations/models/Organization.js';
 import User from '../auth/models/User.js';
 import { Op } from 'sequelize';
+import sequelize from '../../db/sql/sequelize.js';
 import {
     toPublicDashboardDto,
     toPublicGroupDto,
@@ -189,6 +190,33 @@ export const deleteDashboard = async (id) => {
 
     await dashboard.destroy();
     return true;
+};
+
+/**
+ * Desmarcar todos los dashboards home de un usuario en una organización
+ * y marcar el indicado como home
+ */
+export const setHomeDashboard = async (dashboardId, userId, organizationId) => {
+    return await sequelize.transaction(async (t) => {
+        await Dashboard.update(
+            { is_home: false },
+            {
+                where: {
+                    owner_id: userId,
+                    organization_id: organizationId,
+                    is_home: true
+                },
+                transaction: t
+            }
+        );
+
+        const dashboard = await Dashboard.findByPk(dashboardId, { transaction: t });
+        if (!dashboard) return null;
+
+        await dashboard.update({ is_home: true }, { transaction: t });
+        await dashboard.reload({ include: dashboardListIncludes, transaction: t });
+        return toPublicDashboardDto(dashboard);
+    });
 };
 
 // =============================================

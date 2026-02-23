@@ -58,6 +58,34 @@ const Dashboard = sequelize.define('Dashboard', {
         allowNull: true,
         comment: 'Icono del dashboard (nombre o clase CSS)'
     },
+    size: {
+        type: DataTypes.STRING(20),
+        allowNull: false,
+        defaultValue: 'FREE',
+        comment: 'Resolución del canvas: FREE, HD (1920x1080), VERTICAL (1080x1920), CUSTOM'
+    },
+    positioning: {
+        type: DataTypes.STRING(20),
+        allowNull: false,
+        defaultValue: 'AUTO',
+        comment: 'Modo de posicionamiento de widgets: AUTO (grid), FLOAT (libre)'
+    },
+    custom_width: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        comment: 'Ancho personalizado en px (solo cuando size=CUSTOM, rango 800-3840)'
+    },
+    custom_height: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        comment: 'Alto personalizado en px (solo cuando size=CUSTOM, rango 600-2160)'
+    },
+    is_home: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
+        comment: 'Si este dashboard es el home del usuario en la organización'
+    },
     is_public: {
         type: DataTypes.BOOLEAN,
         allowNull: false,
@@ -69,6 +97,17 @@ const Dashboard = sequelize.define('Dashboard', {
         allowNull: false,
         defaultValue: true,
         comment: 'Soft delete flag'
+    },
+    settings: {
+        type: DataTypes.JSONB,
+        allowNull: false,
+        defaultValue: {},
+        comment: 'Configuración extensible del dashboard (forceK, backgroundImage, etc.)'
+    },
+    template_id: {
+        type: DataTypes.UUID,
+        allowNull: true,
+        comment: 'Referencia a template usado para crear el dashboard (sin FK por ahora)'
     }
 }, {
     tableName: 'dashboards',

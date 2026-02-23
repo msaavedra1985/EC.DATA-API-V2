@@ -1,6 +1,6 @@
 # Dashboards Endpoints
 
-> **Última actualización**: 2026-02-13
+> **Última actualización**: 2026-02-23
 > 
 > **IMPORTANTE**: Este archivo DEBE actualizarse cuando se modifique cualquier endpoint del módulo.
 
@@ -14,6 +14,7 @@
 | POST | `/api/v1/dashboards` | Crear dashboard |
 | PATCH | `/api/v1/dashboards/:id` | Actualizar dashboard |
 | DELETE | `/api/v1/dashboards/:id` | Eliminar dashboard (soft delete) |
+| PUT | `/api/v1/dashboards/:id/home` | Marcar dashboard como home |
 
 ### Pages
 | Método | Endpoint | Descripción |
@@ -214,7 +215,10 @@
   "name": "Dashboard Operacional",
   "description": "Monitor de operaciones en tiempo real",
   "icon": "monitor",
-  "is_public": false
+  "is_public": false,
+  "size": "HD",
+  "positioning": "AUTO",
+  "settings": { "forceK": true }
 }
 ```
 
@@ -225,20 +229,34 @@
 | description | string | No | Descripción del dashboard |
 | icon | string | No | Icono del dashboard (max 50 caracteres) |
 | is_public | boolean | No | Si es público (default: false) |
+| size | string | No | Resolución del canvas: `FREE` (default), `HD` (1920x1080), `VERTICAL` (1080x1920), `CUSTOM` |
+| positioning | string | No | Modo posicionamiento widgets: `AUTO` (default, grid), `FLOAT` (libre) |
+| custom_width | number | Condicional | Ancho en px (800-3840). Requerido si `size=CUSTOM` |
+| custom_height | number | Condicional | Alto en px (600-2160). Requerido si `size=CUSTOM` |
+| settings | object | No | Config extensible: `{ forceK: bool, backgroundImage: url|null }` |
+| template_id | string | No | Public code de template para precargar estructura |
+
+**Validaciones condicionales**:
+- Si `size=CUSTOM`: `custom_width` y `custom_height` son **requeridos**
+- Si `size!=CUSTOM`: `custom_width` y `custom_height` deben ser **null** o ausentes
 
 **Respuesta exitosa** (201):
 ```json
 {
   "ok": true,
   "data": {
-    "public_code": "DSH-YYYYY-Y",
+    "id": "DSH-YYYYY-Y",
     "name": "Dashboard Operacional",
     "description": "Monitor de operaciones en tiempo real",
     "icon": "monitor",
+    "size": "HD",
+    "positioning": "AUTO",
+    "custom_width": null,
+    "custom_height": null,
+    "is_home": false,
     "is_public": false,
     "is_active": true,
-    "owner_id": "user-123",
-    "organization_id": "org-123",
+    "settings": { "forceK": true },
     "created_at": "2026-02-13T15:45:00Z"
   }
 }
@@ -276,7 +294,12 @@
   "description": "Dashboard de ventas con nuevas métricas",
   "icon": "chart-line",
   "is_public": true,
-  "is_active": true
+  "is_active": true,
+  "size": "CUSTOM",
+  "positioning": "FLOAT",
+  "custom_width": 1600,
+  "custom_height": 900,
+  "settings": { "forceK": false, "backgroundImage": "https://example.com/bg.jpg" }
 }
 ```
 
@@ -288,6 +311,11 @@
 | icon | string | Nuevo icono (max 50 caracteres) |
 | is_public | boolean | Cambiar visibilidad |
 | is_active | boolean | Activar/desactivar dashboard |
+| size | string | Resolución: `FREE`, `HD`, `VERTICAL`, `CUSTOM` |
+| positioning | string | Posicionamiento: `AUTO`, `FLOAT` |
+| custom_width | number\|null | Ancho personalizado (800-3840, solo con `size=CUSTOM`) |
+| custom_height | number\|null | Alto personalizado (600-2160, solo con `size=CUSTOM`) |
+| settings | object | Config extensible: `{ forceK, backgroundImage }` |
 
 **Respuesta exitosa** (200):
 ```json
@@ -352,6 +380,48 @@
 - Audit log: Sí (DELETE)
 - Soft delete: Marca `deleted_at`, no elimina físicamente
 - Requiere permisos de owner o admin
+
+---
+
+### PUT /api/v1/dashboards/:id/home
+
+**Propósito**: Marcar un dashboard como "home" del usuario en la organización activa
+
+**Autenticación**: Bearer JWT
+
+**Path Parameters**:
+| Param | Tipo | Descripción |
+|-------|------|-------------|
+| id | string | Public code del dashboard |
+
+**Respuesta exitosa** (200):
+```json
+{
+  "ok": true,
+  "data": {
+    "id": "DSH-XXXXX-X",
+    "name": "Dashboard Principal",
+    "is_home": true,
+    "size": "HD",
+    "positioning": "AUTO",
+    "settings": {},
+    "..."
+  }
+}
+```
+
+**Errores**:
+| Status | Código | Descripción |
+|--------|--------|-------------|
+| 404 | DASHBOARD_NOT_FOUND | Dashboard no encontrado |
+| 401 | UNAUTHORIZED | Token inválido |
+| 403 | FORBIDDEN | Solo el owner puede marcar como home |
+
+**Notas**:
+- Audit log: Sí (SET_HOME)
+- Solo puede haber **1 home** por usuario+organización
+- Al marcar uno como home, se desmarca cualquier otro que lo fuera
+- No requiere rol admin, solo ser owner del dashboard
 
 ---
 

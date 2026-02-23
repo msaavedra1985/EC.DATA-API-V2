@@ -157,8 +157,14 @@ export const toPublicDashboardDto = (dashboard) => {
         name: dashboard.name,
         description: dashboard.description,
         icon: dashboard.icon,
+        size: dashboard.size,
+        positioning: dashboard.positioning,
+        custom_width: dashboard.custom_width,
+        custom_height: dashboard.custom_height,
+        is_home: dashboard.is_home,
         is_public: dashboard.is_public,
         is_active: dashboard.is_active,
+        settings: dashboard.settings || {},
         created_at: dashboard.created_at,
         updated_at: dashboard.updated_at
     };
