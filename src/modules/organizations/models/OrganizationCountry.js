@@ -14,7 +14,7 @@ const OrganizationCountry = sequelize.define('OrganizationCountry', {
         defaultValue: DataTypes.UUIDV4,
         comment: 'UUID - clave primaria'
     },
-    organization_id: {
+    organizationId: {
         type: DataTypes.UUID,
         allowNull: false,
         references: {
@@ -25,7 +25,7 @@ const OrganizationCountry = sequelize.define('OrganizationCountry', {
         onDelete: 'CASCADE',
         comment: 'FK a organizations.id'
     },
-    country_code: {
+    countryCode: {
         type: DataTypes.STRING(2),
         allowNull: false,
         references: {
@@ -36,7 +36,7 @@ const OrganizationCountry = sequelize.define('OrganizationCountry', {
         onDelete: 'RESTRICT',
         comment: 'FK a countries.iso_alpha2 - código ISO del país'
     },
-    is_primary: {
+    isPrimary: {
         type: DataTypes.BOOLEAN,
         allowNull: false,
         defaultValue: false,
@@ -64,18 +64,18 @@ const OrganizationCountry = sequelize.define('OrganizationCountry', {
 
 // Asociaciones
 OrganizationCountry.belongsTo(Organization, {
-    foreignKey: 'organization_id',
+    foreignKey: 'organizationId',
     as: 'organization'
 });
 
 OrganizationCountry.belongsTo(Country, {
-    foreignKey: 'country_code',
-    targetKey: 'iso_alpha2',
+    foreignKey: 'countryCode',
+    targetKey: 'isoAlpha2',
     as: 'country'
 });
 
 Organization.hasMany(OrganizationCountry, {
-    foreignKey: 'organization_id',
+    foreignKey: 'organizationId',
     as: 'countries'
 });
 

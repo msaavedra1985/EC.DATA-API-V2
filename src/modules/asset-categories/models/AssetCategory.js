@@ -43,7 +43,7 @@ const AssetCategory = sequelize.define('AssetCategory', {
     defaultValue: 1,
     comment: 'Nivel de profundidad en la jerarquía (1=raíz, 2, 3...)'
   },
-  parent_id: {
+  parentId: {
     type: DataTypes.INTEGER,
     allowNull: true,
     references: {
@@ -62,7 +62,7 @@ const AssetCategory = sequelize.define('AssetCategory', {
     allowNull: false,
     comment: 'Alcance: organization=compartido, user=personal'
   },
-  organization_id: {
+  organizationId: {
     type: DataTypes.UUID,
     allowNull: true,
     references: {
@@ -71,7 +71,7 @@ const AssetCategory = sequelize.define('AssetCategory', {
     },
     comment: 'FK a organizations - requerido si scope=organization'
   },
-  user_id: {
+  userId: {
     type: DataTypes.UUID,
     allowNull: true,
     references: {
@@ -80,7 +80,7 @@ const AssetCategory = sequelize.define('AssetCategory', {
     },
     comment: 'FK a users - requerido si scope=user'
   },
-  is_active: {
+  isActive: {
     type: DataTypes.BOOLEAN,
     allowNull: false,
     defaultValue: true,
@@ -106,33 +106,28 @@ AssetCategory.addHook('afterCreate', async (instance, options) => {
   let newPath;
   let newLevel;
 
-  if (instance.parent_id === null) {
-    // Categoría raíz: path = /id/
+  if (instance.parentId === null) {
     newPath = `/${instance.id}/`;
     newLevel = 1;
   } else {
-    // Categoría hija: buscar path del padre y concatenar
-    const parent = await AssetCategory.findByPk(instance.parent_id, {
+    const parent = await AssetCategory.findByPk(instance.parentId, {
       attributes: ['path', 'level'],
       transaction: options.transaction
     });
 
     if (parent) {
-      // Remover el último / del path del padre y agregar el nuevo ID
       const parentPath = parent.path.slice(0, -1);
       newPath = `${parentPath}/${instance.id}/`;
       newLevel = parent.level + 1;
     } else {
-      // Si no existe padre (edge case), tratar como raíz
       newPath = `/${instance.id}/`;
       newLevel = 1;
     }
   }
 
-  // Actualizar path y level
   await instance.update({ path: newPath, level: newLevel }, { 
     transaction: options.transaction,
-    hooks: false // Evitar recursión
+    hooks: false
   });
 });
 
@@ -141,18 +136,17 @@ AssetCategory.addHook('afterCreate', async (instance, options) => {
  * Importante: También debe actualizar paths de todos los descendientes
  */
 AssetCategory.addHook('beforeUpdate', async (instance, options) => {
-  // Solo procesar si cambió parent_id
-  if (!instance.changed('parent_id')) return;
+  if (!instance.changed('parentId')) return;
 
   const oldPath = instance.path;
   let newPath;
   let newLevel;
 
-  if (instance.parent_id === null) {
+  if (instance.parentId === null) {
     newPath = `/${instance.id}/`;
     newLevel = 1;
   } else {
-    const parent = await AssetCategory.findByPk(instance.parent_id, {
+    const parent = await AssetCategory.findByPk(instance.parentId, {
       attributes: ['path', 'level'],
       transaction: options.transaction
     });
@@ -170,7 +164,6 @@ AssetCategory.addHook('beforeUpdate', async (instance, options) => {
   instance.path = newPath;
   instance.level = newLevel;
 
-  // Actualizar paths de todos los descendientes
   if (oldPath && oldPath !== newPath) {
     const descendants = await AssetCategory.findAll({
       where: {
@@ -180,7 +173,6 @@ AssetCategory.addHook('beforeUpdate', async (instance, options) => {
       transaction: options.transaction
     });
 
-    // Calcular diferencia de nivel
     const levelDiff = newLevel - instance.getDataValue('level');
 
     for (const descendant of descendants) {
@@ -201,7 +193,7 @@ AssetCategory.addHook('beforeUpdate', async (instance, options) => {
  */
 AssetCategory.belongsTo(AssetCategory, {
   as: 'parent',
-  foreignKey: 'parent_id'
+  foreignKey: 'parentId'
 });
 
 /**
@@ -209,7 +201,7 @@ AssetCategory.belongsTo(AssetCategory, {
  */
 AssetCategory.hasMany(AssetCategory, {
   as: 'children',
-  foreignKey: 'parent_id'
+  foreignKey: 'parentId'
 });
 
 /**
@@ -225,7 +217,7 @@ AssetCategory.prototype.getDescendants = async function() {
     where: {
       path: { [Op.like]: `${this.path}%` },
       id: { [Op.ne]: this.id },
-      is_active: true
+      isActive: true
     },
     order: [['level', 'ASC'], ['name', 'ASC']]
   });
@@ -240,12 +232,11 @@ AssetCategory.prototype.getDescendants = async function() {
 AssetCategory.prototype.getAncestors = async function() {
   if (!this.path || this.level === 1) return [];
   
-  // Parsear path: /1/5/12/ -> [1, 5, 12] -> quitar el último (es el propio)
   const pathIds = this.path
     .split('/')
     .filter(id => id !== '')
     .map(id => parseInt(id, 10))
-    .slice(0, -1); // Remover el propio ID
+    .slice(0, -1);
 
   if (pathIds.length === 0) return [];
 
@@ -265,8 +256,8 @@ AssetCategory.prototype.getAncestors = async function() {
 AssetCategory.prototype.getDirectChildren = async function() {
   return AssetCategory.findAll({
     where: {
-      parent_id: this.id,
-      is_active: true
+      parentId: this.id,
+      isActive: true
     },
     order: [['name', 'ASC']]
   });
@@ -283,17 +274,16 @@ AssetCategory.prototype.getDirectChildren = async function() {
  * @returns {Promise<AssetCategory[]>} Árbol de categorías
  */
 AssetCategory.getTree = async function({ scope, organization_id, user_id }) {
-  const where = { is_active: true };
+  const where = { isActive: true };
 
   if (scope === 'organization' && organization_id) {
     where.scope = 'organization';
-    where.organization_id = organization_id;
+    where.organizationId = organization_id;
   } else if (scope === 'user' && user_id) {
     where.scope = 'user';
-    where.user_id = user_id;
+    where.userId = user_id;
   }
 
-  // Obtener todas las categorías ordenadas por path
   return AssetCategory.findAll({
     where,
     order: [['path', 'ASC']],
@@ -322,7 +312,7 @@ AssetCategory.getCategoryAndDescendantIds = async function(categoryId) {
   const descendants = await AssetCategory.findAll({
     where: {
       path: { [Op.like]: `${category.path}%` },
-      is_active: true
+      isActive: true
     },
     attributes: ['id']
   });

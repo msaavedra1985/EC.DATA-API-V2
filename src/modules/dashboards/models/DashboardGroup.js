@@ -1,26 +1,19 @@
 import { DataTypes } from 'sequelize';
 import sequelize from '../../../db/sql/sequelize.js';
 
-/**
- * Modelo DashboardGroup (Playlist)
- * Permite agrupar dashboards para presentaciones secuenciales o categorización.
- * 
- * - id: UUID v7 (clave primaria, interno)
- * - public_code: ID opaco público (formato: DGR-XXXXX-Y)
- */
 const DashboardGroup = sequelize.define('DashboardGroup', {
     id: {
         type: DataTypes.UUID,
         primaryKey: true,
         comment: 'UUID v7 - clave primaria time-ordered'
     },
-    public_code: {
+    publicCode: {
         type: DataTypes.STRING(50),
         allowNull: false,
         unique: true,
         comment: 'ID público opaco (ej: DGR-7K9D2-X) - previene enumeración'
     },
-    organization_id: {
+    organizationId: {
         type: DataTypes.UUID,
         allowNull: false,
         references: {
@@ -31,7 +24,7 @@ const DashboardGroup = sequelize.define('DashboardGroup', {
         onDelete: 'RESTRICT',
         comment: 'FK a organizations - organización dueña del grupo'
     },
-    owner_id: {
+    ownerId: {
         type: DataTypes.UUID,
         allowNull: false,
         references: {
@@ -52,7 +45,7 @@ const DashboardGroup = sequelize.define('DashboardGroup', {
         allowNull: true,
         comment: 'Descripción del grupo'
     },
-    is_active: {
+    isActive: {
         type: DataTypes.BOOLEAN,
         allowNull: false,
         defaultValue: true,
@@ -70,29 +63,26 @@ const DashboardGroup = sequelize.define('DashboardGroup', {
     ]
 });
 
-/**
- * Relaciones del modelo DashboardGroup
- */
 DashboardGroup.associate = (models) => {
     DashboardGroup.belongsTo(models.Organization, {
-        foreignKey: 'organization_id',
+        foreignKey: 'organizationId',
         as: 'organization'
     });
 
     DashboardGroup.belongsTo(models.User, {
-        foreignKey: 'owner_id',
+        foreignKey: 'ownerId',
         as: 'owner'
     });
 
     DashboardGroup.belongsToMany(models.Dashboard, {
         through: models.DashboardGroupItem,
-        foreignKey: 'dashboard_group_id',
-        otherKey: 'dashboard_id',
+        foreignKey: 'dashboardGroupId',
+        otherKey: 'dashboardId',
         as: 'dashboards'
     });
 
     DashboardGroup.hasMany(models.DashboardGroupCollaborator, {
-        foreignKey: 'dashboard_group_id',
+        foreignKey: 'dashboardGroupId',
         as: 'collaborators',
         onDelete: 'CASCADE'
     });

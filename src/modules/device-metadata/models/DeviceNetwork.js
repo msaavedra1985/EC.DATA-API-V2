@@ -21,12 +21,12 @@ const DeviceNetwork = sequelize.define('DeviceNetwork', {
         type: DataTypes.STRING(100),
         allowNull: true
     },
-    display_order: {
+    displayOrder: {
         type: DataTypes.INTEGER,
         allowNull: false,
         defaultValue: 0
     },
-    is_active: {
+    isActive: {
         type: DataTypes.BOOLEAN,
         allowNull: false,
         defaultValue: true

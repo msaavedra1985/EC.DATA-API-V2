@@ -1,21 +1,13 @@
 import { DataTypes } from 'sequelize';
 import sequelize from '../../../db/sql/sequelize.js';
 
-/**
- * Modelo WidgetDataSource
- * Vincula un widget con un recurso real del sistema (canal, equipo, sitio, jerarquía).
- * Permite integridad referencial lógica via public_code sin FKs duras a múltiples tablas.
- * 
- * entity_type: 'channel' | 'device' | 'site' | 'resource_hierarchy'
- * entity_id: public_code del recurso (CHN-xxx, DEV-xxx, SIT-xxx, RES-xxx)
- */
 const WidgetDataSource = sequelize.define('WidgetDataSource', {
     id: {
         type: DataTypes.UUID,
         primaryKey: true,
         comment: 'UUID v7 - clave primaria time-ordered'
     },
-    widget_id: {
+    widgetId: {
         type: DataTypes.UUID,
         allowNull: false,
         references: {
@@ -26,12 +18,12 @@ const WidgetDataSource = sequelize.define('WidgetDataSource', {
         onDelete: 'CASCADE',
         comment: 'FK a widgets - widget que consume este recurso'
     },
-    entity_type: {
+    entityType: {
         type: DataTypes.STRING(30),
         allowNull: false,
         comment: 'Tipo de recurso: channel, device, site, resource_hierarchy'
     },
-    entity_id: {
+    entityId: {
         type: DataTypes.STRING(100),
         allowNull: false,
         comment: 'Public code del recurso (CHN-xxx, DEV-xxx, SIT-xxx, RES-xxx)'
@@ -41,13 +33,13 @@ const WidgetDataSource = sequelize.define('WidgetDataSource', {
         allowNull: true,
         comment: 'Etiqueta personalizada para esta fuente de datos en el widget'
     },
-    series_config: {
+    seriesConfig: {
         type: DataTypes.JSONB,
         allowNull: true,
         defaultValue: {},
         comment: 'Config específica de esta serie: color override, eje Y, agregación, variable_id, etc.'
     },
-    order_index: {
+    orderIndex: {
         type: DataTypes.INTEGER,
         allowNull: false,
         defaultValue: 0,
@@ -63,12 +55,9 @@ const WidgetDataSource = sequelize.define('WidgetDataSource', {
     ]
 });
 
-/**
- * Relaciones del modelo WidgetDataSource
- */
 WidgetDataSource.associate = (models) => {
     WidgetDataSource.belongsTo(models.Widget, {
-        foreignKey: 'widget_id',
+        foreignKey: 'widgetId',
         as: 'widget'
     });
 };

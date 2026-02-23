@@ -17,20 +17,20 @@ const DeviceBrand = sequelize.define('DeviceBrand', {
         unique: true,
         comment: 'Código único interno (ej: schneider, abb)'
     },
-    logo_url: {
+    logoUrl: {
         type: DataTypes.STRING(500),
         allowNull: true
     },
-    website_url: {
+    websiteUrl: {
         type: DataTypes.STRING(500),
         allowNull: true
     },
-    display_order: {
+    displayOrder: {
         type: DataTypes.INTEGER,
         allowNull: false,
         defaultValue: 0
     },
-    is_active: {
+    isActive: {
         type: DataTypes.BOOLEAN,
         allowNull: false,
         defaultValue: true

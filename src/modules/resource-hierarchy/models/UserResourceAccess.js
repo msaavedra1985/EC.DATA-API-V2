@@ -24,7 +24,7 @@ const UserResourceAccess = sequelize.define('UserResourceAccess', {
         defaultValue: () => generateUuidV7(),
         comment: 'UUID v7 - clave primaria'
     },
-    user_id: {
+    userId: {
         type: DataTypes.UUID,
         allowNull: false,
         references: {
@@ -33,7 +33,7 @@ const UserResourceAccess = sequelize.define('UserResourceAccess', {
         },
         comment: 'FK a users - usuario que recibe el acceso'
     },
-    resource_node_id: {
+    resourceNodeId: {
         type: DataTypes.UUID,
         allowNull: false,
         references: {
@@ -42,7 +42,7 @@ const UserResourceAccess = sequelize.define('UserResourceAccess', {
         },
         comment: 'FK a resource_hierarchy - nodo al que se otorga acceso'
     },
-    organization_id: {
+    organizationId: {
         type: DataTypes.UUID,
         allowNull: false,
         references: {
@@ -51,19 +51,19 @@ const UserResourceAccess = sequelize.define('UserResourceAccess', {
         },
         comment: 'FK a organizations - denormalizado para queries rápidas'
     },
-    access_type: {
+    accessType: {
         type: DataTypes.ENUM('view', 'edit', 'admin'),
         allowNull: false,
         defaultValue: 'view',
         comment: 'Nivel de acceso: view (solo lectura), edit (modificar), admin (gestionar permisos)'
     },
-    include_descendants: {
+    includeDescendants: {
         type: DataTypes.BOOLEAN,
         allowNull: false,
         defaultValue: true,
         comment: 'Si true, el acceso se hereda a todos los nodos descendientes'
     },
-    granted_by: {
+    grantedBy: {
         type: DataTypes.UUID,
         allowNull: true,
         references: {
@@ -72,13 +72,13 @@ const UserResourceAccess = sequelize.define('UserResourceAccess', {
         },
         comment: 'FK a users - usuario que otorgó este acceso'
     },
-    granted_at: {
+    grantedAt: {
         type: DataTypes.DATE,
         allowNull: false,
         defaultValue: DataTypes.NOW,
         comment: 'Fecha en que se otorgó el acceso'
     },
-    expires_at: {
+    expiresAt: {
         type: DataTypes.DATE,
         allowNull: true,
         comment: 'Fecha de expiración del acceso (null = permanente)'
@@ -88,7 +88,7 @@ const UserResourceAccess = sequelize.define('UserResourceAccess', {
         allowNull: true,
         comment: 'Notas o razón del otorgamiento de acceso'
     },
-    is_active: {
+    isActive: {
         type: DataTypes.BOOLEAN,
         allowNull: false,
         defaultValue: true,

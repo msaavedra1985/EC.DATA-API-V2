@@ -22,13 +22,13 @@ const MeasurementType = sequelize.define('MeasurementType', {
         unique: true,
         comment: 'Código slug inmutable en inglés (ej: electric_energy, iot_control)'
     },
-    table_prefix: {
+    tablePrefix: {
         type: DataTypes.STRING(20),
         allowNull: false,
         defaultValue: '',
         comment: 'Prefijo de tablas en Cassandra (vacío=energía, sim=IoT)'
     },
-    is_active: {
+    isActive: {
         type: DataTypes.BOOLEAN,
         allowNull: false,
         defaultValue: true,
@@ -54,21 +54,18 @@ const MeasurementType = sequelize.define('MeasurementType', {
  * Relaciones del modelo MeasurementType
  */
 MeasurementType.associate = (models) => {
-    // MeasurementType tiene muchas traducciones
     MeasurementType.hasMany(models.MeasurementTypeTranslation, {
-        foreignKey: 'measurement_type_id',
+        foreignKey: 'measurementTypeId',
         as: 'translations'
     });
 
-    // MeasurementType tiene muchas variables
     MeasurementType.hasMany(models.Variable, {
-        foreignKey: 'measurement_type_id',
+        foreignKey: 'measurementTypeId',
         as: 'variables'
     });
 
-    // MeasurementType tiene muchos channels
     MeasurementType.hasMany(models.Channel, {
-        foreignKey: 'measurement_type_id',
+        foreignKey: 'measurementTypeId',
         as: 'channels'
     });
 };

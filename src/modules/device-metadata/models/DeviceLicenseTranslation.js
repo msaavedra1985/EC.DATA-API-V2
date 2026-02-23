@@ -11,7 +11,7 @@ const DeviceLicenseTranslation = sequelize.define('DeviceLicenseTranslation', {
         primaryKey: true,
         autoIncrement: true
     },
-    device_license_id: {
+    deviceLicenseId: {
         type: DataTypes.INTEGER,
         allowNull: false,
         references: {
@@ -41,13 +41,13 @@ const DeviceLicenseTranslation = sequelize.define('DeviceLicenseTranslation', {
 });
 
 DeviceLicense.hasMany(DeviceLicenseTranslation, {
-    foreignKey: 'device_license_id',
+    foreignKey: 'deviceLicenseId',
     as: 'translations',
     onDelete: 'CASCADE'
 });
 
 DeviceLicenseTranslation.belongsTo(DeviceLicense, {
-    foreignKey: 'device_license_id',
+    foreignKey: 'deviceLicenseId',
     as: 'deviceLicense'
 });
 

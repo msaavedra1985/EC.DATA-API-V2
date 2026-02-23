@@ -1,20 +1,13 @@
 import { DataTypes } from 'sequelize';
 import sequelize from '../../../db/sql/sequelize.js';
 
-/**
- * Modelo Widget
- * Componente visual dentro de una página de dashboard.
- * Usa configuración híbrida: datos relacionales + JSONB para layout/estilos.
- * 
- * Tipos soportados: line_chart, bar_chart, gauge, stat_card, table, map, heatmap, pie_chart, etc.
- */
 const Widget = sequelize.define('Widget', {
     id: {
         type: DataTypes.UUID,
         primaryKey: true,
         comment: 'UUID v7 - clave primaria time-ordered'
     },
-    dashboard_page_id: {
+    dashboardPageId: {
         type: DataTypes.UUID,
         allowNull: false,
         references: {
@@ -41,19 +34,19 @@ const Widget = sequelize.define('Widget', {
         defaultValue: { x: 0, y: 0, w: 4, h: 3 },
         comment: 'Posición y tamaño en el grid: {x, y, w, h}'
     },
-    style_config: {
+    styleConfig: {
         type: DataTypes.JSONB,
         allowNull: true,
         defaultValue: {},
         comment: 'Configuración visual: colores, ejes, títulos, leyendas, etc.'
     },
-    data_config: {
+    dataConfig: {
         type: DataTypes.JSONB,
         allowNull: true,
         defaultValue: {},
         comment: 'Configuración de datos: agregación, rango temporal, filtros, etc.'
     },
-    order_index: {
+    orderIndex: {
         type: DataTypes.INTEGER,
         allowNull: false,
         defaultValue: 0,
@@ -69,17 +62,14 @@ const Widget = sequelize.define('Widget', {
     ]
 });
 
-/**
- * Relaciones del modelo Widget
- */
 Widget.associate = (models) => {
     Widget.belongsTo(models.DashboardPage, {
-        foreignKey: 'dashboard_page_id',
+        foreignKey: 'dashboardPageId',
         as: 'page'
     });
 
     Widget.hasMany(models.WidgetDataSource, {
-        foreignKey: 'widget_id',
+        foreignKey: 'widgetId',
         as: 'dataSources',
         onDelete: 'CASCADE'
     });

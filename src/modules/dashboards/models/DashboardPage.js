@@ -1,18 +1,13 @@
 import { DataTypes } from 'sequelize';
 import sequelize from '../../../db/sql/sequelize.js';
 
-/**
- * Modelo DashboardPage
- * Representa una pestaña/página dentro de un dashboard (similar a tabs de Excel).
- * Cada página contiene widgets independientes.
- */
 const DashboardPage = sequelize.define('DashboardPage', {
     id: {
         type: DataTypes.UUID,
         primaryKey: true,
         comment: 'UUID v7 - clave primaria time-ordered'
     },
-    dashboard_id: {
+    dashboardId: {
         type: DataTypes.UUID,
         allowNull: false,
         references: {
@@ -28,7 +23,7 @@ const DashboardPage = sequelize.define('DashboardPage', {
         allowNull: false,
         comment: 'Nombre de la pestaña (ej: Energía, Clima)'
     },
-    order_index: {
+    orderIndex: {
         type: DataTypes.INTEGER,
         allowNull: false,
         defaultValue: 0,
@@ -44,17 +39,14 @@ const DashboardPage = sequelize.define('DashboardPage', {
     ]
 });
 
-/**
- * Relaciones del modelo DashboardPage
- */
 DashboardPage.associate = (models) => {
     DashboardPage.belongsTo(models.Dashboard, {
-        foreignKey: 'dashboard_id',
+        foreignKey: 'dashboardId',
         as: 'dashboard'
     });
 
     DashboardPage.hasMany(models.Widget, {
-        foreignKey: 'dashboard_page_id',
+        foreignKey: 'dashboardPageId',
         as: 'widgets',
         onDelete: 'CASCADE'
     });

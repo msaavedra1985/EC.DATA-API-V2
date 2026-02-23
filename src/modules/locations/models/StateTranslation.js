@@ -12,7 +12,7 @@ const StateTranslation = sequelize.define('StateTranslation', {
         primaryKey: true,
         autoIncrement: true
     },
-    state_code: {
+    stateCode: {
         type: DataTypes.STRING(10),
         allowNull: false,
         references: {
@@ -55,14 +55,14 @@ const StateTranslation = sequelize.define('StateTranslation', {
  * Relaciones
  */
 State.hasMany(StateTranslation, {
-    foreignKey: 'state_code',
+    foreignKey: 'stateCode',
     sourceKey: 'code',
     as: 'translations',
     onDelete: 'CASCADE'
 });
 
 StateTranslation.belongsTo(State, {
-    foreignKey: 'state_code',
+    foreignKey: 'stateCode',
     targetKey: 'code',
     as: 'state'
 });

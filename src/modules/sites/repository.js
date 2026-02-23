@@ -10,24 +10,24 @@ import sequelize from '../../db/sql/sequelize.js';
 
 // Definir relaciones de Sequelize
 Site.belongsTo(Organization, {
-    foreignKey: 'organization_id',
+    foreignKey: 'organizationId',
     as: 'organization'
 });
 
 Site.belongsTo(Country, {
-    foreignKey: 'country_code',
-    targetKey: 'iso_alpha2',
+    foreignKey: 'countryCode',
+    targetKey: 'isoAlpha2',
     as: 'country'
 });
 
 Organization.hasMany(Site, {
-    foreignKey: 'organization_id',
+    foreignKey: 'organizationId',
     as: 'sites'
 });
 
 Country.hasMany(Site, {
-    foreignKey: 'country_code',
-    sourceKey: 'iso_alpha2',
+    foreignKey: 'countryCode',
+    sourceKey: 'isoAlpha2',
     as: 'sites'
 });
 

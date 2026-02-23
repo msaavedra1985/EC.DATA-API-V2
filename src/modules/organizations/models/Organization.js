@@ -15,13 +15,13 @@ const Organization = sequelize.define('Organization', {
         primaryKey: true,
         comment: 'UUID v7 - clave primaria time-ordered'
     },
-    human_id: {
+    humanId: {
         type: DataTypes.INTEGER,
         allowNull: false,
         unique: true,
         comment: 'ID incremental global para uso interno/soporte'
     },
-    public_code: {
+    publicCode: {
         type: DataTypes.STRING(50),
         allowNull: false,
         unique: true,
@@ -38,7 +38,7 @@ const Organization = sequelize.define('Organization', {
         allowNull: false,
         comment: 'Nombre de la organización'
     },
-    parent_id: {
+    parentId: {
         type: DataTypes.UUID,
         allowNull: true,
         references: {
@@ -49,7 +49,7 @@ const Organization = sequelize.define('Organization', {
         onDelete: 'RESTRICT',
         comment: 'FK a organizations - organización padre (null = raíz)'
     },
-    logo_url: {
+    logoUrl: {
         type: DataTypes.STRING(500),
         allowNull: true,
         comment: 'URL del logo de la organización'
@@ -59,7 +59,7 @@ const Organization = sequelize.define('Organization', {
         allowNull: true,
         comment: 'Descripción de la organización'
     },
-    tax_id: {
+    taxId: {
         type: DataTypes.STRING(50),
         allowNull: true,
         comment: 'Identificación fiscal (CUIT, RFC, EIN, etc.)'
@@ -88,7 +88,7 @@ const Organization = sequelize.define('Organization', {
         defaultValue: {},
         comment: 'Configuración JSON de la organización (theme, formatos, preferencias)'
     },
-    is_active: {
+    isActive: {
         type: DataTypes.BOOLEAN,
         allowNull: false,
         defaultValue: true,
@@ -124,13 +124,13 @@ const Organization = sequelize.define('Organization', {
 
 // Relación jerárquica: organización padre
 Organization.belongsTo(Organization, {
-    foreignKey: 'parent_id',
+    foreignKey: 'parentId',
     as: 'parent'
 });
 
 // Relación jerárquica: organizaciones hijas
 Organization.hasMany(Organization, {
-    foreignKey: 'parent_id',
+    foreignKey: 'parentId',
     as: 'children'
 });
 

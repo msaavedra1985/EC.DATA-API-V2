@@ -12,7 +12,7 @@ const DeviceModel = sequelize.define('DeviceModel', {
         primaryKey: true,
         autoIncrement: true
     },
-    device_brand_id: {
+    deviceBrandId: {
         type: DataTypes.INTEGER,
         allowNull: false,
         references: {
@@ -32,12 +32,12 @@ const DeviceModel = sequelize.define('DeviceModel', {
         allowNull: true,
         comment: 'Especificaciones técnicas en formato JSON'
     },
-    display_order: {
+    displayOrder: {
         type: DataTypes.INTEGER,
         allowNull: false,
         defaultValue: 0
     },
-    is_active: {
+    isActive: {
         type: DataTypes.BOOLEAN,
         allowNull: false,
         defaultValue: true
@@ -57,13 +57,13 @@ const DeviceModel = sequelize.define('DeviceModel', {
 });
 
 DeviceBrand.hasMany(DeviceModel, {
-    foreignKey: 'device_brand_id',
+    foreignKey: 'deviceBrandId',
     as: 'models',
     onDelete: 'CASCADE'
 });
 
 DeviceModel.belongsTo(DeviceBrand, {
-    foreignKey: 'device_brand_id',
+    foreignKey: 'deviceBrandId',
     as: 'brand'
 });
 

@@ -11,7 +11,7 @@ const DeviceValidityPeriodTranslation = sequelize.define('DeviceValidityPeriodTr
         primaryKey: true,
         autoIncrement: true
     },
-    device_validity_period_id: {
+    deviceValidityPeriodId: {
         type: DataTypes.INTEGER,
         allowNull: false,
         references: {
@@ -41,13 +41,13 @@ const DeviceValidityPeriodTranslation = sequelize.define('DeviceValidityPeriodTr
 });
 
 DeviceValidityPeriod.hasMany(DeviceValidityPeriodTranslation, {
-    foreignKey: 'device_validity_period_id',
+    foreignKey: 'deviceValidityPeriodId',
     as: 'translations',
     onDelete: 'CASCADE'
 });
 
 DeviceValidityPeriodTranslation.belongsTo(DeviceValidityPeriod, {
-    foreignKey: 'device_validity_period_id',
+    foreignKey: 'deviceValidityPeriodId',
     as: 'deviceValidityPeriod'
 });
 

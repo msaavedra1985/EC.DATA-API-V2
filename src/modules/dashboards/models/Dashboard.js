@@ -1,27 +1,19 @@
 import { DataTypes } from 'sequelize';
 import sequelize from '../../../db/sql/sequelize.js';
 
-/**
- * Modelo Dashboard
- * Entidad principal del módulo de dashboards y analytics.
- * Soporta múltiples páginas (pestañas), widgets y sistema de permisos granular.
- * 
- * - id: UUID v7 (clave primaria, interno)
- * - public_code: ID opaco público (formato: DSH-XXXXX-Y)
- */
 const Dashboard = sequelize.define('Dashboard', {
     id: {
         type: DataTypes.UUID,
         primaryKey: true,
         comment: 'UUID v7 - clave primaria time-ordered'
     },
-    public_code: {
+    publicCode: {
         type: DataTypes.STRING(50),
         allowNull: false,
         unique: true,
         comment: 'ID público opaco (ej: DSH-7K9D2-X) - previene enumeración'
     },
-    organization_id: {
+    organizationId: {
         type: DataTypes.UUID,
         allowNull: false,
         references: {
@@ -32,7 +24,7 @@ const Dashboard = sequelize.define('Dashboard', {
         onDelete: 'RESTRICT',
         comment: 'FK a organizations - organización dueña del dashboard'
     },
-    owner_id: {
+    ownerId: {
         type: DataTypes.UUID,
         allowNull: false,
         references: {
@@ -70,29 +62,29 @@ const Dashboard = sequelize.define('Dashboard', {
         defaultValue: 'AUTO',
         comment: 'Modo de posicionamiento de widgets: AUTO (grid), FLOAT (libre)'
     },
-    custom_width: {
+    customWidth: {
         type: DataTypes.INTEGER,
         allowNull: true,
         comment: 'Ancho personalizado en px (solo cuando size=CUSTOM, rango 800-3840)'
     },
-    custom_height: {
+    customHeight: {
         type: DataTypes.INTEGER,
         allowNull: true,
         comment: 'Alto personalizado en px (solo cuando size=CUSTOM, rango 600-2160)'
     },
-    is_home: {
+    isHome: {
         type: DataTypes.BOOLEAN,
         allowNull: false,
         defaultValue: false,
         comment: 'Si este dashboard es el home del usuario en la organización'
     },
-    is_public: {
+    isPublic: {
         type: DataTypes.BOOLEAN,
         allowNull: false,
         defaultValue: false,
         comment: 'Si el dashboard es visible para todos los usuarios de la org'
     },
-    is_active: {
+    isActive: {
         type: DataTypes.BOOLEAN,
         allowNull: false,
         defaultValue: true,
@@ -104,7 +96,7 @@ const Dashboard = sequelize.define('Dashboard', {
         defaultValue: {},
         comment: 'Configuración extensible del dashboard (forceK, backgroundImage, etc.)'
     },
-    template_id: {
+    templateId: {
         type: DataTypes.UUID,
         allowNull: true,
         comment: 'Referencia a template usado para crear el dashboard (sin FK por ahora)'
@@ -122,36 +114,33 @@ const Dashboard = sequelize.define('Dashboard', {
     ]
 });
 
-/**
- * Relaciones del modelo Dashboard
- */
 Dashboard.associate = (models) => {
     Dashboard.belongsTo(models.Organization, {
-        foreignKey: 'organization_id',
+        foreignKey: 'organizationId',
         as: 'organization'
     });
 
     Dashboard.belongsTo(models.User, {
-        foreignKey: 'owner_id',
+        foreignKey: 'ownerId',
         as: 'owner'
     });
 
     Dashboard.hasMany(models.DashboardPage, {
-        foreignKey: 'dashboard_id',
+        foreignKey: 'dashboardId',
         as: 'pages',
         onDelete: 'CASCADE'
     });
 
     Dashboard.hasMany(models.DashboardCollaborator, {
-        foreignKey: 'dashboard_id',
+        foreignKey: 'dashboardId',
         as: 'collaborators',
         onDelete: 'CASCADE'
     });
 
     Dashboard.belongsToMany(models.DashboardGroup, {
         through: models.DashboardGroupItem,
-        foreignKey: 'dashboard_id',
-        otherKey: 'dashboard_group_id',
+        foreignKey: 'dashboardId',
+        otherKey: 'dashboardGroupId',
         as: 'groups'
     });
 };

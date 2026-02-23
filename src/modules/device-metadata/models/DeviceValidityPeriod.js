@@ -22,12 +22,12 @@ const DeviceValidityPeriod = sequelize.define('DeviceValidityPeriod', {
         allowNull: true,
         comment: 'Cantidad de meses (null para enterprise/ilimitado)'
     },
-    display_order: {
+    displayOrder: {
         type: DataTypes.INTEGER,
         allowNull: false,
         defaultValue: 0
     },
-    is_active: {
+    isActive: {
         type: DataTypes.BOOLEAN,
         allowNull: false,
         defaultValue: true

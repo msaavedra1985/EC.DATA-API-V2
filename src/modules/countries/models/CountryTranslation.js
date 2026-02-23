@@ -13,7 +13,7 @@ const CountryTranslation = sequelize.define('CountryTranslation', {
         primaryKey: true,
         autoIncrement: true
     },
-    country_code: {
+    countryCode: {
         type: DataTypes.STRING(2),
         allowNull: false,
         references: {
@@ -34,7 +34,7 @@ const CountryTranslation = sequelize.define('CountryTranslation', {
         allowNull: false,
         comment: 'Nombre del país en el idioma especificado'
     },
-    official_name: {
+    officialName: {
         type: DataTypes.STRING(200),
         allowNull: true,
         comment: 'Nombre oficial completo del país'
@@ -61,15 +61,15 @@ const CountryTranslation = sequelize.define('CountryTranslation', {
  * Relaciones entre Country y CountryTranslation
  */
 Country.hasMany(CountryTranslation, {
-    foreignKey: 'country_code',
-    sourceKey: 'iso_alpha2',
+    foreignKey: 'countryCode',
+    sourceKey: 'isoAlpha2',
     as: 'translations',
     onDelete: 'CASCADE'
 });
 
 CountryTranslation.belongsTo(Country, {
-    foreignKey: 'country_code',
-    targetKey: 'iso_alpha2',
+    foreignKey: 'countryCode',
+    targetKey: 'isoAlpha2',
     as: 'country'
 });
 

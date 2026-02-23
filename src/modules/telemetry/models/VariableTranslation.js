@@ -14,7 +14,7 @@ const VariableTranslation = sequelize.define('VariableTranslation', {
         autoIncrement: true,
         comment: 'ID incremental - clave primaria'
     },
-    variable_id: {
+    variableId: {
         type: DataTypes.INTEGER,
         allowNull: false,
         references: {
@@ -62,9 +62,8 @@ const VariableTranslation = sequelize.define('VariableTranslation', {
  * Relaciones del modelo VariableTranslation
  */
 VariableTranslation.associate = (models) => {
-    // Traducción pertenece a Variable
     VariableTranslation.belongsTo(models.Variable, {
-        foreignKey: 'variable_id',
+        foreignKey: 'variableId',
         as: 'variable'
     });
 };

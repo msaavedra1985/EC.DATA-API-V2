@@ -17,7 +17,7 @@ const ChannelVariable = sequelize.define('ChannelVariable', {
         autoIncrement: true,
         comment: 'ID incremental - clave primaria'
     },
-    channel_id: {
+    channelId: {
         type: DataTypes.UUID,
         allowNull: false,
         references: {
@@ -28,7 +28,7 @@ const ChannelVariable = sequelize.define('ChannelVariable', {
         onDelete: 'CASCADE',
         comment: 'FK a tabla channels'
     },
-    variable_id: {
+    variableId: {
         type: DataTypes.INTEGER,
         allowNull: false,
         references: {
@@ -39,13 +39,13 @@ const ChannelVariable = sequelize.define('ChannelVariable', {
         onDelete: 'CASCADE',
         comment: 'FK a tabla variables'
     },
-    is_active: {
+    isActive: {
         type: DataTypes.BOOLEAN,
         allowNull: false,
         defaultValue: true,
         comment: 'Indica si la variable está activa para este canal'
     },
-    display_order: {
+    displayOrder: {
         type: DataTypes.INTEGER,
         allowNull: true,
         comment: 'Orden de visualización específico para este canal (override)'
@@ -78,15 +78,13 @@ const ChannelVariable = sequelize.define('ChannelVariable', {
  * Relaciones del modelo ChannelVariable
  */
 ChannelVariable.associate = (models) => {
-    // ChannelVariable pertenece a Channel
     ChannelVariable.belongsTo(models.Channel, {
-        foreignKey: 'channel_id',
+        foreignKey: 'channelId',
         as: 'channel'
     });
 
-    // ChannelVariable pertenece a Variable
     ChannelVariable.belongsTo(models.Variable, {
-        foreignKey: 'variable_id',
+        foreignKey: 'variableId',
         as: 'variable'
     });
 };

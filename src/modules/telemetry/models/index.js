@@ -11,35 +11,35 @@ import VariableTranslation from './VariableTranslation.js';
 import ChannelVariable from './ChannelVariable.js';
 
 MeasurementType.hasMany(MeasurementTypeTranslation, {
-    foreignKey: 'measurement_type_id',
+    foreignKey: 'measurementTypeId',
     as: 'translations',
     onDelete: 'CASCADE'
 });
 
 MeasurementTypeTranslation.belongsTo(MeasurementType, {
-    foreignKey: 'measurement_type_id',
+    foreignKey: 'measurementTypeId',
     as: 'measurementType'
 });
 
 MeasurementType.hasMany(Variable, {
-    foreignKey: 'measurement_type_id',
+    foreignKey: 'measurementTypeId',
     as: 'variables',
     onDelete: 'RESTRICT'
 });
 
 Variable.belongsTo(MeasurementType, {
-    foreignKey: 'measurement_type_id',
+    foreignKey: 'measurementTypeId',
     as: 'measurementType'
 });
 
 Variable.hasMany(VariableTranslation, {
-    foreignKey: 'variable_id',
+    foreignKey: 'variableId',
     as: 'translations',
     onDelete: 'CASCADE'
 });
 
 VariableTranslation.belongsTo(Variable, {
-    foreignKey: 'variable_id',
+    foreignKey: 'variableId',
     as: 'variable'
 });
 

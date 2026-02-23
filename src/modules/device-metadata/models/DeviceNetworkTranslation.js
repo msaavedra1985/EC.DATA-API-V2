@@ -11,7 +11,7 @@ const DeviceNetworkTranslation = sequelize.define('DeviceNetworkTranslation', {
         primaryKey: true,
         autoIncrement: true
     },
-    device_network_id: {
+    deviceNetworkId: {
         type: DataTypes.INTEGER,
         allowNull: false,
         references: {
@@ -41,13 +41,13 @@ const DeviceNetworkTranslation = sequelize.define('DeviceNetworkTranslation', {
 });
 
 DeviceNetwork.hasMany(DeviceNetworkTranslation, {
-    foreignKey: 'device_network_id',
+    foreignKey: 'deviceNetworkId',
     as: 'translations',
     onDelete: 'CASCADE'
 });
 
 DeviceNetworkTranslation.belongsTo(DeviceNetwork, {
-    foreignKey: 'device_network_id',
+    foreignKey: 'deviceNetworkId',
     as: 'deviceNetwork'
 });
 

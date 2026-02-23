@@ -11,7 +11,7 @@ const DeviceServerTranslation = sequelize.define('DeviceServerTranslation', {
         primaryKey: true,
         autoIncrement: true
     },
-    device_server_id: {
+    deviceServerId: {
         type: DataTypes.INTEGER,
         allowNull: false,
         references: {
@@ -41,13 +41,13 @@ const DeviceServerTranslation = sequelize.define('DeviceServerTranslation', {
 });
 
 DeviceServer.hasMany(DeviceServerTranslation, {
-    foreignKey: 'device_server_id',
+    foreignKey: 'deviceServerId',
     as: 'translations',
     onDelete: 'CASCADE'
 });
 
 DeviceServerTranslation.belongsTo(DeviceServer, {
-    foreignKey: 'device_server_id',
+    foreignKey: 'deviceServerId',
     as: 'deviceServer'
 });
 

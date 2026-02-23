@@ -25,17 +25,17 @@ const ErrorLog = sequelize.define('ErrorLog', {
         defaultValue: 'error',
         comment: 'Nivel de severidad del error'
     },
-    error_code: {
+    errorCode: {
         type: DataTypes.STRING(100),
         allowNull: false,
         comment: 'Código de error (ej: VALIDATION_ERROR, DATABASE_ERROR)'
     },
-    error_message: {
+    errorMessage: {
         type: DataTypes.TEXT,
         allowNull: false,
         comment: 'Mensaje descriptivo del error'
     },
-    stack_trace: {
+    stackTrace: {
         type: DataTypes.TEXT,
         allowNull: true,
         comment: 'Stack trace completo del error (si está disponible)'
@@ -50,12 +50,12 @@ const ErrorLog = sequelize.define('ErrorLog', {
         allowNull: true,
         comment: 'Método HTTP (GET, POST, PUT, DELETE, etc)'
     },
-    status_code: {
+    statusCode: {
         type: DataTypes.INTEGER,
         allowNull: true,
         comment: 'Código de estado HTTP (400, 500, etc)'
     },
-    user_id: {
+    userId: {
         type: DataTypes.UUID,
         allowNull: true,
         references: {
@@ -66,7 +66,7 @@ const ErrorLog = sequelize.define('ErrorLog', {
         onDelete: 'SET NULL',
         comment: 'FK a users - usuario que generó el error (null = sistema/anónimo)'
     },
-    organization_id: {
+    organizationId: {
         type: DataTypes.UUID,
         allowNull: true,
         references: {
@@ -77,27 +77,27 @@ const ErrorLog = sequelize.define('ErrorLog', {
         onDelete: 'SET NULL',
         comment: 'FK a organizations - organización del usuario (null = sin contexto org)'
     },
-    session_id: {
+    sessionId: {
         type: DataTypes.STRING(100),
         allowNull: true,
         comment: 'ID de sesión para rastrear múltiples errores de una sesión'
     },
-    ip_address: {
+    ipAddress: {
         type: DataTypes.INET,
         allowNull: true,
         comment: 'Dirección IP del cliente'
     },
-    user_agent: {
+    userAgent: {
         type: DataTypes.TEXT,
         allowNull: true,
         comment: 'User agent del navegador/cliente'
     },
-    request_id: {
+    requestId: {
         type: DataTypes.STRING(100),
         allowNull: true,
         comment: 'ID único de request para correlación con logs de Pino'
     },
-    correlation_id: {
+    correlationId: {
         type: DataTypes.STRING(100),
         allowNull: true,
         comment: 'ID de correlación para vincular errores con auditorías (opcional)'
@@ -118,10 +118,8 @@ const ErrorLog = sequelize.define('ErrorLog', {
     tableName: 'error_logs',
     underscored: true,
     timestamps: true,
-    createdAt: 'created_at',
     updatedAt: false,
     paranoid: false,
-    deletedAt: false,
     indexes: [
         {
             fields: ['source'],

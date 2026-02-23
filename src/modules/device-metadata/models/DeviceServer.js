@@ -17,7 +17,7 @@ const DeviceServer = sequelize.define('DeviceServer', {
         unique: true,
         comment: 'Hostname o identificador del servidor'
     },
-    server_type: {
+    serverType: {
         type: DataTypes.STRING(20),
         allowNull: false,
         defaultValue: 'mqtt',
@@ -33,17 +33,17 @@ const DeviceServer = sequelize.define('DeviceServer', {
         allowNull: true,
         comment: 'Puerto del servicio'
     },
-    use_ssl: {
+    useSsl: {
         type: DataTypes.BOOLEAN,
         allowNull: false,
         defaultValue: false
     },
-    display_order: {
+    displayOrder: {
         type: DataTypes.INTEGER,
         allowNull: false,
         defaultValue: 0
     },
-    is_active: {
+    isActive: {
         type: DataTypes.BOOLEAN,
         allowNull: false,
         defaultValue: true

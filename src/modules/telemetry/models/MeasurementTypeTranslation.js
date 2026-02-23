@@ -14,7 +14,7 @@ const MeasurementTypeTranslation = sequelize.define('MeasurementTypeTranslation'
         autoIncrement: true,
         comment: 'ID incremental - clave primaria'
     },
-    measurement_type_id: {
+    measurementTypeId: {
         type: DataTypes.INTEGER,
         allowNull: false,
         references: {
@@ -57,9 +57,8 @@ const MeasurementTypeTranslation = sequelize.define('MeasurementTypeTranslation'
  * Relaciones del modelo MeasurementTypeTranslation
  */
 MeasurementTypeTranslation.associate = (models) => {
-    // Traducción pertenece a MeasurementType
     MeasurementTypeTranslation.belongsTo(models.MeasurementType, {
-        foreignKey: 'measurement_type_id',
+        foreignKey: 'measurementTypeId',
         as: 'measurementType'
     });
 };

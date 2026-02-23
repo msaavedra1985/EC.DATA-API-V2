@@ -34,47 +34,47 @@ import DashboardGroupCollaborator from '../modules/dashboards/models/DashboardGr
 // Definir asociaciones adicionales después de importar todos los modelos
 // para evitar dependencias circulares
 User.hasMany(UserOrganization, {
-    foreignKey: 'user_id',
+    foreignKey: 'userId',
     as: 'UserOrganizations'
 });
 
 // --- Asociaciones del módulo Dashboards ---
 
 // Dashboard
-Dashboard.belongsTo(Organization, { foreignKey: 'organization_id', as: 'organization' });
-Dashboard.belongsTo(User, { foreignKey: 'owner_id', as: 'owner' });
-Dashboard.hasMany(DashboardPage, { foreignKey: 'dashboard_id', as: 'pages', onDelete: 'CASCADE' });
-Dashboard.hasMany(DashboardCollaborator, { foreignKey: 'dashboard_id', as: 'collaborators', onDelete: 'CASCADE' });
-Dashboard.belongsToMany(DashboardGroup, { through: DashboardGroupItem, foreignKey: 'dashboard_id', otherKey: 'dashboard_group_id', as: 'groups' });
+Dashboard.belongsTo(Organization, { foreignKey: 'organizationId', as: 'organization' });
+Dashboard.belongsTo(User, { foreignKey: 'ownerId', as: 'owner' });
+Dashboard.hasMany(DashboardPage, { foreignKey: 'dashboardId', as: 'pages', onDelete: 'CASCADE' });
+Dashboard.hasMany(DashboardCollaborator, { foreignKey: 'dashboardId', as: 'collaborators', onDelete: 'CASCADE' });
+Dashboard.belongsToMany(DashboardGroup, { through: DashboardGroupItem, foreignKey: 'dashboardId', otherKey: 'dashboardGroupId', as: 'groups' });
 
 // DashboardPage
-DashboardPage.belongsTo(Dashboard, { foreignKey: 'dashboard_id', as: 'dashboard' });
-DashboardPage.hasMany(Widget, { foreignKey: 'dashboard_page_id', as: 'widgets', onDelete: 'CASCADE' });
+DashboardPage.belongsTo(Dashboard, { foreignKey: 'dashboardId', as: 'dashboard' });
+DashboardPage.hasMany(Widget, { foreignKey: 'dashboardPageId', as: 'widgets', onDelete: 'CASCADE' });
 
 // Widget
-Widget.belongsTo(DashboardPage, { foreignKey: 'dashboard_page_id', as: 'page' });
-Widget.hasMany(WidgetDataSource, { foreignKey: 'widget_id', as: 'dataSources', onDelete: 'CASCADE' });
+Widget.belongsTo(DashboardPage, { foreignKey: 'dashboardPageId', as: 'page' });
+Widget.hasMany(WidgetDataSource, { foreignKey: 'widgetId', as: 'dataSources', onDelete: 'CASCADE' });
 
 // WidgetDataSource
-WidgetDataSource.belongsTo(Widget, { foreignKey: 'widget_id', as: 'widget' });
+WidgetDataSource.belongsTo(Widget, { foreignKey: 'widgetId', as: 'widget' });
 
 // DashboardGroup
-DashboardGroup.belongsTo(Organization, { foreignKey: 'organization_id', as: 'organization' });
-DashboardGroup.belongsTo(User, { foreignKey: 'owner_id', as: 'owner' });
-DashboardGroup.belongsToMany(Dashboard, { through: DashboardGroupItem, foreignKey: 'dashboard_group_id', otherKey: 'dashboard_id', as: 'dashboards' });
-DashboardGroup.hasMany(DashboardGroupCollaborator, { foreignKey: 'dashboard_group_id', as: 'collaborators', onDelete: 'CASCADE' });
+DashboardGroup.belongsTo(Organization, { foreignKey: 'organizationId', as: 'organization' });
+DashboardGroup.belongsTo(User, { foreignKey: 'ownerId', as: 'owner' });
+DashboardGroup.belongsToMany(Dashboard, { through: DashboardGroupItem, foreignKey: 'dashboardGroupId', otherKey: 'dashboardId', as: 'dashboards' });
+DashboardGroup.hasMany(DashboardGroupCollaborator, { foreignKey: 'dashboardGroupId', as: 'collaborators', onDelete: 'CASCADE' });
 
 // DashboardGroupItem
-DashboardGroupItem.belongsTo(DashboardGroup, { foreignKey: 'dashboard_group_id', as: 'group' });
-DashboardGroupItem.belongsTo(Dashboard, { foreignKey: 'dashboard_id', as: 'dashboard' });
+DashboardGroupItem.belongsTo(DashboardGroup, { foreignKey: 'dashboardGroupId', as: 'group' });
+DashboardGroupItem.belongsTo(Dashboard, { foreignKey: 'dashboardId', as: 'dashboard' });
 
 // DashboardCollaborator
-DashboardCollaborator.belongsTo(Dashboard, { foreignKey: 'dashboard_id', as: 'dashboard' });
-DashboardCollaborator.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
+DashboardCollaborator.belongsTo(Dashboard, { foreignKey: 'dashboardId', as: 'dashboard' });
+DashboardCollaborator.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 
 // DashboardGroupCollaborator
-DashboardGroupCollaborator.belongsTo(DashboardGroup, { foreignKey: 'dashboard_group_id', as: 'group' });
-DashboardGroupCollaborator.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
+DashboardGroupCollaborator.belongsTo(DashboardGroup, { foreignKey: 'dashboardGroupId', as: 'group' });
+DashboardGroupCollaborator.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 
 /**
  * Array de modelos en orden de dependencia

@@ -14,7 +14,7 @@ const State = sequelize.define('State', {
         allowNull: false,
         comment: 'Código único: country_code + "-" + state_code (ej: AR-B, US-CA)'
     },
-    country_code: {
+    countryCode: {
         type: DataTypes.STRING(2),
         allowNull: false,
         references: {
@@ -25,7 +25,7 @@ const State = sequelize.define('State', {
         onDelete: 'RESTRICT',
         comment: 'FK a countries.iso_alpha2'
     },
-    state_code: {
+    stateCode: {
         type: DataTypes.STRING(10),
         allowNull: false,
         comment: 'Código del estado dentro del país (ej: B, CA)'
@@ -45,7 +45,7 @@ const State = sequelize.define('State', {
         allowNull: true,
         comment: 'Longitud del centroide'
     },
-    is_active: {
+    isActive: {
         type: DataTypes.BOOLEAN,
         allowNull: false,
         defaultValue: true,
@@ -71,14 +71,14 @@ const State = sequelize.define('State', {
  * Relaciones
  */
 Country.hasMany(State, {
-    foreignKey: 'country_code',
-    sourceKey: 'iso_alpha2',
+    foreignKey: 'countryCode',
+    sourceKey: 'isoAlpha2',
     as: 'states'
 });
 
 State.belongsTo(Country, {
-    foreignKey: 'country_code',
-    targetKey: 'iso_alpha2',
+    foreignKey: 'countryCode',
+    targetKey: 'isoAlpha2',
     as: 'country'
 });
 

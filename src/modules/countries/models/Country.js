@@ -13,30 +13,30 @@ const Country = sequelize.define('Country', {
         autoIncrement: true,
         comment: 'ID incremental - tabla de referencia'
     },
-    iso_alpha2: {
+    isoAlpha2: {
         type: DataTypes.STRING(2),
         allowNull: false,
         unique: true,
         comment: 'Código ISO 3166-1 alpha-2 (ej: AR, US, ES) - usado como FK en otras tablas'
     },
-    iso_alpha3: {
+    isoAlpha3: {
         type: DataTypes.STRING(3),
         allowNull: false,
         unique: true,
         comment: 'Código ISO 3166-1 alpha-3 (ej: ARG, USA, ESP)'
     },
-    iso_numeric: {
+    isoNumeric: {
         type: DataTypes.STRING(3),
         allowNull: false,
         unique: true,
         comment: 'Código ISO 3166-1 numérico (ej: 032, 840, 724)'
     },
-    phone_code: {
+    phoneCode: {
         type: DataTypes.STRING(10),
         allowNull: true,
         comment: 'Código telefónico internacional (ej: +54, +1, +34)'
     },
-    is_active: {
+    isActive: {
         type: DataTypes.BOOLEAN,
         allowNull: false,
         defaultValue: true,

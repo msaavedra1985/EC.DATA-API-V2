@@ -1,36 +1,25 @@
 import { DataTypes } from 'sequelize';
 import sequelize from '../../../db/sql/sequelize.js';
 
-/**
- * Modelo de Site (Locación Física)
- * Usa sistema triple identificador: UUID v7 + human_id + public_code
- * 
- * - id: UUID v7 (clave primaria, usado en FKs)
- * - human_id: incremental global (sin scope, solo para uso interno/soporte)
- * - public_code: ID opaco público (formato: SITE-XXXXX-Y)
- * 
- * Representa una locación física que pertenece a una organización.
- * Usado para gestionar ubicaciones, datos de clima, monedas, formatos locales, etc.
- */
 const Site = sequelize.define('Site', {
     id: {
         type: DataTypes.UUID,
         primaryKey: true,
         comment: 'UUID v7 - clave primaria time-ordered'
     },
-    human_id: {
+    humanId: {
         type: DataTypes.INTEGER,
         allowNull: false,
         unique: true,
         comment: 'ID incremental global para uso interno/soporte'
     },
-    public_code: {
+    publicCode: {
         type: DataTypes.STRING(50),
         allowNull: false,
         unique: true,
         comment: 'ID público opaco (ej: SITE-7K9D2-X) - previene enumeración'
     },
-    organization_id: {
+    organizationId: {
         type: DataTypes.UUID,
         allowNull: false,
         references: {
@@ -51,7 +40,6 @@ const Site = sequelize.define('Site', {
         allowNull: true,
         comment: 'Descripción del site'
     },
-    // Geolocalización
     latitude: {
         type: DataTypes.DECIMAL(10, 8),
         allowNull: true,
@@ -70,13 +58,12 @@ const Site = sequelize.define('Site', {
         },
         comment: 'Longitud GPS (ej: -58.3815704)'
     },
-    // Dirección completa
     address: {
         type: DataTypes.STRING(500),
         allowNull: true,
         comment: 'Dirección completa del site'
     },
-    street_number: {
+    streetNumber: {
         type: DataTypes.STRING(20),
         allowNull: true,
         comment: 'Número de calle'
@@ -86,17 +73,17 @@ const Site = sequelize.define('Site', {
         allowNull: true,
         comment: 'Ciudad'
     },
-    state_province: {
+    stateProvince: {
         type: DataTypes.STRING(100),
         allowNull: true,
         comment: 'Estado/Provincia/Región'
     },
-    postal_code: {
+    postalCode: {
         type: DataTypes.STRING(20),
         allowNull: true,
         comment: 'Código postal'
     },
-    country_code: {
+    countryCode: {
         type: DataTypes.STRING(2),
         allowNull: false,
         references: {
@@ -107,14 +94,12 @@ const Site = sequelize.define('Site', {
         onDelete: 'RESTRICT',
         comment: 'FK a countries.iso_alpha2 - código ISO del país (ej: AR, US)'
     },
-    // Datos adicionales
     timezone: {
         type: DataTypes.STRING(100),
         allowNull: true,
         comment: 'Zona horaria (ej: America/Argentina/Buenos_Aires)'
     },
-    // Características del edificio
-    building_type: {
+    buildingType: {
         type: DataTypes.ENUM(
             'office', 'warehouse', 'factory', 'retail', 
             'hospital', 'school', 'datacenter', 'hotel', 
@@ -123,7 +108,7 @@ const Site = sequelize.define('Site', {
         allowNull: true,
         comment: 'Tipo de edificio o instalación'
     },
-    area_m2: {
+    areaM2: {
         type: DataTypes.DECIMAL(10, 2),
         allowNull: true,
         validate: {
@@ -139,28 +124,27 @@ const Site = sequelize.define('Site', {
         },
         comment: 'Número de pisos/plantas del edificio'
     },
-    operating_hours: {
+    operatingHours: {
         type: DataTypes.STRING(200),
         allowNull: true,
         comment: 'Horario de operación (ej: "Lun-Vie 8:00-18:00")'
     },
-    image_url: {
+    imageUrl: {
         type: DataTypes.STRING(500),
         allowNull: true,
         comment: 'URL de imagen/foto del site'
     },
-    // Datos de contacto del site
-    contact_name: {
+    contactName: {
         type: DataTypes.STRING(100),
         allowNull: true,
         comment: 'Nombre del contacto en el site'
     },
-    contact_phone: {
+    contactPhone: {
         type: DataTypes.STRING(50),
         allowNull: true,
         comment: 'Teléfono de contacto del site'
     },
-    contact_email: {
+    contactEmail: {
         type: DataTypes.STRING(100),
         allowNull: true,
         validate: {
@@ -168,7 +152,7 @@ const Site = sequelize.define('Site', {
         },
         comment: 'Email de contacto del site'
     },
-    is_active: {
+    isActive: {
         type: DataTypes.BOOLEAN,
         allowNull: false,
         defaultValue: true,
@@ -178,7 +162,7 @@ const Site = sequelize.define('Site', {
     tableName: 'sites',
     timestamps: true,
     underscored: true,
-    paranoid: true, // Soft delete
+    paranoid: true,
     indexes: [
         {
             fields: ['public_code']
@@ -204,9 +188,5 @@ const Site = sequelize.define('Site', {
     ],
     comment: 'Sites (locaciones físicas) del sistema con identificadores UUID v7'
 });
-
-// Relaciones
-// Se definen en un archivo separado para evitar dependencias circulares
-// Importar Organization y Country después de que Site esté definido
 
 export default Site;

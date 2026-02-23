@@ -1099,12 +1099,12 @@ const buildTree = (nodes, rootId = null) => {
 
 // Definir asociación para include
 ResourceHierarchy.hasMany(UserResourceAccess, {
-    foreignKey: 'resource_node_id',
+    foreignKey: 'resourceNodeId',
     as: 'accesses'
 });
 
 UserResourceAccess.belongsTo(ResourceHierarchy, {
-    foreignKey: 'resource_node_id',
+    foreignKey: 'resourceNodeId',
     as: 'resourceNode'
 });
 

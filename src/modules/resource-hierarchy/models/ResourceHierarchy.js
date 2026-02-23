@@ -26,20 +26,20 @@ const ResourceHierarchy = sequelize.define('ResourceHierarchy', {
         defaultValue: () => generateUuidV7(),
         comment: 'UUID v7 - clave primaria time-ordered'
     },
-    human_id: {
+    humanId: {
         type: DataTypes.INTEGER,
         allowNull: false,
         autoIncrement: true,
         unique: true,
         comment: 'ID incremental global para uso interno/soporte'
     },
-    public_code: {
+    publicCode: {
         type: DataTypes.STRING(50),
         allowNull: false,
         unique: true,
         comment: 'ID público opaco (ej: RES-7K9D2-X) - previene enumeración'
     },
-    organization_id: {
+    organizationId: {
         type: DataTypes.UUID,
         allowNull: false,
         references: {
@@ -48,7 +48,7 @@ const ResourceHierarchy = sequelize.define('ResourceHierarchy', {
         },
         comment: 'FK a organizations - cada org tiene su propia jerarquía aislada'
     },
-    parent_id: {
+    parentId: {
         type: DataTypes.UUID,
         allowNull: true,
         references: {
@@ -57,13 +57,12 @@ const ResourceHierarchy = sequelize.define('ResourceHierarchy', {
         },
         comment: 'FK self-reference - nodo padre (null para nodos raíz)'
     },
-    // Nota: path ltree es manejado por el trigger de BD, no por Sequelize
-    node_type: {
+    nodeType: {
         type: DataTypes.ENUM('folder', 'site', 'channel'),
         allowNull: false,
         comment: 'Tipo de nodo: folder, site, channel'
     },
-    reference_id: {
+    referenceId: {
         type: DataTypes.STRING(100),
         allowNull: true,
         comment: 'Public code del recurso referenciado (ej: CHN-5LYJX-4, SIT-xxx). Null para carpetas.'
@@ -87,13 +86,13 @@ const ResourceHierarchy = sequelize.define('ResourceHierarchy', {
         allowNull: true,
         comment: 'Icono para mostrar en el árbol (ej: folder, building, sensor)'
     },
-    display_order: {
+    displayOrder: {
         type: DataTypes.INTEGER,
         allowNull: true,
         defaultValue: 0,
         comment: 'Orden de visualización entre hermanos (menor = primero)'
     },
-    asset_category_id: {
+    assetCategoryId: {
         type: DataTypes.INTEGER,
         allowNull: true,
         references: {
@@ -114,7 +113,7 @@ const ResourceHierarchy = sequelize.define('ResourceHierarchy', {
         defaultValue: {},
         comment: 'Metadatos adicionales del nodo'
     },
-    is_active: {
+    isActive: {
         type: DataTypes.BOOLEAN,
         allowNull: false,
         defaultValue: true,
@@ -124,7 +123,7 @@ const ResourceHierarchy = sequelize.define('ResourceHierarchy', {
     tableName: 'resource_hierarchy',
     timestamps: true,
     underscored: true,
-    paranoid: true, // Soft delete con deleted_at
+    paranoid: true,
     indexes: [
         { fields: ['organization_id'] },
         { fields: ['parent_id'] },
@@ -133,19 +132,14 @@ const ResourceHierarchy = sequelize.define('ResourceHierarchy', {
         { fields: ['is_active'] }
     ],
     hooks: {
-        // Hook para generar public_code antes de crear
         beforeCreate: (instance) => {
-            if (!instance.public_code) {
-                instance.public_code = generatePublicCode('RES', instance.id);
+            if (!instance.publicCode) {
+                instance.publicCode = generatePublicCode('RES', instance.id);
             }
         },
-        // Validación: si es site o channel, debe tener reference_id
         beforeValidate: (instance) => {
-            if ((instance.node_type === 'site' || instance.node_type === 'channel') && !instance.reference_id) {
-                // Solo validar en creación, no en updates parciales
+            if ((instance.nodeType === 'site' || instance.nodeType === 'channel') && !instance.referenceId) {
                 if (instance.isNewRecord) {
-                    // Permitir null temporalmente - se puede agregar después
-                    // throw new Error(`${instance.node_type} nodes must have a reference_id`);
                 }
             }
         }
@@ -153,14 +147,13 @@ const ResourceHierarchy = sequelize.define('ResourceHierarchy', {
     comment: 'Jerarquía de recursos para organizar carpetas, sites y canales por organización'
 });
 
-// Auto-referencia para relación padre-hijo
 ResourceHierarchy.hasMany(ResourceHierarchy, {
-    foreignKey: 'parent_id',
+    foreignKey: 'parentId',
     as: 'children'
 });
 
 ResourceHierarchy.belongsTo(ResourceHierarchy, {
-    foreignKey: 'parent_id',
+    foreignKey: 'parentId',
     as: 'parent'
 });
 
@@ -169,15 +162,13 @@ ResourceHierarchy.belongsTo(ResourceHierarchy, {
  * Llamada desde el inicializador de modelos
  */
 ResourceHierarchy.associate = (models) => {
-    // ResourceHierarchy pertenece a Organization
     ResourceHierarchy.belongsTo(models.Organization, {
-        foreignKey: 'organization_id',
+        foreignKey: 'organizationId',
         as: 'organization'
     });
 
-    // ResourceHierarchy pertenece a AssetCategory (tag de clasificación)
     ResourceHierarchy.belongsTo(models.AssetCategory, {
-        foreignKey: 'asset_category_id',
+        foreignKey: 'assetCategoryId',
         as: 'assetCategory'
     });
 };

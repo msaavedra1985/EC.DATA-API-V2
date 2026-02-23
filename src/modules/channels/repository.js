@@ -11,27 +11,27 @@ import sequelize from '../../db/sql/sequelize.js';
 
 // Definir relaciones de Sequelize
 Channel.belongsTo(Device, {
-    foreignKey: 'device_id',
+    foreignKey: 'deviceId',
     as: 'device'
 });
 
 Channel.belongsTo(Organization, {
-    foreignKey: 'organization_id',
+    foreignKey: 'organizationId',
     as: 'organization'
 });
 
 Channel.belongsTo(MeasurementType, {
-    foreignKey: 'measurement_type_id',
+    foreignKey: 'measurementTypeId',
     as: 'measurementType'
 });
 
 Device.hasMany(Channel, {
-    foreignKey: 'device_id',
+    foreignKey: 'deviceId',
     as: 'channels'
 });
 
 Organization.hasMany(Channel, {
-    foreignKey: 'organization_id',
+    foreignKey: 'organizationId',
     as: 'channels'
 });
 

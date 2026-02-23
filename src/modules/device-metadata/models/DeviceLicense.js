@@ -26,12 +26,12 @@ const DeviceLicense = sequelize.define('DeviceLicense', {
         allowNull: true,
         comment: 'Color para UI (hex o nombre)'
     },
-    display_order: {
+    displayOrder: {
         type: DataTypes.INTEGER,
         allowNull: false,
         defaultValue: 0
     },
-    is_active: {
+    isActive: {
         type: DataTypes.BOOLEAN,
         allowNull: false,
         defaultValue: true

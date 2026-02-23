@@ -34,12 +34,12 @@ const AuditLog = sequelize.define(
             primaryKey: true,
             comment: 'UUID v7 - clave primaria time-ordered'
         },
-        entity_type: {
+        entityType: {
             type: DataTypes.STRING(50),
             allowNull: false,
             comment: 'Tipo de entidad afectada (organization, user, product, order, etc.)'
         },
-        entity_id: {
+        entityId: {
             type: DataTypes.STRING(100),
             allowNull: false,
             comment: 'Identificador de la entidad (preferentemente public_code o UUID)'
@@ -49,9 +49,9 @@ const AuditLog = sequelize.define(
             allowNull: false,
             comment: 'Acción realizada (created, updated, deleted, activated, deactivated, etc.)'
         },
-        performed_by: {
+        performedBy: {
             type: DataTypes.UUID,
-            allowNull: true, // null = sistema automático
+            allowNull: true,
             references: {
                 model: 'users',
                 key: 'id'
@@ -60,18 +60,18 @@ const AuditLog = sequelize.define(
             onDelete: 'SET NULL',
             comment: 'Usuario que realizó la acción (null = sistema automático)'
         },
-        performed_at: {
+        performedAt: {
             type: DataTypes.DATE,
             allowNull: false,
             defaultValue: DataTypes.NOW,
             comment: 'Timestamp exacto de la acción'
         },
-        ip_address: {
+        ipAddress: {
             type: DataTypes.INET,
             allowNull: true,
             comment: 'Dirección IP del cliente'
         },
-        user_agent: {
+        userAgent: {
             type: DataTypes.TEXT,
             allowNull: true,
             comment: 'User agent del navegador/cliente para tracking de seguridad'
@@ -86,12 +86,12 @@ const AuditLog = sequelize.define(
             allowNull: true,
             comment: 'Información contextual adicional (nombres, descripciones, etc.)'
         },
-        correlation_id: {
+        correlationId: {
             type: DataTypes.STRING(100),
             allowNull: true,
             comment: 'ID de correlación para vincular auditorías con errores (opcional)'
         },
-        impersonated_org_id: {
+        impersonatedOrgId: {
             type: DataTypes.UUID,
             allowNull: true,
             references: {
@@ -105,9 +105,9 @@ const AuditLog = sequelize.define(
     },
     {
         tableName: 'audit_logs',
-        timestamps: false, // Usamos performed_at manualmente
+        timestamps: false,
         underscored: true,
-        paranoid: false, // No soft delete en logs de auditoría
+        paranoid: false,
         indexes: [
             {
                 name: 'idx_audit_entity',
@@ -142,8 +142,8 @@ const AuditLog = sequelize.define(
  * Hook para asegurar que performed_at siempre esté presente
  */
 AuditLog.beforeCreate((auditLog) => {
-    if (!auditLog.performed_at) {
-        auditLog.performed_at = new Date();
+    if (!auditLog.performedAt) {
+        auditLog.performedAt = new Date();
     }
 });
 

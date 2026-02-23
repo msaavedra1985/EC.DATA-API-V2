@@ -59,6 +59,7 @@ agent-docs/
 5. **"What works, don't touch"** → análisis de impacto antes de modificar código funcional
 6. **Actualizar docs de endpoints** al modificarlos → `agent-docs/endpoints/{modulo}.md`
 7. **Case transform bidireccional**: DB=snake_case, API=camelCase (automático via middleware)
+8. **Modelos Sequelize en camelCase**: Todas las propiedades de modelos usan camelCase (ej: `publicCode`, `organizationId`). `underscored: true` mapea automáticamente a columnas snake_case en la DB. Los servicios/repositorios/DTOs aún usan snake_case (refactor Fase 2 pendiente).
 
 ## Quick Start
 

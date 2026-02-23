@@ -24,7 +24,7 @@ const Variable = sequelize.define('Variable', {
         unique: true,
         comment: 'Código slug inmutable con prefijo del tipo (ej: ee_power, iot_temperature)'
     },
-    measurement_type_id: {
+    measurementTypeId: {
         type: DataTypes.INTEGER,
         allowNull: false,
         references: {
@@ -35,7 +35,7 @@ const Variable = sequelize.define('Variable', {
         onDelete: 'RESTRICT',
         comment: 'FK a measurement_types - tipo de medición al que pertenece'
     },
-    column_name: {
+    columnName: {
         type: DataTypes.STRING(50),
         allowNull: false,
         comment: 'Nombre de columna en Cassandra (ej: e, p, val1, val2)'
@@ -45,68 +45,68 @@ const Variable = sequelize.define('Variable', {
         allowNull: true,
         comment: 'Unidad de medida (ej: Wh, W, °C, %)'
     },
-    chart_type: {
+    chartType: {
         type: DataTypes.ENUM('column', 'spline', 'line', 'area', 'bar', 'pie', 'scatter', 'gauge', 'none'),
         allowNull: true,
         defaultValue: 'spline',
         comment: 'Tipo de gráfico recomendado para visualización'
     },
-    axis_name: {
+    axisName: {
         type: DataTypes.STRING(50),
         allowNull: true,
         comment: 'Nombre del eje para gráficos (ej: Energia (Wh))'
     },
-    axis_id: {
+    axisId: {
         type: DataTypes.STRING(30),
         allowNull: true,
         comment: 'ID del eje para agrupar variables en el mismo eje'
     },
-    axis_min: {
+    axisMin: {
         type: DataTypes.DECIMAL(10, 2),
         allowNull: true,
         comment: 'Valor mínimo del eje (null = auto)'
     },
-    axis_function: {
+    axisFunction: {
         type: DataTypes.STRING(20),
         allowNull: true,
         comment: 'Función de agregación para tablas (total, avg, etc.)'
     },
-    aggregation_type: {
+    aggregationType: {
         type: DataTypes.ENUM('sum', 'avg', 'min', 'max', 'count', 'last', 'first', 'none'),
         allowNull: true,
         defaultValue: 'none',
         comment: 'Tipo de agregación por defecto para esta variable'
     },
-    display_order: {
+    displayOrder: {
         type: DataTypes.INTEGER,
         allowNull: true,
         comment: 'Orden de visualización en listas y gráficos'
     },
-    show_in_billing: {
+    showInBilling: {
         type: DataTypes.BOOLEAN,
         allowNull: false,
         defaultValue: false,
         comment: 'Mostrar en sección de facturación'
     },
-    show_in_analysis: {
+    showInAnalysis: {
         type: DataTypes.BOOLEAN,
         allowNull: false,
         defaultValue: true,
         comment: 'Mostrar en sección de análisis'
     },
-    is_realtime: {
+    isRealtime: {
         type: DataTypes.BOOLEAN,
         allowNull: false,
         defaultValue: false,
         comment: 'Indica si la variable soporta visualización en tiempo real'
     },
-    is_default: {
+    isDefault: {
         type: DataTypes.BOOLEAN,
         allowNull: false,
         defaultValue: false,
         comment: 'Indica si es la variable por defecto del tipo de medición'
     },
-    is_active: {
+    isActive: {
         type: DataTypes.BOOLEAN,
         allowNull: false,
         defaultValue: true,
@@ -139,23 +139,20 @@ const Variable = sequelize.define('Variable', {
  * Relaciones del modelo Variable
  */
 Variable.associate = (models) => {
-    // Variable pertenece a MeasurementType
     Variable.belongsTo(models.MeasurementType, {
-        foreignKey: 'measurement_type_id',
+        foreignKey: 'measurementTypeId',
         as: 'measurementType'
     });
 
-    // Variable tiene muchas traducciones
     Variable.hasMany(models.VariableTranslation, {
-        foreignKey: 'variable_id',
+        foreignKey: 'variableId',
         as: 'translations'
     });
 
-    // Variable tiene muchas relaciones con channels
     Variable.belongsToMany(models.Channel, {
         through: models.ChannelVariable,
-        foreignKey: 'variable_id',
-        otherKey: 'channel_id',
+        foreignKey: 'variableId',
+        otherKey: 'channelId',
         as: 'channels'
     });
 };

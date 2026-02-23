@@ -22,12 +22,12 @@ const DeviceType = sequelize.define('DeviceType', {
         allowNull: true,
         comment: 'Nombre del ícono'
     },
-    display_order: {
+    displayOrder: {
         type: DataTypes.INTEGER,
         allowNull: false,
         defaultValue: 0
     },
-    is_active: {
+    isActive: {
         type: DataTypes.BOOLEAN,
         allowNull: false,
         defaultValue: true

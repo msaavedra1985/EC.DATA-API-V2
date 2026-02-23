@@ -11,7 +11,7 @@ const DeviceTypeTranslation = sequelize.define('DeviceTypeTranslation', {
         primaryKey: true,
         autoIncrement: true
     },
-    device_type_id: {
+    deviceTypeId: {
         type: DataTypes.INTEGER,
         allowNull: false,
         references: {
@@ -42,13 +42,13 @@ const DeviceTypeTranslation = sequelize.define('DeviceTypeTranslation', {
 });
 
 DeviceType.hasMany(DeviceTypeTranslation, {
-    foreignKey: 'device_type_id',
+    foreignKey: 'deviceTypeId',
     as: 'translations',
     onDelete: 'CASCADE'
 });
 
 DeviceTypeTranslation.belongsTo(DeviceType, {
-    foreignKey: 'device_type_id',
+    foreignKey: 'deviceTypeId',
     as: 'deviceType'
 });
 

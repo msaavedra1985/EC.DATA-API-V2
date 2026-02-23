@@ -1,30 +1,19 @@
 import { DataTypes, Op } from 'sequelize';
 import sequelize from '../../../db/sql/sequelize.js';
 
-/**
- * Modelo de Device (Equipo IoT/Edge)
- * Usa sistema triple identificador: UUID v7 + human_id + public_code
- * 
- * - id: UUID v7 (clave primaria, usado en FKs)
- * - human_id: incremental global (sin scope, solo para uso interno/soporte)
- * - public_code: ID opaco público (formato: DEV-XXXXX-Y)
- * 
- * Representa un equipo IoT, sensor, gateway, UPS, medidor, etc.
- * Vinculado a 7 catálogos: tipo, marca, modelo, servidor, red, licencia, vigencia.
- */
 const Device = sequelize.define('Device', {
     id: {
         type: DataTypes.UUID,
         primaryKey: true,
         comment: 'UUID v7 - clave primaria time-ordered'
     },
-    human_id: {
+    humanId: {
         type: DataTypes.INTEGER,
         allowNull: false,
         unique: true,
         comment: 'ID incremental global para uso interno/soporte'
     },
-    public_code: {
+    publicCode: {
         type: DataTypes.STRING(50),
         allowNull: false,
         unique: true,
@@ -36,7 +25,7 @@ const Device = sequelize.define('Device', {
         unique: true,
         comment: 'UUID operativo/externo - asignado por técnicos en campo o sistemas externos'
     },
-    organization_id: {
+    organizationId: {
         type: DataTypes.UUID,
         allowNull: false,
         references: {
@@ -47,7 +36,7 @@ const Device = sequelize.define('Device', {
         onDelete: 'RESTRICT',
         comment: 'FK a organizations - organización dueña del equipo'
     },
-    site_id: {
+    siteId: {
         type: DataTypes.UUID,
         allowNull: true,
         references: {
@@ -68,9 +57,7 @@ const Device = sequelize.define('Device', {
         allowNull: true,
         comment: 'Descripción del equipo'
     },
-
-    // --- FKs a catálogos de equipos ---
-    device_type_id: {
+    deviceTypeId: {
         type: DataTypes.INTEGER,
         allowNull: true,
         references: {
@@ -81,7 +68,7 @@ const Device = sequelize.define('Device', {
         onDelete: 'SET NULL',
         comment: 'FK a device_types - tipo de equipo (catálogo)'
     },
-    brand_id: {
+    brandId: {
         type: DataTypes.INTEGER,
         allowNull: true,
         references: {
@@ -92,7 +79,7 @@ const Device = sequelize.define('Device', {
         onDelete: 'SET NULL',
         comment: 'FK a device_brands - marca del equipo'
     },
-    model_id: {
+    modelId: {
         type: DataTypes.INTEGER,
         allowNull: true,
         references: {
@@ -103,7 +90,7 @@ const Device = sequelize.define('Device', {
         onDelete: 'SET NULL',
         comment: 'FK a device_models - modelo del equipo'
     },
-    server_id: {
+    serverId: {
         type: DataTypes.INTEGER,
         allowNull: true,
         references: {
@@ -114,7 +101,7 @@ const Device = sequelize.define('Device', {
         onDelete: 'SET NULL',
         comment: 'FK a device_servers - servidor de comunicación'
     },
-    network_id: {
+    networkId: {
         type: DataTypes.INTEGER,
         allowNull: true,
         references: {
@@ -125,7 +112,7 @@ const Device = sequelize.define('Device', {
         onDelete: 'SET NULL',
         comment: 'FK a device_networks - tipo de red'
     },
-    license_id: {
+    licenseId: {
         type: DataTypes.INTEGER,
         allowNull: true,
         references: {
@@ -136,7 +123,7 @@ const Device = sequelize.define('Device', {
         onDelete: 'SET NULL',
         comment: 'FK a device_licenses - tipo de licencia'
     },
-    validity_period_id: {
+    validityPeriodId: {
         type: DataTypes.INTEGER,
         allowNull: true,
         references: {
@@ -147,54 +134,48 @@ const Device = sequelize.define('Device', {
         onDelete: 'SET NULL',
         comment: 'FK a device_validity_periods - período de vigencia'
     },
-
-    // --- Comunicación MQTT ---
     topic: {
         type: DataTypes.STRING(500),
         allowNull: true,
         comment: 'Topic MQTT del equipo (ej: ecdata/ups/eaton-001)'
     },
-
-    // --- Identificación de hardware ---
     status: {
         type: DataTypes.ENUM('active', 'inactive', 'maintenance', 'decommissioned'),
         allowNull: false,
         defaultValue: 'active',
         comment: 'Estado del equipo: active, inactive, maintenance, decommissioned'
     },
-    firmware_version: {
+    firmwareVersion: {
         type: DataTypes.STRING(50),
         allowNull: true,
         comment: 'Versión del firmware instalado (ej: "v2.5.1")'
     },
-    serial_number: {
+    serialNumber: {
         type: DataTypes.STRING(100),
         allowNull: true,
         comment: 'Número de serie del equipo'
     },
-    ip_address: {
+    ipAddress: {
         type: DataTypes.STRING(45),
         allowNull: true,
         comment: 'Dirección IP del equipo (IPv4 o IPv6)'
     },
-    mac_address: {
+    macAddress: {
         type: DataTypes.STRING(17),
         allowNull: true,
         comment: 'Dirección MAC del equipo (ej: "00:1A:2B:3C:4D:5E")'
     },
-
-    // --- Ubicación ---
-    location_name: {
+    locationName: {
         type: DataTypes.STRING(200),
         allowNull: true,
         comment: 'Nombre de ubicación (ej: Edificio Principal)'
     },
-    physical_location: {
+    physicalLocation: {
         type: DataTypes.STRING(200),
         allowNull: true,
         comment: 'Ubicación física (ej: Piso 3, Sala de servidores)'
     },
-    electrical_location: {
+    electricalLocation: {
         type: DataTypes.STRING(200),
         allowNull: true,
         comment: 'Ubicación eléctrica (ej: Tablero principal TGD)'
@@ -220,26 +201,22 @@ const Device = sequelize.define('Device', {
         defaultValue: 'UTC',
         comment: 'Zona horaria del equipo en formato IANA (ej: America/Lima, UTC)'
     },
-
-    // --- Datos comerciales ---
-    installation_date: {
+    installationDate: {
         type: DataTypes.DATEONLY,
         allowNull: true,
         comment: 'Fecha de instalación del equipo'
     },
-    warranty_months: {
+    warrantyMonths: {
         type: DataTypes.INTEGER,
         allowNull: true,
         comment: 'Meses de garantía del equipo'
     },
-    expiration_date: {
+    expirationDate: {
         type: DataTypes.DATEONLY,
         allowNull: true,
         comment: 'Fecha de expiración de la licencia/servicio'
     },
-
-    // --- Sistema ---
-    last_seen_at: {
+    lastSeenAt: {
         type: DataTypes.DATE,
         allowNull: true,
         comment: 'Última vez que el equipo se comunicó con el sistema'
@@ -250,7 +227,7 @@ const Device = sequelize.define('Device', {
         defaultValue: {},
         comment: 'Metadatos adicionales en formato JSON'
     },
-    is_active: {
+    isActive: {
         type: DataTypes.BOOLEAN,
         allowNull: false,
         defaultValue: true,
@@ -323,60 +300,54 @@ const Device = sequelize.define('Device', {
     ]
 });
 
-/**
- * Relaciones del modelo Device
- */
 Device.associate = (models) => {
-    // Relaciones con organización y sitio
     Device.belongsTo(models.Organization, {
-        foreignKey: 'organization_id',
+        foreignKey: 'organizationId',
         as: 'organization'
     });
 
     Device.belongsTo(models.Site, {
-        foreignKey: 'site_id',
+        foreignKey: 'siteId',
         as: 'site'
     });
 
-    // Relaciones con catálogos de equipos
     Device.belongsTo(models.DeviceType, {
-        foreignKey: 'device_type_id',
+        foreignKey: 'deviceTypeId',
         as: 'deviceType'
     });
 
     Device.belongsTo(models.DeviceBrand, {
-        foreignKey: 'brand_id',
+        foreignKey: 'brandId',
         as: 'brand'
     });
 
     Device.belongsTo(models.DeviceModel, {
-        foreignKey: 'model_id',
+        foreignKey: 'modelId',
         as: 'model'
     });
 
     Device.belongsTo(models.DeviceServer, {
-        foreignKey: 'server_id',
+        foreignKey: 'serverId',
         as: 'server'
     });
 
     Device.belongsTo(models.DeviceNetwork, {
-        foreignKey: 'network_id',
+        foreignKey: 'networkId',
         as: 'network'
     });
 
     Device.belongsTo(models.DeviceLicense, {
-        foreignKey: 'license_id',
+        foreignKey: 'licenseId',
         as: 'license'
     });
 
     Device.belongsTo(models.DeviceValidityPeriod, {
-        foreignKey: 'validity_period_id',
+        foreignKey: 'validityPeriodId',
         as: 'validityPeriod'
     });
 
-    // Relación con canales
     Device.hasMany(models.Channel, {
-        foreignKey: 'device_id',
+        foreignKey: 'deviceId',
         as: 'channels'
     });
 };

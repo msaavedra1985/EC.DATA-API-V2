@@ -9,25 +9,25 @@ import { generateUuidV7, generateHumanId, generatePublicCode } from '../../utils
 // Definir asociaciones de FileUpload
 // FileUpload pertenece a Organization
 FileUpload.belongsTo(Organization, {
-    foreignKey: 'organization_id',
+    foreignKey: 'organizationId',
     as: 'organization'
 });
 
 // FileUpload pertenece a User (quien lo subió)
 FileUpload.belongsTo(User, {
-    foreignKey: 'uploaded_by',
+    foreignKey: 'uploadedBy',
     as: 'uploader'
 });
 
 // Organization tiene muchos FileUploads
 Organization.hasMany(FileUpload, {
-    foreignKey: 'organization_id',
+    foreignKey: 'organizationId',
     as: 'files'
 });
 
 // User tiene muchos FileUploads
 User.hasMany(FileUpload, {
-    foreignKey: 'uploaded_by',
+    foreignKey: 'uploadedBy',
     as: 'uploadedFiles'
 });
 

@@ -1,20 +1,13 @@
 import { DataTypes } from 'sequelize';
 import sequelize from '../../../db/sql/sequelize.js';
 
-/**
- * Modelo DashboardGroupCollaborator
- * ACL granular: vincula un usuario con un grupo de dashboards y define su nivel de acceso.
- * Un usuario solo puede tener un rol por grupo (constraint unique).
- * 
- * Roles: viewer (solo lectura), editor (puede modificar el grupo y sus items)
- */
 const DashboardGroupCollaborator = sequelize.define('DashboardGroupCollaborator', {
     id: {
         type: DataTypes.UUID,
         primaryKey: true,
         comment: 'UUID v7 - clave primaria'
     },
-    dashboard_group_id: {
+    dashboardGroupId: {
         type: DataTypes.UUID,
         allowNull: false,
         references: {
@@ -25,7 +18,7 @@ const DashboardGroupCollaborator = sequelize.define('DashboardGroupCollaborator'
         onDelete: 'CASCADE',
         comment: 'FK a dashboard_groups'
     },
-    user_id: {
+    userId: {
         type: DataTypes.UUID,
         allowNull: false,
         references: {
@@ -57,17 +50,14 @@ const DashboardGroupCollaborator = sequelize.define('DashboardGroupCollaborator'
     ]
 });
 
-/**
- * Relaciones del modelo DashboardGroupCollaborator
- */
 DashboardGroupCollaborator.associate = (models) => {
     DashboardGroupCollaborator.belongsTo(models.DashboardGroup, {
-        foreignKey: 'dashboard_group_id',
+        foreignKey: 'dashboardGroupId',
         as: 'group'
     });
 
     DashboardGroupCollaborator.belongsTo(models.User, {
-        foreignKey: 'user_id',
+        foreignKey: 'userId',
         as: 'user'
     });
 };

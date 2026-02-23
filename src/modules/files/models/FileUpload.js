@@ -24,19 +24,19 @@ const FileUpload = sequelize.define('FileUpload', {
         primaryKey: true,
         comment: 'UUID v7 - clave primaria time-ordered'
     },
-    human_id: {
+    humanId: {
         type: DataTypes.INTEGER,
         allowNull: false,
         unique: true,
         comment: 'ID incremental global para uso interno/soporte'
     },
-    public_code: {
+    publicCode: {
         type: DataTypes.STRING(50),
         allowNull: false,
         unique: true,
         comment: 'ID público opaco (ej: FILE-7K9D2-X) - previene enumeración'
     },
-    organization_id: {
+    organizationId: {
         type: DataTypes.UUID,
         allowNull: false,
         references: {
@@ -47,27 +47,27 @@ const FileUpload = sequelize.define('FileUpload', {
         onDelete: 'RESTRICT',
         comment: 'FK a organizations - organización propietaria del archivo'
     },
-    blob_path: {
+    blobPath: {
         type: DataTypes.STRING(500),
         allowNull: false,
         comment: 'Ruta completa en Azure Blob Storage (ej: ORG-XXX/logos/uuid_name.png)'
     },
-    blob_url: {
+    blobUrl: {
         type: DataTypes.STRING(1000),
         allowNull: true,
         comment: 'URL pública o firmada del archivo en Azure Blob Storage'
     },
-    original_name: {
+    originalName: {
         type: DataTypes.STRING(255),
         allowNull: false,
         comment: 'Nombre original del archivo subido por el usuario'
     },
-    file_name: {
+    fileName: {
         type: DataTypes.STRING(255),
         allowNull: false,
         comment: 'Nombre del archivo almacenado (sanitizado, con UUID)'
     },
-    mime_type: {
+    mimeType: {
         type: DataTypes.STRING(100),
         allowNull: false,
         comment: 'Tipo MIME del archivo (ej: image/png, application/pdf)'
@@ -77,12 +77,12 @@ const FileUpload = sequelize.define('FileUpload', {
         allowNull: false,
         comment: 'Extensión del archivo sin punto (ej: png, pdf, xlsx)'
     },
-    size_bytes: {
+    sizeBytes: {
         type: DataTypes.BIGINT,
         allowNull: false,
         comment: 'Tamaño del archivo en bytes'
     },
-    checksum_sha256: {
+    checksumSha256: {
         type: DataTypes.STRING(64),
         allowNull: true,
         comment: 'Checksum SHA-256 del archivo para verificación de integridad'
@@ -93,12 +93,12 @@ const FileUpload = sequelize.define('FileUpload', {
         defaultValue: 'other',
         comment: 'Categoría del archivo: logo, image, document, firmware, backup, export, import, attachment, other'
     },
-    owner_type: {
+    ownerType: {
         type: DataTypes.STRING(50),
         allowNull: true,
         comment: 'Tipo de entidad propietaria (ej: organization, site, device, user)'
     },
-    owner_id: {
+    ownerId: {
         type: DataTypes.STRING(50),
         allowNull: true,
         comment: 'Public code de la entidad propietaria'
@@ -109,7 +109,7 @@ const FileUpload = sequelize.define('FileUpload', {
         defaultValue: 'pending',
         comment: 'Estado del archivo: pending, uploaded, linked, deleted'
     },
-    uploaded_by: {
+    uploadedBy: {
         type: DataTypes.UUID,
         allowNull: true,
         references: {
@@ -120,12 +120,12 @@ const FileUpload = sequelize.define('FileUpload', {
         onDelete: 'SET NULL',
         comment: 'FK a users - usuario que subió el archivo'
     },
-    uploaded_at: {
+    uploadedAt: {
         type: DataTypes.DATE,
         allowNull: true,
         comment: 'Fecha y hora en que se completó el upload'
     },
-    expires_at: {
+    expiresAt: {
         type: DataTypes.DATE,
         allowNull: true,
         comment: 'Fecha de expiración para archivos temporales o pending'
@@ -136,7 +136,7 @@ const FileUpload = sequelize.define('FileUpload', {
         defaultValue: {},
         comment: 'Metadatos adicionales (dimensiones de imagen, duración de audio, etc.)'
     },
-    is_public: {
+    isPublic: {
         type: DataTypes.BOOLEAN,
         allowNull: false,
         defaultValue: false,
@@ -145,7 +145,7 @@ const FileUpload = sequelize.define('FileUpload', {
 }, {
     tableName: 'file_uploads',
     timestamps: true,
-    paranoid: true, // Habilita soft delete con deleted_at
+    paranoid: true,
     underscored: true,
     indexes: [
         {
@@ -179,15 +179,13 @@ const FileUpload = sequelize.define('FileUpload', {
  * Relaciones del modelo FileUpload
  */
 FileUpload.associate = (models) => {
-    // FileUpload pertenece a Organization
     FileUpload.belongsTo(models.Organization, {
-        foreignKey: 'organization_id',
+        foreignKey: 'organizationId',
         as: 'organization'
     });
 
-    // FileUpload pertenece a User (quien lo subió)
     FileUpload.belongsTo(models.User, {
-        foreignKey: 'uploaded_by',
+        foreignKey: 'uploadedBy',
         as: 'uploader'
     });
 };

@@ -20,58 +20,58 @@ import { Op } from 'sequelize';
 
 // Relaciones principales
 Device.belongsTo(Organization, {
-    foreignKey: 'organization_id',
+    foreignKey: 'organizationId',
     as: 'organization'
 });
 
 Device.belongsTo(Site, {
-    foreignKey: 'site_id',
+    foreignKey: 'siteId',
     as: 'site'
 });
 
 Organization.hasMany(Device, {
-    foreignKey: 'organization_id',
+    foreignKey: 'organizationId',
     as: 'devices'
 });
 
 Site.hasMany(Device, {
-    foreignKey: 'site_id',
+    foreignKey: 'siteId',
     as: 'devices'
 });
 
 // Relaciones con catálogos de equipos
 Device.belongsTo(DeviceType, {
-    foreignKey: 'device_type_id',
+    foreignKey: 'deviceTypeId',
     as: 'deviceType'
 });
 
 Device.belongsTo(DeviceBrand, {
-    foreignKey: 'brand_id',
+    foreignKey: 'brandId',
     as: 'brand'
 });
 
 Device.belongsTo(DeviceModel, {
-    foreignKey: 'model_id',
+    foreignKey: 'modelId',
     as: 'model'
 });
 
 Device.belongsTo(DeviceServer, {
-    foreignKey: 'server_id',
+    foreignKey: 'serverId',
     as: 'server'
 });
 
 Device.belongsTo(DeviceNetwork, {
-    foreignKey: 'network_id',
+    foreignKey: 'networkId',
     as: 'network'
 });
 
 Device.belongsTo(DeviceLicense, {
-    foreignKey: 'license_id',
+    foreignKey: 'licenseId',
     as: 'license'
 });
 
 Device.belongsTo(DeviceValidityPeriod, {
-    foreignKey: 'validity_period_id',
+    foreignKey: 'validityPeriodId',
     as: 'validityPeriod'
 });
 

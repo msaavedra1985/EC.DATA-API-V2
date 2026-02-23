@@ -24,16 +24,14 @@ const sequelizeConfig = {
 
     // Configuración global de modelos
     define: {
-        // Nombres de columnas snake_case y nombres de tabla sin pluralizar
+        // underscored: mapea automáticamente camelCase (JS) → snake_case (DB)
+        // Ej: propiedad publicCode → columna public_code
         underscored: true,
         freezeTableName: true,
 
-        // Timestamps y soft deletes listos
+        // Timestamps y soft deletes (underscored maneja el mapeo automáticamente)
         timestamps: true,
         paranoid: true,
-        createdAt: 'created_at',
-        updatedAt: 'updated_at',
-        deletedAt: 'deleted_at',
     },
 };
 
