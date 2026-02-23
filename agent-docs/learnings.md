@@ -432,6 +432,21 @@ const safeAddIndex = async (table, fields, options) => {
 
 ---
 
+## API Case Transform
+
+### Middleware bidireccional camelCase ↔ snake_case
+**Fecha**: 2026-02-23
+**Contexto**: Frontend Next.js usa camelCase, DB/Sequelize usa snake_case
+**Solución**:
+- `src/middleware/caseTransform.js` con dos middlewares: `requestCaseTransform` y `responseCaseTransform`
+- `src/utils/caseTransform.js` con funciones puras de transformación recursiva
+- Se monta en `app.js` después de `express.json()` y antes de rutas
+- Los DTOs Zod siguen validando en snake_case sin cambios
+- `req.params` NO se transforma (son path segments)
+- Query params SÍ se transforman (`?isPublic=true` → `is_public`)
+
+---
+
 ## Deployment
 
 (Agregar problemas de deployment aquí)

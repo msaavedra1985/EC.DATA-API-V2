@@ -105,8 +105,28 @@ npm run db:dbml              # Generate DBML visualization
 | Constants | SCREAMING_SNAKE | `SESSION_TTL_NORMAL` |
 | Classes/Models | PascalCase | `Organization`, `RefreshToken` |
 | Database tables | snake_case | `refresh_tokens`, `audit_logs` |
+| DB columns | snake_case | `created_at`, `public_code` |
 | API endpoints | kebab-case | `/api/v1/session-context` |
+| API request keys | camelCase | `{ "customWidth": 1920 }` |
+| API response keys | camelCase | `{ "publicCode": "DSH-X", "isHome": true }` |
 | Public codes | PREFIX-HASH-CHECK | `ORG-5LYJX-4` |
+
+## API Case Transform (Bidireccional)
+
+El API usa transformación automática de case mediante middlewares globales en `src/middleware/caseTransform.js`:
+
+- **Request** (Frontend → API): `req.body` y `req.query` se convierten de camelCase a snake_case
+- **Response** (API → Frontend): `res.json()` convierte keys de snake_case a camelCase
+
+Esto permite que:
+- El **código interno** del API trabaje en snake_case (alineado con DB y Sequelize)
+- El **frontend** trabaje exclusivamente en camelCase
+- Los **DTOs Zod** sigan validando en snake_case sin cambios
+- La transformación es **transparente** y no requiere acción por módulo
+
+**Utilidades**: `src/utils/caseTransform.js` (snakeToCamel, camelToSnake, toCamelCase, toSnakeCase)
+
+**Orden en app.js**: Se monta después de `express.json()` + `compression()` y antes de `i18n` y rutas
 
 ## Module Creation Checklist
 

@@ -12,6 +12,7 @@ import { httpLogger } from './utils/logger.js';
 import { i18nMiddleware } from './middleware/i18n.js';
 import { rateLimitMiddleware } from './middleware/rateLimit.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
+import { requestCaseTransform, responseCaseTransform } from './middleware/caseTransform.js';
 import { setupSwagger } from './docs/openapi.js';
 import { metricsHandler } from './metrics/prometheus.js';
 import routes from './routes/index.js';
@@ -104,6 +105,16 @@ const createApp = () => {
 
     // Compresión de respuestas (brotli/gzip)
     app.use(compression());
+
+    // ========================================
+    // TRANSFORMACIÓN DE CASE (camelCase ↔ snake_case)
+    // ========================================
+
+    // Request: convierte keys de camelCase (frontend) a snake_case (interno)
+    app.use(requestCaseTransform);
+
+    // Response: convierte keys de snake_case (interno) a camelCase (frontend)
+    app.use(responseCaseTransform);
 
     // ========================================
     // INTERNACIONALIZACIÓN (i18n)

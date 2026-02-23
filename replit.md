@@ -58,6 +58,7 @@ agent-docs/
 4. **Comentarios en español**, código en inglés
 5. **"What works, don't touch"** → análisis de impacto antes de modificar código funcional
 6. **Actualizar docs de endpoints** al modificarlos → `agent-docs/endpoints/{modulo}.md`
+7. **Case transform bidireccional**: DB=snake_case, API=camelCase (automático via middleware)
 
 ## Quick Start
 
