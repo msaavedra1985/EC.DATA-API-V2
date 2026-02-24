@@ -9,14 +9,14 @@ export const createErrorLogSchema = z.object({
         errorMap: () => ({ message: 'Source must be either "frontend" or "backend"' })
     }),
     level: z.enum(['error', 'warning', 'critical']).default('error'),
-    error_code: z.string().min(1).max(100),
-    error_message: z.string().min(1),
-    stack_trace: z.string().optional().nullable(),
+    errorCode: z.string().min(1).max(100),
+    errorMessage: z.string().min(1),
+    stackTrace: z.string().optional().nullable(),
     endpoint: z.string().max(500).optional().nullable(),
     method: z.string().max(10).optional().nullable(),
-    status_code: z.number().int().min(100).max(599).optional().nullable(),
-    session_id: z.string().max(100).optional().nullable(),
-    correlation_id: z.string().max(100).optional().nullable(),
+    statusCode: z.number().int().min(100).max(599).optional().nullable(),
+    sessionId: z.string().max(100).optional().nullable(),
+    correlationId: z.string().max(100).optional().nullable(),
     context: z.record(z.any()).optional().default({}),
     metadata: z.record(z.any()).optional().default({})
 });

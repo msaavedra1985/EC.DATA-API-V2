@@ -3,11 +3,11 @@
 
 /**
  * Convertir modelo Device a DTO público
- * Expone public_code como 'id', oculta UUID interno
+ * Expone publicCode como 'id', oculta UUID interno
  * 
  * POLÍTICA DE SEGURIDAD:
  * - Nunca exponer el UUID interno en APIs públicas
- * - Siempre usar public_code como 'id' en respuestas
+ * - Siempre usar publicCode como 'id' en respuestas
  * - UUIDs solo para operaciones internas de base de datos
  * - IDs de catálogo (integers) se exponen directamente (no son sensibles)
  * 
@@ -18,42 +18,42 @@ export const toPublicDeviceDto = (device) => {
     if (!device) return null;
     
     const dto = {
-        id: device.public_code,
+        id: device.publicCode,
         uuid: device.uuid || null,
         name: device.name,
         description: device.description,
         status: device.status,
-        firmware_version: device.firmware_version,
-        serial_number: device.serial_number,
-        ip_address: device.ip_address,
-        mac_address: device.mac_address,
+        firmwareVersion: device.firmwareVersion,
+        serialNumber: device.serialNumber,
+        ipAddress: device.ipAddress,
+        macAddress: device.macAddress,
         topic: device.topic,
-        location_name: device.location_name,
-        physical_location: device.physical_location,
-        electrical_location: device.electrical_location,
+        locationName: device.locationName,
+        physicalLocation: device.physicalLocation,
+        electricalLocation: device.electricalLocation,
         latitude: device.latitude ? parseFloat(device.latitude) : null,
         longitude: device.longitude ? parseFloat(device.longitude) : null,
         city: device.city,
         timezone: device.timezone,
-        installation_date: device.installation_date,
-        warranty_months: device.warranty_months,
-        expiration_date: device.expiration_date,
-        last_seen_at: device.last_seen_at,
+        installationDate: device.installationDate,
+        warrantyMonths: device.warrantyMonths,
+        expirationDate: device.expirationDate,
+        lastSeenAt: device.lastSeenAt,
         metadata: device.metadata || {},
-        is_active: device.is_active,
-        created_at: device.created_at,
-        updated_at: device.updated_at
+        isActive: device.isActive,
+        createdAt: device.createdAt,
+        updatedAt: device.updatedAt
     };
 
     // --- Catálogos (exponer id + datos traducidos) ---
     if (device.deviceType) {
-        dto.device_type = {
+        dto.deviceType = {
             id: device.deviceType.id,
             code: device.deviceType.code,
             icon: device.deviceType.icon
         };
     } else {
-        dto.device_type_id = device.device_type_id;
+        dto.deviceTypeId = device.deviceTypeId;
     }
 
     if (device.brand) {
@@ -62,7 +62,7 @@ export const toPublicDeviceDto = (device) => {
             code: device.brand.code
         };
     } else {
-        dto.brand_id = device.brand_id;
+        dto.brandId = device.brandId;
     }
 
     if (device.model) {
@@ -71,7 +71,7 @@ export const toPublicDeviceDto = (device) => {
             code: device.model.code
         };
     } else {
-        dto.model_id = device.model_id;
+        dto.modelId = device.modelId;
     }
 
     if (device.server) {
@@ -80,7 +80,7 @@ export const toPublicDeviceDto = (device) => {
             code: device.server.code
         };
     } else {
-        dto.server_id = device.server_id;
+        dto.serverId = device.serverId;
     }
 
     if (device.network) {
@@ -89,7 +89,7 @@ export const toPublicDeviceDto = (device) => {
             code: device.network.code
         };
     } else {
-        dto.network_id = device.network_id;
+        dto.networkId = device.networkId;
     }
 
     if (device.license) {
@@ -98,44 +98,44 @@ export const toPublicDeviceDto = (device) => {
             code: device.license.code
         };
     } else {
-        dto.license_id = device.license_id;
+        dto.licenseId = device.licenseId;
     }
 
     if (device.validityPeriod) {
-        dto.validity_period = {
+        dto.validityPeriod = {
             id: device.validityPeriod.id,
             code: device.validityPeriod.code
         };
     } else {
-        dto.validity_period_id = device.validity_period_id;
+        dto.validityPeriodId = device.validityPeriodId;
     }
 
     // --- Relaciones principales ---
     if (device.organization) {
         dto.organization = {
-            id: device.organization.public_code,
+            id: device.organization.publicCode,
             slug: device.organization.slug,
             name: device.organization.name,
-            logo_url: device.organization.logo_url
+            logoUrl: device.organization.logoUrl
         };
     }
     
     if (device.site) {
         dto.site = {
-            id: device.site.public_code,
+            id: device.site.publicCode,
             name: device.site.name,
             city: device.site.city,
-            country_code: device.site.country_code
+            countryCode: device.site.countryCode
         };
     }
 
     if (device.channels && Array.isArray(device.channels)) {
         dto.channels = device.channels.map(ch => ({
-            id: ch.public_code,
+            id: ch.publicCode,
             name: ch.name,
             description: ch.description || null,
             status: ch.status,
-            measurement_type_id: ch.measurement_type_id || null,
+            measurementTypeId: ch.measurementTypeId || null,
             unit: ch.unit || null
         }));
     }

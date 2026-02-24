@@ -42,23 +42,23 @@ router.get('/', authenticate, requireRole(['system-admin', 'org-admin', 'org-man
         
         const filters = {
             search,
-            is_active: is_active !== undefined ? is_active === 'true' : undefined
+            isActive: is_active !== undefined ? is_active === 'true' : undefined
         };
         
         if (!scope.canAccessAll) {
-            filters.user_ids = scope.userIds;
+            filters.userIds = scope.userIds;
         }
         
         if (organization_id) {
             const Organization = (await import('../organizations/models/Organization.js')).default;
-            const org = await Organization.findOne({ where: { public_code: organization_id } });
-            if (org) filters.organization_id = org.id;
+            const org = await Organization.findOne({ where: { publicCode: organization_id } });
+            if (org) filters.organizationId = org.id;
         }
         
         if (role) {
             const Role = (await import('../auth/models/Role.js')).default;
             const roleObj = await Role.findOne({ where: { name: role } });
-            if (roleObj) filters.role_id = roleObj.id;
+            if (roleObj) filters.roleId = roleObj.id;
         }
         
         const result = await userRepository.listUsers(parsedLimit, parsedOffset, filters);
@@ -70,7 +70,7 @@ router.get('/', authenticate, requireRole(['system-admin', 'org-admin', 'org-man
                 total: result.total,
                 limit: parsedLimit,
                 offset: parsedOffset,
-                has_more: result.total > parsedOffset + result.users.length
+                hasMore: result.total > parsedOffset + result.users.length
             }
         });
     } catch (error) {
@@ -202,11 +202,11 @@ router.post('/', authenticate, requireRole(['system-admin', 'org-admin']), async
         const validatedData = validateCreateUser(req.body);
         
         if (req.user.role === 'org-admin') {
-            validatedData.organization_id = req.organization?.public_code || req.user.activeOrgId;
+            validatedData.organizationId = req.organization?.publicCode || req.user.activeOrgId;
         }
         
         const actor = { userId: req.user.userId, role: req.user.role };
-        const metadata = { ip_address: req.ip, user_agent: req.get('user-agent') };
+        const metadata = { ipAddress: req.ip, userAgent: req.get('user-agent') };
         
         const newUser = await userServices.createUser(validatedData, actor, metadata);
         
@@ -275,7 +275,7 @@ router.post('/validate-email', async (req, res, next) => {
         // Llamar al servicio de validación
         const result = await userServices.validateEmail({
             email: validatedData.email,
-            excludePublicCode: validatedData.exclude_id || null
+            excludePublicCode: validatedData.excludeId || null
         });
         
         return res.json({
@@ -330,12 +330,12 @@ router.put('/me', authenticate, async (req, res, next) => {
         
         const auditLog = (await import('../../helpers/auditLog.js')).default;
         await auditLog.log({
-            entity_type: 'user',
-            entity_id: req.user.userId,
+            entityType: 'user',
+            entityId: req.user.userId,
             action: 'update_profile',
-            performed_by: req.user.userId,
+            performedBy: req.user.userId,
             changes: validatedData,
-            metadata: { ip_address: req.ip, user_agent: req.get('user-agent') }
+            metadata: { ipAddress: req.ip, userAgent: req.get('user-agent') }
         });
         
         return successResponse(res, updatedUser);
@@ -352,12 +352,12 @@ router.put('/me', authenticate, async (req, res, next) => {
 router.patch('/me/password', authenticate, async (req, res, next) => {
     try {
         const validatedData = validateChangePassword(req.body);
-        const metadata = { ip_address: req.ip, user_agent: req.get('user-agent') };
+        const metadata = { ipAddress: req.ip, userAgent: req.get('user-agent') };
         
         await userServices.changePassword(
             req.user.userId,
-            validatedData.current_password,
-            validatedData.new_password,
+            validatedData.currentPassword,
+            validatedData.newPassword,
             metadata
         );
         
@@ -412,7 +412,7 @@ router.put('/:id', authenticate, requireRole(['system-admin', 'org-admin']), asy
         const validatedData = validateUpdateUser(req.body);
         
         const actor = { userId: req.user.userId, role: req.user.role };
-        const metadata = { ip_address: req.ip, user_agent: req.get('user-agent') };
+        const metadata = { ipAddress: req.ip, userAgent: req.get('user-agent') };
         
         const updatedUser = await userServices.updateUser(id, validatedData, actor, metadata);
         
@@ -432,7 +432,7 @@ router.delete('/:id', authenticate, requireRole(['system-admin', 'org-admin']), 
         const { id } = req.params;
         
         const actor = { userId: req.user.userId, role: req.user.role };
-        const metadata = { ip_address: req.ip, user_agent: req.get('user-agent') };
+        const metadata = { ipAddress: req.ip, userAgent: req.get('user-agent') };
         
         await userServices.deleteUser(id, actor, metadata);
         
@@ -478,14 +478,14 @@ router.get('/:id/organizations', authenticate, async (req, res, next) => {
         const Organization = (await import('../organizations/models/Organization.js')).default;
         const orgsWithPublicCode = await Promise.all(
             userOrgs.map(async (uo) => {
-                const org = await Organization.findByPk(uo.organization_id);
+                const org = await Organization.findByPk(uo.organizationId);
                 return {
-                    organization_id: org.public_code,
+                    organizationId: org.publicCode,
                     slug: uo.slug,
                     name: uo.name,
-                    logo_url: uo.logo_url,
-                    is_primary: uo.is_primary,
-                    joined_at: uo.joined_at
+                    logoUrl: uo.logoUrl,
+                    isPrimary: uo.isPrimary,
+                    joinedAt: uo.joinedAt
                 };
             })
         );
@@ -562,10 +562,10 @@ router.get('/:id/organizations', authenticate, async (req, res, next) => {
 router.post('/:id/organizations', authenticate, requireRole(['system-admin', 'org-admin']), async (req, res, next) => {
     try {
         const { id } = req.params;
-        const { organization_id, is_primary = false } = req.body;
+        const { organizationId, isPrimary = false } = req.body;
         
-        if (!organization_id) {
-            return errorResponse(res, 'organization_id is required', 400, 'VALIDATION_ERROR');
+        if (!organizationId) {
+            return errorResponse(res, 'organizationId is required', 400, 'VALIDATION_ERROR');
         }
         
         // Obtener modelo para UUID del usuario
@@ -582,9 +582,9 @@ router.post('/:id/organizations', authenticate, requireRole(['system-admin', 'or
             }
         }
         
-        // Convertir organization_id (public_code) a UUID
+        // Convertir organizationId (publicCode) a UUID
         const Organization = (await import('../organizations/models/Organization.js')).default;
-        const org = await Organization.findOne({ where: { public_code: organization_id } });
+        const org = await Organization.findOne({ where: { publicCode: organizationId } });
         
         if (!org) {
             return errorResponse(res, 'Organization not found', 404, 'ORGANIZATION_NOT_FOUND');
@@ -592,23 +592,23 @@ router.post('/:id/organizations', authenticate, requireRole(['system-admin', 'or
         
         // Agregar usuario a la organización
         const organizationService = await import('../organizations/services.js');
-        await organizationService.addUserToOrganization(userModel.id, org.id, is_primary);
+        await organizationService.addUserToOrganization(userModel.id, org.id, isPrimary);
         
         // Auditar acción
         const auditLog = (await import('../../helpers/auditLog.js')).default;
         await auditLog.log({
-            entity_type: 'user_organization',
-            entity_id: userModel.id,
+            entityType: 'user_organization',
+            entityId: userModel.id,
             action: 'add_organization',
-            performed_by: req.user.userId,
+            performedBy: req.user.userId,
             changes: {
-                organization_id: { old: null, new: org.id },
-                is_primary: { old: null, new: is_primary }
+                organizationId: { old: null, new: org.id },
+                isPrimary: { old: null, new: isPrimary }
             },
             metadata: { 
-                ip_address: req.ip, 
-                user_agent: req.get('user-agent'),
-                organization_public_code: organization_id
+                ipAddress: req.ip, 
+                userAgent: req.get('user-agent'),
+                organizationPublicCode: organizationId
             }
         });
         
@@ -685,9 +685,9 @@ router.delete('/:id/organizations/:orgId', authenticate, requireRole(['system-ad
             }
         }
         
-        // Convertir orgId (public_code) a UUID
+        // Convertir orgId (publicCode) a UUID
         const Organization = (await import('../organizations/models/Organization.js')).default;
-        const org = await Organization.findOne({ where: { public_code: orgId } });
+        const org = await Organization.findOne({ where: { publicCode: orgId } });
         
         if (!org) {
             return errorResponse(res, 'Organization not found', 404, 'ORGANIZATION_NOT_FOUND');
@@ -700,17 +700,17 @@ router.delete('/:id/organizations/:orgId', authenticate, requireRole(['system-ad
         // Auditar acción
         const auditLog = (await import('../../helpers/auditLog.js')).default;
         await auditLog.log({
-            entity_type: 'user_organization',
-            entity_id: userModel.id,
+            entityType: 'user_organization',
+            entityId: userModel.id,
             action: 'remove_organization',
-            performed_by: req.user.userId,
+            performedBy: req.user.userId,
             changes: {
-                organization_id: { old: org.id, new: null }
+                organizationId: { old: org.id, new: null }
             },
             metadata: { 
-                ip_address: req.ip, 
-                user_agent: req.get('user-agent'),
-                organization_public_code: orgId
+                ipAddress: req.ip, 
+                userAgent: req.get('user-agent'),
+                organizationPublicCode: orgId
             }
         });
         
@@ -761,11 +761,11 @@ router.get('/:id/audit-logs', authenticate, async (req, res, next) => {
         
         // Construir query filters
         const where = {
-            performed_by: userModel.id // Filtrar por usuario que realizó la acción
+            performedBy: userModel.id // Filtrar por usuario que realizó la acción
         };
         
         if (entity_type) {
-            where.entity_type = entity_type;
+            where.entityType = entity_type;
         }
         
         if (action) {
@@ -777,16 +777,16 @@ router.get('/:id/audit-logs', authenticate, async (req, res, next) => {
             where,
             limit: parsedLimit,
             offset: parsedOffset,
-            order: [['performed_at', 'DESC']],
+            order: [['performedAt', 'DESC']],
             attributes: [
                 'id',
-                'entity_type',
-                'entity_id',
+                'entityType',
+                'entityId',
                 'action',
-                'performed_by',
+                'performedBy',
                 'changes',
                 'metadata',
-                'performed_at'
+                'performedAt'
             ]
         });
         
@@ -797,7 +797,7 @@ router.get('/:id/audit-logs', authenticate, async (req, res, next) => {
                 total: count,
                 limit: parsedLimit,
                 offset: parsedOffset,
-                has_more: count > parsedOffset + rows.length
+                hasMore: count > parsedOffset + rows.length
             }
         });
     } catch (error) {
@@ -817,9 +817,9 @@ router.patch('/:id/status', authenticate, requireRole(['system-admin', 'org-admi
         const validatedData = validateToggleStatus(req.body);
         
         const actor = { userId: req.user.userId, role: req.user.role };
-        const metadata = { ip_address: req.ip, user_agent: req.get('user-agent') };
+        const metadata = { ipAddress: req.ip, userAgent: req.get('user-agent') };
         
-        const updatedUser = await userServices.toggleUserStatus(id, validatedData.is_active, actor, metadata);
+        const updatedUser = await userServices.toggleUserStatus(id, validatedData.isActive, actor, metadata);
         
         return successResponse(res, updatedUser);
     } catch (error) {

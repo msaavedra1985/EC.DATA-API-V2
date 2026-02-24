@@ -10,8 +10,8 @@ import { getCachedUser, cacheUser, invalidateUserCache, getCachedUserList, cache
 
 /**
  * Serializa un modelo User a DTO público
- * NUNCA expone: password_hash, id (UUID), human_id
- * SIEMPRE usa public_code como "id"
+ * NUNCA expone: passwordHash, id (UUID), humanId
+ * SIEMPRE usa publicCode como "id"
  * 
  * @param {Object} user - Instancia de Sequelize User
  * @returns {Object} - DTO público para API responses
@@ -20,20 +20,20 @@ export const toPublicUserDto = (user) => {
     if (!user) return null;
     
     const dto = {
-        id: user.public_code, // public_code como "id" (NUNCA UUID)
+        id: user.publicCode, // publicCode como "id" (NUNCA UUID)
         email: user.email,
-        first_name: user.first_name,
-        last_name: user.last_name,
-        is_active: user.is_active,
-        email_verified: user.email_verified_at !== null,
-        last_login_at: user.last_login_at,
-        created_at: user.created_at,
-        updated_at: user.updated_at
+        firstName: user.firstName,
+        lastName: user.lastName,
+        isActive: user.isActive,
+        emailVerified: user.emailVerifiedAt !== null,
+        lastLoginAt: user.lastLoginAt,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt
     };
     
     // Campos opcionales
     if (user.phone) dto.phone = user.phone;
-    if (user.avatar_url) dto.avatar_url = user.avatar_url;
+    if (user.avatarUrl) dto.avatarUrl = user.avatarUrl;
     if (user.language) dto.language = user.language;
     if (user.timezone) dto.timezone = user.timezone;
     
@@ -46,33 +46,33 @@ export const toPublicUserDto = (user) => {
     }
     
     // Incluir organización primaria si está cargada
-    // Se carga desde UserOrganizations where is_primary = true
+    // Se carga desde UserOrganizations where isPrimary = true
     if (user.UserOrganizations && user.UserOrganizations.length > 0) {
-        const primaryOrgRelation = user.UserOrganizations.find(uo => uo.is_primary);
+        const primaryOrgRelation = user.UserOrganizations.find(uo => uo.isPrimary);
         if (primaryOrgRelation && primaryOrgRelation.organization) {
-            dto.primary_organization = {
-                id: primaryOrgRelation.organization.public_code,
+            dto.primaryOrganization = {
+                id: primaryOrgRelation.organization.publicCode,
                 name: primaryOrgRelation.organization.name,
                 slug: primaryOrgRelation.organization.slug
             };
         }
         
-        // Incluir todas las organizaciones del usuario (organization_memberships)
+        // Incluir todas las organizaciones del usuario (organizationMemberships)
         // Filtrar solo aquellas que tengan la organización cargada para evitar errores
-        dto.organization_memberships = user.UserOrganizations
+        dto.organizationMemberships = user.UserOrganizations
             .filter(uo => uo.organization)
             .map(uo => ({
-                id: uo.organization.public_code,
+                id: uo.organization.publicCode,
                 slug: uo.organization.slug,
                 name: uo.organization.name,
-                logo_url: uo.organization.logo_url,
-                is_primary: uo.is_primary,
-                joined_at: uo.joined_at
+                logoUrl: uo.organization.logoUrl,
+                isPrimary: uo.isPrimary,
+                joinedAt: uo.joinedAt
             }));
     } else {
-        // Siempre incluir organization_memberships, incluso si está vacío
+        // Siempre incluir organizationMemberships, incluso si está vacío
         // Esto mantiene el contrato de la API consistente
-        dto.organization_memberships = [];
+        dto.organizationMemberships = [];
     }
     
     return dto;
@@ -92,15 +92,15 @@ export const toAdminUserDto = (user) => {
     
     return {
         ...publicDto,
-        internal_id: user.id, // UUID solo para admins
-        human_id: user.human_id, // ID incremental solo para admins
-        organization_id: user.organization_id, // UUID de org para queries
-        role_id: user.role_id // UUID de role para queries
+        internalId: user.id, // UUID solo para admins
+        humanId: user.humanId, // ID incremental solo para admins
+        organizationId: user.organizationId, // UUID de org para queries
+        roleId: user.roleId // UUID de role para queries
     };
 };
 
 /**
- * Buscar usuario por ID (public_code o UUID)
+ * Buscar usuario por ID (publicCode o UUID)
  * Cache: 15 minutos | Key: user:{id}
  * 
  * @param {string} id - Public code o UUID del usuario
@@ -117,9 +117,9 @@ export const findUserById = async (id, includeRelations = true, useCache = true)
     
     const where = {};
     
-    // Detectar si es public_code (formato: USR-XXXXX-X) o UUID
+    // Detectar si es publicCode (formato: USR-XXXXX-X) o UUID
     if (/^USR-[A-Z0-9]{5}-[A-Z0-9]$/.test(id)) {
-        where.public_code = id;
+        where.publicCode = id;
     } else {
         where.id = id;
     }
@@ -129,13 +129,13 @@ export const findUserById = async (id, includeRelations = true, useCache = true)
         {
             model: UserOrganization,
             as: 'UserOrganizations',
-            where: { is_primary: true },
+            where: { isPrimary: true },
             required: false, // LEFT JOIN para no excluir usuarios sin org primaria
             include: [
                 {
                     model: Organization,
                     as: 'organization',
-                    attributes: ['public_code', 'name', 'slug']
+                    attributes: ['publicCode', 'name', 'slug']
                 }
             ]
         }
@@ -152,7 +152,7 @@ export const findUserById = async (id, includeRelations = true, useCache = true)
     
     // Guardar en cache
     if (useCache) {
-        await cacheUser(user.public_code, dto);
+        await cacheUser(user.publicCode, dto);
     }
     
     return dto;
@@ -171,13 +171,13 @@ export const findUserByEmail = async (email, includeRelations = true) => {
         {
             model: UserOrganization,
             as: 'UserOrganizations',
-            where: { is_primary: true },
+            where: { isPrimary: true },
             required: false,
             include: [
                 {
                     model: Organization,
                     as: 'organization',
-                    attributes: ['public_code', 'name', 'slug']
+                    attributes: ['publicCode', 'name', 'slug']
                 }
             ]
         }
@@ -208,30 +208,30 @@ export const listUsers = async (limit = 50, offset = 0, filters = {}) => {
     const where = {};
     
     // Filtro de estado activo
-    if (filters.is_active !== undefined) {
-        where.is_active = filters.is_active;
+    if (filters.isActive !== undefined) {
+        where.isActive = filters.isActive;
     }
     
     // Filtro de scope - usuarios permitidos por organización
-    if (filters.user_ids && Array.isArray(filters.user_ids)) {
-        where.id = { [Op.in]: filters.user_ids };
+    if (filters.userIds && Array.isArray(filters.userIds)) {
+        where.id = { [Op.in]: filters.userIds };
     }
     
     // Filtro por organización
-    if (filters.organization_id) {
-        where.organization_id = filters.organization_id;
+    if (filters.organizationId) {
+        where.organizationId = filters.organizationId;
     }
     
     // Filtro por rol
-    if (filters.role_id) {
-        where.role_id = filters.role_id;
+    if (filters.roleId) {
+        where.roleId = filters.roleId;
     }
     
     // Búsqueda por nombre, apellido o email
     if (filters.search) {
         where[Op.or] = [
-            { first_name: { [Op.iLike]: `%${filters.search}%` } },
-            { last_name: { [Op.iLike]: `%${filters.search}%` } },
+            { firstName: { [Op.iLike]: `%${filters.search}%` } },
+            { lastName: { [Op.iLike]: `%${filters.search}%` } },
             { email: { [Op.iLike]: `%${filters.search}%` } }
         ];
     }
@@ -245,18 +245,18 @@ export const listUsers = async (limit = 50, offset = 0, filters = {}) => {
             {
                 model: UserOrganization,
                 as: 'UserOrganizations',
-                where: { is_primary: true },
+                where: { isPrimary: true },
                 required: false, // LEFT JOIN para no excluir usuarios sin org primaria
                 include: [
                     {
                         model: Organization,
                         as: 'organization',
-                        attributes: ['public_code', 'name', 'slug']
+                        attributes: ['publicCode', 'name', 'slug']
                     }
                 ]
             }
         ],
-        order: [['created_at', 'DESC']]
+        order: [['createdAt', 'DESC']]
     });
     
     const result = {
@@ -287,13 +287,13 @@ export const createUser = async (userData) => {
             {
                 model: UserOrganization,
                 as: 'UserOrganizations',
-                where: { is_primary: true },
+                where: { isPrimary: true },
                 required: false,
                 include: [
                     {
                         model: Organization,
                         as: 'organization',
-                        attributes: ['public_code', 'name', 'slug']
+                        attributes: ['publicCode', 'name', 'slug']
                     }
                 ]
             }
@@ -303,7 +303,7 @@ export const createUser = async (userData) => {
     const dto = toPublicUserDto(user);
     
     // Cachear usuario creado
-    await cacheUser(user.public_code, dto);
+    await cacheUser(user.publicCode, dto);
     
     return dto;
 };
@@ -335,13 +335,13 @@ export const updateUser = async (userId, updateData) => {
             {
                 model: UserOrganization,
                 as: 'UserOrganizations',
-                where: { is_primary: true },
+                where: { isPrimary: true },
                 required: false,
                 include: [
                     {
                         model: Organization,
                         as: 'organization',
-                        attributes: ['public_code', 'name', 'slug']
+                        attributes: ['publicCode', 'name', 'slug']
                     }
                 ]
             }
@@ -351,16 +351,16 @@ export const updateUser = async (userId, updateData) => {
     const dto = toPublicUserDto(user);
     
     // Invalidar cache del usuario
-    await invalidateUserCache(user.public_code);
+    await invalidateUserCache(user.publicCode);
     
     // Re-cachear con datos actualizados
-    await cacheUser(user.public_code, dto);
+    await cacheUser(user.publicCode, dto);
     
     return dto;
 };
 
 /**
- * Soft delete de usuario (is_active = false)
+ * Soft delete de usuario (isActive = false)
  * Invalidación de cache: usuario específico + listas
  * 
  * @param {string} userId - UUID del usuario
@@ -376,10 +376,10 @@ export const deleteUser = async (userId) => {
         throw error;
     }
     
-    await user.update({ is_active: false });
+    await user.update({ isActive: false });
     
     // Invalidar cache
-    await invalidateUserCache(user.public_code);
+    await invalidateUserCache(user.publicCode);
     
     return true;
 };
@@ -396,7 +396,7 @@ export const getUserModelById = async (id, includeRelations = true) => {
     const where = {};
     
     if (/^USR-[A-Z0-9]{5}-[A-Z0-9]$/.test(id)) {
-        where.public_code = id;
+        where.publicCode = id;
     } else {
         where.id = id;
     }
@@ -419,7 +419,7 @@ export const getUserModelById = async (id, includeRelations = true) => {
 export const getUserModelsByOrganizations = async (organizationIds) => {
     return await User.findAll({
         where: {
-            organization_id: { [Op.in]: organizationIds }
+            organizationId: { [Op.in]: organizationIds }
         },
         attributes: ['id']
     });
@@ -442,7 +442,7 @@ export const validateEmailUniqueness = async ({ email, excludePublicCode }) => {
     
     // Excluir usuario actual si se proporciona excludePublicCode
     if (excludePublicCode) {
-        where.public_code = { [Op.ne]: excludePublicCode };
+        where.publicCode = { [Op.ne]: excludePublicCode };
     }
     
     const existingUser = await User.findOne({

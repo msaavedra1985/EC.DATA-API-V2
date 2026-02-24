@@ -27,29 +27,24 @@ export {
  * @returns {Promise<{hasAccess: boolean, role: string}>}
  */
 const checkDashboardAccess = async (dashboard, userId, requiredRole = 'viewer') => {
-  // El owner siempre tiene acceso total
-  if (dashboard.owner_id === userId) {
+  if (dashboard.ownerId === userId) {
     return { hasAccess: true, role: 'owner' };
   }
 
-  // Si es público y solo se requiere viewer, tiene acceso
-  if (dashboard.is_public && requiredRole === 'viewer') {
+  if (dashboard.isPublic && requiredRole === 'viewer') {
     return { hasAccess: true, role: 'viewer' };
   }
 
-  // Buscar en colaboradores
   const collaborator = await dashboardRepository.findCollaborator(dashboard.id, userId);
 
   if (!collaborator) {
     return { hasAccess: false, role: null };
   }
 
-  // Editor implica viewer
   if (requiredRole === 'viewer') {
     return { hasAccess: true, role: collaborator.role };
   }
 
-  // Para editor, el colaborador debe tener rol editor
   if (requiredRole === 'editor' && collaborator.role === 'editor') {
     return { hasAccess: true, role: 'editor' };
   }
@@ -64,26 +59,23 @@ const checkDashboardAccess = async (dashboard, userId, requiredRole = 'viewer') 
 /**
  * Listar dashboards con filtros, paginación y cache
  * @param {string} organizationId - UUID de la organización
- * @param {Object} query - Parámetros de búsqueda (search, is_public, limit, offset)
+ * @param {Object} query - Parámetros de búsqueda (search, isPublic, limit, offset)
  * @param {string} userId - UUID del usuario que consulta
  * @returns {Promise<Object>} - { items, total, limit, offset }
  */
 export const listDashboards = async (organizationId, query = {}, userId) => {
-  const { search, is_public, limit = 20, offset = 0 } = query;
+  const { search, isPublic, limit = 20, offset = 0 } = query;
 
-  // Generar cache key basada en organización + filtros
-  const cacheKey = JSON.stringify({ organizationId, search, is_public, limit, offset });
+  const cacheKey = JSON.stringify({ organizationId, search, isPublic, limit, offset });
 
-  // Intentar obtener del cache
   const cached = await getCachedDashboardList(cacheKey);
   if (cached) {
     return cached;
   }
 
-  // Obtener de BD
   const result = await dashboardRepository.findAllDashboards({
     organizationId,
-    isPublic: is_public,
+    isPublic,
     search,
     limit,
     offset
@@ -96,14 +88,13 @@ export const listDashboards = async (organizationId, query = {}, userId) => {
     offset: parseInt(offset)
   };
 
-  // Cachear resultado
   await cacheDashboardList(cacheKey, response);
 
   return response;
 };
 
 /**
- * Obtener dashboard por public_code con todas las relaciones
+ * Obtener dashboard por publicCode con todas las relaciones
  * @param {string} publicCode - Public code del dashboard
  * @param {string} userId - UUID del usuario que consulta
  * @returns {Promise<Object>} - Dashboard serializado
@@ -131,20 +122,17 @@ export const getDashboard = async (publicCode, userId) => {
  * @returns {Promise<Object>} - Dashboard creado
  */
 export const createDashboard = async (dashboardData, userId, organizationId, ipAddress, userAgent) => {
-  // Generar identificadores
   const uuid = uuidv7();
   const publicCode = generatePublicCode('DSH', uuid);
 
-  // Crear dashboard
   const dashboard = await dashboardRepository.createDashboard({
     ...dashboardData,
     id: uuid,
-    public_code: publicCode,
-    owner_id: userId,
-    organization_id: organizationId
+    publicCode,
+    ownerId: userId,
+    organizationId
   });
 
-  // Audit log
   await logAuditAction({
     entityType: 'dashboard',
     entityId: publicCode,
@@ -152,13 +140,12 @@ export const createDashboard = async (dashboardData, userId, organizationId, ipA
     performedBy: userId,
     changes: { new: dashboard },
     metadata: {
-      organization_id: organizationId
+      organizationId
     },
     ipAddress,
     userAgent
   });
 
-  // Invalidar cache
   await invalidateDashboardCache();
 
   logger.info({ dashboardId: uuid, userId }, 'Dashboard created successfully');
@@ -176,7 +163,6 @@ export const createDashboard = async (dashboardData, userId, organizationId, ipA
  * @returns {Promise<Object>} - Dashboard actualizado
  */
 export const updateDashboard = async (publicCode, updateData, userId, ipAddress, userAgent) => {
-  // Obtener dashboard actual
   const dashboardInternal = await dashboardRepository.findDashboardByPublicCodeInternal(publicCode);
 
   if (!dashboardInternal) {
@@ -186,7 +172,6 @@ export const updateDashboard = async (publicCode, updateData, userId, ipAddress,
     throw error;
   }
 
-  // Verificar que el usuario tiene acceso de edición
   const access = await checkDashboardAccess(dashboardInternal, userId, 'editor');
   if (!access.hasAccess) {
     const error = new Error('No tienes permisos para editar este dashboard');
@@ -195,13 +180,10 @@ export const updateDashboard = async (publicCode, updateData, userId, ipAddress,
     throw error;
   }
 
-  // Guardar estado anterior para audit
   const oldData = { ...dashboardInternal.dataValues };
 
-  // Actualizar dashboard
   const updatedDashboard = await dashboardRepository.updateDashboard(dashboardInternal.id, updateData);
 
-  // Construir cambios para auditoría
   const changes = {};
   Object.keys(updateData).forEach(key => {
     if (oldData[key] !== updateData[key]) {
@@ -212,7 +194,6 @@ export const updateDashboard = async (publicCode, updateData, userId, ipAddress,
     }
   });
 
-  // Audit log
   await logAuditAction({
     entityType: 'dashboard',
     entityId: publicCode,
@@ -220,13 +201,12 @@ export const updateDashboard = async (publicCode, updateData, userId, ipAddress,
     performedBy: userId,
     changes,
     metadata: {
-      organization_id: dashboardInternal.organization_id
+      organizationId: dashboardInternal.organizationId
     },
     ipAddress,
     userAgent
   });
 
-  // Invalidar cache
   await invalidateDashboardCache();
 
   logger.info({ dashboardId: dashboardInternal.id, userId }, 'Dashboard updated successfully');
@@ -244,7 +224,6 @@ export const updateDashboard = async (publicCode, updateData, userId, ipAddress,
  * @returns {Promise<void>}
  */
 export const deleteDashboard = async (publicCode, userId, ipAddress, userAgent) => {
-  // Obtener dashboard actual
   const dashboardInternal = await dashboardRepository.findDashboardByPublicCodeInternal(publicCode);
 
   if (!dashboardInternal) {
@@ -254,32 +233,28 @@ export const deleteDashboard = async (publicCode, userId, ipAddress, userAgent) 
     throw error;
   }
 
-  // Solo el owner puede eliminar
-  if (dashboardInternal.owner_id !== userId) {
+  if (dashboardInternal.ownerId !== userId) {
     const error = new Error('Solo el propietario puede eliminar este dashboard');
     error.status = 403;
     error.code = 'FORBIDDEN';
     throw error;
   }
 
-  // Soft delete via repository
   await dashboardRepository.deleteDashboard(dashboardInternal.id);
 
-  // Audit log
   await logAuditAction({
     entityType: 'dashboard',
     entityId: publicCode,
     action: 'deleted',
     performedBy: userId,
     metadata: {
-      organization_id: dashboardInternal.organization_id,
-      dashboard_name: dashboardInternal.name
+      organizationId: dashboardInternal.organizationId,
+      dashboardName: dashboardInternal.name
     },
     ipAddress,
     userAgent
   });
 
-  // Invalidar cache
   await invalidateDashboardCache();
 
   logger.info({ dashboardId: dashboardInternal.id, userId }, 'Dashboard deleted successfully');
@@ -304,7 +279,7 @@ export const setHomeDashboard = async (publicCode, userId, ipAddress, userAgent)
     throw error;
   }
 
-  if (dashboardInternal.owner_id !== userId) {
+  if (dashboardInternal.ownerId !== userId) {
     const error = new Error('Solo el propietario puede marcar este dashboard como home');
     error.status = 403;
     error.code = 'FORBIDDEN';
@@ -314,7 +289,7 @@ export const setHomeDashboard = async (publicCode, userId, ipAddress, userAgent)
   const result = await dashboardRepository.setHomeDashboard(
     dashboardInternal.id,
     userId,
-    dashboardInternal.organization_id
+    dashboardInternal.organizationId
   );
 
   await logAuditAction({
@@ -322,9 +297,9 @@ export const setHomeDashboard = async (publicCode, userId, ipAddress, userAgent)
     entityId: publicCode,
     action: 'set_home',
     performedBy: userId,
-    changes: { is_home: { old: false, new: true } },
+    changes: { isHome: { old: false, new: true } },
     metadata: {
-      organization_id: dashboardInternal.organization_id
+      organizationId: dashboardInternal.organizationId
     },
     ipAddress,
     userAgent
@@ -379,7 +354,6 @@ export const createPage = async (dashboardPublicCode, pageData, userId, ipAddres
     throw error;
   }
 
-  // Verificar acceso de edición
   const access = await checkDashboardAccess(dashboard, userId, 'editor');
   if (!access.hasAccess) {
     const error = new Error('No tienes permisos para editar este dashboard');
@@ -388,17 +362,14 @@ export const createPage = async (dashboardPublicCode, pageData, userId, ipAddres
     throw error;
   }
 
-  // Generar UUID
   const uuid = uuidv7();
 
-  // Crear página
   const page = await dashboardRepository.createPage({
     ...pageData,
     id: uuid,
-    dashboard_id: dashboard.id
+    dashboardId: dashboard.id
   });
 
-  // Audit log
   await logAuditAction({
     entityType: 'dashboard_page',
     entityId: uuid,
@@ -406,14 +377,13 @@ export const createPage = async (dashboardPublicCode, pageData, userId, ipAddres
     performedBy: userId,
     changes: { new: page },
     metadata: {
-      dashboard_id: dashboard.id,
-      dashboard_public_code: dashboardPublicCode
+      dashboardId: dashboard.id,
+      dashboardPublicCode
     },
     ipAddress,
     userAgent
   });
 
-  // Invalidar cache
   await invalidateDashboardCache();
 
   logger.info({ pageId: uuid, dashboardId: dashboard.id, userId }, 'Dashboard page created successfully');
@@ -441,7 +411,6 @@ export const updatePage = async (dashboardPublicCode, pageId, pageData, userId, 
     throw error;
   }
 
-  // Verificar acceso de edición
   const access = await checkDashboardAccess(dashboard, userId, 'editor');
   if (!access.hasAccess) {
     const error = new Error('No tienes permisos para editar este dashboard');
@@ -450,7 +419,6 @@ export const updatePage = async (dashboardPublicCode, pageId, pageData, userId, 
     throw error;
   }
 
-  // Buscar página y verificar que pertenece al dashboard
   const page = await dashboardRepository.findPageById(pageId);
 
   if (!page) {
@@ -460,20 +428,17 @@ export const updatePage = async (dashboardPublicCode, pageId, pageData, userId, 
     throw error;
   }
 
-  if (page.dashboard_id !== dashboard.id) {
+  if (page.dashboardId !== dashboard.id) {
     const error = new Error('La página no pertenece al dashboard especificado');
     error.status = 400;
     error.code = 'PAGE_DASHBOARD_MISMATCH';
     throw error;
   }
 
-  // Guardar estado anterior para audit
   const oldData = { ...page.dataValues };
 
-  // Actualizar página
   const updatedPage = await dashboardRepository.updatePage(pageId, pageData);
 
-  // Construir cambios para auditoría
   const changes = {};
   Object.keys(pageData).forEach(key => {
     if (oldData[key] !== pageData[key]) {
@@ -484,7 +449,6 @@ export const updatePage = async (dashboardPublicCode, pageId, pageData, userId, 
     }
   });
 
-  // Audit log
   await logAuditAction({
     entityType: 'dashboard_page',
     entityId: pageId,
@@ -492,14 +456,13 @@ export const updatePage = async (dashboardPublicCode, pageId, pageData, userId, 
     performedBy: userId,
     changes,
     metadata: {
-      dashboard_id: dashboard.id,
-      dashboard_public_code: dashboardPublicCode
+      dashboardId: dashboard.id,
+      dashboardPublicCode
     },
     ipAddress,
     userAgent
   });
 
-  // Invalidar cache
   await invalidateDashboardCache();
 
   logger.info({ pageId, dashboardId: dashboard.id, userId }, 'Dashboard page updated successfully');
@@ -526,7 +489,6 @@ export const deletePage = async (dashboardPublicCode, pageId, userId, ipAddress,
     throw error;
   }
 
-  // Verificar acceso de edición
   const access = await checkDashboardAccess(dashboard, userId, 'editor');
   if (!access.hasAccess) {
     const error = new Error('No tienes permisos para editar este dashboard');
@@ -535,7 +497,6 @@ export const deletePage = async (dashboardPublicCode, pageId, userId, ipAddress,
     throw error;
   }
 
-  // Buscar página y verificar que pertenece al dashboard
   const page = await dashboardRepository.findPageById(pageId);
 
   if (!page) {
@@ -545,32 +506,29 @@ export const deletePage = async (dashboardPublicCode, pageId, userId, ipAddress,
     throw error;
   }
 
-  if (page.dashboard_id !== dashboard.id) {
+  if (page.dashboardId !== dashboard.id) {
     const error = new Error('La página no pertenece al dashboard especificado');
     error.status = 400;
     error.code = 'PAGE_DASHBOARD_MISMATCH';
     throw error;
   }
 
-  // Eliminar página
   await dashboardRepository.deletePage(pageId);
 
-  // Audit log
   await logAuditAction({
     entityType: 'dashboard_page',
     entityId: pageId,
     action: 'deleted',
     performedBy: userId,
     metadata: {
-      dashboard_id: dashboard.id,
-      dashboard_public_code: dashboardPublicCode,
-      page_name: page.name
+      dashboardId: dashboard.id,
+      dashboardPublicCode,
+      pageName: page.name
     },
     ipAddress,
     userAgent
   });
 
-  // Invalidar cache
   await invalidateDashboardCache();
 
   logger.info({ pageId, dashboardId: dashboard.id, userId }, 'Dashboard page deleted successfully');
@@ -591,7 +549,6 @@ export const deletePage = async (dashboardPublicCode, pageId, userId, ipAddress,
  * @returns {Promise<Object>} - Widget creado
  */
 export const createWidget = async (dashboardPublicCode, pageId, widgetData, userId, ipAddress, userAgent) => {
-  // Validar dashboard
   const dashboard = await dashboardRepository.findDashboardByPublicCodeInternal(dashboardPublicCode);
 
   if (!dashboard) {
@@ -601,7 +558,6 @@ export const createWidget = async (dashboardPublicCode, pageId, widgetData, user
     throw error;
   }
 
-  // Verificar acceso de edición
   const access = await checkDashboardAccess(dashboard, userId, 'editor');
   if (!access.hasAccess) {
     const error = new Error('No tienes permisos para editar este dashboard');
@@ -610,7 +566,6 @@ export const createWidget = async (dashboardPublicCode, pageId, widgetData, user
     throw error;
   }
 
-  // Validar que la página pertenece al dashboard
   const page = await dashboardRepository.findPageById(pageId);
 
   if (!page) {
@@ -620,24 +575,21 @@ export const createWidget = async (dashboardPublicCode, pageId, widgetData, user
     throw error;
   }
 
-  if (page.dashboard_id !== dashboard.id) {
+  if (page.dashboardId !== dashboard.id) {
     const error = new Error('La página no pertenece al dashboard especificado');
     error.status = 400;
     error.code = 'PAGE_DASHBOARD_MISMATCH';
     throw error;
   }
 
-  // Generar UUID
   const uuid = uuidv7();
 
-  // Crear widget
   const widget = await dashboardRepository.createWidget({
     ...widgetData,
     id: uuid,
-    dashboard_page_id: pageId
+    dashboardPageId: pageId
   });
 
-  // Audit log
   await logAuditAction({
     entityType: 'widget',
     entityId: uuid,
@@ -645,15 +597,14 @@ export const createWidget = async (dashboardPublicCode, pageId, widgetData, user
     performedBy: userId,
     changes: { new: widget },
     metadata: {
-      dashboard_id: dashboard.id,
-      dashboard_public_code: dashboardPublicCode,
-      page_id: pageId
+      dashboardId: dashboard.id,
+      dashboardPublicCode,
+      pageId
     },
     ipAddress,
     userAgent
   });
 
-  // Invalidar cache
   await invalidateDashboardCache();
 
   logger.info({ widgetId: uuid, pageId, dashboardId: dashboard.id, userId }, 'Widget created successfully');
@@ -673,7 +624,6 @@ export const createWidget = async (dashboardPublicCode, pageId, widgetData, user
  * @returns {Promise<Object>} - Widget actualizado
  */
 export const updateWidget = async (dashboardPublicCode, pageId, widgetId, widgetData, userId, ipAddress, userAgent) => {
-  // Validar cadena: dashboard → page → widget
   const dashboard = await dashboardRepository.findDashboardByPublicCodeInternal(dashboardPublicCode);
 
   if (!dashboard) {
@@ -700,7 +650,7 @@ export const updateWidget = async (dashboardPublicCode, pageId, widgetId, widget
     throw error;
   }
 
-  if (page.dashboard_id !== dashboard.id) {
+  if (page.dashboardId !== dashboard.id) {
     const error = new Error('La página no pertenece al dashboard especificado');
     error.status = 400;
     error.code = 'PAGE_DASHBOARD_MISMATCH';
@@ -716,20 +666,17 @@ export const updateWidget = async (dashboardPublicCode, pageId, widgetId, widget
     throw error;
   }
 
-  if (widget.dashboard_page_id !== pageId) {
+  if (widget.dashboardPageId !== pageId) {
     const error = new Error('El widget no pertenece a la página especificada');
     error.status = 400;
     error.code = 'WIDGET_PAGE_MISMATCH';
     throw error;
   }
 
-  // Guardar estado anterior para audit
   const oldData = { ...widget.dataValues };
 
-  // Actualizar widget
   const updatedWidget = await dashboardRepository.updateWidget(widgetId, widgetData);
 
-  // Construir cambios para auditoría
   const changes = {};
   Object.keys(widgetData).forEach(key => {
     if (oldData[key] !== widgetData[key]) {
@@ -740,7 +687,6 @@ export const updateWidget = async (dashboardPublicCode, pageId, widgetId, widget
     }
   });
 
-  // Audit log
   await logAuditAction({
     entityType: 'widget',
     entityId: widgetId,
@@ -748,15 +694,14 @@ export const updateWidget = async (dashboardPublicCode, pageId, widgetId, widget
     performedBy: userId,
     changes,
     metadata: {
-      dashboard_id: dashboard.id,
-      dashboard_public_code: dashboardPublicCode,
-      page_id: pageId
+      dashboardId: dashboard.id,
+      dashboardPublicCode,
+      pageId
     },
     ipAddress,
     userAgent
   });
 
-  // Invalidar cache
   await invalidateDashboardCache();
 
   logger.info({ widgetId, pageId, dashboardId: dashboard.id, userId }, 'Widget updated successfully');
@@ -775,7 +720,6 @@ export const updateWidget = async (dashboardPublicCode, pageId, widgetId, widget
  * @returns {Promise<void>}
  */
 export const deleteWidget = async (dashboardPublicCode, pageId, widgetId, userId, ipAddress, userAgent) => {
-  // Validar cadena: dashboard → page → widget
   const dashboard = await dashboardRepository.findDashboardByPublicCodeInternal(dashboardPublicCode);
 
   if (!dashboard) {
@@ -802,7 +746,7 @@ export const deleteWidget = async (dashboardPublicCode, pageId, widgetId, userId
     throw error;
   }
 
-  if (page.dashboard_id !== dashboard.id) {
+  if (page.dashboardId !== dashboard.id) {
     const error = new Error('La página no pertenece al dashboard especificado');
     error.status = 400;
     error.code = 'PAGE_DASHBOARD_MISMATCH';
@@ -818,33 +762,30 @@ export const deleteWidget = async (dashboardPublicCode, pageId, widgetId, userId
     throw error;
   }
 
-  if (widget.dashboard_page_id !== pageId) {
+  if (widget.dashboardPageId !== pageId) {
     const error = new Error('El widget no pertenece a la página especificada');
     error.status = 400;
     error.code = 'WIDGET_PAGE_MISMATCH';
     throw error;
   }
 
-  // Eliminar widget
   await dashboardRepository.deleteWidget(widgetId);
 
-  // Audit log
   await logAuditAction({
     entityType: 'widget',
     entityId: widgetId,
     action: 'deleted',
     performedBy: userId,
     metadata: {
-      dashboard_id: dashboard.id,
-      dashboard_public_code: dashboardPublicCode,
-      page_id: pageId,
-      widget_title: widget.title
+      dashboardId: dashboard.id,
+      dashboardPublicCode,
+      pageId,
+      widgetTitle: widget.title
     },
     ipAddress,
     userAgent
   });
 
-  // Invalidar cache
   await invalidateDashboardCache();
 
   logger.info({ widgetId, pageId, dashboardId: dashboard.id, userId }, 'Widget deleted successfully');
@@ -864,7 +805,6 @@ export const deleteWidget = async (dashboardPublicCode, pageId, widgetId, userId
  * @returns {Promise<Object>} - DataSource creado
  */
 export const createDataSource = async (widgetId, dataSourceData, userId, ipAddress, userAgent) => {
-  // Validar que el widget existe
   const widget = await dashboardRepository.findWidgetById(widgetId);
 
   if (!widget) {
@@ -874,17 +814,14 @@ export const createDataSource = async (widgetId, dataSourceData, userId, ipAddre
     throw error;
   }
 
-  // Generar UUID
   const uuid = uuidv7();
 
-  // Crear data source
   const dataSource = await dashboardRepository.createDataSource({
     ...dataSourceData,
     id: uuid,
-    widget_id: widgetId
+    widgetId
   });
 
-  // Audit log
   await logAuditAction({
     entityType: 'widget_data_source',
     entityId: uuid,
@@ -892,13 +829,12 @@ export const createDataSource = async (widgetId, dataSourceData, userId, ipAddre
     performedBy: userId,
     changes: { new: dataSource },
     metadata: {
-      widget_id: widgetId
+      widgetId
     },
     ipAddress,
     userAgent
   });
 
-  // Invalidar cache
   await invalidateDashboardCache();
 
   logger.info({ dataSourceId: uuid, widgetId, userId }, 'Widget data source created successfully');
@@ -917,7 +853,6 @@ export const createDataSource = async (widgetId, dataSourceData, userId, ipAddre
  * @returns {Promise<Object>} - DataSource actualizado
  */
 export const updateDataSource = async (widgetId, dataSourceId, data, userId, ipAddress, userAgent) => {
-  // Validar que el widget existe
   const widget = await dashboardRepository.findWidgetById(widgetId);
 
   if (!widget) {
@@ -927,7 +862,6 @@ export const updateDataSource = async (widgetId, dataSourceId, data, userId, ipA
     throw error;
   }
 
-  // Buscar data source y verificar que pertenece al widget
   const dataSources = await dashboardRepository.findDataSourcesByWidgetId(widgetId);
   const existingDs = dataSources.find(ds => ds.id === dataSourceId);
 
@@ -938,10 +872,8 @@ export const updateDataSource = async (widgetId, dataSourceId, data, userId, ipA
     throw error;
   }
 
-  // Actualizar data source
   const updatedDataSource = await dashboardRepository.updateDataSource(dataSourceId, data);
 
-  // Audit log
   await logAuditAction({
     entityType: 'widget_data_source',
     entityId: dataSourceId,
@@ -949,13 +881,12 @@ export const updateDataSource = async (widgetId, dataSourceId, data, userId, ipA
     performedBy: userId,
     changes: { new: data },
     metadata: {
-      widget_id: widgetId
+      widgetId
     },
     ipAddress,
     userAgent
   });
 
-  // Invalidar cache
   await invalidateDashboardCache();
 
   logger.info({ dataSourceId, widgetId, userId }, 'Widget data source updated successfully');
@@ -973,7 +904,6 @@ export const updateDataSource = async (widgetId, dataSourceId, data, userId, ipA
  * @returns {Promise<void>}
  */
 export const deleteDataSource = async (widgetId, dataSourceId, userId, ipAddress, userAgent) => {
-  // Validar que el widget existe
   const widget = await dashboardRepository.findWidgetById(widgetId);
 
   if (!widget) {
@@ -983,7 +913,6 @@ export const deleteDataSource = async (widgetId, dataSourceId, userId, ipAddress
     throw error;
   }
 
-  // Verificar que el data source pertenece al widget
   const dataSources = await dashboardRepository.findDataSourcesByWidgetId(widgetId);
   const existingDs = dataSources.find(ds => ds.id === dataSourceId);
 
@@ -994,23 +923,20 @@ export const deleteDataSource = async (widgetId, dataSourceId, userId, ipAddress
     throw error;
   }
 
-  // Eliminar data source
   await dashboardRepository.deleteDataSource(dataSourceId);
 
-  // Audit log
   await logAuditAction({
     entityType: 'widget_data_source',
     entityId: dataSourceId,
     action: 'deleted',
     performedBy: userId,
     metadata: {
-      widget_id: widgetId
+      widgetId
     },
     ipAddress,
     userAgent
   });
 
-  // Invalidar cache
   await invalidateDashboardCache();
 
   logger.info({ dataSourceId, widgetId, userId }, 'Widget data source deleted successfully');

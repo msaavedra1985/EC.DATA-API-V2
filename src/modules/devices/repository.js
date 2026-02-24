@@ -83,12 +83,12 @@ const deviceIncludes = [
     {
         model: Organization,
         as: 'organization',
-        attributes: ['id', 'public_code', 'slug', 'name', 'logo_url']
+        attributes: ['id', 'publicCode', 'slug', 'name', 'logoUrl']
     },
     {
         model: Site,
         as: 'site',
-        attributes: ['id', 'public_code', 'name', 'city', 'country_code']
+        attributes: ['id', 'publicCode', 'name', 'city', 'countryCode']
     },
     {
         model: DeviceType,
@@ -142,14 +142,14 @@ export const createDevice = async (deviceData) => {
 };
 
 /**
- * Buscar device por ID público (public_code)
+ * Buscar device por ID público (publicCode)
  * Retorna DTO público - uso externo
  * @param {string} publicCode - Public code del device (ej: DEV-abc123-1)
  * @returns {Promise<Object|null>} - Device DTO o null
  */
 export const findDeviceByPublicCode = async (publicCode) => {
     const device = await Device.findOne({
-        where: { public_code: publicCode },
+        where: { publicCode },
         include: deviceIncludes
     });
     
@@ -161,14 +161,14 @@ export const findDeviceByPublicCode = async (publicCode) => {
 };
 
 /**
- * Buscar device por ID público (public_code) - VERSIÓN INTERNA
+ * Buscar device por ID público (publicCode) - VERSIÓN INTERNA
  * Retorna modelo Sequelize completo - uso interno
  * @param {string} publicCode - Public code del device
  * @returns {Promise<Device|null>} - Modelo Device o null
  */
 export const findDeviceByPublicCodeInternal = async (publicCode) => {
     return await Device.findOne({
-        where: { public_code: publicCode }
+        where: { publicCode }
     });
 };
 
@@ -204,7 +204,7 @@ export const updateDevice = async (id, updateData) => {
 };
 
 /**
- * Soft delete de device (actualiza deleted_at e is_active)
+ * Soft delete de device (actualiza deletedAt e isActive)
  * @param {string} id - UUID interno del device
  * @param {Object} transaction - Transacción de Sequelize (opcional)
  * @returns {Promise<Object|null>} - Device actualizado con DTO público o null
@@ -216,10 +216,10 @@ export const softDeleteDevice = async (id, transaction = null) => {
         return null;
     }
     
-    // Soft delete explícito: setear deleted_at e is_active
+    // Soft delete explícito: setear deletedAt e isActive
     await device.update({
-        deleted_at: new Date(),
-        is_active: false
+        deletedAt: new Date(),
+        isActive: false
     }, { transaction });
     
     // Recargar con relaciones para serializar
@@ -253,27 +253,27 @@ export const deleteDevice = async (id) => {
  * @returns {Promise<Object>} - { items, total, page, limit }
  */
 export const listDevices = async ({ 
-    organization_id,
-    organization_ids,
-    site_id,
+    organizationId,
+    organizationIds,
+    siteId,
     status,
-    device_type_id,
+    deviceTypeId,
     search,
-    include_channels = false,
+    includeChannels = false,
     limit = 20, 
     offset = 0 
 }) => {
     const where = {};
     
     // Soporte para filtro de múltiples organizaciones (usado por all=true con scope limitado)
-    if (organization_ids !== undefined && Array.isArray(organization_ids) && organization_ids.length > 0) {
-        where.organization_id = { [Op.in]: organization_ids };
-    } else if (organization_id !== undefined && organization_id !== null) {
-        where.organization_id = organization_id;
+    if (organizationIds !== undefined && Array.isArray(organizationIds) && organizationIds.length > 0) {
+        where.organizationId = { [Op.in]: organizationIds };
+    } else if (organizationId !== undefined && organizationId !== null) {
+        where.organizationId = organizationId;
     }
     
-    if (site_id !== undefined) {
-        where.site_id = site_id;
+    if (siteId !== undefined) {
+        where.siteId = siteId;
     }
     
     if (status !== undefined) {
@@ -281,25 +281,25 @@ export const listDevices = async ({
     }
     
     // Filtrar por tipo de equipo (FK a catálogo)
-    if (device_type_id !== undefined) {
-        where.device_type_id = device_type_id;
+    if (deviceTypeId !== undefined) {
+        where.deviceTypeId = deviceTypeId;
     }
     
-    // Búsqueda por nombre o serial_number
+    // Búsqueda por nombre o serialNumber
     if (search) {
         where[Op.or] = [
             { name: { [Op.iLike]: `%${search}%` } },
-            { serial_number: { [Op.iLike]: `%${search}%` } }
+            { serialNumber: { [Op.iLike]: `%${search}%` } }
         ];
     }
     
     const includes = [...deviceIncludes];
 
-    if (include_channels) {
+    if (includeChannels) {
         includes.push({
             model: Channel,
             as: 'channels',
-            attributes: ['id', 'public_code', 'name', 'description', 'status', 'measurement_type_id', 'unit'],
+            attributes: ['id', 'publicCode', 'name', 'description', 'status', 'measurementTypeId', 'unit'],
             required: false
         });
     }
@@ -310,7 +310,7 @@ export const listDevices = async ({
         distinct: true,
         limit: parseInt(limit),
         offset: parseInt(offset),
-        order: [['created_at', 'DESC']]
+        order: [['createdAt', 'DESC']]
     });
     
     return {

@@ -9,11 +9,11 @@ import { z } from 'zod';
  */
 export const createChannelSchema = z.object({
     body: z.object({
-        device_id: z
+        deviceId: z
             .string({
-                required_error: 'device_id es requerido'
+                required_error: 'deviceId es requerido'
             })
-            .min(1, 'device_id no puede estar vacío'),
+            .min(1, 'deviceId no puede estar vacío'),
         name: z
             .string({
                 required_error: 'name es requerido'
@@ -30,17 +30,17 @@ export const createChannelSchema = z.object({
             .min(0, 'ch debe ser mayor o igual a 0')
             .optional()
             .nullable(),
-        measurement_type_id: z
-            .number({ invalid_type_error: 'measurement_type_id debe ser un número' })
-            .int('measurement_type_id debe ser un entero')
-            .positive('measurement_type_id debe ser positivo')
+        measurementTypeId: z
+            .number({ invalid_type_error: 'measurementTypeId debe ser un número' })
+            .int('measurementTypeId debe ser un entero')
+            .positive('measurementTypeId debe ser positivo')
             .optional()
             .nullable(),
-        phase_system: z
-            .number({ invalid_type_error: 'phase_system debe ser un número' })
-            .int('phase_system debe ser un entero')
-            .min(0, 'phase_system debe ser 0, 1 o 3')
-            .max(3, 'phase_system debe ser 0, 1 o 3')
+        phaseSystem: z
+            .number({ invalid_type_error: 'phaseSystem debe ser un número' })
+            .int('phaseSystem debe ser un entero')
+            .min(0, 'phaseSystem debe ser 0, 1 o 3')
+            .max(3, 'phaseSystem debe ser 0, 1 o 3')
             .optional()
             .nullable(),
         phase: z
@@ -62,7 +62,7 @@ export const createChannelSchema = z.object({
         metadata: z
             .record(z.any())
             .optional(),
-        is_active: z
+        isActive: z
             .boolean()
             .optional()
             .default(true)
@@ -97,13 +97,13 @@ export const updateChannelSchema = z.object({
             .min(0)
             .optional()
             .nullable(),
-        measurement_type_id: z
+        measurementTypeId: z
             .number()
             .int()
             .positive()
             .optional()
             .nullable(),
-        phase_system: z
+        phaseSystem: z
             .number()
             .int()
             .min(0)
@@ -128,7 +128,7 @@ export const updateChannelSchema = z.object({
         metadata: z
             .record(z.any())
             .optional(),
-        is_active: z
+        isActive: z
             .boolean()
             .optional()
     })
@@ -140,13 +140,13 @@ export const updateChannelSchema = z.object({
  */
 export const getChannelsSchema = z.object({
     query: z.object({
-        device_id: z
+        deviceId: z
             .string()
             .optional(),
-        organization_id: z
+        organizationId: z
             .string()
             .optional(),
-        organization_ids: z
+        organizationIds: z
             .array(z.string())
             .optional()
             .describe('INTERNO: Array de UUIDs de organizaciones (inyectado por middleware)'),
@@ -154,11 +154,11 @@ export const getChannelsSchema = z.object({
             .string()
             .optional()
             .describe('Solo admins: si es "true", muestra todos los channels sin filtrar por organización'),
-        measurement_type_id: z
+        measurementTypeId: z
             .string()
             .transform((val) => parseInt(val, 10))
             .refine((val) => !isNaN(val) && val > 0, {
-                message: 'measurement_type_id debe ser un entero positivo'
+                message: 'measurementTypeId debe ser un entero positivo'
             })
             .optional(),
         status: z
@@ -167,7 +167,7 @@ export const getChannelsSchema = z.object({
         search: z
             .string()
             .optional(),
-        not_in_hierarchy: z
+        notInHierarchy: z
             .string()
             .transform(val => val === 'true')
             .optional()

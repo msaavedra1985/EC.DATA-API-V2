@@ -33,7 +33,7 @@ const channelLogger = logger.child({ component: 'channels' });
  * /api/v1/channels:
  *   post:
  *     summary: Crear un nuevo channel (punto de medición)
- *     description: Crea un punto de medición perteneciente a un dispositivo. El organization_id se obtiene automáticamente del dispositivo.
+ *     description: Crea un punto de medición perteneciente a un dispositivo. El organizationId se obtiene automáticamente del dispositivo.
  *     tags: [Channels]
  *     security:
  *       - bearerAuth: []
@@ -44,10 +44,10 @@ const channelLogger = logger.child({ component: 'channels' });
  *           schema:
  *             type: object
  *             required:
- *               - device_id
+ *               - deviceId
  *               - name
  *             properties:
- *               device_id:
+ *               deviceId:
  *                 type: string
  *                 description: Public code del dispositivo
  *                 example: "DEV-abc123xyz-1"
@@ -62,11 +62,11 @@ const channelLogger = logger.child({ component: 'channels' });
  *                 type: integer
  *                 description: Número de canal físico
  *                 example: 1
- *               measurement_type_id:
+ *               measurementTypeId:
  *                 type: integer
  *                 description: ID del tipo de medición
  *                 example: 1
- *               phase_system:
+ *               phaseSystem:
  *                 type: integer
  *                 description: "Sistema eléctrico: 0=N/A, 1=monofásico, 3=trifásico"
  *                 example: 3
@@ -87,7 +87,7 @@ const channelLogger = logger.child({ component: 'channels' });
  *               metadata:
  *                 type: object
  *                 description: Metadatos adicionales
- *               is_active:
+ *               isActive:
  *                 type: boolean
  *                 default: true
  *     responses:
@@ -113,10 +113,10 @@ const channelLogger = logger.child({ component: 'channels' });
  *                     ch:
  *                       type: integer
  *                       example: 1
- *                     measurement_type_id:
+ *                     measurementTypeId:
  *                       type: integer
  *                       example: 1
- *                     phase_system:
+ *                     phaseSystem:
  *                       type: integer
  *                       example: 3
  *                     phase:
@@ -185,17 +185,17 @@ router.post('/', authenticate, requireRole(['system-admin', 'org-admin']), valid
  *       - bearerAuth: []
  *     parameters:
  *       - in: query
- *         name: device_id
+ *         name: deviceId
  *         schema:
  *           type: string
- *         description: Filtrar por public_code del dispositivo
+ *         description: Filtrar por publicCode del dispositivo
  *       - in: query
- *         name: organization_id
+ *         name: organizationId
  *         schema:
  *           type: string
- *         description: Filtrar por public_code de la organización
+ *         description: Filtrar por publicCode de la organización
  *       - in: query
- *         name: measurement_type_id
+ *         name: measurementTypeId
  *         schema:
  *           type: integer
  *         description: Filtrar por tipo de medición
@@ -211,7 +211,7 @@ router.post('/', authenticate, requireRole(['system-admin', 'org-admin']), valid
  *           type: string
  *         description: Buscar en nombre o descripción
  *       - in: query
- *         name: not_in_hierarchy
+ *         name: notInHierarchy
  *         schema:
  *           type: string
  *           enum: ["true", "false"]
@@ -237,15 +237,15 @@ router.post('/', authenticate, requireRole(['system-admin', 'org-admin']), valid
  */
 router.get('/', authenticate, enforceActiveOrganization, validate(getChannelsSchema), async (req, res, next) => {
     try {
-        const { device_id, measurement_type_id, status, search, not_in_hierarchy, limit, offset } = req.query;
+        const { deviceId, measurementTypeId, status, search, notInHierarchy, limit, offset } = req.query;
         
         const result = await channelServices.listChannels({
-            device_id,
-            organization_id: req.organizationContext.id,
-            measurement_type_id,
+            deviceId,
+            organizationId: req.organizationContext.id,
+            measurementTypeId,
             status,
             search,
-            not_in_hierarchy,
+            notInHierarchy,
             limit,
             offset,
             showAll: req.organizationContext.showAll || false
@@ -273,7 +273,7 @@ router.get('/', authenticate, enforceActiveOrganization, validate(getChannelsSch
  * /api/v1/channels/{id}:
  *   get:
  *     summary: Obtener un channel por ID público
- *     description: Obtiene los detalles de un channel específico usando su public_code.
+ *     description: Obtiene los detalles de un channel específico usando su publicCode.
  *     tags: [Channels]
  *     security:
  *       - bearerAuth: []
@@ -338,9 +338,9 @@ router.get('/:id', authenticate, validateChannelOwnership, validate(getChannelBy
  *                 type: string
  *               ch:
  *                 type: integer
- *               measurement_type_id:
+ *               measurementTypeId:
  *                 type: integer
- *               phase_system:
+ *               phaseSystem:
  *                 type: integer
  *                 description: "0=N/A, 1=monofásico, 3=trifásico"
  *               phase:
@@ -354,7 +354,7 @@ router.get('/:id', authenticate, validateChannelOwnership, validate(getChannelBy
  *                 enum: [active, inactive, error, disabled]
  *               metadata:
  *                 type: object
- *               is_active:
+ *               isActive:
  *                 type: boolean
  *     responses:
  *       200:

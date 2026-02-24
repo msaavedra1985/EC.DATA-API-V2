@@ -20,10 +20,10 @@ import logger from '../../utils/logger.js';
  * @returns {Promise<Object>} - Site creado
  */
 export const createSite = async (siteData, userId, ipAddress, userAgent) => {
-    // Convertir organization_id de public_code a UUID si es necesario
-    let organizationUuid = siteData.organization_id;
-    if (!siteData.organization_id.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
-        const org = await organizationRepository.findOrganizationByPublicCodeInternal(siteData.organization_id);
+    // Convertir organizationId de publicCode a UUID si es necesario
+    let organizationUuid = siteData.organizationId;
+    if (!siteData.organizationId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+        const org = await organizationRepository.findOrganizationByPublicCodeInternal(siteData.organizationId);
         if (!org) {
             const error = new Error('Organización no encontrada');
             error.status = 404;
@@ -33,8 +33,8 @@ export const createSite = async (siteData, userId, ipAddress, userAgent) => {
         organizationUuid = org.id;
     }
     
-    // Validar que el country_code existe
-    const country = await countryRepository.findCountryByCode(siteData.country_code);
+    // Validar que el countryCode existe
+    const country = await countryRepository.findCountryByCode(siteData.countryCode);
     if (!country) {
         const error = new Error('País no encontrado');
         error.status = 404;
@@ -49,14 +49,14 @@ export const createSite = async (siteData, userId, ipAddress, userAgent) => {
     
     const identifiers = {
         id: uuid,
-        human_id: humanId,
-        public_code: publicCode
+        humanId,
+        publicCode
     };
     
     // Crear site
     const site = await siteRepository.createSite({
         ...siteData,
-        organization_id: organizationUuid,
+        organizationId: organizationUuid,
         ...identifiers
     });
     
@@ -68,8 +68,8 @@ export const createSite = async (siteData, userId, ipAddress, userAgent) => {
         performedBy: userId,
         changes: { new: site },
         metadata: {
-            organization_id: organizationUuid,
-            country_code: siteData.country_code
+            organizationId: organizationUuid,
+            countryCode: siteData.countryCode
         },
         ipAddress: ipAddress,
         userAgent: userAgent
@@ -84,7 +84,7 @@ export const createSite = async (siteData, userId, ipAddress, userAgent) => {
 };
 
 /**
- * Obtener site por public_code
+ * Obtener site por publicCode
  * @param {string} publicCode - Public code del site
  * @returns {Promise<Object>} - Site encontrado
  */
@@ -113,8 +113,8 @@ export const listSites = async (filters) => {
     if (showAll) {
         // Preparar filtros para el repository sin organización
         const repoFilters = { ...filters, showAll: true };
-        delete repoFilters.organization_id;
-        delete repoFilters.organization_ids;
+        delete repoFilters.organizationId;
+        delete repoFilters.organizationIds;
         
         return await siteRepository.listSites(repoFilters);
     }
@@ -123,15 +123,15 @@ export const listSites = async (filters) => {
     let organizationUuid = null;
     let organizationUuids = null;
 
-    // Prioridad: organization_ids (array del middleware) > organization_id (singular)
-    if (filters.organization_ids && Array.isArray(filters.organization_ids) && filters.organization_ids.length > 0) {
+    // Prioridad: organizationIds (array del middleware) > organizationId (singular)
+    if (filters.organizationIds && Array.isArray(filters.organizationIds) && filters.organizationIds.length > 0) {
         // Array de UUIDs inyectado por el middleware (ya son UUIDs validados)
-        organizationUuids = filters.organization_ids;
-    } else if (filters.organization_id) {
-        // Convertir organization_id de public_code a UUID si es necesario
-        organizationUuid = filters.organization_id;
-        if (!filters.organization_id.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
-            const org = await organizationRepository.findOrganizationByPublicCodeInternal(filters.organization_id);
+        organizationUuids = filters.organizationIds;
+    } else if (filters.organizationId) {
+        // Convertir organizationId de publicCode a UUID si es necesario
+        organizationUuid = filters.organizationId;
+        if (!filters.organizationId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+            const org = await organizationRepository.findOrganizationByPublicCodeInternal(filters.organizationId);
             if (!org) {
                 const error = new Error('Organización no encontrada');
                 error.status = 404;
@@ -145,8 +145,8 @@ export const listSites = async (filters) => {
     // Generar cache key basada en filtros
     const cacheKey = JSON.stringify({
         ...filters,
-        organization_id: organizationUuid,
-        organization_ids: organizationUuids
+        organizationId: organizationUuid,
+        organizationIds: organizationUuids
     });
     
     // Intentar obtener del cache
@@ -158,8 +158,8 @@ export const listSites = async (filters) => {
     // Preparar filtros para el repository
     const repoFilters = {
         ...filters,
-        organization_id: organizationUuid,
-        organization_ids: organizationUuids
+        organizationId: organizationUuid,
+        organizationIds: organizationUuids
     };
 
     // Obtener de BD
@@ -191,9 +191,9 @@ export const updateSite = async (publicCode, updateData, userId, ipAddress, user
         throw error;
     }
     
-    // Si se actualiza country_code, validar que existe
-    if (updateData.country_code) {
-        const country = await countryRepository.findCountryByCode(updateData.country_code);
+    // Si se actualiza countryCode, validar que existe
+    if (updateData.countryCode) {
+        const country = await countryRepository.findCountryByCode(updateData.countryCode);
         if (!country) {
             const error = new Error('País no encontrado');
             error.status = 404;
@@ -226,7 +226,7 @@ export const updateSite = async (publicCode, updateData, userId, ipAddress, user
         performedBy: userId,
         changes,
         metadata: {
-            organization_id: siteInternal.organization_id
+            organizationId: siteInternal.organizationId
         },
         ipAddress: ipAddress,
         userAgent: userAgent
@@ -270,13 +270,13 @@ export const deleteSite = async (publicCode, userId, ipAddress, userAgent) => {
             action: 'delete',
             performedBy: userId,
             changes: {
-                deleted_at: {
+                deletedAt: {
                     old: null,
                     new: new Date()
                 }
             },
             metadata: {
-                organization_id: siteInternal.organization_id
+                organizationId: siteInternal.organizationId
             },
             ipAddress: ipAddress,
             userAgent: userAgent

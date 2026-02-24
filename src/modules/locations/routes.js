@@ -63,10 +63,10 @@ router.get('/', (req, res) => {
  *                       code:
  *                         type: string
  *                         example: "MX-AGU"
- *                       state_code:
+ *                       stateCode:
  *                         type: string
  *                         example: "AGU"
- *                       country_code:
+ *                       countryCode:
  *                         type: string
  *                         example: "MX"
  *                       name:
@@ -165,7 +165,7 @@ router.get('/countries/:countryCode/states', async (req, res) => {
  *                       name:
  *                         type: string
  *                         example: "Aguascalientes"
- *                       state_code:
+ *                       stateCode:
  *                         type: string
  *                         example: "MX-AGU"
  *                       latitude:

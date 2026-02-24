@@ -51,7 +51,7 @@ export const findAll = async (options = {}) => {
         aggregationType,
         limit = 50,
         offset = 0,
-        sortBy = 'display_order',
+        sortBy = 'displayOrder',
         sortOrder = 'ASC'
     } = options;
 
@@ -124,12 +124,12 @@ export const findAll = async (options = {}) => {
     // Mapeo de campos de ordenamiento válidos
     const validSortFields = {
         'id': 'v.id',
-        'display_order': 'v.display_order',
-        'column_name': 'v.column_name',
+        'displayOrder': 'v.display_order',
+        'columnName': 'v.column_name',
         'name': 'COALESCE(vt.name, vt_default.name)',
-        'measurement_type_id': 'v.measurement_type_id',
-        'created_at': 'v.created_at',
-        'updated_at': 'v.updated_at'
+        'measurementTypeId': 'v.measurement_type_id',
+        'createdAt': 'v.created_at',
+        'updatedAt': 'v.updated_at'
     };
 
     const orderField = validSortFields[sortBy] || 'v.display_order';
@@ -278,27 +278,27 @@ export const create = async (data, translations = {}, transaction = null) => {
     try {
         // Crear variable
         const variable = await Variable.create({
-            measurement_type_id: data.measurementTypeId,
-            column_name: data.columnName,
+            measurementTypeId: data.measurementTypeId,
+            columnName: data.columnName,
             unit: data.unit,
-            chart_type: data.chartType,
-            axis_name: data.axisName,
-            axis_id: data.axisId,
-            axis_min: data.axisMin,
-            axis_function: data.axisFunction,
-            aggregation_type: data.aggregationType,
-            display_order: data.displayOrder,
-            show_in_billing: data.showInBilling ?? false,
-            show_in_analysis: data.showInAnalysis ?? true,
-            is_realtime: data.isRealtime ?? false,
-            is_default: data.isDefault ?? false,
-            is_active: data.isActive ?? true
+            chartType: data.chartType,
+            axisName: data.axisName,
+            axisId: data.axisId,
+            axisMin: data.axisMin,
+            axisFunction: data.axisFunction,
+            aggregationType: data.aggregationType,
+            displayOrder: data.displayOrder,
+            showInBilling: data.showInBilling ?? false,
+            showInAnalysis: data.showInAnalysis ?? true,
+            isRealtime: data.isRealtime ?? false,
+            isDefault: data.isDefault ?? false,
+            isActive: data.isActive ?? true
         }, { transaction: t });
 
         // Crear traducciones
         const translationPromises = Object.entries(translations).map(([lang, trans]) => 
             VariableTranslation.create({
-                variable_id: variable.id,
+                variableId: variable.id,
                 lang,
                 name: trans.name,
                 description: trans.description
@@ -347,21 +347,21 @@ export const update = async (id, data, translations = {}, transaction = null) =>
 
         // Construir objeto de actualización solo con campos presentes
         const updateFields = {};
-        if (data.measurementTypeId !== undefined) updateFields.measurement_type_id = data.measurementTypeId;
-        if (data.columnName !== undefined) updateFields.column_name = data.columnName;
+        if (data.measurementTypeId !== undefined) updateFields.measurementTypeId = data.measurementTypeId;
+        if (data.columnName !== undefined) updateFields.columnName = data.columnName;
         if (data.unit !== undefined) updateFields.unit = data.unit;
-        if (data.chartType !== undefined) updateFields.chart_type = data.chartType;
-        if (data.axisName !== undefined) updateFields.axis_name = data.axisName;
-        if (data.axisId !== undefined) updateFields.axis_id = data.axisId;
-        if (data.axisMin !== undefined) updateFields.axis_min = data.axisMin;
-        if (data.axisFunction !== undefined) updateFields.axis_function = data.axisFunction;
-        if (data.aggregationType !== undefined) updateFields.aggregation_type = data.aggregationType;
-        if (data.displayOrder !== undefined) updateFields.display_order = data.displayOrder;
-        if (data.showInBilling !== undefined) updateFields.show_in_billing = data.showInBilling;
-        if (data.showInAnalysis !== undefined) updateFields.show_in_analysis = data.showInAnalysis;
-        if (data.isRealtime !== undefined) updateFields.is_realtime = data.isRealtime;
-        if (data.isDefault !== undefined) updateFields.is_default = data.isDefault;
-        if (data.isActive !== undefined) updateFields.is_active = data.isActive;
+        if (data.chartType !== undefined) updateFields.chartType = data.chartType;
+        if (data.axisName !== undefined) updateFields.axisName = data.axisName;
+        if (data.axisId !== undefined) updateFields.axisId = data.axisId;
+        if (data.axisMin !== undefined) updateFields.axisMin = data.axisMin;
+        if (data.axisFunction !== undefined) updateFields.axisFunction = data.axisFunction;
+        if (data.aggregationType !== undefined) updateFields.aggregationType = data.aggregationType;
+        if (data.displayOrder !== undefined) updateFields.displayOrder = data.displayOrder;
+        if (data.showInBilling !== undefined) updateFields.showInBilling = data.showInBilling;
+        if (data.showInAnalysis !== undefined) updateFields.showInAnalysis = data.showInAnalysis;
+        if (data.isRealtime !== undefined) updateFields.isRealtime = data.isRealtime;
+        if (data.isDefault !== undefined) updateFields.isDefault = data.isDefault;
+        if (data.isActive !== undefined) updateFields.isActive = data.isActive;
 
         if (Object.keys(updateFields).length > 0) {
             await variable.update(updateFields, { transaction: t });
@@ -370,7 +370,7 @@ export const update = async (id, data, translations = {}, transaction = null) =>
         // Actualizar o crear traducciones
         for (const [lang, trans] of Object.entries(translations)) {
             const [translation, created] = await VariableTranslation.findOrCreate({
-                where: { variable_id: id, lang },
+                where: { variableId: id, lang },
                 defaults: {
                     name: trans.name,
                     description: trans.description
@@ -419,7 +419,7 @@ export const remove = async (id) => {
         throw new Error(`Variable con ID ${id} no encontrada`);
     }
 
-    await variable.update({ is_active: false });
+    await variable.update({ isActive: false });
 
     // Invalidar cache global de variables
     await invalidateGlobalVariablesCache();
@@ -437,7 +437,7 @@ export const remove = async (id) => {
  */
 export const getTranslations = async (variableId) => {
     return await VariableTranslation.findAll({
-        where: { variable_id: variableId },
+        where: { variableId },
         order: [['lang', 'ASC']]
     });
 };
@@ -452,8 +452,8 @@ export const getTranslations = async (variableId) => {
  */
 export const existsDuplicate = async (measurementTypeId, columnName, excludeId = null) => {
     const where = {
-        measurement_type_id: measurementTypeId,
-        column_name: columnName
+        measurementTypeId,
+        columnName
     };
 
     if (excludeId) {

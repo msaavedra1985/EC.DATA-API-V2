@@ -8,25 +8,25 @@ import { z } from 'zod';
  * Permite al usuario cambiar su propia contraseña
  * 
  * Campos requeridos:
- * - current_password: Contraseña actual (para verificación)
- * - new_password: Nueva contraseña (mínimo 8 caracteres)
+ * - currentPassword: Contraseña actual (para verificación)
+ * - newPassword: Nueva contraseña (mínimo 8 caracteres)
  * 
  * Validaciones adicionales:
- * - new_password debe ser diferente de current_password
- * - new_password debe cumplir políticas de complejidad
+ * - newPassword debe ser diferente de currentPassword
+ * - newPassword debe cumplir políticas de complejidad
  */
 export const changePasswordSchema = z.object({
-    current_password: z.string()
+    currentPassword: z.string()
         .min(1, 'Current password is required'),
     
-    new_password: z.string()
+    newPassword: z.string()
         .min(8, 'New password must be at least 8 characters')
         .max(255, 'New password must be at most 255 characters')
 }).refine(
-    (data) => data.current_password !== data.new_password,
+    (data) => data.currentPassword !== data.newPassword,
     {
         message: 'New password must be different from current password',
-        path: ['new_password']
+        path: ['newPassword']
     }
 );
 

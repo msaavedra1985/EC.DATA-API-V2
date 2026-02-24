@@ -25,10 +25,10 @@ import logger from '../../utils/logger.js';
  * @returns {Promise<Object>} - Device creado
  */
 export const createDevice = async (deviceData, userId, ipAddress, userAgent) => {
-    // Convertir organization_id de public_code a UUID si es necesario
-    let organizationUuid = deviceData.organization_id;
-    if (!deviceData.organization_id.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
-        const org = await organizationRepository.findOrganizationByPublicCodeInternal(deviceData.organization_id);
+    // Convertir organizationId de publicCode a UUID si es necesario
+    let organizationUuid = deviceData.organizationId;
+    if (!deviceData.organizationId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+        const org = await organizationRepository.findOrganizationByPublicCodeInternal(deviceData.organizationId);
         if (!org) {
             const error = new Error('Organización no encontrada');
             error.status = 404;
@@ -38,11 +38,11 @@ export const createDevice = async (deviceData, userId, ipAddress, userAgent) => 
         organizationUuid = org.id;
     }
     
-    // Si se proporciona site_id, validar que existe y pertenece a la misma organización
-    let siteUuid = deviceData.site_id;
-    if (deviceData.site_id) {
-        if (!deviceData.site_id.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
-            const site = await siteRepository.findSiteByPublicCodeInternal(deviceData.site_id);
+    // Si se proporciona siteId, validar que existe y pertenece a la misma organización
+    let siteUuid = deviceData.siteId;
+    if (deviceData.siteId) {
+        if (!deviceData.siteId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+            const site = await siteRepository.findSiteByPublicCodeInternal(deviceData.siteId);
             if (!site) {
                 const error = new Error('Site no encontrado');
                 error.status = 404;
@@ -50,7 +50,7 @@ export const createDevice = async (deviceData, userId, ipAddress, userAgent) => 
                 throw error;
             }
             // Validar que el site pertenece a la misma organización
-            if (site.organization_id !== organizationUuid) {
+            if (site.organizationId !== organizationUuid) {
                 const error = new Error('El site no pertenece a la organización especificada');
                 error.status = 400;
                 error.code = 'SITE_ORGANIZATION_MISMATCH';
@@ -67,15 +67,15 @@ export const createDevice = async (deviceData, userId, ipAddress, userAgent) => 
     
     const identifiers = {
         id: uuid,
-        human_id: humanId,
-        public_code: publicCode
+        humanId: humanId,
+        publicCode: publicCode
     };
     
     // Crear device
     const device = await deviceRepository.createDevice({
         ...deviceData,
-        organization_id: organizationUuid,
-        site_id: siteUuid || null,
+        organizationId: organizationUuid,
+        siteId: siteUuid || null,
         ...identifiers
     });
     
@@ -87,9 +87,9 @@ export const createDevice = async (deviceData, userId, ipAddress, userAgent) => 
         performedBy: userId,
         changes: { new: device },
         metadata: {
-            organization_id: organizationUuid,
-            site_id: siteUuid || null,
-            device_type_id: deviceData.device_type_id
+            organizationId: organizationUuid,
+            siteId: siteUuid || null,
+            deviceTypeId: deviceData.deviceTypeId
         },
         ipAddress: ipAddress,
         userAgent: userAgent
@@ -104,7 +104,7 @@ export const createDevice = async (deviceData, userId, ipAddress, userAgent) => 
 };
 
 /**
- * Obtener device por public_code
+ * Obtener device por publicCode
  * @param {string} publicCode - Public code del device
  * @returns {Promise<Object>} - Device encontrado
  */
@@ -132,8 +132,8 @@ export const listDevices = async (filters) => {
     // En modo showAll (God View), no filtramos por organización
     if (showAll) {
         const repoFilters = { ...filters, showAll: true };
-        delete repoFilters.organization_id;
-        delete repoFilters.organization_ids;
+        delete repoFilters.organizationId;
+        delete repoFilters.organizationIds;
         
         return await deviceRepository.listDevices(repoFilters);
     }
@@ -142,15 +142,15 @@ export const listDevices = async (filters) => {
     let organizationUuid = null;
     let organizationUuids = null;
 
-    // Prioridad: organization_ids (array del middleware) > organization_id (singular)
-    if (filters.organization_ids && Array.isArray(filters.organization_ids) && filters.organization_ids.length > 0) {
+    // Prioridad: organizationIds (array del middleware) > organizationId (singular)
+    if (filters.organizationIds && Array.isArray(filters.organizationIds) && filters.organizationIds.length > 0) {
         // Array de UUIDs inyectado por el middleware (ya son UUIDs validados)
-        organizationUuids = filters.organization_ids;
-    } else if (filters.organization_id) {
-        // Convertir organization_id de public_code a UUID si es necesario
-        organizationUuid = filters.organization_id;
-        if (!filters.organization_id.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
-            const org = await organizationRepository.findOrganizationByPublicCodeInternal(filters.organization_id);
+        organizationUuids = filters.organizationIds;
+    } else if (filters.organizationId) {
+        // Convertir organizationId de publicCode a UUID si es necesario
+        organizationUuid = filters.organizationId;
+        if (!filters.organizationId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+            const org = await organizationRepository.findOrganizationByPublicCodeInternal(filters.organizationId);
             if (!org) {
                 const error = new Error('Organización no encontrada');
                 error.status = 404;
@@ -161,10 +161,10 @@ export const listDevices = async (filters) => {
         }
     }
     
-    // Convertir site_id de public_code a UUID si es necesario
-    let siteUuid = filters.site_id;
-    if (filters.site_id && !filters.site_id.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
-        const site = await siteRepository.findSiteByPublicCodeInternal(filters.site_id);
+    // Convertir siteId de publicCode a UUID si es necesario
+    let siteUuid = filters.siteId;
+    if (filters.siteId && !filters.siteId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+        const site = await siteRepository.findSiteByPublicCodeInternal(filters.siteId);
         if (!site) {
             const error = new Error('Site no encontrado');
             error.status = 404;
@@ -177,9 +177,9 @@ export const listDevices = async (filters) => {
     // Generar cache key basada en filtros
     const cacheKey = JSON.stringify({
         ...filters,
-        organization_id: organizationUuid,
-        organization_ids: organizationUuids,
-        site_id: siteUuid
+        organizationId: organizationUuid,
+        organizationIds: organizationUuids,
+        siteId: siteUuid
     });
     
     // Intentar obtener del cache
@@ -191,9 +191,9 @@ export const listDevices = async (filters) => {
     // Preparar filtros para el repository
     const repoFilters = {
         ...filters,
-        organization_id: organizationUuid,
-        organization_ids: organizationUuids,
-        site_id: siteUuid
+        organizationId: organizationUuid,
+        organizationIds: organizationUuids,
+        siteId: siteUuid
     };
 
     // Obtener de BD
@@ -225,11 +225,11 @@ export const updateDevice = async (publicCode, updateData, userId, ipAddress, us
         throw error;
     }
     
-    // Si se actualiza site_id, validar que existe y pertenece a la misma organización
-    if (updateData.site_id) {
-        let siteUuid = updateData.site_id;
-        if (!updateData.site_id.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
-            const site = await siteRepository.findSiteByPublicCodeInternal(updateData.site_id);
+    // Si se actualiza siteId, validar que existe y pertenece a la misma organización
+    if (updateData.siteId) {
+        let siteUuid = updateData.siteId;
+        if (!updateData.siteId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+            const site = await siteRepository.findSiteByPublicCodeInternal(updateData.siteId);
             if (!site) {
                 const error = new Error('Site no encontrado');
                 error.status = 404;
@@ -237,7 +237,7 @@ export const updateDevice = async (publicCode, updateData, userId, ipAddress, us
                 throw error;
             }
             // Validar que el site pertenece a la misma organización
-            if (site.organization_id !== deviceInternal.organization_id) {
+            if (site.organizationId !== deviceInternal.organizationId) {
                 const error = new Error('El site no pertenece a la organización del device');
                 error.status = 400;
                 error.code = 'SITE_ORGANIZATION_MISMATCH';
@@ -245,7 +245,7 @@ export const updateDevice = async (publicCode, updateData, userId, ipAddress, us
             }
             siteUuid = site.id;
         }
-        updateData.site_id = siteUuid;
+        updateData.siteId = siteUuid;
     }
     
     // Guardar estado anterior para audit
@@ -272,7 +272,7 @@ export const updateDevice = async (publicCode, updateData, userId, ipAddress, us
         performedBy: userId,
         changes,
         metadata: {
-            organization_id: deviceInternal.organization_id
+            organizationId: deviceInternal.organizationId
         },
         ipAddress: ipAddress,
         userAgent: userAgent
@@ -314,7 +314,7 @@ export const deleteDevice = async (publicCode, userId, ipAddress, userAgent) => 
         // 1. Buscar TODOS los channels asociados al device (no solo activos)
         const allChannels = await Channel.findAll({
             where: {
-                device_id: deviceInternal.id
+                deviceId: deviceInternal.id
             },
             transaction
         });
@@ -350,9 +350,9 @@ export const deleteDevice = async (publicCode, userId, ipAddress, userAgent) => 
                     }
                 },
                 metadata: {
-                    device_id: deviceInternal.id,
-                    organization_id: deviceInternal.organization_id,
-                    cascade_from: 'device_delete',
+                    deviceId: deviceInternal.id,
+                    organizationId: deviceInternal.organizationId,
+                    cascadeFrom: 'device_delete',
                     reason: 'Cascade from device soft-delete'
                 },
                 ipAddress: ipAddress,
@@ -360,16 +360,16 @@ export const deleteDevice = async (publicCode, userId, ipAddress, userAgent) => 
             });
             
             channelUpdates.push({
-                id: channel.public_code,
+                id: channel.publicCode,
                 name: channel.name,
-                old_status: oldStatus,
-                new_status: 'inactive'
+                oldStatus: oldStatus,
+                newStatus: 'inactive'
             });
         }
         
         // 3. Soft delete del device usando repository layer
         const deletedDevice = await deviceRepository.softDeleteDevice(deviceInternal.id, transaction);
-        const deletionTimestamp = deletedDevice.deleted_at;
+        const deletionTimestamp = deletedDevice.deletedAt;
         
         // 4. Audit log para device con información completa del cambio
         await logAuditAction({
@@ -378,21 +378,21 @@ export const deleteDevice = async (publicCode, userId, ipAddress, userAgent) => 
             action: 'delete',
             performedBy: userId,
             changes: {
-                deleted_at: {
+                deletedAt: {
                     old: null,
                     new: deletionTimestamp
                 },
-                is_active: {
+                isActive: {
                     old: true,
                     new: false
                 }
             },
             metadata: {
-                organization_id: deviceInternal.organization_id,
-                channels_affected: allChannels.length,
-                channel_updates: channelUpdates,
-                device_name: deviceInternal.name,
-                device_type_id: deviceInternal.device_type_id
+                organizationId: deviceInternal.organizationId,
+                channelsAffected: allChannels.length,
+                channelUpdates: channelUpdates,
+                deviceName: deviceInternal.name,
+                deviceTypeId: deviceInternal.deviceTypeId
             },
             ipAddress: ipAddress,
             userAgent: userAgent
@@ -417,16 +417,16 @@ export const deleteDevice = async (publicCode, userId, ipAddress, userAgent) => 
             'Device soft-deleted successfully with cascade to channels'
         );
         
-        // Retornar respuesta canónica: device serializado + deletion_status + cascade
+        // Retornar respuesta canónica: device serializado + deletionStatus + cascade
         return {
-            device: deletedDevice, // Serializado sin deleted_at (DTO público estándar)
+            device: deletedDevice, // Serializado sin deletedAt (DTO público estándar)
             cascade: {
-                channels_affected: allChannels.length,
-                channel_updates: channelUpdates
+                channelsAffected: allChannels.length,
+                channelUpdates: channelUpdates
             },
-            deletion_status: {
+            deletionStatus: {
                 deleted: true,
-                deleted_at: deletionTimestamp
+                deletedAt: deletionTimestamp
             }
         };
         

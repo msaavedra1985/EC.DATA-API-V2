@@ -6,21 +6,21 @@
  * Serializa una organización para consumo público (API externa)
  * 
  * POLÍTICA DE SEGURIDAD:
- * - 'id' SIEMPRE es public_code (nunca UUID interno)
- * - 'human_id' NUNCA se expone (solo uso interno/soporte)
- * - Relaciones (parent, etc.) usan public_code, no UUIDs
+ * - 'id' SIEMPRE es publicCode (nunca UUID interno)
+ * - 'humanId' NUNCA se expone (solo uso interno/soporte)
+ * - Relaciones (parent, etc.) usan publicCode, no UUIDs
  * - Previene ataques de enumeración
  * 
  * @param {Object} org - Modelo de organización de Sequelize
  * @param {Object} options - Opciones de serialización
  * @param {boolean} options.includeParent - Incluir datos del parent (default: false)
- * @param {boolean} options.includeTimestamps - Incluir created_at/updated_at (default: true)
+ * @param {boolean} options.includeTimestamps - Incluir createdAt/updatedAt (default: true)
  * @returns {Object} - DTO público seguro
  * 
  * @example
  * const publicOrg = toPublicOrganizationDto(org, { includeParent: true });
  * // {
- * //   id: "ORG-7K9D2-X",  // public_code, NO UUID
+ * //   id: "ORG-7K9D2-X",  // publicCode, NO UUID
  * //   slug: "ec-data",
  * //   name: "EC.DATA",
  * //   parent: { id: "ORG-ABC12-Y", slug: "global-corp" },
@@ -38,8 +38,8 @@ export const toPublicOrganizationDto = (org, options = {}) => {
     }
 
     const dto = {
-        // ID PÚBLICO (public_code, NO el UUID interno)
-        id: org.public_code,
+        // ID PÚBLICO (publicCode, NO el UUID interno)
+        id: org.publicCode,
         
         // Datos básicos
         slug: org.slug,
@@ -47,40 +47,40 @@ export const toPublicOrganizationDto = (org, options = {}) => {
         description: org.description || null,
         
         // Metadata
-        logo_url: org.logo_url || null,
+        logoUrl: org.logoUrl || null,
         website: org.website || null,
         
         // Países asociados (relación muchos-a-muchos)
         countries: (org.countries || []).map(oc => ({
-            code: oc.country_code,
-            is_primary: oc.is_primary
+            code: oc.countryCode,
+            isPrimary: oc.isPrimary
         })),
-        primary_country: (() => {
+        primaryCountry: (() => {
             const countries = org.countries || [];
-            const primary = countries.find(c => c.is_primary);
-            return primary ? primary.country_code : (countries.length > 0 ? countries[0].country_code : null);
+            const primary = countries.find(c => c.isPrimary);
+            return primary ? primary.countryCode : (countries.length > 0 ? countries[0].countryCode : null);
         })(),
         
         // Estado
-        is_active: org.is_active
+        isActive: org.isActive
     };
 
     // Parent organization (si está incluido en la query)
     if (includeParent && org.parent) {
         dto.parent = {
-            id: org.parent.public_code,  // public_code del parent
+            id: org.parent.publicCode,  // publicCode del parent
             slug: org.parent.slug,
             name: org.parent.name
         };
-    } else if (org.parent_id) {
-        // Si tenemos parent_id pero no el objeto, indicar que existe
-        dto.has_parent = true;
+    } else if (org.parentId) {
+        // Si tenemos parentId pero no el objeto, indicar que existe
+        dto.hasParent = true;
     }
 
     // Timestamps (opcional)
     if (includeTimestamps) {
-        dto.created_at = org.created_at;
-        dto.updated_at = org.updated_at;
+        dto.createdAt = org.createdAt;
+        dto.updatedAt = org.updatedAt;
     }
 
     return dto;
@@ -109,14 +109,14 @@ export const toAdminOrganizationDto = (org, options = {}) => {
         ...publicDto,
         
         // Identificadores internos (SOLO ADMIN)
-        internal_id: org.id,           // UUID interno
-        human_id: org.human_id,        // ID incremental
+        internalId: org.id,           // UUID interno
+        humanId: org.humanId,        // ID incremental
         
         // Parent UUID interno (para operaciones admin)
-        parent_internal_id: org.parent_id || null,
+        parentInternalId: org.parentId || null,
         
         // Metadata adicional
-        deleted_at: org.deleted_at || null
+        deletedAt: org.deletedAt || null
     };
 };
 
@@ -139,9 +139,9 @@ export const toPublicOrganizationListDto = (organizations, options = {}) => {
  * Serializa un usuario para consumo público (API externa)
  * 
  * POLÍTICA DE SEGURIDAD:
- * - 'id' SIEMPRE es public_code (nunca UUID interno)
- * - 'password_hash' NUNCA se expone
- * - 'human_id' NUNCA se expone
+ * - 'id' SIEMPRE es publicCode (nunca UUID interno)
+ * - 'passwordHash' NUNCA se expone
+ * - 'humanId' NUNCA se expone
  * - Datos sensibles (email completo) solo si es el propio usuario
  * 
  * @param {Object} user - Modelo de usuario de Sequelize
@@ -163,35 +163,35 @@ export const toPublicUserDto = (user, options = {}) => {
     }
 
     const dto = {
-        // ID PÚBLICO (public_code, NO el UUID interno)
-        id: user.public_code,
+        // ID PÚBLICO (publicCode, NO el UUID interno)
+        id: user.publicCode,
         
         // Nombre público
-        first_name: user.first_name,
-        last_name: user.last_name,
-        full_name: `${user.first_name} ${user.last_name}`.trim(),
+        firstName: user.firstName,
+        lastName: user.lastName,
+        fullName: `${user.firstName} ${user.lastName}`.trim(),
         
         // Estado
-        is_active: user.is_active
+        isActive: user.isActive
     };
 
     // Email: solo completo si es el propio usuario, sino parcialmente oculto
     if (isSelf) {
         dto.email = user.email;
-        dto.email_verified = !!user.email_verified_at;
-        dto.last_login_at = user.last_login_at;
+        dto.emailVerified = !!user.emailVerifiedAt;
+        dto.lastLoginAt = user.lastLoginAt;
         
         // Campos adicionales de perfil (solo para el propio usuario)
         dto.phone = user.phone || null;
         dto.language = user.language || 'es';
         dto.timezone = user.timezone || 'America/Argentina/Buenos_Aires';
-        dto.avatar_url = user.avatar_url || null;
+        dto.avatarUrl = user.avatarUrl || null;
     } else {
         // Ocultar email parcialmente (ej: "j***@example.com")
         const [localPart, domain] = (user.email || '').split('@');
         if (localPart && domain) {
             const masked = localPart[0] + '***';
-            dto.email_masked = `${masked}@${domain}`;
+            dto.emailMasked = `${masked}@${domain}`;
         }
     }
 
@@ -230,29 +230,29 @@ export const toAdminUserDto = (user) => {
         ...publicDto,
         
         // Identificadores internos (SOLO ADMIN)
-        internal_id: user.id,          // UUID interno
-        human_id: user.human_id,       // ID incremental
+        internalId: user.id,          // UUID interno
+        humanId: user.humanId,       // ID incremental
         
         // Relaciones internas
-        role_id: user.role_id,
-        organization_internal_id: user.organization_id,
+        roleId: user.roleId,
+        organizationInternalId: user.organizationId,
         
         // Metadata completa
-        created_at: user.created_at,
-        updated_at: user.updated_at,
-        deleted_at: user.deleted_at || null
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+        deletedAt: user.deletedAt || null
     };
 };
 
 /**
  * Helper genérico para convertir relaciones parent a formato público
- * Reutilizable para cualquier entidad con parent_id
+ * Reutilizable para cualquier entidad con parentId
  * 
  * @param {Object} entity - Entidad con parent
- * @param {string} publicCodeField - Nombre del campo public_code (default: 'public_code')
+ * @param {string} publicCodeField - Nombre del campo publicCode (default: 'publicCode')
  * @returns {Object|null} - Parent serializado o null
  */
-export const serializeParentRelation = (entity, publicCodeField = 'public_code') => {
+export const serializeParentRelation = (entity, publicCodeField = 'publicCode') => {
     if (!entity || !entity.parent) {
         return null;
     }
@@ -265,18 +265,18 @@ export const serializeParentRelation = (entity, publicCodeField = 'public_code')
 };
 
 /**
- * Helper para validar y convertir public_code a UUID interno
+ * Helper para validar y convertir publicCode a UUID interno
  * Usar en endpoints que reciben IDs en la URL o body
  * 
  * @param {Object} Model - Modelo de Sequelize
- * @param {string} publicCode - public_code recibido del cliente
+ * @param {string} publicCode - publicCode recibido del cliente
  * @param {string} errorMessage - Mensaje de error personalizado
  * @returns {Promise<Object>} - Entidad encontrada
  * @throws {Error} - Si no se encuentra la entidad
  */
 export const resolvePublicCode = async (Model, publicCode, errorMessage = 'Entity not found') => {
     const entity = await Model.findOne({
-        where: { public_code: publicCode }
+        where: { publicCode }
     });
 
     if (!entity) {
@@ -291,7 +291,7 @@ export const resolvePublicCode = async (Model, publicCode, errorMessage = 'Entit
 
 /**
  * Helper para validar y convertir slug a UUID interno
- * Usar como alternativa a public_code
+ * Usar como alternativa a publicCode
  * 
  * @param {Object} Model - Modelo de Sequelize
  * @param {string} slug - slug recibido del cliente

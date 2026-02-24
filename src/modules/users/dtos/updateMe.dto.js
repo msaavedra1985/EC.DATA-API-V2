@@ -8,28 +8,28 @@ import { z } from 'zod';
  * Permite al usuario actualizar su propio perfil
  * 
  * Campos permitidos (opcionales):
- * - first_name: Nombre
- * - last_name: Apellido
+ * - firstName: Nombre
+ * - lastName: Apellido
  * - phone: Número de teléfono
  * - language: Idioma preferido (es, en)
  * - timezone: Zona horaria IANA
- * - avatar_url: URL del avatar
+ * - avatarUrl: URL del avatar
  * 
  * Campos NO permitidos (requieren admin o endpoints dedicados):
  * - email: Cambio de email requiere verificación
  * - password: Usar PATCH /users/me/password
  * - role: Solo administradores pueden cambiar roles
- * - organization_id: Requiere aprobación admin
- * - is_active: Solo administradores
+ * - organizationId: Requiere aprobación admin
+ * - isActive: Solo administradores
  */
 export const updateMeSchema = z.object({
-    first_name: z.string()
+    firstName: z.string()
         .min(1, 'First name cannot be empty')
         .max(100, 'First name must be at most 100 characters')
         .trim()
         .optional(),
     
-    last_name: z.string()
+    lastName: z.string()
         .min(1, 'Last name cannot be empty')
         .max(100, 'Last name must be at most 100 characters')
         .trim()
@@ -53,7 +53,7 @@ export const updateMeSchema = z.object({
         .optional()
         .nullable(),
     
-    avatar_url: z.string()
+    avatarUrl: z.string()
         .url('Avatar URL must be a valid URL')
         .optional()
         .nullable()

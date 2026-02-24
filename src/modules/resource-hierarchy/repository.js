@@ -75,13 +75,12 @@ export const createNode = async (data) => {
     // Usar transacción para que el incremento del contador y el insert sean atómicos
     // Si el insert falla, el contador también se revierte
     const result = await sequelize.transaction(async (transaction) => {
-        // Obtener human_id del contador atómico por organización (O(1), sin race conditions)
-        const humanId = await getNextHumanId(data.organization_id, transaction);
+        const humanId = await getNextHumanId(data.organizationId, transaction);
         
         const node = await ResourceHierarchy.create({
             id,
-            human_id: humanId,
-            public_code: publicCode,
+            humanId: humanId,
+            publicCode: publicCode,
             ...data
         }, { transaction });
         
@@ -94,7 +93,7 @@ export const createNode = async (data) => {
     // Para nodos nuevos, children_count siempre es 0
     // Usamos el modelo Sequelize y agregamos children_count manualmente
     const nodeData = result.toJSON();
-    nodeData.children_count = 0;
+    nodeData.childrenCount = 0;
     
     return toNodeDto(nodeData);
 };
@@ -132,7 +131,7 @@ export const findNodeByPublicCode = async (publicCode) => {
  */
 export const findNodeByPublicCodeInternal = async (publicCode) => {
     return await ResourceHierarchy.findOne({
-        where: { public_code: publicCode, deleted_at: null }
+        where: { publicCode: publicCode, deletedAt: null }
     });
 };
 
@@ -144,7 +143,7 @@ export const findNodeByPublicCodeInternal = async (publicCode) => {
  */
 export const findNodeById = async (id) => {
     return await ResourceHierarchy.findOne({
-        where: { id, deleted_at: null }
+        where: { id, deletedAt: null }
     });
 };
 
@@ -282,7 +281,7 @@ export const getDescendants = async (nodeId, options = {}) => {
     
     // Obtener el path del nodo ancestro
     const ancestor = await ResourceHierarchy.findByPk(nodeId, {
-        attributes: ['id', 'path', 'organization_id', 'depth']
+        attributes: ['id', 'path', 'organizationId', 'depth']
     });
     
     if (!ancestor) {
@@ -476,7 +475,7 @@ const getDescendantsWithChildCount = async (nodeId, options = {}) => {
         paramIndex++;
     }
     
-    query += ` ORDER BY rh.path, rh.display_order, rh.name LIMIT $${paramIndex}`;
+    query += ` ORDER BY rh.path, rh.display_order ASC, rh.name ASC LIMIT $${paramIndex}`;
     replacements.push(limit);
     
     const descendants = await sequelize.query(query, {
@@ -541,12 +540,10 @@ export const moveNode = async (nodeId, newParentId) => {
         if (!newParent) {
             throw new Error('Nodo padre no encontrado');
         }
-        if (newParent.organization_id !== node.organization_id) {
+        if (newParent.organizationId !== node.organizationId) {
             throw new Error('No se puede mover a una organización diferente');
         }
         
-        // Verificar que no estamos moviendo a un descendiente (causaría ciclo)
-        // Usa ltree para verificación eficiente O(1)
         const wouldCreateCycle = await isDescendantOf(newParentId, nodeId);
         if (wouldCreateCycle) {
             const error = new Error('No se puede mover un nodo a uno de sus descendientes');
@@ -554,7 +551,6 @@ export const moveNode = async (nodeId, newParentId) => {
             throw error;
         }
         
-        // Verificar que no estamos moviendo a sí mismo
         if (newParentId === nodeId) {
             const error = new Error('No se puede mover un nodo a sí mismo');
             error.code = 'SELF_REFERENCE';
@@ -562,8 +558,7 @@ export const moveNode = async (nodeId, newParentId) => {
         }
     }
     
-    // Actualizar parent_id (el trigger actualiza path y depth)
-    node.parent_id = newParentId;
+    node.parentId = newParentId;
     await node.save();
     
     // Re-obtener nodo con conteo de hijos actualizado (retorna DTO directamente)
@@ -584,8 +579,7 @@ export const updateNode = async (nodeId, updates) => {
         throw new Error('Nodo no encontrado');
     }
     
-    // Campos permitidos para actualizar
-    const allowedFields = ['name', 'description', 'icon', 'display_order', 'metadata', 'is_active'];
+    const allowedFields = ['name', 'description', 'icon', 'displayOrder', 'metadata', 'isActive'];
     const sanitizedUpdates = {};
     
     for (const field of allowedFields) {
@@ -610,7 +604,7 @@ export const updateNode = async (nodeId, updates) => {
  */
 export const getDescendantsForDeletion = async (nodeId) => {
     const node = await ResourceHierarchy.findByPk(nodeId, {
-        attributes: ['id', 'path', 'public_code', 'name', 'node_type']
+        attributes: ['id', 'path', 'publicCode', 'name', 'nodeType']
     });
     
     if (!node) {
@@ -631,7 +625,11 @@ export const getDescendantsForDeletion = async (nodeId) => {
         type: QueryTypes.SELECT
     });
     
-    return descendants;
+    return descendants.map(d => ({
+        publicCode: d.public_code,
+        name: d.name,
+        nodeType: d.node_type
+    }));
 };
 
 /**
@@ -653,13 +651,12 @@ export const deleteNode = async (nodeId, cascade = false) => {
         throw new Error('Nodo no encontrado');
     }
     
-    // Crear objeto node compatible para el resto del código
     const node = {
         id: nodeRow.id,
-        organization_id: nodeRow.organization_id,
-        public_code: nodeRow.public_code,
+        organizationId: nodeRow.organization_id,
+        publicCode: nodeRow.public_code,
         name: nodeRow.name,
-        node_type: nodeRow.node_type,
+        nodeType: nodeRow.node_type,
         path: nodeRow.path,
         dataValues: { path: nodeRow.path },
         destroy: async () => {
@@ -670,8 +667,7 @@ export const deleteNode = async (nodeId, cascade = false) => {
         }
     };
     
-    // Verificar si tiene hijos activos
-    const children = await getChildren(nodeId, node.organization_id, { limit: 1 });
+    const children = await getChildren(nodeId, node.organizationId, { limit: 1 });
     const hasChildren = children.total > 0;
     
     // Si tiene hijos y no viene cascade, lanzar error con info de descendientes
@@ -680,9 +676,8 @@ export const deleteNode = async (nodeId, cascade = false) => {
         const error = new Error('El nodo tiene hijos. Debe confirmar la eliminación en cascada.');
         error.code = 'HAS_CHILDREN';
         error.data = {
-            // Excluir el nodo raíz de la lista de hijos afectados
-            affected_nodes: descendants.filter(d => d.public_code !== node.public_code),
-            total_affected: descendants.length
+            affectedNodes: descendants.filter(d => d.publicCode !== node.publicCode),
+            totalAffected: descendants.length
         };
         throw error;
     }
@@ -705,19 +700,18 @@ export const deleteNode = async (nodeId, cascade = false) => {
             bind: [node.dataValues.path]
         });
     } else {
-        // Solo eliminar el nodo individual
         deletedNodes = [{
-            public_code: node.public_code,
+            publicCode: node.publicCode,
             name: node.name,
-            node_type: node.node_type
+            nodeType: node.nodeType
         }];
         
         await node.destroy(); // Soft delete (paranoid: true)
     }
     
     return {
-        deleted_count: deletedNodes.length,
-        deleted_nodes: deletedNodes,
+        deletedCount: deletedNodes.length,
+        deletedNodes: deletedNodes,
         cascade
     };
 };
@@ -859,21 +853,20 @@ export const grantAccess = async (data) => {
     // Verificar si ya existe
     const existing = await UserResourceAccess.findOne({
         where: {
-            user_id: data.user_id,
-            resource_node_id: data.resource_node_id
+            userId: data.userId,
+            resourceNodeId: data.resourceNodeId
         }
     });
     
     if (existing) {
-        // Actualizar existente
         await existing.update({
-            access_type: data.access_type || existing.access_type,
-            include_descendants: data.include_descendants !== undefined ? data.include_descendants : existing.include_descendants,
-            granted_by: data.granted_by || existing.granted_by,
-            granted_at: new Date(),
-            expires_at: data.expires_at || existing.expires_at,
+            accessType: data.accessType || existing.accessType,
+            includeDescendants: data.includeDescendants !== undefined ? data.includeDescendants : existing.includeDescendants,
+            grantedBy: data.grantedBy || existing.grantedBy,
+            grantedAt: new Date(),
+            expiresAt: data.expiresAt || existing.expiresAt,
             notes: data.notes || existing.notes,
-            is_active: true
+            isActive: true
         });
         return existing.toJSON();
     }
@@ -895,11 +888,11 @@ export const grantAccess = async (data) => {
  */
 export const revokeAccess = async (userId, resourceNodeId) => {
     const result = await UserResourceAccess.update(
-        { is_active: false },
+        { isActive: false },
         {
             where: {
-                user_id: userId,
-                resource_node_id: resourceNodeId
+                userId: userId,
+                resourceNodeId: resourceNodeId
             }
         }
     );
@@ -953,10 +946,10 @@ export const getAccessibleNodeIds = async (userId, organizationId, accessType = 
  * @returns {Promise<Array>} - Lista de accesos
  */
 export const listUserAccess = async (userId, organizationId = null) => {
-    const where = { user_id: userId, is_active: true };
+    const where = { userId: userId, isActive: true };
     
     if (organizationId) {
-        where.organization_id = organizationId;
+        where.organizationId = organizationId;
     }
     
     const accesses = await UserResourceAccess.findAll({
@@ -964,7 +957,7 @@ export const listUserAccess = async (userId, organizationId = null) => {
         include: [{
             model: ResourceHierarchy,
             as: 'resourceNode',
-            attributes: ['id', 'public_code', 'name', 'node_type']
+            attributes: ['id', 'publicCode', 'name', 'nodeType']
         }]
     });
     
@@ -1036,30 +1029,31 @@ function toNodeDto(node, includeCounts = true) {
     
     const data = node.toJSON ? node.toJSON() : node;
     
+    const parentId = data.parentId ?? data.parent_id;
+    const parentPublicCode = data.parent?.publicCode ?? data.parent?.public_code;
+    
     const dto = {
-        id: data.public_code,
+        id: data.publicCode ?? data.public_code,
         name: data.name,
         description: data.description,
-        node_type: data.node_type,
+        nodeType: data.nodeType ?? data.node_type,
         icon: data.icon,
-        display_order: data.display_order,
+        displayOrder: data.displayOrder ?? data.display_order,
         depth: data.depth,
-        parent_id: data.parent_id ? data.parent?.public_code || data.parent_id : null,
+        parentId: parentId ? (parentPublicCode ?? parentId) : null,
         metadata: data.metadata,
-        is_active: data.is_active,
-        created_at: data.created_at,
-        updated_at: data.updated_at,
-        // Campos internos para operaciones (no exponer en API)
+        isActive: data.isActive ?? data.is_active,
+        createdAt: data.createdAt ?? data.created_at,
+        updatedAt: data.updatedAt ?? data.updated_at,
         _uuid: data.id,
-        _organization_id: data.organization_id
+        _organizationId: data.organizationId ?? data.organization_id
     };
     
-    // Solo incluir has_children y children_count si se solicita
     if (includeCounts) {
-        const childrenCount = parseInt(data.children_count, 10) || 0;
+        const childrenCount = parseInt(data.childrenCount ?? data.children_count, 10) || 0;
         const hasChildren = childrenCount > 0 || (data.children?.length > 0);
-        dto.has_children = hasChildren;
-        dto.children_count = childrenCount;
+        dto.hasChildren = hasChildren;
+        dto.childrenCount = childrenCount;
     }
     
     return dto;
@@ -1072,18 +1066,15 @@ const buildTree = (nodes, rootId = null) => {
     const nodeMap = new Map();
     const tree = [];
     
-    // Crear mapa de nodos
     for (const node of nodes) {
         nodeMap.set(node._uuid, { ...node, children: [] });
     }
     
-    // Construir árbol
     for (const node of nodes) {
         const currentNode = nodeMap.get(node._uuid);
         
-        if (node.parent_id && node.parent_id !== rootId) {
-            // Buscar padre por UUID en el mapa
-            const parent = nodeMap.get(node.parent_id);
+        if (node.parentId && node.parentId !== rootId) {
+            const parent = nodeMap.get(node.parentId);
             if (parent) {
                 parent.children.push(currentNode);
             } else {
@@ -1129,24 +1120,24 @@ export const batchCreateNodes = async (nodesData, options = {}) => {
         
         const node = await ResourceHierarchy.create({
             id,
-            human_id: humanId,
-            public_code: publicCode,
-            organization_id: organizationId,
-            parent_id: parentId,
-            node_type: data.node_type,
-            reference_id: data.reference_id || null,
+            humanId: humanId,
+            publicCode: publicCode,
+            organizationId: organizationId,
+            parentId: parentId,
+            nodeType: data.nodeType,
+            referenceId: data.referenceId || null,
             name: data.name,
             description: data.description || null,
             icon: data.icon || null,
             color: data.color || null,
-            display_order: data.display_order ?? i,
+            displayOrder: data.displayOrder ?? i,
             metadata: data.metadata || {}
         }, { transaction });
         
         await node.reload({ transaction });
         
         const nodeData = node.toJSON();
-        nodeData.children_count = 0;
+        nodeData.childrenCount = 0;
         
         createdNodes.push(toNodeDto(nodeData));
     }
@@ -1277,7 +1268,7 @@ export const getFilteredTree = async (organizationId, categoryId, options = {}) 
     // 4. Convertir a DTOs y construir árbol
     const nodes = rows.map(row => {
         const dto = toNodeDto(row);
-        dto.matches_filter = row.matches_filter;
+        dto.matchesFilter = row.matches_filter;
         return dto;
     });
     

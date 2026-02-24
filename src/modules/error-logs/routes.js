@@ -14,7 +14,7 @@ const errorLogger = logger.child({ module: 'error-logs' });
  * /api/v1/error-logs:
  *   post:
  *     summary: Registrar error de frontend o backend
- *     description: Endpoint público (sin autenticación requerida) para que el frontend pueda reportar errores. Captura automáticamente IP, user-agent y user_id si hay JWT presente.
+ *     description: Endpoint público (sin autenticación requerida) para que el frontend pueda reportar errores. Captura automáticamente IP, user-agent y userId si hay JWT presente.
  *     tags: [Error Logs]
  *     requestBody:
  *       required: true
@@ -24,8 +24,8 @@ const errorLogger = logger.child({ module: 'error-logs' });
  *             type: object
  *             required:
  *               - source
- *               - error_code
- *               - error_message
+ *               - errorCode
+ *               - errorMessage
  *             properties:
  *               source:
  *                 type: string
@@ -38,15 +38,15 @@ const errorLogger = logger.child({ module: 'error-logs' });
  *                 description: Nivel de severidad
  *                 default: error
  *                 example: error
- *               error_code:
+ *               errorCode:
  *                 type: string
  *                 description: Código del error
  *                 example: COMPONENT_RENDER_ERROR
- *               error_message:
+ *               errorMessage:
  *                 type: string
  *                 description: Mensaje descriptivo del error
  *                 example: Failed to render ProductList component
- *               stack_trace:
+ *               stackTrace:
  *                 type: string
  *                 description: Stack trace del error
  *                 example: "Error: Cannot read property 'map' of undefined\n    at ProductList.render..."
@@ -58,11 +58,11 @@ const errorLogger = logger.child({ module: 'error-logs' });
  *                 type: string
  *                 description: Método HTTP (para errores de API)
  *                 example: GET
- *               status_code:
+ *               statusCode:
  *                 type: integer
  *                 description: Código de estado HTTP
  *                 example: 500
- *               session_id:
+ *               sessionId:
  *                 type: string
  *                 description: ID de sesión para rastrear múltiples errores
  *                 example: sess_abc123xyz
@@ -73,14 +73,14 @@ const errorLogger = logger.child({ module: 'error-logs' });
  *                   url: "/dashboard/products"
  *                   component: "ProductList"
  *                   action: "initial_render"
- *                   user_action: "page_load"
+ *                   userAction: "page_load"
  *               metadata:
  *                 type: object
  *                 description: Metadata adicional
  *                 example:
  *                   browser: "Chrome 118"
  *                   os: "Windows 11"
- *                   screen_size: "1920x1080"
+ *                   screenSize: "1920x1080"
  *                   viewport: "1600x900"
  *           examples:
  *             frontend_error:
@@ -88,9 +88,9 @@ const errorLogger = logger.child({ module: 'error-logs' });
  *               value:
  *                 source: frontend
  *                 level: error
- *                 error_code: COMPONENT_RENDER_ERROR
- *                 error_message: Failed to render ProductList component
- *                 stack_trace: "Error: Cannot read property 'map' of undefined..."
+ *                 errorCode: COMPONENT_RENDER_ERROR
+ *                 errorMessage: Failed to render ProductList component
+ *                 stackTrace: "Error: Cannot read property 'map' of undefined..."
  *                 context:
  *                   url: "/dashboard/products"
  *                   component: "ProductList"
@@ -103,13 +103,13 @@ const errorLogger = logger.child({ module: 'error-logs' });
  *               value:
  *                 source: frontend
  *                 level: warning
- *                 error_code: API_REQUEST_FAILED
- *                 error_message: Failed to fetch organizations
+ *                 errorCode: API_REQUEST_FAILED
+ *                 errorMessage: Failed to fetch organizations
  *                 endpoint: /api/v1/organizations
  *                 method: GET
- *                 status_code: 500
+ *                 statusCode: 500
  *                 context:
- *                   retry_count: 3
+ *                   retryCount: 3
  *                   timeout: 5000
  *     responses:
  *       201:
@@ -134,10 +134,10 @@ const errorLogger = logger.child({ module: 'error-logs' });
  *                     level:
  *                       type: string
  *                       example: error
- *                     error_code:
+ *                     errorCode:
  *                       type: string
  *                       example: COMPONENT_RENDER_ERROR
- *                     created_at:
+ *                     createdAt:
  *                       type: string
  *                       example: "2025-10-13T18:00:00Z"
  *       400:
@@ -189,7 +189,7 @@ router.post('/', async (req, res) => {
         // Validar datos del request
         const validatedData = validateCreateErrorLog(req.body);
 
-        // Intentar extraer user_id y organization_id del JWT (si existe)
+        // Intentar extraer userId y organizationId del JWT (si existe)
         let userId = null;
         let organizationId = null;
         
@@ -204,7 +204,7 @@ router.post('/', async (req, res) => {
                 userId = decoded.sub;
                 organizationId = decoded.activeOrgId;
             } catch (error) {
-                // JWT inválido o expirado - continuar sin user_id
+                // JWT inválido o expirado - continuar sin userId
                 errorLogger.debug('Invalid or expired JWT in error-logs endpoint');
             }
         }
@@ -213,45 +213,45 @@ router.post('/', async (req, res) => {
         const ipAddress = req.ip || req.connection?.remoteAddress;
         const userAgent = req.get('user-agent');
         
-        // Generar request_id único
+        // Generar requestId único
         const requestId = uuidv7();
 
         // Loguear usando Winston - automáticamente escribe a SQL + archivos
         winstonLogger.logError({
             source: validatedData.source,
             level: validatedData.level,
-            errorCode: validatedData.error_code,
-            errorMessage: validatedData.error_message,
-            stackTrace: validatedData.stack_trace,
+            errorCode: validatedData.errorCode,
+            errorMessage: validatedData.errorMessage,
+            stackTrace: validatedData.stackTrace,
             endpoint: validatedData.endpoint,
             method: validatedData.method,
-            statusCode: validatedData.status_code,
+            statusCode: validatedData.statusCode,
             userId,
             organizationId,
-            sessionId: validatedData.session_id,
+            sessionId: validatedData.sessionId,
             ipAddress,
             userAgent,
             requestId,
-            correlationId: validatedData.correlation_id,
+            correlationId: validatedData.correlationId,
             context: validatedData.context,
             metadata: validatedData.metadata
         });
 
         errorLogger.info({
             source: validatedData.source,
-            errorCode: validatedData.error_code,
+            errorCode: validatedData.errorCode,
             userId,
-            correlationId: validatedData.correlation_id
+            correlationId: validatedData.correlationId
         }, 'Error logged successfully via Winston');
 
         res.status(201).json({
             ok: true,
             data: {
-                request_id: requestId,
+                requestId: requestId,
                 source: validatedData.source,
                 level: validatedData.level,
-                error_code: validatedData.error_code,
-                correlation_id: validatedData.correlation_id || null
+                errorCode: validatedData.errorCode,
+                correlationId: validatedData.correlationId || null
             }
         });
     } catch (error) {

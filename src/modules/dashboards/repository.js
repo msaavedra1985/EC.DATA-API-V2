@@ -28,19 +28,19 @@ import {
 const organizationInclude = {
     model: Organization,
     as: 'organization',
-    attributes: ['id', 'public_code', 'slug', 'name', 'logo_url']
+    attributes: ['id', 'publicCode', 'slug', 'name', 'logoUrl']
 };
 
 const ownerInclude = {
     model: User,
     as: 'owner',
-    attributes: ['id', 'public_code', 'email', 'first_name', 'last_name']
+    attributes: ['id', 'publicCode', 'email', 'firstName', 'lastName']
 };
 
 const userInclude = {
     model: User,
     as: 'user',
-    attributes: ['id', 'public_code', 'email', 'first_name', 'last_name']
+    attributes: ['id', 'publicCode', 'email', 'firstName', 'lastName']
 };
 
 const dataSourceInclude = {
@@ -58,7 +58,7 @@ const pageWithWidgetsInclude = {
     model: DashboardPage,
     as: 'pages',
     include: [widgetWithDataSourcesInclude],
-    order: [['order_index', 'ASC']]
+    order: [['orderIndex', 'ASC']]
 };
 
 const collaboratorWithUserInclude = {
@@ -90,8 +90,8 @@ const groupFullIncludes = [
     {
         model: Dashboard,
         as: 'dashboards',
-        attributes: ['id', 'public_code', 'name', 'description'],
-        through: { attributes: ['order_index'] }
+        attributes: ['id', 'publicCode', 'name', 'description'],
+        through: { attributes: ['orderIndex'] }
     },
     groupCollaboratorWithUserInclude
 ];
@@ -111,15 +111,15 @@ export const findAllDashboards = async ({
     const where = {};
 
     if (organizationId !== undefined && organizationId !== null) {
-        where.organization_id = organizationId;
+        where.organizationId = organizationId;
     }
 
     if (ownerId !== undefined && ownerId !== null) {
-        where.owner_id = ownerId;
+        where.ownerId = ownerId;
     }
 
     if (isPublic !== undefined && isPublic !== null) {
-        where.is_public = isPublic;
+        where.isPublic = isPublic;
     }
 
     if (search) {
@@ -134,7 +134,7 @@ export const findAllDashboards = async ({
         include: dashboardListIncludes,
         limit: parseInt(limit),
         offset: parseInt(offset),
-        order: [['created_at', 'DESC']]
+        order: [['createdAt', 'DESC']]
     });
 
     return {
@@ -145,14 +145,14 @@ export const findAllDashboards = async ({
 
 export const findDashboardByPublicCode = async (publicCode) => {
     return await Dashboard.findOne({
-        where: { public_code: publicCode },
+        where: { publicCode },
         include: dashboardFullIncludes
     });
 };
 
 export const findDashboardByPublicCodeInternal = async (publicCode) => {
     return await Dashboard.findOne({
-        where: { public_code: publicCode },
+        where: { publicCode },
         include: [organizationInclude]
     });
 };
@@ -199,12 +199,12 @@ export const deleteDashboard = async (id) => {
 export const setHomeDashboard = async (dashboardId, userId, organizationId) => {
     return await sequelize.transaction(async (t) => {
         await Dashboard.update(
-            { is_home: false },
+            { isHome: false },
             {
                 where: {
-                    owner_id: userId,
-                    organization_id: organizationId,
-                    is_home: true
+                    ownerId: userId,
+                    organizationId: organizationId,
+                    isHome: true
                 },
                 transaction: t
             }
@@ -213,7 +213,7 @@ export const setHomeDashboard = async (dashboardId, userId, organizationId) => {
         const dashboard = await Dashboard.findByPk(dashboardId, { transaction: t });
         if (!dashboard) return null;
 
-        await dashboard.update({ is_home: true }, { transaction: t });
+        await dashboard.update({ isHome: true }, { transaction: t });
         await dashboard.reload({ include: dashboardListIncludes, transaction: t });
         return toPublicDashboardDto(dashboard);
     });
@@ -225,9 +225,9 @@ export const setHomeDashboard = async (dashboardId, userId, organizationId) => {
 
 export const findPagesByDashboardId = async (dashboardId) => {
     const pages = await DashboardPage.findAll({
-        where: { dashboard_id: dashboardId },
+        where: { dashboardId },
         include: [widgetWithDataSourcesInclude],
-        order: [['order_index', 'ASC']]
+        order: [['orderIndex', 'ASC']]
     });
 
     return pages.map(page => toPublicPageDto(page));
@@ -272,9 +272,9 @@ export const deletePage = async (pageId) => {
 
 export const findWidgetsByPageId = async (pageId) => {
     const widgets = await Widget.findAll({
-        where: { dashboard_page_id: pageId },
+        where: { dashboardPageId: pageId },
         include: [dataSourceInclude],
-        order: [['order_index', 'ASC']]
+        order: [['orderIndex', 'ASC']]
     });
 
     return widgets.map(widget => toPublicWidgetDto(widget));
@@ -321,8 +321,8 @@ export const deleteWidget = async (widgetId) => {
 
 export const findDataSourcesByWidgetId = async (widgetId) => {
     const dataSources = await WidgetDataSource.findAll({
-        where: { widget_id: widgetId },
-        order: [['order_index', 'ASC']]
+        where: { widgetId },
+        order: [['orderIndex', 'ASC']]
     });
 
     return dataSources.map(ds => toPublicDataSourceDto(ds));
@@ -368,7 +368,7 @@ export const findAllGroups = async ({
     const where = {};
 
     if (organizationId !== undefined && organizationId !== null) {
-        where.organization_id = organizationId;
+        where.organizationId = organizationId;
     }
 
     if (search) {
@@ -383,7 +383,7 @@ export const findAllGroups = async ({
         include: groupListIncludes,
         limit: parseInt(limit),
         offset: parseInt(offset),
-        order: [['created_at', 'DESC']]
+        order: [['createdAt', 'DESC']]
     });
 
     return {
@@ -394,14 +394,14 @@ export const findAllGroups = async ({
 
 export const findGroupByPublicCode = async (publicCode) => {
     return await DashboardGroup.findOne({
-        where: { public_code: publicCode },
+        where: { publicCode },
         include: groupFullIncludes
     });
 };
 
 export const findGroupByPublicCodeInternal = async (publicCode) => {
     return await DashboardGroup.findOne({
-        where: { public_code: publicCode },
+        where: { publicCode },
         include: [organizationInclude]
     });
 };
@@ -452,8 +452,8 @@ export const addDashboardToGroup = async (data) => {
 export const removeDashboardFromGroup = async (groupId, dashboardId) => {
     const item = await DashboardGroupItem.findOne({
         where: {
-            dashboard_group_id: groupId,
-            dashboard_id: dashboardId
+            dashboardGroupId: groupId,
+            dashboardId: dashboardId
         }
     });
 
@@ -468,8 +468,8 @@ export const removeDashboardFromGroup = async (groupId, dashboardId) => {
 export const findGroupItem = async (groupId, dashboardId) => {
     return await DashboardGroupItem.findOne({
         where: {
-            dashboard_group_id: groupId,
-            dashboard_id: dashboardId
+            dashboardGroupId: groupId,
+            dashboardId: dashboardId
         }
     });
 };
@@ -480,7 +480,7 @@ export const findGroupItem = async (groupId, dashboardId) => {
 
 export const findCollaboratorsByDashboardId = async (dashboardId) => {
     const collaborators = await DashboardCollaborator.findAll({
-        where: { dashboard_id: dashboardId },
+        where: { dashboardId },
         include: [userInclude]
     });
 
@@ -519,8 +519,8 @@ export const removeCollaborator = async (collaboratorId) => {
 export const findCollaborator = async (dashboardId, userId) => {
     return await DashboardCollaborator.findOne({
         where: {
-            dashboard_id: dashboardId,
-            user_id: userId
+            dashboardId,
+            userId
         },
         include: [userInclude]
     });
@@ -532,7 +532,7 @@ export const findCollaborator = async (dashboardId, userId) => {
 
 export const findGroupCollaboratorsByGroupId = async (groupId) => {
     const collaborators = await DashboardGroupCollaborator.findAll({
-        where: { dashboard_group_id: groupId },
+        where: { dashboardGroupId: groupId },
         include: [userInclude]
     });
 
@@ -571,8 +571,8 @@ export const removeGroupCollaborator = async (collaboratorId) => {
 export const findGroupCollaborator = async (groupId, userId) => {
     return await DashboardGroupCollaborator.findOne({
         where: {
-            dashboard_group_id: groupId,
-            user_id: userId
+            dashboardGroupId: groupId,
+            userId
         },
         include: [userInclude]
     });

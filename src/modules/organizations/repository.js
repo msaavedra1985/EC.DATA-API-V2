@@ -22,7 +22,7 @@ import {
 const countriesInclude = {
     model: OrganizationCountry,
     as: 'countries',
-    attributes: ['country_code', 'is_primary']
+    attributes: ['countryCode', 'isPrimary']
 };
 
 /**
@@ -50,17 +50,17 @@ export const createOrganization = async (data) => {
         // Crear organización
         const organization = await Organization.create({
             id,
-            human_id: humanId,
-            public_code: publicCode,
+            humanId,
+            publicCode,
             ...orgData
         }, { transaction });
         
         // Crear relaciones con países
         if (countries && countries.length > 0) {
             const countryRecords = countries.map(c => ({
-                organization_id: id,
-                country_code: c.code,
-                is_primary: c.is_primary || false
+                organizationId: id,
+                countryCode: c.code,
+                isPrimary: c.isPrimary || false
             }));
             
             await OrganizationCountry.bulkCreate(countryRecords, { transaction });
@@ -92,7 +92,7 @@ export const createOrganization = async (data) => {
  */
 export const findOrganizationByPublicCode = async (publicCode) => {
     const organization = await Organization.findOne({
-        where: { public_code: publicCode },
+        where: { publicCode },
         include: [countriesInclude]
     });
     
@@ -113,7 +113,7 @@ export const findOrganizationByPublicCode = async (publicCode) => {
  */
 export const findOrganizationByPublicCodeInternal = async (publicCode) => {
     return await Organization.findOne({
-        where: { public_code: publicCode }
+        where: { publicCode }
     });
 };
 
@@ -125,7 +125,7 @@ export const findOrganizationByPublicCodeInternal = async (publicCode) => {
  */
 export const findOrganizationByHumanId = async (humanId) => {
     const organization = await Organization.findOne({
-        where: { human_id: humanId },
+        where: { humanId },
         include: [countriesInclude]
     });
     
@@ -203,13 +203,13 @@ export const listOrganizations = async (limit = 50, offset = 0, filters = {}) =>
     
     const where = {};
     
-    if (filters.is_active !== undefined) {
-        where.is_active = filters.is_active;
+    if (filters.isActive !== undefined) {
+        where.isActive = filters.isActive;
     }
 
     // Filtro de scope - organizaciones permitidas por permisos
-    if (filters.organization_ids && Array.isArray(filters.organization_ids)) {
-        where.id = { [Op.in]: filters.organization_ids };
+    if (filters.organizationIds && Array.isArray(filters.organizationIds)) {
+        where.id = { [Op.in]: filters.organizationIds };
     }
 
     // Búsqueda por nombre o slug
@@ -220,18 +220,18 @@ export const listOrganizations = async (limit = 50, offset = 0, filters = {}) =>
         ];
     }
 
-    // Filtro por parent_id
-    if (filters.parent_id) {
-        where.parent_id = filters.parent_id;
+    // Filtro por parentId
+    if (filters.parentId) {
+        where.parentId = filters.parentId;
     }
 
-    // Filtro por country_code a través de organization_countries
+    // Filtro por countryCode a través de organization_countries
     const include = [countriesInclude];
     let orgIds;
-    if (filters.country_code) {
+    if (filters.countryCode) {
         const countryOrgs = await OrganizationCountry.findAll({
-            where: { country_code: filters.country_code },
-            attributes: ['organization_id'],
+            where: { countryCode: filters.countryCode },
+            attributes: ['organizationId'],
             raw: true
         });
         orgIds = countryOrgs.map(co => co.organization_id);
@@ -249,7 +249,7 @@ export const listOrganizations = async (limit = 50, offset = 0, filters = {}) =>
         include,
         limit,
         offset,
-        order: [['created_at', 'DESC']],
+        order: [['createdAt', 'DESC']],
         distinct: true
     });
     
@@ -287,10 +287,10 @@ export const updateOrganization = async (id, updates) => {
             return null;
         }
         
-        // No permitir actualizar id, human_id, o public_code
+        // No permitir actualizar id, humanId, o publicCode
         delete orgUpdates.id;
-        delete orgUpdates.human_id;
-        delete orgUpdates.public_code;
+        delete orgUpdates.humanId;
+        delete orgUpdates.publicCode;
         
         // Actualizar campos de la organización
         if (Object.keys(orgUpdates).length > 0) {
@@ -301,15 +301,15 @@ export const updateOrganization = async (id, updates) => {
         if (countries && countries.length > 0) {
             // Eliminar relaciones existentes
             await OrganizationCountry.destroy({
-                where: { organization_id: id },
+                where: { organizationId: id },
                 transaction
             });
             
             // Crear nuevas relaciones
             const countryRecords = countries.map(c => ({
-                organization_id: id,
-                country_code: c.code,
-                is_primary: c.is_primary || false
+                organizationId: id,
+                countryCode: c.code,
+                isPrimary: c.isPrimary || false
             }));
             
             await OrganizationCountry.bulkCreate(countryRecords, { transaction });
@@ -361,7 +361,7 @@ export const deleteOrganization = async (id) => {
  */
 export const getRootOrganization = async () => {
     const organization = await Organization.findOne({
-        where: { parent_id: null },
+        where: { parentId: null },
         include: [countriesInclude]
     });
     
@@ -380,7 +380,7 @@ export const getRootOrganization = async () => {
  */
 export const getChildOrganizations = async (parentId) => {
     const organizations = await Organization.findAll({
-        where: { parent_id: parentId, is_active: true },
+        where: { parentId, isActive: true },
         include: [countriesInclude],
         order: [['name', 'ASC']]
     });
@@ -399,7 +399,7 @@ export const getOrganizationDescendants = async (organizationId) => {
     
     // Obtener hijos directos
     const children = await Organization.findAll({
-        where: { parent_id: organizationId },
+        where: { parentId: organizationId },
         attributes: ['id']
     });
     
@@ -455,7 +455,7 @@ export const validateOrganizationUniqueness = async ({ name, slug, excludePublic
     
     // Excluir organización actual si se proporciona excludePublicCode
     if (excludePublicCode) {
-        where.public_code = { [Op.ne]: excludePublicCode };
+        where.publicCode = { [Op.ne]: excludePublicCode };
     }
     
     const existingOrganizations = await Organization.findAll({

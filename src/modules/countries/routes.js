@@ -39,13 +39,13 @@ const countriesLogger = logger.child({ component: 'countries' });
  *                       id:
  *                         type: integer
  *                         example: 276
- *                       iso_alpha2:
+ *                       isoAlpha2:
  *                         type: string
  *                         example: "AR"
- *                       iso_alpha3:
+ *                       isoAlpha3:
  *                         type: string
  *                         example: "ARG"
- *                       phone_code:
+ *                       phoneCode:
  *                         type: string
  *                         example: "+54"
  *                       name:

@@ -15,8 +15,8 @@ import StateTranslation from './models/StateTranslation.js';
 export const getStatesByCountry = async (countryCode, lang = 'es') => {
     const states = await State.findAll({
         where: {
-            country_code: countryCode.toUpperCase(),
-            is_active: true
+            countryCode: countryCode.toUpperCase(),
+            isActive: true
         },
         include: [{
             model: StateTranslation,
@@ -35,8 +35,8 @@ export const getStatesByCountry = async (countryCode, lang = 'es') => {
         const translation = state.translations?.[0];
         return {
             code: state.code,
-            state_code: state.state_code,
-            country_code: state.country_code,
+            stateCode: state.stateCode,
+            countryCode: state.countryCode,
             name: translation?.name || state.code,
             type: state.type,
             latitude: state.latitude,
@@ -65,8 +65,8 @@ export const getStateByCode = async (code) => {
 
     return {
         code: state.code,
-        state_code: state.state_code,
-        country_code: state.country_code,
+        stateCode: state.stateCode,
+        countryCode: state.countryCode,
         type: state.type,
         latitude: state.latitude,
         longitude: state.longitude,

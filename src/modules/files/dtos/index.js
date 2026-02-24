@@ -2,9 +2,6 @@
 // Esquemas de validación Zod para el módulo de files
 import { z } from 'zod';
 
-/**
- * Categorías permitidas para archivos
- */
 export const FILE_CATEGORIES = [
     'logo',
     'image', 
@@ -17,26 +14,19 @@ export const FILE_CATEGORIES = [
     'other'
 ];
 
-/**
- * Estados de archivo permitidos
- */
 export const FILE_STATUSES = ['pending', 'uploaded', 'linked', 'deleted'];
 
-/**
- * Configuración de archivos permitidos por categoría
- * Define tipos MIME, extensiones y tamaños máximos para cada categoría
- */
 export const FILE_CATEGORY_CONFIG = {
     logo: {
         mimeTypes: ['image/png', 'image/jpeg', 'image/webp', 'image/svg+xml'],
         extensions: ['png', 'jpg', 'jpeg', 'webp', 'svg'],
-        maxSizeBytes: 5 * 1024 * 1024, // 5 MB
+        maxSizeBytes: 5 * 1024 * 1024,
         description: 'Logos e iconos de organizaciones'
     },
     image: {
         mimeTypes: ['image/png', 'image/jpeg', 'image/webp', 'image/gif', 'image/svg+xml'],
         extensions: ['png', 'jpg', 'jpeg', 'webp', 'gif', 'svg'],
-        maxSizeBytes: 10 * 1024 * 1024, // 10 MB
+        maxSizeBytes: 10 * 1024 * 1024,
         description: 'Imágenes generales'
     },
     document: {
@@ -52,19 +42,19 @@ export const FILE_CATEGORY_CONFIG = {
             'text/csv'
         ],
         extensions: ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'csv'],
-        maxSizeBytes: 50 * 1024 * 1024, // 50 MB
+        maxSizeBytes: 50 * 1024 * 1024,
         description: 'Documentos de oficina y PDFs'
     },
     firmware: {
         mimeTypes: ['application/octet-stream', 'application/zip', 'application/x-tar', 'application/gzip'],
         extensions: ['bin', 'hex', 'zip', 'tar', 'gz', 'tgz'],
-        maxSizeBytes: 100 * 1024 * 1024, // 100 MB
+        maxSizeBytes: 100 * 1024 * 1024,
         description: 'Archivos de firmware para dispositivos'
     },
     backup: {
         mimeTypes: ['application/zip', 'application/x-tar', 'application/gzip', 'application/x-7z-compressed'],
         extensions: ['zip', 'tar', 'gz', 'tgz', '7z', 'bak'],
-        maxSizeBytes: 500 * 1024 * 1024, // 500 MB
+        maxSizeBytes: 500 * 1024 * 1024,
         description: 'Archivos de backup'
     },
     export: {
@@ -76,7 +66,7 @@ export const FILE_CATEGORY_CONFIG = {
             'application/zip'
         ],
         extensions: ['json', 'csv', 'xls', 'xlsx', 'zip'],
-        maxSizeBytes: 100 * 1024 * 1024, // 100 MB
+        maxSizeBytes: 100 * 1024 * 1024,
         description: 'Archivos de exportación de datos'
     },
     import: {
@@ -87,7 +77,7 @@ export const FILE_CATEGORY_CONFIG = {
             'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
         ],
         extensions: ['json', 'csv', 'xls', 'xlsx'],
-        maxSizeBytes: 50 * 1024 * 1024, // 50 MB
+        maxSizeBytes: 50 * 1024 * 1024,
         description: 'Archivos para importación de datos'
     },
     attachment: {
@@ -102,48 +92,45 @@ export const FILE_CATEGORY_CONFIG = {
             'application/zip'
         ],
         extensions: ['png', 'jpg', 'jpeg', 'webp', 'gif', 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'txt', 'zip'],
-        maxSizeBytes: 25 * 1024 * 1024, // 25 MB
+        maxSizeBytes: 25 * 1024 * 1024,
         description: 'Archivos adjuntos generales'
     },
     other: {
         mimeTypes: ['application/octet-stream'],
         extensions: ['*'],
-        maxSizeBytes: 50 * 1024 * 1024, // 50 MB
+        maxSizeBytes: 50 * 1024 * 1024,
         description: 'Otros tipos de archivos'
     }
 };
 
-/**
- * Schema para solicitar URL de carga (upload-url)
- */
 export const requestUploadUrlSchema = z.object({
     body: z.object({
-        organization_id: z.string()
-            .min(1, 'organization_id es requerido')
+        organizationId: z.string()
+            .min(1, 'organizationId es requerido')
             .describe('Public code de la organización'),
-        original_name: z.string()
-            .min(1, 'original_name es requerido')
+        originalName: z.string()
+            .min(1, 'originalName es requerido')
             .max(255, 'Nombre de archivo muy largo (máx 255 caracteres)')
             .describe('Nombre original del archivo'),
-        mime_type: z.string()
-            .min(1, 'mime_type es requerido')
+        mimeType: z.string()
+            .min(1, 'mimeType es requerido')
             .describe('Tipo MIME del archivo'),
-        size_bytes: z.number()
+        sizeBytes: z.number()
             .int()
-            .positive('size_bytes debe ser positivo')
+            .positive('sizeBytes debe ser positivo')
             .describe('Tamaño del archivo en bytes'),
         category: z.enum(FILE_CATEGORIES)
             .default('other')
             .describe('Categoría del archivo'),
-        owner_type: z.string()
+        ownerType: z.string()
             .max(50)
             .optional()
             .describe('Tipo de entidad propietaria (site, device, user, etc.)'),
-        owner_id: z.string()
+        ownerId: z.string()
             .max(50)
             .optional()
             .describe('Public code de la entidad propietaria'),
-        is_public: z.boolean()
+        isPublic: z.boolean()
             .optional()
             .default(false)
             .describe('Si true, el archivo se guarda en contenedor público (acceso directo sin SAS)'),
@@ -153,13 +140,10 @@ export const requestUploadUrlSchema = z.object({
     })
 });
 
-/**
- * Schema para confirmar upload completado
- */
 export const confirmUploadSchema = z.object({
     body: z.object({
-        checksum_sha256: z.string()
-            .length(64, 'checksum_sha256 debe tener 64 caracteres')
+        checksumSha256: z.string()
+            .length(64, 'checksumSha256 debe tener 64 caracteres')
             .optional()
             .describe('Checksum SHA-256 del archivo subido'),
         metadata: z.record(z.any())
@@ -173,9 +157,6 @@ export const confirmUploadSchema = z.object({
     })
 });
 
-/**
- * Schema para obtener archivo por ID
- */
 export const getFileByIdSchema = z.object({
     params: z.object({
         id: z.string()
@@ -184,21 +165,12 @@ export const getFileByIdSchema = z.object({
     })
 });
 
-/**
- * Schema para listar archivos con filtros
- * 
- * Comportamiento del filtro por organización:
- * - Sin filtro: Usa la organización activa del usuario (del JWT)
- * - Con organization_id: Filtra por esa organización (si tiene acceso)
- * - Con all=true: Solo admins, muestra todos los archivos accesibles (org-admins limitados a su scope)
- * - organization_ids: Array interno usado por el middleware (no expuesto a clientes)
- */
 export const listFilesSchema = z.object({
     query: z.object({
-        organization_id: z.string()
+        organizationId: z.string()
             .optional()
             .describe('Filtrar por organización'),
-        organization_ids: z
+        organizationIds: z
             .array(z.string())
             .optional()
             .describe('INTERNO: Array de UUIDs de organizaciones (inyectado por middleware)'),
@@ -211,13 +183,13 @@ export const listFilesSchema = z.object({
         status: z.enum(FILE_STATUSES)
             .optional()
             .describe('Filtrar por estado'),
-        owner_type: z.string()
+        ownerType: z.string()
             .optional()
             .describe('Filtrar por tipo de propietario'),
-        owner_id: z.string()
+        ownerId: z.string()
             .optional()
             .describe('Filtrar por ID de propietario'),
-        mime_type: z.string()
+        mimeType: z.string()
             .optional()
             .describe('Filtrar por tipo MIME'),
         search: z.string()
@@ -249,9 +221,6 @@ export const listFilesSchema = z.object({
     })
 });
 
-/**
- * Schema para eliminar archivo
- */
 export const deleteFileSchema = z.object({
     params: z.object({
         id: z.string()
@@ -260,17 +229,14 @@ export const deleteFileSchema = z.object({
     })
 });
 
-/**
- * Schema para vincular archivo a una entidad
- */
 export const linkFileSchema = z.object({
     body: z.object({
-        owner_type: z.string()
-            .min(1, 'owner_type es requerido')
+        ownerType: z.string()
+            .min(1, 'ownerType es requerido')
             .max(50)
             .describe('Tipo de entidad propietaria'),
-        owner_id: z.string()
-            .min(1, 'owner_id es requerido')
+        ownerId: z.string()
+            .min(1, 'ownerId es requerido')
             .max(50)
             .describe('Public code de la entidad propietaria')
     }),

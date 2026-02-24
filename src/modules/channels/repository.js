@@ -38,13 +38,13 @@ Organization.hasMany(Channel, {
 const deviceInclude = {
     model: Device,
     as: 'device',
-    attributes: ['id', 'public_code', 'name', 'status']
+    attributes: ['id', 'publicCode', 'name', 'status']
 };
 
 const organizationInclude = {
     model: Organization,
     as: 'organization',
-    attributes: ['id', 'public_code', 'slug', 'name', 'logo_url']
+    attributes: ['id', 'publicCode', 'slug', 'name', 'logoUrl']
 };
 
 const measurementTypeInclude = {
@@ -70,14 +70,14 @@ export const createChannel = async (channelData) => {
 };
 
 /**
- * Buscar channel por ID público (public_code)
+ * Buscar channel por ID público (publicCode)
  * Retorna DTO público - uso externo
  * @param {string} publicCode - Public code del channel (ej: CHN-abc123-1)
  * @returns {Promise<Object|null>} - Channel DTO o null
  */
 export const findChannelByPublicCode = async (publicCode) => {
     const channel = await Channel.findOne({
-        where: { public_code: publicCode },
+        where: { publicCode },
         include: defaultIncludes
     });
     
@@ -89,14 +89,14 @@ export const findChannelByPublicCode = async (publicCode) => {
 };
 
 /**
- * Buscar channel por ID público (public_code) - VERSIÓN INTERNA
+ * Buscar channel por ID público (publicCode) - VERSIÓN INTERNA
  * Retorna modelo Sequelize completo - uso interno
  * @param {string} publicCode - Public code del channel
  * @returns {Promise<Channel|null>} - Modelo Channel o null
  */
 export const findChannelByPublicCodeInternal = async (publicCode) => {
     return await Channel.findOne({
-        where: { public_code: publicCode }
+        where: { publicCode }
     });
 };
 
@@ -148,29 +148,29 @@ export const deleteChannel = async (id) => {
 
 /**
  * Listar channels con filtros y paginación
- * Soporta filtro not_in_hierarchy para excluir channels ya en jerarquía
+ * Soporta filtro notInHierarchy para excluir channels ya en jerarquía
  * 
  * @param {Object} options - Opciones de filtrado y paginación
- * @param {boolean} options.not_in_hierarchy - Si true, excluye channels que ya están en resource_hierarchy
+ * @param {boolean} options.notInHierarchy - Si true, excluye channels que ya están en resource_hierarchy
  * @returns {Promise<Object>} - { items: [...], total, page, limit }
  */
 export const listChannels = async ({ 
-    device_id, 
-    organization_id,
-    organization_ids,
-    measurement_type_id,
+    deviceId, 
+    organizationId,
+    organizationIds,
+    measurementTypeId,
     status,
     search,
-    not_in_hierarchy = false,
+    notInHierarchy = false,
     limit = 20, 
     offset = 0 
 }) => {
-    if (not_in_hierarchy) {
+    if (notInHierarchy) {
         return await listChannelsNotInHierarchy({
-            device_id,
-            organization_id,
-            organization_ids,
-            measurement_type_id,
+            deviceId,
+            organizationId,
+            organizationIds,
+            measurementTypeId,
             status,
             search,
             limit,
@@ -180,18 +180,18 @@ export const listChannels = async ({
     
     const where = {};
     
-    if (device_id !== undefined) {
-        where.device_id = device_id;
+    if (deviceId !== undefined) {
+        where.deviceId = deviceId;
     }
     
-    if (organization_ids !== undefined && Array.isArray(organization_ids) && organization_ids.length > 0) {
-        where.organization_id = { [Op.in]: organization_ids };
-    } else if (organization_id !== undefined && organization_id !== null) {
-        where.organization_id = organization_id;
+    if (organizationIds !== undefined && Array.isArray(organizationIds) && organizationIds.length > 0) {
+        where.organizationId = { [Op.in]: organizationIds };
+    } else if (organizationId !== undefined && organizationId !== null) {
+        where.organizationId = organizationId;
     }
 
-    if (measurement_type_id !== undefined) {
-        where.measurement_type_id = measurement_type_id;
+    if (measurementTypeId !== undefined) {
+        where.measurementTypeId = measurementTypeId;
     }
     
     if (status !== undefined) {
@@ -210,7 +210,7 @@ export const listChannels = async ({
         include: defaultIncludes,
         limit: parseInt(limit),
         offset: parseInt(offset),
-        order: [['created_at', 'DESC']]
+        order: [['createdAt', 'DESC']]
     });
     
     return {
@@ -229,10 +229,10 @@ export const listChannels = async ({
  * @returns {Promise<Object>} - { items: [...], total, page, limit }
  */
 const listChannelsNotInHierarchy = async ({
-    device_id,
-    organization_id,
-    organization_ids,
-    measurement_type_id,
+    deviceId,
+    organizationId,
+    organizationIds,
+    measurementTypeId,
     status,
     search,
     limit = 20,
@@ -242,25 +242,25 @@ const listChannelsNotInHierarchy = async ({
     const bindings = [];
     let bindIndex = 1;
     
-    if (organization_ids && Array.isArray(organization_ids) && organization_ids.length > 0) {
+    if (organizationIds && Array.isArray(organizationIds) && organizationIds.length > 0) {
         conditions.push(`c.organization_id = ANY($${bindIndex}::uuid[])`);
-        bindings.push(organization_ids);
+        bindings.push(organizationIds);
         bindIndex++;
-    } else if (organization_id) {
+    } else if (organizationId) {
         conditions.push(`c.organization_id = $${bindIndex}`);
-        bindings.push(organization_id);
+        bindings.push(organizationId);
         bindIndex++;
     }
     
-    if (device_id) {
+    if (deviceId) {
         conditions.push(`c.device_id = $${bindIndex}`);
-        bindings.push(device_id);
+        bindings.push(deviceId);
         bindIndex++;
     }
 
-    if (measurement_type_id) {
+    if (measurementTypeId) {
         conditions.push(`c.measurement_type_id = $${bindIndex}`);
-        bindings.push(measurement_type_id);
+        bindings.push(measurementTypeId);
         bindIndex++;
     }
     
@@ -332,15 +332,15 @@ const listChannelsNotInHierarchy = async ({
         name: row.name,
         description: row.description,
         ch: row.ch,
-        measurement_type_id: row.measurement_type_id,
-        phase_system: row.phase_system,
+        measurementTypeId: row.measurement_type_id,
+        phaseSystem: row.phase_system,
         phase: row.phase,
         process: row.process,
         status: row.status,
-        last_sync_at: row.last_sync_at,
+        lastSyncAt: row.last_sync_at,
         metadata: row.metadata,
-        is_active: row.is_active,
-        measurement_type: row.mt_id ? {
+        isActive: row.is_active,
+        measurementType: row.mt_id ? {
             id: row.mt_id,
             code: row.mt_code
         } : null,
@@ -353,10 +353,10 @@ const listChannelsNotInHierarchy = async ({
             id: row.org_public_code,
             slug: row.org_slug,
             name: row.org_name,
-            logo_url: row.org_logo_url
+            logoUrl: row.org_logo_url
         } : null,
-        created_at: row.created_at,
-        updated_at: row.updated_at
+        createdAt: row.created_at,
+        updatedAt: row.updated_at
     }));
     
     return {

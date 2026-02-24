@@ -18,7 +18,7 @@ const rolesLogger = pino({ name: 'roles-routes' });
 router.get('/', async (req, res, next) => {
     try {
         const roles = await Role.findAll({
-            where: { is_active: true },
+            where: { isActive: true },
             attributes: ['name', 'description'],
             order: [
                 // Orden específico para mejorexperiencia UX

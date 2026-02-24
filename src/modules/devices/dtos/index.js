@@ -27,14 +27,14 @@ export const createDeviceSchema = z.object({
             .regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i, 'uuid debe tener formato UUID válido')
             .optional()
             .nullable(),
-        organization_id: z
+        organizationId: z
             .string({
-                required_error: 'organization_id es requerido'
+                required_error: 'organizationId es requerido'
             })
-            .min(1, 'organization_id no puede estar vacío'),
-        site_id: z
+            .min(1, 'organizationId no puede estar vacío'),
+        siteId: z
             .string()
-            .min(1, 'site_id no puede estar vacío')
+            .min(1, 'siteId no puede estar vacío')
             .optional()
             .nullable(),
         name: z
@@ -49,46 +49,46 @@ export const createDeviceSchema = z.object({
             .optional(),
 
         // --- FKs a catálogos (integers) ---
-        device_type_id: z
-            .number({ invalid_type_error: 'device_type_id debe ser un número' })
-            .int('device_type_id debe ser un entero')
-            .positive('device_type_id debe ser positivo')
+        deviceTypeId: z
+            .number({ invalid_type_error: 'deviceTypeId debe ser un número' })
+            .int('deviceTypeId debe ser un entero')
+            .positive('deviceTypeId debe ser positivo')
             .optional()
             .nullable(),
-        brand_id: z
-            .number({ invalid_type_error: 'brand_id debe ser un número' })
-            .int('brand_id debe ser un entero')
-            .positive('brand_id debe ser positivo')
+        brandId: z
+            .number({ invalid_type_error: 'brandId debe ser un número' })
+            .int('brandId debe ser un entero')
+            .positive('brandId debe ser positivo')
             .optional()
             .nullable(),
-        model_id: z
-            .number({ invalid_type_error: 'model_id debe ser un número' })
-            .int('model_id debe ser un entero')
-            .positive('model_id debe ser positivo')
+        modelId: z
+            .number({ invalid_type_error: 'modelId debe ser un número' })
+            .int('modelId debe ser un entero')
+            .positive('modelId debe ser positivo')
             .optional()
             .nullable(),
-        server_id: z
-            .number({ invalid_type_error: 'server_id debe ser un número' })
-            .int('server_id debe ser un entero')
-            .positive('server_id debe ser positivo')
+        serverId: z
+            .number({ invalid_type_error: 'serverId debe ser un número' })
+            .int('serverId debe ser un entero')
+            .positive('serverId debe ser positivo')
             .optional()
             .nullable(),
-        network_id: z
-            .number({ invalid_type_error: 'network_id debe ser un número' })
-            .int('network_id debe ser un entero')
-            .positive('network_id debe ser positivo')
+        networkId: z
+            .number({ invalid_type_error: 'networkId debe ser un número' })
+            .int('networkId debe ser un entero')
+            .positive('networkId debe ser positivo')
             .optional()
             .nullable(),
-        license_id: z
-            .number({ invalid_type_error: 'license_id debe ser un número' })
-            .int('license_id debe ser un entero')
-            .positive('license_id debe ser positivo')
+        licenseId: z
+            .number({ invalid_type_error: 'licenseId debe ser un número' })
+            .int('licenseId debe ser un entero')
+            .positive('licenseId debe ser positivo')
             .optional()
             .nullable(),
-        validity_period_id: z
-            .number({ invalid_type_error: 'validity_period_id debe ser un número' })
-            .int('validity_period_id debe ser un entero')
-            .positive('validity_period_id debe ser positivo')
+        validityPeriodId: z
+            .number({ invalid_type_error: 'validityPeriodId debe ser un número' })
+            .int('validityPeriodId debe ser un entero')
+            .positive('validityPeriodId debe ser positivo')
             .optional()
             .nullable(),
 
@@ -105,53 +105,53 @@ export const createDeviceSchema = z.object({
                 errorMap: () => ({ message: 'status debe ser: active, inactive, maintenance, o decommissioned' })
             })
             .default('active'),
-        firmware_version: z
+        firmwareVersion: z
             .string()
-            .max(50, 'firmware_version no puede exceder 50 caracteres')
+            .max(50, 'firmwareVersion no puede exceder 50 caracteres')
             .optional()
             .nullable(),
-        serial_number: z
+        serialNumber: z
             .string()
-            .max(100, 'serial_number no puede exceder 100 caracteres')
+            .max(100, 'serialNumber no puede exceder 100 caracteres')
             .optional()
             .nullable(),
-        ip_address: z
+        ipAddress: z
             .string()
-            .max(45, 'ip_address no puede exceder 45 caracteres')
+            .max(45, 'ipAddress no puede exceder 45 caracteres')
             .refine((val) => {
                 if (!val) return true;
                 return ipv4Regex.test(val) || ipv6Regex.test(val);
             }, {
-                message: 'ip_address debe ser una dirección IPv4 o IPv6 válida'
+                message: 'ipAddress debe ser una dirección IPv4 o IPv6 válida'
             })
             .optional()
             .nullable(),
-        mac_address: z
+        macAddress: z
             .string()
-            .max(17, 'mac_address no puede exceder 17 caracteres')
+            .max(17, 'macAddress no puede exceder 17 caracteres')
             .refine((val) => {
                 if (!val) return true;
                 return macAddressRegex.test(val);
             }, {
-                message: 'mac_address debe tener formato válido (ej: 00:1A:2B:3C:4D:5E)'
+                message: 'macAddress debe tener formato válido (ej: 00:1A:2B:3C:4D:5E)'
             })
             .optional()
             .nullable(),
 
         // --- Ubicación ---
-        location_name: z
+        locationName: z
             .string()
-            .max(200, 'location_name no puede exceder 200 caracteres')
+            .max(200, 'locationName no puede exceder 200 caracteres')
             .optional()
             .nullable(),
-        physical_location: z
+        physicalLocation: z
             .string()
-            .max(200, 'physical_location no puede exceder 200 caracteres')
+            .max(200, 'physicalLocation no puede exceder 200 caracteres')
             .optional()
             .nullable(),
-        electrical_location: z
+        electricalLocation: z
             .string()
-            .max(200, 'electrical_location no puede exceder 200 caracteres')
+            .max(200, 'electricalLocation no puede exceder 200 caracteres')
             .optional()
             .nullable(),
         latitude: z
@@ -179,21 +179,21 @@ export const createDeviceSchema = z.object({
             .default('UTC'),
 
         // --- Datos comerciales ---
-        installation_date: z
+        installationDate: z
             .string()
-            .regex(/^\d{4}-\d{2}-\d{2}$/, 'installation_date debe tener formato YYYY-MM-DD')
+            .regex(/^\d{4}-\d{2}-\d{2}$/, 'installationDate debe tener formato YYYY-MM-DD')
             .optional()
             .nullable(),
-        warranty_months: z
-            .number({ invalid_type_error: 'warranty_months debe ser un número' })
-            .int('warranty_months debe ser un entero')
-            .min(0, 'warranty_months no puede ser negativo')
-            .max(120, 'warranty_months no puede exceder 120 meses')
+        warrantyMonths: z
+            .number({ invalid_type_error: 'warrantyMonths debe ser un número' })
+            .int('warrantyMonths debe ser un entero')
+            .min(0, 'warrantyMonths no puede ser negativo')
+            .max(120, 'warrantyMonths no puede exceder 120 meses')
             .optional()
             .nullable(),
-        expiration_date: z
+        expirationDate: z
             .string()
-            .regex(/^\d{4}-\d{2}-\d{2}$/, 'expiration_date debe tener formato YYYY-MM-DD')
+            .regex(/^\d{4}-\d{2}-\d{2}$/, 'expirationDate debe tener formato YYYY-MM-DD')
             .optional()
             .nullable(),
 
@@ -201,7 +201,7 @@ export const createDeviceSchema = z.object({
         metadata: z
             .record(z.any())
             .optional(),
-        is_active: z
+        isActive: z
             .boolean()
             .optional()
             .default(true)
@@ -227,9 +227,9 @@ export const updateDeviceSchema = z.object({
             .regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i, 'uuid debe tener formato UUID válido')
             .optional()
             .nullable(),
-        site_id: z
+        siteId: z
             .string()
-            .min(1, 'site_id no puede estar vacío')
+            .min(1, 'siteId no puede estar vacío')
             .optional()
             .nullable(),
         name: z
@@ -244,43 +244,43 @@ export const updateDeviceSchema = z.object({
             .nullable(),
 
         // --- FKs a catálogos ---
-        device_type_id: z
+        deviceTypeId: z
             .number()
             .int()
             .positive()
             .optional()
             .nullable(),
-        brand_id: z
+        brandId: z
             .number()
             .int()
             .positive()
             .optional()
             .nullable(),
-        model_id: z
+        modelId: z
             .number()
             .int()
             .positive()
             .optional()
             .nullable(),
-        server_id: z
+        serverId: z
             .number()
             .int()
             .positive()
             .optional()
             .nullable(),
-        network_id: z
+        networkId: z
             .number()
             .int()
             .positive()
             .optional()
             .nullable(),
-        license_id: z
+        licenseId: z
             .number()
             .int()
             .positive()
             .optional()
             .nullable(),
-        validity_period_id: z
+        validityPeriodId: z
             .number()
             .int()
             .positive()
@@ -300,64 +300,64 @@ export const updateDeviceSchema = z.object({
                 errorMap: () => ({ message: 'status debe ser: active, inactive, maintenance, o decommissioned' })
             })
             .optional(),
-        firmware_version: z
+        firmwareVersion: z
             .string()
             .max(50)
             .optional()
             .nullable(),
-        serial_number: z
+        serialNumber: z
             .string()
             .max(100)
             .optional()
             .nullable(),
-        ip_address: z
+        ipAddress: z
             .string()
             .max(45)
             .refine((val) => {
                 if (!val) return true;
                 return ipv4Regex.test(val) || ipv6Regex.test(val);
             }, {
-                message: 'ip_address debe ser una dirección IPv4 o IPv6 válida'
+                message: 'ipAddress debe ser una dirección IPv4 o IPv6 válida'
             })
             .optional()
             .nullable(),
-        mac_address: z
+        macAddress: z
             .string()
             .max(17)
             .refine((val) => {
                 if (!val) return true;
                 return macAddressRegex.test(val);
             }, {
-                message: 'mac_address debe tener formato válido (ej: 00:1A:2B:3C:4D:5E)'
+                message: 'macAddress debe tener formato válido (ej: 00:1A:2B:3C:4D:5E)'
             })
             .optional()
             .nullable(),
 
         // --- Ubicación ---
-        location_name: z.string().max(200).optional().nullable(),
-        physical_location: z.string().max(200).optional().nullable(),
-        electrical_location: z.string().max(200).optional().nullable(),
+        locationName: z.string().max(200).optional().nullable(),
+        physicalLocation: z.string().max(200).optional().nullable(),
+        electricalLocation: z.string().max(200).optional().nullable(),
         latitude: z.number().min(-90).max(90).optional().nullable(),
         longitude: z.number().min(-180).max(180).optional().nullable(),
         city: z.string().max(100).optional().nullable(),
         timezone: z.string().max(50).optional().nullable(),
 
         // --- Datos comerciales ---
-        installation_date: z
+        installationDate: z
             .string()
-            .regex(/^\d{4}-\d{2}-\d{2}$/, 'installation_date debe tener formato YYYY-MM-DD')
+            .regex(/^\d{4}-\d{2}-\d{2}$/, 'installationDate debe tener formato YYYY-MM-DD')
             .optional()
             .nullable(),
-        warranty_months: z.number().int().min(0).max(120).optional().nullable(),
-        expiration_date: z
+        warrantyMonths: z.number().int().min(0).max(120).optional().nullable(),
+        expirationDate: z
             .string()
-            .regex(/^\d{4}-\d{2}-\d{2}$/, 'expiration_date debe tener formato YYYY-MM-DD')
+            .regex(/^\d{4}-\d{2}-\d{2}$/, 'expirationDate debe tener formato YYYY-MM-DD')
             .optional()
             .nullable(),
 
         // --- Sistema ---
         metadata: z.record(z.any()).optional(),
-        is_active: z.boolean().optional()
+        isActive: z.boolean().optional()
     })
 });
 
@@ -367,10 +367,10 @@ export const updateDeviceSchema = z.object({
  */
 export const getDevicesSchema = z.object({
     query: z.object({
-        organization_id: z
+        organizationId: z
             .string()
             .optional(),
-        organization_ids: z
+        organizationIds: z
             .array(z.string())
             .optional()
             .describe('INTERNO: Array de UUIDs de organizaciones (inyectado por middleware)'),
@@ -378,20 +378,20 @@ export const getDevicesSchema = z.object({
             .string()
             .optional()
             .describe('Solo admins: si es "true", muestra todos los devices sin filtrar por organización'),
-        site_id: z
+        siteId: z
             .string()
             .optional(),
-        device_type_id: z
+        deviceTypeId: z
             .string()
             .transform((val) => parseInt(val, 10))
             .refine((val) => !isNaN(val) && val > 0, {
-                message: 'device_type_id debe ser un entero positivo'
+                message: 'deviceTypeId debe ser un entero positivo'
             })
             .optional(),
         status: z
             .enum(['active', 'inactive', 'maintenance', 'decommissioned'])
             .optional(),
-        is_active: z
+        isActive: z
             .string()
             .transform((val) => val === 'true')
             .optional(),
@@ -399,7 +399,7 @@ export const getDevicesSchema = z.object({
             .string()
             .max(200, 'search no puede exceder 200 caracteres')
             .optional(),
-        include_channels: z
+        includeChannels: z
             .string()
             .transform((val) => val === 'true')
             .optional(),

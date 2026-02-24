@@ -45,12 +45,12 @@ export const createSite = async (siteData) => {
             {
                 model: Organization,
                 as: 'organization',
-                attributes: ['id', 'public_code', 'slug', 'name', 'logo_url']
+                attributes: ['id', 'publicCode', 'slug', 'name', 'logoUrl']
             },
             {
                 model: Country,
                 as: 'country',
-                attributes: ['id', 'iso_alpha2', 'iso_alpha3', 'phone_code']
+                attributes: ['id', 'isoAlpha2', 'isoAlpha3', 'phoneCode']
             }
         ]
     });
@@ -59,24 +59,24 @@ export const createSite = async (siteData) => {
 };
 
 /**
- * Buscar site por ID público (public_code)
+ * Buscar site por ID público (publicCode)
  * Retorna DTO público - uso externo
  * @param {string} publicCode - Public code del site (ej: SITE-abc123-1)
  * @returns {Promise<Object|null>} - Site DTO o null
  */
 export const findSiteByPublicCode = async (publicCode) => {
     const site = await Site.findOne({
-        where: { public_code: publicCode },
+        where: { publicCode },
         include: [
             {
                 model: Organization,
                 as: 'organization',
-                attributes: ['id', 'public_code', 'slug', 'name', 'logo_url']
+                attributes: ['id', 'publicCode', 'slug', 'name', 'logoUrl']
             },
             {
                 model: Country,
                 as: 'country',
-                attributes: ['id', 'iso_alpha2', 'iso_alpha3', 'phone_code']
+                attributes: ['id', 'isoAlpha2', 'isoAlpha3', 'phoneCode']
             }
         ]
     });
@@ -89,14 +89,14 @@ export const findSiteByPublicCode = async (publicCode) => {
 };
 
 /**
- * Buscar site por ID público (public_code) - VERSIÓN INTERNA
+ * Buscar site por ID público (publicCode) - VERSIÓN INTERNA
  * Retorna modelo Sequelize completo - uso interno
  * @param {string} publicCode - Public code del site
  * @returns {Promise<Site|null>} - Modelo Site o null
  */
 export const findSiteByPublicCodeInternal = async (publicCode) => {
     return await Site.findOne({
-        where: { public_code: publicCode }
+        where: { publicCode }
     });
 };
 
@@ -131,12 +131,12 @@ export const updateSite = async (id, updateData) => {
             {
                 model: Organization,
                 as: 'organization',
-                attributes: ['id', 'public_code', 'slug', 'name', 'logo_url']
+                attributes: ['id', 'publicCode', 'slug', 'name', 'logoUrl']
             },
             {
                 model: Country,
                 as: 'country',
-                attributes: ['id', 'iso_alpha2', 'iso_alpha3', 'phone_code']
+                attributes: ['id', 'isoAlpha2', 'isoAlpha3', 'phoneCode']
             }
         ]
     });
@@ -162,29 +162,29 @@ export const deleteSite = async (id) => {
 
 /**
  * Listar sites con filtros y paginación
- * Soporta filtro not_in_hierarchy para excluir sites ya en jerarquía
+ * Soporta filtro notInHierarchy para excluir sites ya en jerarquía
  * 
  * @param {Object} options - Opciones de filtrado y paginación
- * @param {boolean} options.not_in_hierarchy - Si true, excluye sites que ya están en resource_hierarchy
+ * @param {boolean} options.notInHierarchy - Si true, excluye sites que ya están en resource_hierarchy
  * @returns {Promise<Object>} - { items: [...], total, page, limit }
  */
 export const listSites = async ({ 
-    organization_id,
-    organization_ids,
-    country_code,
-    is_active,
+    organizationId,
+    organizationIds,
+    countryCode,
+    isActive,
     city,
-    not_in_hierarchy = false,
+    notInHierarchy = false,
     limit = 20, 
     offset = 0 
 }) => {
-    // Si se requiere filtrar por not_in_hierarchy, usamos raw SQL
-    if (not_in_hierarchy) {
+    // Si se requiere filtrar por notInHierarchy, usamos raw SQL
+    if (notInHierarchy) {
         return await listSitesNotInHierarchy({
-            organization_id,
-            organization_ids,
-            country_code,
-            is_active,
+            organizationId,
+            organizationIds,
+            countryCode,
+            isActive,
             city,
             limit,
             offset
@@ -194,18 +194,18 @@ export const listSites = async ({
     // Flujo normal con Sequelize ORM
     const where = {};
     
-    if (organization_ids !== undefined && Array.isArray(organization_ids) && organization_ids.length > 0) {
-        where.organization_id = { [Op.in]: organization_ids };
-    } else if (organization_id !== undefined && organization_id !== null) {
-        where.organization_id = organization_id;
+    if (organizationIds !== undefined && Array.isArray(organizationIds) && organizationIds.length > 0) {
+        where.organizationId = { [Op.in]: organizationIds };
+    } else if (organizationId !== undefined && organizationId !== null) {
+        where.organizationId = organizationId;
     }
     
-    if (country_code !== undefined) {
-        where.country_code = country_code;
+    if (countryCode !== undefined) {
+        where.countryCode = countryCode;
     }
     
-    if (is_active !== undefined) {
-        where.is_active = is_active;
+    if (isActive !== undefined) {
+        where.isActive = isActive;
     }
     
     if (city) {
@@ -218,17 +218,17 @@ export const listSites = async ({
             {
                 model: Organization,
                 as: 'organization',
-                attributes: ['id', 'public_code', 'slug', 'name', 'logo_url']
+                attributes: ['id', 'publicCode', 'slug', 'name', 'logoUrl']
             },
             {
                 model: Country,
                 as: 'country',
-                attributes: ['id', 'iso_alpha2', 'iso_alpha3', 'phone_code']
+                attributes: ['id', 'isoAlpha2', 'isoAlpha3', 'phoneCode']
             }
         ],
         limit: parseInt(limit),
         offset: parseInt(offset),
-        order: [['created_at', 'DESC']]
+        order: [['createdAt', 'DESC']]
     });
     
     return {
@@ -247,10 +247,10 @@ export const listSites = async ({
  * @returns {Promise<Object>} - { items: [...], total, page, limit }
  */
 const listSitesNotInHierarchy = async ({
-    organization_id,
-    organization_ids,
-    country_code,
-    is_active,
+    organizationId,
+    organizationIds,
+    countryCode,
+    isActive,
     city,
     limit = 20,
     offset = 0
@@ -260,25 +260,25 @@ const listSitesNotInHierarchy = async ({
     let bindIndex = 1;
     
     // Filtros de organización
-    if (organization_ids && Array.isArray(organization_ids) && organization_ids.length > 0) {
+    if (organizationIds && Array.isArray(organizationIds) && organizationIds.length > 0) {
         conditions.push(`s.organization_id = ANY($${bindIndex}::uuid[])`);
-        bindings.push(organization_ids);
+        bindings.push(organizationIds);
         bindIndex++;
-    } else if (organization_id) {
+    } else if (organizationId) {
         conditions.push(`s.organization_id = $${bindIndex}`);
-        bindings.push(organization_id);
+        bindings.push(organizationId);
         bindIndex++;
     }
     
-    if (country_code !== undefined) {
+    if (countryCode !== undefined) {
         conditions.push(`s.country_code = $${bindIndex}`);
-        bindings.push(country_code);
+        bindings.push(countryCode);
         bindIndex++;
     }
     
-    if (is_active !== undefined) {
+    if (isActive !== undefined) {
         conditions.push(`s.is_active = $${bindIndex}`);
-        bindings.push(is_active);
+        bindings.push(isActive);
         bindIndex++;
     }
     
@@ -337,36 +337,37 @@ const listSitesNotInHierarchy = async ({
     
     const total = parseInt(countResult[0]?.total || 0);
     
-    // Transformar resultados a formato DTO
+    // Transformar resultados raw SQL a formato DTO camelCase
+    // NOTA: raw queries devuelven columnas DB en snake_case
     const items = dataResult.map(row => ({
         id: row.public_code,
         name: row.name,
-        site_type: row.site_type,
+        siteType: row.site_type,
         address: row.address,
         city: row.city,
         state: row.state,
-        postal_code: row.postal_code,
+        postalCode: row.postal_code,
         latitude: row.latitude,
         longitude: row.longitude,
         timezone: row.timezone,
-        contact_name: row.contact_name,
-        contact_phone: row.contact_phone,
-        contact_email: row.contact_email,
+        contactName: row.contact_name,
+        contactPhone: row.contact_phone,
+        contactEmail: row.contact_email,
         metadata: row.metadata,
-        is_active: row.is_active,
+        isActive: row.is_active,
         organization: row.org_id_rel ? {
             id: row.org_public_code,
             slug: row.org_slug,
             name: row.org_name,
-            logo_url: row.org_logo_url
+            logoUrl: row.org_logo_url
         } : null,
         country: row.country_code_rel ? {
             code: row.country_code_rel,
-            iso_alpha3: row.country_iso_alpha3,
-            phone_code: row.country_phone_code
+            isoAlpha3: row.country_iso_alpha3,
+            phoneCode: row.country_phone_code
         } : null,
-        created_at: row.created_at,
-        updated_at: row.updated_at
+        createdAt: row.created_at,
+        updatedAt: row.updated_at
     }));
     
     return {

@@ -120,10 +120,9 @@ router.post('/nodes',
     validate(createNodeSchema),
     async (req, res, next) => {
         try {
-            // Usa organization_id del body (para system-admin) o del contexto (org activa)
             const nodeData = {
                 ...req.body,
-                organization_id: req.body.organization_id || req.organizationContext.id
+                organizationId: req.body.organizationId || req.organizationContext.id
             };
             
             const node = await hierarchyServices.createNode(
@@ -233,11 +232,11 @@ router.get('/nodes',
                 {
                     limit: req.query.limit,
                     offset: req.query.offset,
-                    nodeType: req.query.node_type,
-                    parentId: req.query.parent_id,
+                    nodeType: req.query.nodeType,
+                    parentId: req.query.parentId,
                     search: req.query.search,
-                    isActive: req.query.is_active,
-                    includeCounts: req.query.include_counts,
+                    isActive: req.query.isActive,
+                    includeCounts: req.query.includeCounts,
                     showAll: req.organizationContext.showAll || false
                 }
             );
@@ -370,7 +369,7 @@ router.post('/nodes/batch',
             const nodes = await hierarchyServices.batchGetNodes(
                 req.body.ids,
                 { 
-                    includeCounts: req.body.include_counts,
+                    includeCounts: req.body.includeCounts,
                     organizationId: req.organizationContext.id,
                     showAll: req.organizationContext.showAll || false
                 }
@@ -540,7 +539,7 @@ router.post('/nodes/batch-create',
             hierarchyLogger.info({ 
                 inserted: result.meta.inserted,
                 failed: result.meta.failed,
-                parentId: req.body.parent_id,
+                parentId: req.body.parentId,
                 userId 
             }, 'Batch create nodes completed via API');
             
@@ -902,18 +901,18 @@ router.patch('/nodes/:id/move',
             
             const node = await hierarchyServices.moveNode(
                 req.params.id,
-                req.body.new_parent_id,
+                req.body.newParentId,
                 req.user.userId,
                 req.ip,
                 req.headers['user-agent'],
-                isAdmin, // skipPermissionCheck para admins
-                req.body.display_order // Nuevo parámetro opcional
+                isAdmin,
+                req.body.displayOrder
             );
             
             hierarchyLogger.info({ 
                 nodeId: req.params.id, 
-                newParent: req.body.new_parent_id, 
-                displayOrder: req.body.display_order,
+                newParent: req.body.newParentId, 
+                displayOrder: req.body.displayOrder,
                 userId: req.user.userId 
             }, 'Node moved via API');
             
@@ -982,8 +981,8 @@ router.get('/nodes/:id/children',
                 {
                     limit: req.query.limit,
                     offset: req.query.offset,
-                    nodeType: req.query.node_type,
-                    includeCounts: req.query.include_counts,
+                    nodeType: req.query.nodeType,
+                    includeCounts: req.query.includeCounts,
                     showAll: req.organizationContext.showAll || false
                 }
             );
@@ -1050,8 +1049,8 @@ router.get('/nodes/:id/descendants',
                 {
                     limit: req.query.limit,
                     offset: req.query.offset,
-                    nodeType: req.query.node_type,
-                    maxDepth: req.query.max_depth
+                    nodeType: req.query.nodeType,
+                    maxDepth: req.query.maxDepth
                 }
             );
             
@@ -1156,9 +1155,9 @@ router.get('/tree',
             const tree = await hierarchyServices.getTree(
                 req.organizationContext.id,
                 {
-                    rootId: req.query.root_id,
-                    maxDepth: req.query.max_depth,
-                    includeCounts: req.query.include_counts,
+                    rootId: req.query.rootId,
+                    maxDepth: req.query.maxDepth,
+                    includeCounts: req.query.includeCounts,
                     showAll: req.organizationContext.showAll || false
                 }
             );
@@ -1228,9 +1227,9 @@ router.get('/tree/filter',
         try {
             const tree = await hierarchyServices.getFilteredTree(
                 req.organizationContext.id,
-                req.query.category_id,
+                req.query.categoryId,
                 {
-                    includeSubcategories: req.query.include_subcategories
+                    includeSubcategories: req.query.includeSubcategories
                 }
             );
             
@@ -1294,13 +1293,13 @@ router.get('/nodes/:id/has-category-descendants',
         try {
             const hasDescendants = await hierarchyServices.hasDescendantsWithCategory(
                 req.params.id,
-                req.query.category_id,
-                req.query.include_subcategories
+                req.query.categoryId,
+                req.query.includeSubcategories
             );
             
             res.json({
                 ok: true,
-                has_descendants: hasDescendants
+                hasDescendants: hasDescendants
             });
         } catch (error) {
             next(error);
@@ -1357,8 +1356,8 @@ router.get('/roots',
                 {
                     limit: req.query.limit,
                     offset: req.query.offset,
-                    nodeType: req.query.node_type,
-                    includeCounts: req.query.include_counts,
+                    nodeType: req.query.nodeType,
+                    includeCounts: req.query.includeCounts,
                     showAll: req.organizationContext.showAll || false
                 }
             );
@@ -1436,7 +1435,7 @@ router.post('/access',
                 req.headers['user-agent']
             );
             
-            hierarchyLogger.info({ userId: req.body.user_id, nodeId: req.body.node_id, grantedBy: req.user.userId }, 'Access granted via API');
+            hierarchyLogger.info({ userId: req.body.userId, nodeId: req.body.nodeId, grantedBy: req.user.userId }, 'Access granted via API');
             
             res.json({
                 ok: true,
@@ -1483,15 +1482,15 @@ router.delete('/access',
     async (req, res, next) => {
         try {
             const revoked = await hierarchyServices.revokeNodeAccess(
-                req.body.user_id,
-                req.body.node_id,
+                req.body.userId,
+                req.body.nodeId,
                 req.user.userId,
                 req.ip,
                 req.headers['user-agent']
             );
             
             if (revoked) {
-                hierarchyLogger.info({ userId: req.body.user_id, nodeId: req.body.node_id, revokedBy: req.user.userId }, 'Access revoked via API');
+                hierarchyLogger.info({ userId: req.body.userId, nodeId: req.body.nodeId, revokedBy: req.user.userId }, 'Access revoked via API');
             }
             
             res.json({
@@ -1553,14 +1552,14 @@ router.get('/access/check',
     async (req, res, next) => {
         try {
             const hasAccess = await hierarchyServices.checkNodeAccess(
-                req.query.user_id,
-                req.query.node_id,
-                req.query.access_type || 'view'
+                req.query.userId,
+                req.query.nodeId,
+                req.query.accessType || 'view'
             );
             
             res.json({
                 ok: true,
-                data: { has_access: hasAccess }
+                data: { hasAccess: hasAccess }
             });
         } catch (error) {
             next(error);

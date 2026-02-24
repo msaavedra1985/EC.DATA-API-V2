@@ -52,7 +52,7 @@ const dashboardLogger = logger.child({ component: 'dashboards' });
  *         schema:
  *           type: string
  *       - in: query
- *         name: is_public
+ *         name: isPublic
  *         schema:
  *           type: string
  *       - in: query
@@ -97,7 +97,7 @@ router.get('/', authenticate, enforceActiveOrganization, validate(getDashboardsS
  * @swagger
  * /api/v1/dashboards/{id}:
  *   get:
- *     summary: Obtener un dashboard por public_code
+ *     summary: Obtener un dashboard por publicCode
  *     description: Obtiene los detalles de un dashboard específico con todas sus relaciones
  *     tags: [Dashboards]
  *     security:
@@ -157,7 +157,7 @@ router.get('/:id', authenticate, enforceActiveOrganization, validate(getDashboar
  *                 type: string
  *               icon:
  *                 type: string
- *               is_public:
+ *               isPublic:
  *                 type: boolean
  *     responses:
  *       201:
@@ -617,7 +617,7 @@ router.post('/:id/collaborators', authenticate, enforceActiveOrganization, valid
     try {
         const collaborator = await dashboardServices.addDashboardCollaborator(
             req.params.id,
-            req.body.user_id,
+            req.body.userId,
             req.body.role,
             req.user.userId,
             req.ip,
@@ -731,7 +731,7 @@ groupRouter.get('/', authenticate, enforceActiveOrganization, validate(getGroups
  * @swagger
  * /api/v1/dashboard-groups/{id}:
  *   get:
- *     summary: Obtener un grupo de dashboards por public_code
+ *     summary: Obtener un grupo de dashboards por publicCode
  *     tags: [Dashboard Groups]
  *     security:
  *       - bearerAuth: []
@@ -885,8 +885,8 @@ groupRouter.post('/:groupId/dashboards', authenticate, enforceActiveOrganization
     try {
         const result = await dashboardServices.addDashboardToGroup(
             req.params.groupId,
-            req.body.dashboard_id,
-            req.body.order_index,
+            req.body.dashboardId,
+            req.body.orderIndex,
             req.user.userId,
             req.ip,
             req.headers['user-agent']
@@ -955,7 +955,7 @@ groupRouter.post('/:id/collaborators', authenticate, enforceActiveOrganization, 
     try {
         const collaborator = await dashboardServices.addGroupCollaborator(
             req.params.id,
-            req.body.user_id,
+            req.body.userId,
             req.body.role,
             req.user.userId,
             req.ip,

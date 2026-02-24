@@ -53,15 +53,15 @@ const getRoleByName = async (roleName) => {
  * @param {Object} userData - Datos del usuario
  * @param {string} userData.email - Email
  * @param {string} userData.password - Password en texto plano (será hasheado)
- * @param {string} userData.first_name - Nombre
- * @param {string} userData.last_name - Apellido
- * @param {string} [userData.organization_id] - ID de la organización
- * @param {string} [userData.role_id] - ID del rol (si no se provee, usa 'user' por defecto)
+ * @param {string} userData.firstName - Nombre
+ * @param {string} userData.lastName - Apellido
+ * @param {string} [userData.organizationId] - ID de la organización
+ * @param {string} [userData.roleId] - ID del rol (si no se provee, usa 'user' por defecto)
  * @param {Object} [sessionData] - Datos de la sesión (userAgent, ipAddress)
  * @returns {Promise<Object>} - Usuario creado y token JWT
  */
 export const register = async (userData, sessionData = {}) => {
-    const { email, password, first_name, last_name, organization_id, role_id } = userData;
+    const { email, password, firstName, lastName, organizationId, roleId } = userData;
 
     // Verificar si el email ya existe
     const existingUser = await authRepository.findUserByEmail(email);
@@ -72,8 +72,8 @@ export const register = async (userData, sessionData = {}) => {
         throw error;
     }
 
-    // Si no se provee role_id, buscar el rol 'user' por defecto (usa cache)
-    let finalRoleId = role_id;
+    // Si no se provee roleId, buscar el rol 'user' por defecto (usa cache)
+    let finalRoleId = roleId;
     if (!finalRoleId) {
         const defaultRole = await getRoleByName('user');
         if (!defaultRole) {
@@ -86,16 +86,16 @@ export const register = async (userData, sessionData = {}) => {
     }
 
     // Hashear password con bcrypt
-    const password_hash = await bcrypt.hash(password, SALT_ROUNDS);
+    const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
 
     // Crear usuario en la base de datos
     const newUser = await authRepository.createUser({
         email,
-        password_hash,
-        first_name,
-        last_name,
-        organization_id,
-        role_id: finalRoleId
+        passwordHash,
+        firstName,
+        lastName,
+        organizationId,
+        roleId: finalRoleId
     });
 
     // Generar tokens JWT y guardar refresh token en BD
@@ -200,7 +200,7 @@ export const login = async (identifier, password, sessionData = {}) => {
     }
 
     // Verificar que el usuario esté activo
-    if (!user.is_active) {
+    if (!user.isActive) {
         const error = new Error('auth.login.account_disabled');
         error.status = 403; // Forbidden
         error.code = 'USER_INACTIVE';
@@ -208,7 +208,7 @@ export const login = async (identifier, password, sessionData = {}) => {
     }
 
     // Verificar password con bcrypt
-    const isPasswordValid = await bcrypt.compare(password, user.password_hash);
+    const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
 
     if (!isPasswordValid) {
         const error = new Error('auth.login.invalid_credentials');
@@ -220,8 +220,8 @@ export const login = async (identifier, password, sessionData = {}) => {
     // Actualizar último login
     await authRepository.updateLastLogin(user.id);
 
-    // Eliminar password_hash antes de devolver
-    delete user.password_hash;
+    // Eliminar passwordHash antes de devolver
+    delete user.passwordHash;
 
     // Generar tokens JWT y guardar refresh token en BD
     // Pasar rememberMe a generateTokens para usar duración extendida si es necesario
@@ -232,7 +232,7 @@ export const login = async (identifier, password, sessionData = {}) => {
     const { setSessionContext, SESSION_TTL_NORMAL, SESSION_TTL_EXTENDED } = await import('./sessionContextCache.js');
     const sessionTTL = sessionData.rememberMe ? SESSION_TTL_EXTENDED : SESSION_TTL_NORMAL;
     
-    const primaryOrgId = primaryOrg ? primaryOrg.organization_id : null;
+    const primaryOrgId = primaryOrg ? primaryOrg.organizationId : null;
     const activeOrgId = sessionData.activeOrgId || primaryOrgId;
     
     // Resolver info pública de la org primaria
@@ -240,10 +240,10 @@ export const login = async (identifier, password, sessionData = {}) => {
     if (primaryOrgId) {
         const Organization = (await import('../organizations/models/Organization.js')).default;
         const orgDetails = await Organization.findByPk(primaryOrgId, {
-            attributes: ['public_code', 'name', 'logo_url']
+            attributes: ['publicCode', 'name', 'logoUrl']
         });
         if (orgDetails) {
-            primaryOrgInfo = { publicCode: orgDetails.public_code, name: orgDetails.name, logoUrl: orgDetails.logo_url };
+            primaryOrgInfo = { publicCode: orgDetails.publicCode, name: orgDetails.name, logoUrl: orgDetails.logoUrl };
         }
     }
     
@@ -252,10 +252,10 @@ export const login = async (identifier, password, sessionData = {}) => {
     if (activeOrgId && activeOrgId !== primaryOrgId) {
         const Organization = (await import('../organizations/models/Organization.js')).default;
         const orgDetails = await Organization.findByPk(activeOrgId, {
-            attributes: ['public_code', 'name', 'logo_url']
+            attributes: ['publicCode', 'name', 'logoUrl']
         });
         if (orgDetails) {
-            activeOrgInfo = { publicCode: orgDetails.public_code, name: orgDetails.name, logoUrl: orgDetails.logo_url };
+            activeOrgInfo = { publicCode: orgDetails.publicCode, name: orgDetails.name, logoUrl: orgDetails.logoUrl };
         }
     }
     
@@ -271,10 +271,10 @@ export const login = async (identifier, password, sessionData = {}) => {
         canAccessAllOrgs: user.role && user.role.name === 'system-admin',
         role: user.role ? user.role.name : null,
         email: user.email,
-        firstName: user.first_name,
-        lastName: user.last_name,
+        firstName: user.firstName,
+        lastName: user.lastName,
         userId: user.id,
-        userPublicCode: user.public_code || null
+        userPublicCode: user.publicCode || null
     }, sessionTTL);
 
     return {
@@ -319,7 +319,7 @@ export const verifyToken = async (token) => {
             await authCache.setUserCache(userId, user);
         }
 
-        if (!user.is_active) {
+        if (!user.isActive) {
             const error = new Error('auth.login.account_disabled');
             error.status = 403;
             error.code = 'USER_INACTIVE';
@@ -350,8 +350,8 @@ export const verifyToken = async (token) => {
             activeOrgId: decoded.activeOrgId,
             primaryOrgId: decoded.primaryOrgId,
             canAccessAllOrgs: decoded.canAccessAllOrgs || false,
-            first_name: user.first_name,
-            last_name: user.last_name,
+            firstName: user.firstName,
+            lastName: user.lastName,
             // impersonating solo para system-admin (indica si está actuando como otra org)
             ...(isSystemAdmin && { impersonating: decoded.impersonating || false })
         };
@@ -410,7 +410,7 @@ export const refreshAccessToken = async (refreshToken, sessionData = {}) => {
             throw error;
         }
 
-        if (storedToken.is_revoked) {
+        if (storedToken.isRevoked) {
             await refreshTokenRepository.revokeAllUserTokens(userId, 'suspicious_activity');
             await authCache.invalidateUserSession(userId);
             
@@ -420,7 +420,7 @@ export const refreshAccessToken = async (refreshToken, sessionData = {}) => {
             throw error;
         }
 
-        if (new Date(storedToken.expires_at) < new Date()) {
+        if (new Date(storedToken.expiresAt) < new Date()) {
             await refreshTokenRepository.revokeToken(refreshToken, 'expired');
             const error = new Error('auth.refresh.token_expired');
             error.status = 401;
@@ -453,7 +453,7 @@ export const refreshAccessToken = async (refreshToken, sessionData = {}) => {
             throw error;
         }
 
-        if (!user.is_active) {
+        if (!user.isActive) {
             const error = new Error('auth.login.account_disabled');
             error.status = 403;
             error.code = 'USER_INACTIVE';
@@ -462,9 +462,9 @@ export const refreshAccessToken = async (refreshToken, sessionData = {}) => {
 
         await refreshTokenRepository.revokeToken(refreshToken, 'rotated');
 
-        // Preservar remember_me del token original para mantener la duración de sesión correcta
+        // Preservar rememberMe del token original para mantener la duración de sesión correcta
         // Usar Boolean() explícitamente para garantizar tipo booleano
-        const isExtendedSession = Boolean(storedToken.remember_me);
+        const isExtendedSession = Boolean(storedToken.rememberMe);
         const refreshSessionData = {
             ...sessionData,
             rememberMe: isExtendedSession
@@ -474,12 +474,12 @@ export const refreshAccessToken = async (refreshToken, sessionData = {}) => {
         
         // Regenerar session_context en Redis durante el refresh
         // Esto soluciona el problema de que el session_context expiraba antes que el refresh_token
-        // Usar TTL correcto basado en remember_me del token original
+        // Usar TTL correcto basado en rememberMe del token original
         const primaryOrg = await organizationService.getPrimaryOrganization(userId);
         const { setSessionContext, SESSION_TTL_NORMAL, SESSION_TTL_EXTENDED } = await import('./sessionContextCache.js');
         const sessionTTL = isExtendedSession ? SESSION_TTL_EXTENDED : SESSION_TTL_NORMAL;
         
-        const refreshPrimaryOrgId = decoded.primaryOrgId || (primaryOrg ? primaryOrg.organization_id : null);
+        const refreshPrimaryOrgId = decoded.primaryOrgId || (primaryOrg ? primaryOrg.organizationId : null);
         const refreshActiveOrgId = decoded.activeOrgId || refreshPrimaryOrgId;
         
         // Resolver info pública de la org primaria
@@ -487,10 +487,10 @@ export const refreshAccessToken = async (refreshToken, sessionData = {}) => {
         if (refreshPrimaryOrgId) {
             const Organization = (await import('../organizations/models/Organization.js')).default;
             const orgDetails = await Organization.findByPk(refreshPrimaryOrgId, {
-                attributes: ['public_code', 'name', 'logo_url']
+                attributes: ['publicCode', 'name', 'logoUrl']
             });
             if (orgDetails) {
-                refreshPrimaryOrgInfo = { publicCode: orgDetails.public_code, name: orgDetails.name, logoUrl: orgDetails.logo_url };
+                refreshPrimaryOrgInfo = { publicCode: orgDetails.publicCode, name: orgDetails.name, logoUrl: orgDetails.logoUrl };
             }
         }
         
@@ -499,10 +499,10 @@ export const refreshAccessToken = async (refreshToken, sessionData = {}) => {
         if (refreshActiveOrgId && refreshActiveOrgId !== refreshPrimaryOrgId) {
             const Organization = (await import('../organizations/models/Organization.js')).default;
             const orgDetails = await Organization.findByPk(refreshActiveOrgId, {
-                attributes: ['public_code', 'name', 'logo_url']
+                attributes: ['publicCode', 'name', 'logoUrl']
             });
             if (orgDetails) {
-                refreshActiveOrgInfo = { publicCode: orgDetails.public_code, name: orgDetails.name, logoUrl: orgDetails.logo_url };
+                refreshActiveOrgInfo = { publicCode: orgDetails.publicCode, name: orgDetails.name, logoUrl: orgDetails.logoUrl };
             }
         }
         
@@ -518,10 +518,10 @@ export const refreshAccessToken = async (refreshToken, sessionData = {}) => {
             canAccessAllOrgs: decoded.canAccessAllOrgs || false,
             role: decoded.role || (user.role ? user.role.name : null),
             email: user.email,
-            firstName: user.first_name,
-            lastName: user.last_name,
+            firstName: user.firstName,
+            lastName: user.lastName,
             userId: userId,
-            userPublicCode: user.public_code || null
+            userPublicCode: user.publicCode || null
         }, sessionTTL);
 
         return tokens;
@@ -564,11 +564,11 @@ export const changePassword = async (userId, currentPassword, newPassword) => {
         throw error;
     }
 
-    // Obtener el password_hash actual (necesitamos hacer query directa)
+    // Obtener el passwordHash actual (necesitamos hacer query directa)
     const userWithPassword = await authRepository.findUserByEmail(user.email, true);
 
     // Verificar password actual
-    const isPasswordValid = await bcrypt.compare(currentPassword, userWithPassword.password_hash);
+    const isPasswordValid = await bcrypt.compare(currentPassword, userWithPassword.passwordHash);
 
     if (!isPasswordValid) {
         const error = new Error('auth.password.current_incorrect');
@@ -603,13 +603,13 @@ export const changePassword = async (userId, currentPassword, newPassword) => {
  * @param {string} [sessionData.ipAddress] - IP del cliente
  * @param {boolean} [sessionData.rememberMe=false] - Si true, genera tokens con duración extendida (90 días)
  * @param {string} [sessionData.activeOrgId] - ID de la organización activa (si se está haciendo switch)
- * @returns {Promise<Object>} - { access_token, refresh_token, expires_in }
+ * @returns {Promise<Object>} - { accessToken, refreshToken, expiresIn }
  */
 const generateTokens = async (user, sessionData = {}) => {
     const sessionVersion = await authCache.getSessionVersion(user.id);
     const rememberMe = sessionData.rememberMe || false;
 
-    // Determinar expiración del refresh token según remember_me
+    // Determinar expiración del refresh token según rememberMe
     const refreshExpiresIn = rememberMe 
         ? config.jwt.refreshExpiresInLong  // 90 días
         : config.jwt.refreshExpiresIn;     // 14 días
@@ -630,10 +630,10 @@ const generateTokens = async (user, sessionData = {}) => {
         activeOrgId = sessionData.activeOrgId;
     } else {
         // Usar org primaria por defecto
-        activeOrgId = primaryOrg ? primaryOrg.organization_id : null;
+        activeOrgId = primaryOrg ? primaryOrg.organizationId : null;
     }
     
-    const primaryOrgId = primaryOrg ? primaryOrg.organization_id : null;
+    const primaryOrgId = primaryOrg ? primaryOrg.organizationId : null;
     
     // impersonating: solo para system-admin, indica si está actuando como otra org
     // Es true cuando system-admin tiene activeOrgId pero no es su org primaria
@@ -652,7 +652,7 @@ const generateTokens = async (user, sessionData = {}) => {
         ...(isSystemAdmin && { impersonating })
     };
 
-    const access_token = jwt.sign(
+    const accessToken = jwt.sign(
         {
             ...basePayload,
             tokenType: 'access',
@@ -662,7 +662,7 @@ const generateTokens = async (user, sessionData = {}) => {
         { expiresIn: JWT_ACCESS_EXPIRES_IN }
     );
 
-    const refresh_token = jwt.sign(
+    const refreshToken = jwt.sign(
         {
             ...basePayload,
             tokenType: 'refresh',
@@ -681,7 +681,7 @@ const generateTokens = async (user, sessionData = {}) => {
 
     await refreshTokenRepository.createRefreshToken({
         userId: user.id,
-        token: refresh_token,
+        token: refreshToken,
         expiresAt,
         userAgent: sessionData.userAgent || null,
         ipAddress: sessionData.ipAddress || null,
@@ -689,10 +689,10 @@ const generateTokens = async (user, sessionData = {}) => {
     });
 
     return {
-        access_token,
-        refresh_token,
-        expires_in: JWT_ACCESS_EXPIRES_IN,
-        token_type: 'Bearer'
+        accessToken,
+        refreshToken,
+        expiresIn: JWT_ACCESS_EXPIRES_IN,
+        tokenType: 'Bearer'
     };
 };
 
@@ -728,7 +728,7 @@ export const logout = async (refreshToken) => {
     }
     
     // Invalidar sesión del usuario (incrementa sessionVersion y limpia caché)
-    await authCache.invalidateUserSession(tokenData.user_id);
+    await authCache.invalidateUserSession(tokenData.userId);
     
     return true;
 };
@@ -837,7 +837,7 @@ export const switchOrganization = async (userId, newActiveOrgId, sessionData = {
     // Importación dinámica para evitar dependencias circulares
     const Organization = (await import('../organizations/models/Organization.js')).default;
     const targetOrg = await Organization.findByPk(newActiveOrgId, {
-        attributes: ['id', 'is_active', 'name', 'public_code', 'logo_url']
+        attributes: ['id', 'isActive', 'name', 'publicCode', 'logoUrl']
     });
     
     // Error 404: Organización no existe
@@ -849,7 +849,7 @@ export const switchOrganization = async (userId, newActiveOrgId, sessionData = {
     }
     
     // Error 404: Organización eliminada/desactivada (tratada como no existente para el cliente)
-    if (!targetOrg.is_active) {
+    if (!targetOrg.isActive) {
         const error = new Error('auth.organization.not_found');
         error.status = 404;
         error.code = 'ORGANIZATION_NOT_FOUND';
@@ -881,23 +881,23 @@ export const switchOrganization = async (userId, newActiveOrgId, sessionData = {
     // Actualizar session_context en Redis con la nueva org activa e info completa
     const { updateActiveOrg } = await import('./sessionContextCache.js');
     await updateActiveOrg(userId, newActiveOrgId, {
-        publicCode: targetOrg.public_code,
+        publicCode: targetOrg.publicCode,
         name: targetOrg.name,
-        logoUrl: targetOrg.logo_url
+        logoUrl: targetOrg.logoUrl
     });
     
     return {
         ...tokens,
-        active_organization_id: newActiveOrgId
+        activeOrganizationId: newActiveOrgId
     };
 };
 
 /**
  * Obtener organizaciones disponibles del usuario
- * SEGURIDAD: Retorna public_codes en lugar de UUIDs internos
+ * SEGURIDAD: Retorna publicCodes en lugar de UUIDs internos
  * 
  * @param {string} userId - ID del usuario
- * @returns {Promise<Object>} - Lista de organizaciones con detalles (solo public_codes)
+ * @returns {Promise<Object>} - Lista de organizaciones con detalles (solo publicCodes)
  */
 export const getUserAvailableOrganizations = async (userId) => {
     const user = await authRepository.findUserById(userId);
@@ -916,32 +916,32 @@ export const getUserAvailableOrganizations = async (userId) => {
     const Organization = (await import('../organizations/models/Organization.js')).default;
     
     // Función helper para mapear org a formato seguro (sin UUIDs)
-    // Recibe un Map de parentId -> parentPublicCode para resolver parent_public_code
+    // Recibe un Map de parentId -> parentPublicCode para resolver parentPublicCode
     const mapOrgToSafeFormat = (org, parentPublicCodeMap, directOrgIds, userOrganizations) => ({
-        public_code: org.public_code,
+        publicCode: org.publicCode,
         slug: org.slug,
         name: org.name,
-        logo_url: org.logo_url,
-        is_primary: userOrganizations.find(uo => uo.organization_id === org.id)?.is_primary || false,
-        is_active: org.is_active,
-        parent_public_code: org.parent_id ? (parentPublicCodeMap.get(org.parent_id) || null) : null,
-        joined_at: userOrganizations.find(uo => uo.organization_id === org.id)?.joined_at || null,
-        is_direct_member: directOrgIds.includes(org.id)
+        logoUrl: org.logoUrl,
+        isPrimary: userOrganizations.find(uo => uo.organizationId === org.id)?.isPrimary || false,
+        isActive: org.isActive,
+        parentPublicCode: org.parentId ? (parentPublicCodeMap.get(org.parentId) || null) : null,
+        joinedAt: userOrganizations.find(uo => uo.organizationId === org.id)?.joinedAt || null,
+        isDirectMember: directOrgIds.includes(org.id)
     });
     
     let accessibleOrganizations = [];
-    const directOrgIds = scope.userOrganizations.map(uo => uo.organization_id);
+    const directOrgIds = scope.userOrganizations.map(uo => uo.organizationId);
     
     if (scope.canAccessAll) {
         // system-admin: obtener todas las organizaciones del sistema con detalles
         const allOrgs = await Organization.findAll({
-            where: { is_active: true },
-            attributes: ['id', 'public_code', 'slug', 'name', 'logo_url', 'is_active', 'parent_id'],
+            where: { isActive: true },
+            attributes: ['id', 'publicCode', 'slug', 'name', 'logoUrl', 'isActive', 'parentId'],
             order: [['name', 'ASC']]
         });
         
-        // Crear mapa de id -> public_code para resolver parent_public_code
-        const parentPublicCodeMap = new Map(allOrgs.map(org => [org.id, org.public_code]));
+        // Crear mapa de id -> publicCode para resolver parentPublicCode
+        const parentPublicCodeMap = new Map(allOrgs.map(org => [org.id, org.publicCode]));
         
         // Mapear a formato seguro (sin UUIDs)
         accessibleOrganizations = allOrgs.map(org => 
@@ -953,25 +953,25 @@ export const getUserAvailableOrganizations = async (userId) => {
         const accessibleOrgs = await Organization.findAll({
             where: { 
                 id: scope.organizationIds,
-                is_active: true 
+                isActive: true 
             },
-            attributes: ['id', 'public_code', 'slug', 'name', 'logo_url', 'is_active', 'parent_id'],
+            attributes: ['id', 'publicCode', 'slug', 'name', 'logoUrl', 'isActive', 'parentId'],
             order: [['name', 'ASC']]
         });
         
-        // Obtener parent_ids únicos que no están en el resultado
-        const parentIds = [...new Set(accessibleOrgs.map(org => org.parent_id).filter(Boolean))];
+        // Obtener parentIds únicos que no están en el resultado
+        const parentIds = [...new Set(accessibleOrgs.map(org => org.parentId).filter(Boolean))];
         const missingParentIds = parentIds.filter(pid => !accessibleOrgs.some(org => org.id === pid));
         
-        // Buscar public_codes de parents faltantes
-        let parentPublicCodeMap = new Map(accessibleOrgs.map(org => [org.id, org.public_code]));
+        // Buscar publicCodes de parents faltantes
+        let parentPublicCodeMap = new Map(accessibleOrgs.map(org => [org.id, org.publicCode]));
         
         if (missingParentIds.length > 0) {
             const parentOrgs = await Organization.findAll({
                 where: { id: missingParentIds },
-                attributes: ['id', 'public_code']
+                attributes: ['id', 'publicCode']
             });
-            parentOrgs.forEach(org => parentPublicCodeMap.set(org.id, org.public_code));
+            parentOrgs.forEach(org => parentPublicCodeMap.set(org.id, org.publicCode));
         }
         
         accessibleOrganizations = accessibleOrgs.map(org => 
@@ -980,30 +980,30 @@ export const getUserAvailableOrganizations = async (userId) => {
         
     } else {
         // Para user/viewer: solo sus organizaciones directas
-        const userOrgIds = scope.userOrganizations.map(uo => uo.organization_id);
+        const userOrgIds = scope.userOrganizations.map(uo => uo.organizationId);
         
         if (userOrgIds.length > 0) {
             const userOrgs = await Organization.findAll({
                 where: { 
                     id: userOrgIds,
-                    is_active: true 
+                    isActive: true 
                 },
-                attributes: ['id', 'public_code', 'slug', 'name', 'logo_url', 'is_active', 'parent_id'],
+                attributes: ['id', 'publicCode', 'slug', 'name', 'logoUrl', 'isActive', 'parentId'],
                 order: [['name', 'ASC']]
             });
             
-            // Obtener parent public_codes
-            const parentIds = [...new Set(userOrgs.map(org => org.parent_id).filter(Boolean))];
-            let parentPublicCodeMap = new Map(userOrgs.map(org => [org.id, org.public_code]));
+            // Obtener parent publicCodes
+            const parentIds = [...new Set(userOrgs.map(org => org.parentId).filter(Boolean))];
+            let parentPublicCodeMap = new Map(userOrgs.map(org => [org.id, org.publicCode]));
             
             if (parentIds.length > 0) {
                 const missingParentIds = parentIds.filter(pid => !userOrgs.some(org => org.id === pid));
                 if (missingParentIds.length > 0) {
                     const parentOrgs = await Organization.findAll({
                         where: { id: missingParentIds },
-                        attributes: ['id', 'public_code']
+                        attributes: ['id', 'publicCode']
                     });
-                    parentOrgs.forEach(org => parentPublicCodeMap.set(org.id, org.public_code));
+                    parentOrgs.forEach(org => parentPublicCodeMap.set(org.id, org.publicCode));
                 }
             }
             
@@ -1030,7 +1030,7 @@ export const getUserAvailableOrganizations = async (userId) => {
  * @param {string} [sessionData.activeOrgId] - ID de org activa (puede ser null para system-admin)
  * @param {string} [sessionData.userAgent] - User agent
  * @param {string} [sessionData.ipAddress] - IP del cliente
- * @returns {Promise<Object>} - { access_token, refresh_token, expires_in, token_type }
+ * @returns {Promise<Object>} - { accessToken, refreshToken, expiresIn, tokenType }
  */
 export const generateTokensForUser = async (user, sessionData = {}) => {
     return await generateTokens(user, sessionData);

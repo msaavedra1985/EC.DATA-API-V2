@@ -14,7 +14,7 @@ import CountryTranslation from './models/CountryTranslation.js';
 export const findCountryByCode = async (code) => {
     if (!code) return null;
     return await Country.findOne({
-        where: { iso_alpha2: code.toUpperCase() }
+        where: { isoAlpha2: code.toUpperCase() }
     });
 };
 
@@ -42,7 +42,7 @@ export const findCountryById = async (id) => {
 export const getAllCountries = async (lang = 'es') => {
     const countries = await Country.findAll({
         where: {
-            is_active: true
+            isActive: true
         },
         include: [{
             model: CountryTranslation,
@@ -51,7 +51,7 @@ export const getAllCountries = async (lang = 'es') => {
                 lang: lang
             },
             required: false,
-            attributes: ['name', 'official_name']
+            attributes: ['name', 'officialName']
         }],
         order: [
             [{ model: CountryTranslation, as: 'translations' }, 'name', 'ASC']
@@ -64,11 +64,11 @@ export const getAllCountries = async (lang = 'es') => {
         const translation = country.translations?.[0];
         
         return {
-            code: country.iso_alpha2,
-            iso_alpha2: country.iso_alpha2,
-            iso_alpha3: country.iso_alpha3,
-            phone_code: country.phone_code,
-            name: translation?.name || country.iso_alpha2 // Fallback a código ISO si no hay traducción
+            code: country.isoAlpha2,
+            isoAlpha2: country.isoAlpha2,
+            isoAlpha3: country.isoAlpha3,
+            phoneCode: country.phoneCode,
+            name: translation?.name || country.isoAlpha2 // Fallback a código ISO si no hay traducción
         };
     }).filter(c => c.name); // Filtrar países sin traducción disponible
 };

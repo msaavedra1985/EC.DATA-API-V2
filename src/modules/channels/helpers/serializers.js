@@ -3,11 +3,11 @@
 
 /**
  * Convertir modelo Channel a DTO público
- * Expone public_code como 'id', oculta UUID interno
+ * Expone publicCode como 'id', oculta UUID interno
  * 
  * POLÍTICA DE SEGURIDAD:
  * - Nunca exponer el UUID interno en APIs públicas
- * - Siempre usar public_code como 'id' en respuestas
+ * - Siempre usar publicCode como 'id' en respuestas
  * - UUIDs solo para operaciones internas de base de datos
  * 
  * @param {Channel} channel - Modelo Sequelize Channel
@@ -17,24 +17,24 @@ export const toPublicChannelDto = (channel) => {
     if (!channel) return null;
     
     const dto = {
-        id: channel.public_code,
+        id: channel.publicCode,
         name: channel.name,
         description: channel.description,
         ch: channel.ch,
-        measurement_type_id: channel.measurement_type_id,
-        phase_system: channel.phase_system,
+        measurementTypeId: channel.measurementTypeId,
+        phaseSystem: channel.phaseSystem,
         phase: channel.phase,
         process: channel.process,
         status: channel.status,
-        last_sync_at: channel.last_sync_at,
+        lastSyncAt: channel.lastSyncAt,
         metadata: channel.metadata || {},
-        is_active: channel.is_active,
-        created_at: channel.created_at,
-        updated_at: channel.updated_at
+        isActive: channel.isActive,
+        createdAt: channel.createdAt,
+        updatedAt: channel.updatedAt
     };
 
     if (channel.measurementType) {
-        dto.measurement_type = {
+        dto.measurementType = {
             id: channel.measurementType.id,
             code: channel.measurementType.code
         };
@@ -42,7 +42,7 @@ export const toPublicChannelDto = (channel) => {
     
     if (channel.device) {
         dto.device = {
-            id: channel.device.public_code,
+            id: channel.device.publicCode,
             name: channel.device.name,
             status: channel.device.status
         };
@@ -50,10 +50,10 @@ export const toPublicChannelDto = (channel) => {
     
     if (channel.organization) {
         dto.organization = {
-            id: channel.organization.public_code,
+            id: channel.organization.publicCode,
             slug: channel.organization.slug,
             name: channel.organization.name,
-            logo_url: channel.organization.logo_url
+            logoUrl: channel.organization.logoUrl
         };
     }
     

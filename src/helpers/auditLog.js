@@ -14,7 +14,7 @@ const auditLogger = logger.child({ component: 'audit' });
  * 
  * @param {Object} params - Parámetros de la acción
  * @param {string} params.entityType - Tipo de entidad ('organization', 'user', 'product', etc.)
- * @param {string} params.entityId - ID de la entidad (preferentemente public_code)
+ * @param {string} params.entityId - ID de la entidad (preferentemente publicCode)
  * @param {string} params.action - Acción realizada ('created', 'updated', 'deleted', etc.)
  * @param {string|null} params.performedBy - UUID del usuario (null = sistema)
  * @param {Object|null} params.changes - Cambios: { field: { old, new } }
@@ -29,7 +29,7 @@ const auditLogger = logger.child({ component: 'audit' });
  * // Registrar creación de organización
  * await logAuditAction({
  *   entityType: 'organization',
- *   entityId: org.public_code,
+ *   entityId: org.publicCode,
  *   action: 'created',
  *   performedBy: req.user.userId,
  *   metadata: { organization_name: org.name },
@@ -41,7 +41,7 @@ const auditLogger = logger.child({ component: 'audit' });
  * // Registrar acción de system-admin impersonando otra org
  * await logAuditAction({
  *   entityType: 'resource_hierarchy',
- *   entityId: node.public_code,
+ *   entityId: node.publicCode,
  *   action: 'created',
  *   performedBy: req.user.userId,
  *   impersonatedOrgId: req.organizationContext.impersonating ? req.organizationContext.id : null,
@@ -53,7 +53,7 @@ const auditLogger = logger.child({ component: 'audit' });
  * // Registrar actualización con cambios específicos
  * await logAuditAction({
  *   entityType: 'organization',
- *   entityId: org.public_code,
+ *   entityId: org.publicCode,
  *   action: 'updated',
  *   performedBy: req.user.userId,
  *   changes: {
@@ -86,17 +86,17 @@ export const logAuditAction = async ({
         // Crear registro de auditoría
         const auditLog = await AuditLog.create({
             id: generateUuidV7(),
-            entity_type: entityType,
-            entity_id: entityId,
+            entityType,
+            entityId,
             action,
-            performed_by: performedBy,
+            performedBy,
             changes,
             metadata,
-            ip_address: ipAddress,
-            user_agent: userAgent,
-            correlation_id: correlationId,
-            impersonated_org_id: impersonatedOrgId,
-            performed_at: new Date()
+            ipAddress,
+            userAgent,
+            correlationId,
+            impersonatedOrgId,
+            performedAt: new Date()
         });
 
         auditLogger.debug({
@@ -138,16 +138,16 @@ export const getEntityAuditLogs = async (entityType, entityId, { limit = 50, off
     try {
         const result = await AuditLog.findAndCountAll({
             where: {
-                entity_type: entityType,
-                entity_id: entityId
+                entityType,
+                entityId
             },
-            order: [['performed_at', 'DESC']],
+            order: [['performedAt', 'DESC']],
             limit,
             offset,
             include: [
                 {
                     association: 'performedByUser',
-                    attributes: ['public_code', 'first_name', 'last_name', 'email'],
+                    attributes: ['publicCode', 'firstName', 'lastName', 'email'],
                     required: false
                 }
             ]
@@ -178,9 +178,9 @@ export const getUserAuditLogs = async (userId, { limit = 50, offset = 0 } = {}) 
     try {
         const result = await AuditLog.findAndCountAll({
             where: {
-                performed_by: userId
+                performedBy: userId
             },
-            order: [['performed_at', 'DESC']],
+            order: [['performedAt', 'DESC']],
             limit,
             offset
         });
@@ -216,7 +216,7 @@ export const getRecentActivity = async ({
         const where = {};
         
         if (entityType) {
-            where.entity_type = entityType;
+            where.entityType = entityType;
         }
         
         if (action) {
@@ -225,13 +225,13 @@ export const getRecentActivity = async ({
 
         const result = await AuditLog.findAndCountAll({
             where,
-            order: [['performed_at', 'DESC']],
+            order: [['performedAt', 'DESC']],
             limit,
             offset,
             include: [
                 {
                     association: 'performedByUser',
-                    attributes: ['public_code', 'first_name', 'last_name', 'email'],
+                    attributes: ['publicCode', 'firstName', 'lastName', 'email'],
                     required: false
                 }
             ]

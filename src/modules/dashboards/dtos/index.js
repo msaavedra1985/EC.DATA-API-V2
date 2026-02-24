@@ -25,7 +25,7 @@ const dashboardPositioningEnum = ['AUTO', 'FLOAT'];
 /**
  * Schema para crear un nuevo dashboard
  * POST /dashboards
- * Nota: organization_id y owner_id vienen del middleware (req.organizationContext y req.user)
+ * Nota: organizationId y ownerId vienen del middleware (req.organizationContext y req.user)
  */
 export const createDashboardSchema = z.object({
     body: z.object({
@@ -42,7 +42,7 @@ export const createDashboardSchema = z.object({
             .string()
             .max(50, 'icon no puede exceder 50 caracteres')
             .optional(),
-        is_public: z
+        isPublic: z
             .boolean()
             .optional()
             .default(false),
@@ -58,19 +58,19 @@ export const createDashboardSchema = z.object({
             })
             .optional()
             .default('AUTO'),
-        custom_width: z
+        customWidth: z
             .number()
-            .int('custom_width debe ser un entero')
-            .min(800, 'custom_width mínimo es 800')
-            .max(3840, 'custom_width máximo es 3840')
+            .int('customWidth debe ser un entero')
+            .min(800, 'customWidth mínimo es 800')
+            .max(3840, 'customWidth máximo es 3840')
             .nullable()
             .optional()
             .default(null),
-        custom_height: z
+        customHeight: z
             .number()
-            .int('custom_height debe ser un entero')
-            .min(600, 'custom_height mínimo es 600')
-            .max(2160, 'custom_height máximo es 2160')
+            .int('customHeight debe ser un entero')
+            .min(600, 'customHeight mínimo es 600')
+            .max(2160, 'customHeight máximo es 2160')
             .nullable()
             .optional()
             .default(null),
@@ -81,7 +81,7 @@ export const createDashboardSchema = z.object({
             })
             .optional()
             .default({}),
-        template_id: z
+        templateId: z
             .string()
             .nullable()
             .optional()
@@ -89,19 +89,19 @@ export const createDashboardSchema = z.object({
     }).refine(
         (data) => {
             if (data.size === 'CUSTOM') {
-                return data.custom_width != null && data.custom_height != null;
+                return data.customWidth != null && data.customHeight != null;
             }
             return true;
         },
-        { message: 'custom_width y custom_height son requeridos cuando size es CUSTOM', path: ['custom_width'] }
+        { message: 'customWidth y customHeight son requeridos cuando size es CUSTOM', path: ['customWidth'] }
     ).refine(
         (data) => {
             if (data.size !== 'CUSTOM') {
-                return data.custom_width == null && data.custom_height == null;
+                return data.customWidth == null && data.customHeight == null;
             }
             return true;
         },
-        { message: 'custom_width y custom_height solo son válidos cuando size es CUSTOM', path: ['custom_width'] }
+        { message: 'customWidth y customHeight solo son válidos cuando size es CUSTOM', path: ['customWidth'] }
     )
 });
 
@@ -130,10 +130,10 @@ export const updateDashboardSchema = z.object({
             .string()
             .max(50, 'icon no puede exceder 50 caracteres')
             .optional(),
-        is_public: z
+        isPublic: z
             .boolean()
             .optional(),
-        is_active: z
+        isActive: z
             .boolean()
             .optional(),
         size: z
@@ -146,18 +146,18 @@ export const updateDashboardSchema = z.object({
                 errorMap: () => ({ message: `positioning debe ser uno de: ${dashboardPositioningEnum.join(', ')}` })
             })
             .optional(),
-        custom_width: z
+        customWidth: z
             .number()
-            .int('custom_width debe ser un entero')
-            .min(800, 'custom_width mínimo es 800')
-            .max(3840, 'custom_width máximo es 3840')
+            .int('customWidth debe ser un entero')
+            .min(800, 'customWidth mínimo es 800')
+            .max(3840, 'customWidth máximo es 3840')
             .nullable()
             .optional(),
-        custom_height: z
+        customHeight: z
             .number()
-            .int('custom_height debe ser un entero')
-            .min(600, 'custom_height mínimo es 600')
-            .max(2160, 'custom_height máximo es 2160')
+            .int('customHeight debe ser un entero')
+            .min(600, 'customHeight mínimo es 600')
+            .max(2160, 'customHeight máximo es 2160')
             .nullable()
             .optional(),
         settings: z
@@ -169,19 +169,19 @@ export const updateDashboardSchema = z.object({
     }).refine(
         (data) => {
             if (data.size === 'CUSTOM') {
-                return data.custom_width != null && data.custom_height != null;
+                return data.customWidth != null && data.customHeight != null;
             }
             return true;
         },
-        { message: 'custom_width y custom_height son requeridos cuando size es CUSTOM', path: ['custom_width'] }
+        { message: 'customWidth y customHeight son requeridos cuando size es CUSTOM', path: ['customWidth'] }
     ).refine(
         (data) => {
             if (data.size !== undefined && data.size !== 'CUSTOM') {
-                return data.custom_width == null && data.custom_height == null;
+                return data.customWidth == null && data.customHeight == null;
             }
             return true;
         },
-        { message: 'custom_width y custom_height solo son válidos cuando size es CUSTOM', path: ['custom_width'] }
+        { message: 'customWidth y customHeight solo son válidos cuando size es CUSTOM', path: ['customWidth'] }
     )
 });
 
@@ -195,7 +195,7 @@ export const getDashboardsSchema = z.object({
             .string()
             .max(200, 'search no puede exceder 200 caracteres')
             .optional(),
-        is_public: z
+        isPublic: z
             .string()
             .transform((val) => val === 'true')
             .optional(),
@@ -282,10 +282,10 @@ export const createPageSchema = z.object({
             })
             .min(1, 'name no puede estar vacío')
             .max(200, 'name no puede exceder 200 caracteres'),
-        order_index: z
-            .number({ invalid_type_error: 'order_index debe ser un número' })
-            .int('order_index debe ser un entero')
-            .min(0, 'order_index debe ser mayor o igual a 0')
+        orderIndex: z
+            .number({ invalid_type_error: 'orderIndex debe ser un número' })
+            .int('orderIndex debe ser un entero')
+            .min(0, 'orderIndex debe ser mayor o igual a 0')
             .optional()
             .default(0)
     })
@@ -314,10 +314,10 @@ export const updatePageSchema = z.object({
             .min(1, 'name no puede estar vacío')
             .max(200, 'name no puede exceder 200 caracteres')
             .optional(),
-        order_index: z
-            .number({ invalid_type_error: 'order_index debe ser un número' })
-            .int('order_index debe ser un entero')
-            .min(0, 'order_index debe ser mayor o igual a 0')
+        orderIndex: z
+            .number({ invalid_type_error: 'orderIndex debe ser un número' })
+            .int('orderIndex debe ser un entero')
+            .min(0, 'orderIndex debe ser mayor o igual a 0')
             .optional()
     })
 });
@@ -379,16 +379,16 @@ export const createWidgetSchema = z.object({
                 h: z.number({ invalid_type_error: 'layout.h debe ser un número' })
             })
             .optional(),
-        style_config: z
+        styleConfig: z
             .record(z.any())
             .optional(),
-        data_config: z
+        dataConfig: z
             .record(z.any())
             .optional(),
-        order_index: z
-            .number({ invalid_type_error: 'order_index debe ser un número' })
-            .int('order_index debe ser un entero')
-            .min(0, 'order_index debe ser mayor o igual a 0')
+        orderIndex: z
+            .number({ invalid_type_error: 'orderIndex debe ser un número' })
+            .int('orderIndex debe ser un entero')
+            .min(0, 'orderIndex debe ser mayor o igual a 0')
             .optional()
             .default(0)
     })
@@ -434,16 +434,16 @@ export const updateWidgetSchema = z.object({
                 h: z.number({ invalid_type_error: 'layout.h debe ser un número' })
             })
             .optional(),
-        style_config: z
+        styleConfig: z
             .record(z.any())
             .optional(),
-        data_config: z
+        dataConfig: z
             .record(z.any())
             .optional(),
-        order_index: z
-            .number({ invalid_type_error: 'order_index debe ser un número' })
-            .int('order_index debe ser un entero')
-            .min(0, 'order_index debe ser mayor o igual a 0')
+        orderIndex: z
+            .number({ invalid_type_error: 'orderIndex debe ser un número' })
+            .int('orderIndex debe ser un entero')
+            .min(0, 'orderIndex debe ser mayor o igual a 0')
             .optional()
     })
 });
@@ -489,27 +489,27 @@ export const createDataSourceSchema = z.object({
             .min(1, 'widgetId no puede estar vacío')
     }),
     body: z.object({
-        entity_type: z
+        entityType: z
             .enum(entityTypeEnum, {
-                errorMap: () => ({ message: `entity_type debe ser uno de: ${entityTypeEnum.join(', ')}` })
+                errorMap: () => ({ message: `entityType debe ser uno de: ${entityTypeEnum.join(', ')}` })
             }),
-        entity_id: z
+        entityId: z
             .string({
-                required_error: 'entity_id es requerido'
+                required_error: 'entityId es requerido'
             })
-            .min(1, 'entity_id no puede estar vacío')
-            .max(100, 'entity_id no puede exceder 100 caracteres'),
+            .min(1, 'entityId no puede estar vacío')
+            .max(100, 'entityId no puede exceder 100 caracteres'),
         label: z
             .string()
             .max(200, 'label no puede exceder 200 caracteres')
             .optional(),
-        series_config: z
+        seriesConfig: z
             .record(z.any())
             .optional(),
-        order_index: z
-            .number({ invalid_type_error: 'order_index debe ser un número' })
-            .int('order_index debe ser un entero')
-            .min(0, 'order_index debe ser mayor o igual a 0')
+        orderIndex: z
+            .number({ invalid_type_error: 'orderIndex debe ser un número' })
+            .int('orderIndex debe ser un entero')
+            .min(0, 'orderIndex debe ser mayor o igual a 0')
             .optional()
             .default(0)
     })
@@ -533,27 +533,27 @@ export const updateDataSourceSchema = z.object({
             .min(1, 'dataSourceId no puede estar vacío')
     }),
     body: z.object({
-        entity_type: z
+        entityType: z
             .enum(entityTypeEnum, {
-                errorMap: () => ({ message: `entity_type debe ser uno de: ${entityTypeEnum.join(', ')}` })
+                errorMap: () => ({ message: `entityType debe ser uno de: ${entityTypeEnum.join(', ')}` })
             })
             .optional(),
-        entity_id: z
+        entityId: z
             .string()
-            .min(1, 'entity_id no puede estar vacío')
-            .max(100, 'entity_id no puede exceder 100 caracteres')
+            .min(1, 'entityId no puede estar vacío')
+            .max(100, 'entityId no puede exceder 100 caracteres')
             .optional(),
         label: z
             .string()
             .max(200, 'label no puede exceder 200 caracteres')
             .optional(),
-        series_config: z
+        seriesConfig: z
             .record(z.any())
             .optional(),
-        order_index: z
-            .number({ invalid_type_error: 'order_index debe ser un número' })
-            .int('order_index debe ser un entero')
-            .min(0, 'order_index debe ser mayor o igual a 0')
+        orderIndex: z
+            .number({ invalid_type_error: 'orderIndex debe ser un número' })
+            .int('orderIndex debe ser un entero')
+            .min(0, 'orderIndex debe ser mayor o igual a 0')
             .optional()
     })
 });
@@ -620,7 +620,7 @@ export const updateGroupSchema = z.object({
         description: z
             .string()
             .optional(),
-        is_active: z
+        isActive: z
             .boolean()
             .optional()
     })
@@ -713,15 +713,15 @@ export const addGroupItemSchema = z.object({
             .min(1, 'groupId no puede estar vacío')
     }),
     body: z.object({
-        dashboard_id: z
+        dashboardId: z
             .string({
-                required_error: 'dashboard_id es requerido'
+                required_error: 'dashboardId es requerido'
             })
-            .min(1, 'dashboard_id no puede estar vacío'),
-        order_index: z
-            .number({ invalid_type_error: 'order_index debe ser un número' })
-            .int('order_index debe ser un entero')
-            .min(0, 'order_index debe ser mayor o igual a 0')
+            .min(1, 'dashboardId no puede estar vacío'),
+        orderIndex: z
+            .number({ invalid_type_error: 'orderIndex debe ser un número' })
+            .int('orderIndex debe ser un entero')
+            .min(0, 'orderIndex debe ser mayor o igual a 0')
             .optional()
             .default(0)
     })
@@ -763,11 +763,11 @@ export const addCollaboratorSchema = z.object({
             .min(1, 'ID no puede estar vacío')
     }),
     body: z.object({
-        user_id: z
+        userId: z
             .string({
-                required_error: 'user_id es requerido'
+                required_error: 'userId es requerido'
             })
-            .min(1, 'user_id no puede estar vacío'),
+            .min(1, 'userId no puede estar vacío'),
         role: z
             .enum(collaboratorRoleEnum, {
                 errorMap: () => ({ message: `role debe ser uno de: ${collaboratorRoleEnum.join(', ')}` })

@@ -7,7 +7,7 @@ import { z } from 'zod';
  * Schema Zod para validar disponibilidad de email de usuario
  * Validaciones:
  * - email: requerido, formato válido de email
- * - exclude_id: opcional, public_code de usuario a excluir (para edición)
+ * - excludeId: opcional, publicCode de usuario a excluir (para edición)
  */
 export const validateEmailSchema = z.object({
     email: z.string()
@@ -16,8 +16,8 @@ export const validateEmailSchema = z.object({
         .trim()
         .toLowerCase(),
     
-    exclude_id: z.string()
-        .min(1, 'Exclude ID (public_code) cannot be empty')
+    excludeId: z.string()
+        .min(1, 'Exclude ID (publicCode) cannot be empty')
         .optional()
         .nullable()
 });

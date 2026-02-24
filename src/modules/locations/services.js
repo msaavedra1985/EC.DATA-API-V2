@@ -62,7 +62,7 @@ export const getCitiesByState = async (stateCode, lang = 'es') => {
             .filter(city => city.state_code === localStateCode)
             .map(city => ({
                 name: city.translations?.[lang] || city.translations?.es || city.name,
-                state_code: stateCode,
+                stateCode: stateCode,
                 latitude: city.latitude,
                 longitude: city.longitude,
                 population: city.population,

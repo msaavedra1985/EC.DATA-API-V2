@@ -27,23 +27,23 @@ export const registerSchema = z.object({
                 /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
                 'Password debe contener al menos una mayúscula, una minúscula y un número'
             ),
-        first_name: z
+        firstName: z
             .string({
                 required_error: 'Nombre es requerido'
             })
             .min(2, 'Nombre debe tener al menos 2 caracteres')
             .max(100, 'Nombre no puede exceder 100 caracteres')
             .trim(),
-        last_name: z
+        lastName: z
             .string({
                 required_error: 'Apellido es requerido'
             })
             .min(2, 'Apellido debe tener al menos 2 caracteres')
             .max(100, 'Apellido no puede exceder 100 caracteres')
             .trim(),
-        organization_id: z
+        organizationId: z
             .string()
-            .uuid('organization_id debe ser un UUID válido')
+            .uuid('organizationId debe ser un UUID válido')
             .optional()
             .nullable()
     })
@@ -77,19 +77,13 @@ export const loginSchema = z.object({
                 required_error: 'Password es requerido'
             })
             .min(1, 'Password no puede estar vacío'),
-        remember_me: z
+        rememberMe: z
             .boolean({
-                invalid_type_error: 'remember_me debe ser un booleano'
+                invalid_type_error: 'rememberMe debe ser un booleano'
             })
             .optional()
             .default(false),
-        // Token de Cloudflare Turnstile (captcha) - opcional
-        // Acepta camelCase (captchaToken) o snake_case (captcha_token)
         captchaToken: z
-            .string()
-            .optional()
-            .nullable(),
-        captcha_token: z
             .string()
             .optional()
             .nullable()
@@ -106,7 +100,7 @@ export const loginSchema = z.object({
  */
 export const refreshTokenSchema = z.object({
     body: z.object({
-        refresh_token: z
+        refreshToken: z
             .string({
                 required_error: 'Refresh token es requerido'
             })
@@ -120,12 +114,12 @@ export const refreshTokenSchema = z.object({
  */
 export const changePasswordSchema = z.object({
     body: z.object({
-        current_password: z
+        currentPassword: z
             .string({
                 required_error: 'Password actual es requerido'
             })
             .min(1, 'Password actual no puede estar vacío'),
-        new_password: z
+        newPassword: z
             .string({
                 required_error: 'Nuevo password es requerido'
             })
@@ -165,7 +159,7 @@ export const resetPasswordSchema = z.object({
                 required_error: 'Token es requerido'
             })
             .min(1, 'Token no puede estar vacío'),
-        new_password: z
+        newPassword: z
             .string({
                 required_error: 'Nuevo password es requerido'
             })
@@ -181,11 +175,11 @@ export const resetPasswordSchema = z.object({
 /**
  * Schema para logout
  * POST /auth/logout
- * refresh_token puede venir en body o en header Authorization
+ * refreshToken puede venir en body o en header Authorization
  */
 export const logoutSchema = z.object({
     body: z.object({
-        refresh_token: z
+        refreshToken: z
             .string()
             .min(1, 'Refresh token no puede estar vacío')
             .optional()
@@ -210,14 +204,14 @@ export const revokeSessionSchema = z.object({
  * Schema para cambiar organización activa
  * POST /auth/switch-org
  * 
- * Acepta public_code de la organización (ej: "ORG-xyz123-1")
+ * Acepta publicCode de la organización (ej: "ORG-xyz123-1")
  */
 export const switchOrgSchema = z.object({
     body: z.object({
-        organization_id: z
+        organizationId: z
             .string({
-                required_error: 'organization_id es requerido'
+                required_error: 'organizationId es requerido'
             })
-            .min(1, 'organization_id no puede estar vacío')
+            .min(1, 'organizationId no puede estar vacío')
     })
 });

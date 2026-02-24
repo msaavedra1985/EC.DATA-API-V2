@@ -10,28 +10,28 @@ import { z } from 'zod';
  * Todos los campos son opcionales (partial update)
  * 
  * Campos permitidos:
- * - first_name: Nombre
- * - last_name: Apellido
+ * - firstName: Nombre
+ * - lastName: Apellido
  * - role: Cambiar rol (con validación de jerarquía)
- * - organization_id: Cambiar organización (solo system-admin)
- * - is_active: Activar/desactivar usuario
+ * - organizationId: Cambiar organización (solo system-admin)
+ * - isActive: Activar/desactivar usuario
  * - phone: Número de teléfono
  * - language: Idioma preferido (es, en)
  * - timezone: Zona horaria IANA
- * - avatar_url: URL del avatar
+ * - avatarUrl: URL del avatar
  * 
  * Campos NO permitidos aquí:
  * - email: Requiere endpoint dedicado (evitar conflictos)
  * - password: Usar PATCH /users/:id/password
  */
 export const updateUserSchema = z.object({
-    first_name: z.string()
+    firstName: z.string()
         .min(1, 'First name cannot be empty')
         .max(100, 'First name must be at most 100 characters')
         .trim()
         .optional(),
     
-    last_name: z.string()
+    lastName: z.string()
         .min(1, 'Last name cannot be empty')
         .max(100, 'Last name must be at most 100 characters')
         .trim()
@@ -42,7 +42,7 @@ export const updateUserSchema = z.object({
         .regex(/^[a-z-]+$/, 'Role must be a valid slug (lowercase with hyphens)')
         .optional(),
     
-    organization_id: z.string()
+    organizationId: z.string()
         .refine(
             (val) => !val || /^ORG-[A-Z0-9]{5}-[A-Z0-9]$/.test(val),
             'Invalid organization public code format'
@@ -50,7 +50,7 @@ export const updateUserSchema = z.object({
         .optional()
         .nullable(),
     
-    is_active: z.boolean()
+    isActive: z.boolean()
         .optional(),
     
     phone: z.string()
@@ -71,7 +71,7 @@ export const updateUserSchema = z.object({
         .optional()
         .nullable(),
     
-    avatar_url: z.string()
+    avatarUrl: z.string()
         .url('Avatar URL must be a valid URL')
         .optional()
         .nullable()

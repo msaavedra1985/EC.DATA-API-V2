@@ -8,7 +8,7 @@ import { z } from 'zod';
  * Validaciones:
  * - name: opcional, string 2-200 caracteres
  * - slug: opcional, string 2-100 caracteres alfanumérico con guiones
- * - exclude_id: opcional, public_code de organización a excluir (para edición)
+ * - excludeId: opcional, public_code de organización a excluir (para edición)
  * - Al menos uno de name o slug debe estar presente
  */
 export const validateOrganizationSchema = z.object({
@@ -25,7 +25,7 @@ export const validateOrganizationSchema = z.object({
         .trim()
         .optional(),
     
-    exclude_id: z.string()
+    excludeId: z.string()
         .min(1, 'Exclude ID (public_code) cannot be empty')
         .optional()
         .nullable()

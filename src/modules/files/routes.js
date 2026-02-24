@@ -405,12 +405,12 @@ router.post('/:id/confirm', authenticate, validate(confirmUploadSchema), async (
 router.post('/:id/link', authenticate, validate(linkFileSchema), async (req, res, next) => {
     try {
         const { id } = req.params;
-        const { owner_type, owner_id } = req.body;
+        const { ownerType, ownerId } = req.body;
         const userId = req.user.userId;
         const ipAddress = req.ip || req.connection.remoteAddress;
         const userAgent = req.headers['user-agent'];
 
-        const result = await fileServices.linkFile(id, owner_type, owner_id, userId, ipAddress, userAgent);
+        const result = await fileServices.linkFile(id, ownerType, ownerId, userId, ipAddress, userAgent);
 
         res.json({
             ok: true,
@@ -525,7 +525,7 @@ router.get('/', authenticate, enforceActiveOrganization, validate(listFilesSchem
         // Si showAll=true (God View), no filtra por organización
         const result = await fileServices.listFiles({
             ...req.query,
-            organization_id: req.organizationContext.id,
+            organizationId: req.organizationContext.id,
             showAll: req.organizationContext.showAll || false
         });
 

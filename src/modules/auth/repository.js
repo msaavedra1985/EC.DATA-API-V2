@@ -8,48 +8,48 @@ import { authLogger } from '../../utils/logger.js';
 
 /**
  * Crear un nuevo usuario en la base de datos
- * Genera automáticamente: UUID v7, human_id (scoped por organization_id), public_code (prefijo EC-)
+ * Genera automáticamente: UUID v7, humanId (scoped por organizationId), publicCode (prefijo EC-)
  * 
  * @param {Object} userData - Datos del usuario a crear
  * @param {string} userData.email - Email único
- * @param {string} userData.password_hash - Hash de la contraseña (ya hasheado con bcrypt)
- * @param {string} userData.first_name - Nombre
- * @param {string} userData.last_name - Apellido
- * @param {string} [userData.organization_id] - ID de la organización (opcional)
+ * @param {string} userData.passwordHash - Hash de la contraseña (ya hasheado con bcrypt)
+ * @param {string} userData.firstName - Nombre
+ * @param {string} userData.lastName - Apellido
+ * @param {string} [userData.organizationId] - ID de la organización (opcional)
  * @param {string} [userData.role='user'] - Rol del usuario
- * @returns {Promise<Object>} - Usuario creado (sin password_hash)
+ * @returns {Promise<Object>} - Usuario creado (sin passwordHash)
  */
 export const createUser = async (userData) => {
     try {
         // Generar UUID v7
         const id = generateUuidV7();
         
-        // Generar human_id con scope por organization_id
+        // Generar humanId con scope por organizationId
         const humanId = await generateHumanId(
             User,
-            'organization_id',
-            userData.organization_id || null
+            'organizationId',
+            userData.organizationId || null
         );
         
-        // Generar public_code con prefijo EC- usando UUID v7 para garantizar unicidad global
+        // Generar publicCode con prefijo EC- usando UUID v7 para garantizar unicidad global
         const publicCode = generatePublicCode('EC', id);
         
         // Crear usuario con identificadores
         const user = await User.create({
             id,
-            human_id: humanId,
-            public_code: publicCode,
+            humanId,
+            publicCode,
             ...userData
         });
         
         // Refetch con role incluido
         const userWithRole = await User.findByPk(user.id, {
-            attributes: { exclude: ['password_hash'] },
+            attributes: { exclude: ['passwordHash'] },
             include: [
                 {
                     model: Role,
                     as: 'role',
-                    attributes: ['id', 'name', 'description', 'is_active']
+                    attributes: ['id', 'name', 'description', 'isActive']
                 }
             ]
         });
@@ -64,7 +64,7 @@ export const createUser = async (userData) => {
 /**
  * Buscar usuario por email
  * @param {string} email - Email del usuario
- * @param {boolean} includePassword - Si incluir password_hash (para verificación de login)
+ * @param {boolean} includePassword - Si incluir passwordHash (para verificación de login)
  * @returns {Promise<Object|null>} - Usuario encontrado o null
  */
 export const findUserByEmail = async (email, includePassword = false) => {
@@ -74,12 +74,12 @@ export const findUserByEmail = async (email, includePassword = false) => {
             // Si includePassword es true, necesitamos el campo para verificar login
             attributes: includePassword 
                 ? undefined // Incluir todos los campos
-                : { exclude: ['password_hash'] },
+                : { exclude: ['passwordHash'] },
             include: [
                 {
                     model: Role,
                     as: 'role',
-                    attributes: ['id', 'name', 'description', 'is_active']
+                    attributes: ['id', 'name', 'description', 'isActive']
                 }
             ]
         });
@@ -92,16 +92,16 @@ export const findUserByEmail = async (email, includePassword = false) => {
 };
 
 /**
- * Buscar usuario por identificador (email, username O public_code)
+ * Buscar usuario por identificador (email, username O publicCode)
  * Para login híbrido que acepta múltiples identificadores
  * 
  * El login híbrido acepta:
  * - email (normalizado a lowercase)
  * - username (normalizado a lowercase)
- * - public_code (formato EC-XXXXX-X)
+ * - publicCode (formato EC-XXXXX-X)
  * 
- * @param {string} identifier - Email, username o public_code del usuario
- * @param {boolean} includePassword - Si incluir password_hash (para verificación de login)
+ * @param {string} identifier - Email, username o publicCode del usuario
+ * @param {boolean} includePassword - Si incluir passwordHash (para verificación de login)
  * @returns {Promise<Object|null>} - Usuario encontrado o null
  */
 export const findUserByIdentifier = async (identifier, includePassword = false) => {
@@ -121,10 +121,10 @@ export const findUserByIdentifier = async (identifier, includePassword = false) 
         // Buscar por username (normalizado a lowercase)
         conditions.push({ username: lowercaseIdentifier });
         
-        // Si el identificador tiene formato de public_code (EC-XXXXX-X), buscar también por public_code
+        // Si el identificador tiene formato de publicCode (EC-XXXXX-X), buscar también por publicCode
         const publicCodePattern = /^EC-[A-Z0-9]+-\d$/i;
         if (publicCodePattern.test(trimmedIdentifier)) {
-            conditions.push({ public_code: trimmedIdentifier.toUpperCase() });
+            conditions.push({ publicCode: trimmedIdentifier.toUpperCase() });
         }
         
         const user = await User.findOne({
@@ -134,12 +134,12 @@ export const findUserByIdentifier = async (identifier, includePassword = false) 
             // Si includePassword es true, necesitamos el campo para verificar login
             attributes: includePassword 
                 ? undefined // Incluir todos los campos
-                : { exclude: ['password_hash'] },
+                : { exclude: ['passwordHash'] },
             include: [
                 {
                     model: Role,
                     as: 'role',
-                    attributes: ['id', 'name', 'description', 'is_active']
+                    attributes: ['id', 'name', 'description', 'isActive']
                 }
             ]
         });
@@ -159,12 +159,12 @@ export const findUserByIdentifier = async (identifier, includePassword = false) 
 export const findUserById = async (userId) => {
     try {
         const user = await User.findByPk(userId, {
-            attributes: { exclude: ['password_hash'] },
+            attributes: { exclude: ['passwordHash'] },
             include: [
                 {
                     model: Role,
                     as: 'role',
-                    attributes: ['id', 'name', 'description', 'is_active']
+                    attributes: ['id', 'name', 'description', 'isActive']
                 }
             ]
         });
@@ -184,7 +184,7 @@ export const findUserById = async (userId) => {
 export const updateLastLogin = async (userId) => {
     try {
         const [affectedRows] = await User.update(
-            { last_login_at: new Date() },
+            { lastLoginAt: new Date() },
             { where: { id: userId } }
         );
         
@@ -204,7 +204,7 @@ export const updateLastLogin = async (userId) => {
 export const updatePassword = async (userId, newPasswordHash) => {
     try {
         const [affectedRows] = await User.update(
-            { password_hash: newPasswordHash },
+            { passwordHash: newPasswordHash },
             { where: { id: userId } }
         );
         
@@ -223,7 +223,7 @@ export const updatePassword = async (userId, newPasswordHash) => {
 export const verifyEmail = async (userId) => {
     try {
         const [affectedRows] = await User.update(
-            { email_verified_at: new Date() },
+            { emailVerifiedAt: new Date() },
             { where: { id: userId } }
         );
         
@@ -243,7 +243,7 @@ export const verifyEmail = async (userId) => {
 export const setUserActiveStatus = async (userId, isActive) => {
     try {
         const [affectedRows] = await User.update(
-            { is_active: isActive },
+            { isActive },
             { where: { id: userId } }
         );
         
@@ -255,20 +255,20 @@ export const setUserActiveStatus = async (userId, isActive) => {
 };
 
 /**
- * Buscar usuario por public_code
- * @param {string} publicCode - public_code del usuario (ej: EC-7K9D2-X)
+ * Buscar usuario por publicCode
+ * @param {string} publicCode - publicCode del usuario (ej: EC-7K9D2-X)
  * @returns {Promise<Object|null>} - Usuario encontrado o null
  */
 export const findUserByPublicCode = async (publicCode) => {
     try {
         const user = await User.findOne({
-            where: { public_code: publicCode },
-            attributes: { exclude: ['password_hash'] },
+            where: { publicCode },
+            attributes: { exclude: ['passwordHash'] },
             include: [
                 {
                     model: Role,
                     as: 'role',
-                    attributes: ['id', 'name', 'description', 'is_active']
+                    attributes: ['id', 'name', 'description', 'isActive']
                 }
             ]
         });
@@ -281,8 +281,8 @@ export const findUserByPublicCode = async (publicCode) => {
 };
 
 /**
- * Buscar usuario por human_id + organization_id (solo uso interno/admin)
- * @param {number} humanId - human_id del usuario
+ * Buscar usuario por humanId + organizationId (solo uso interno/admin)
+ * @param {number} humanId - humanId del usuario
  * @param {string} organizationId - UUID de la organización
  * @returns {Promise<Object|null>} - Usuario encontrado o null
  */
@@ -290,15 +290,15 @@ export const findUserByHumanId = async (humanId, organizationId) => {
     try {
         const user = await User.findOne({
             where: { 
-                human_id: humanId,
-                organization_id: organizationId
+                humanId,
+                organizationId
             },
-            attributes: { exclude: ['password_hash'] },
+            attributes: { exclude: ['passwordHash'] },
             include: [
                 {
                     model: Role,
                     as: 'role',
-                    attributes: ['id', 'name', 'description', 'is_active']
+                    attributes: ['id', 'name', 'description', 'isActive']
                 }
             ]
         });
@@ -315,10 +315,10 @@ export const findUserByHumanId = async (humanId, organizationId) => {
  * @param {Object} options - Opciones de búsqueda
  * @param {number} [options.limit=50] - Límite de resultados
  * @param {number} [options.offset=0] - Offset para paginación
- * @param {string} [options.role_id] - Filtrar por role_id (UUID)
- * @param {string} [options.role_name] - Filtrar por nombre de rol
- * @param {string} [options.organization_id] - Filtrar por organización
- * @param {boolean} [options.is_active] - Filtrar por estado activo
+ * @param {string} [options.roleId] - Filtrar por roleId (UUID)
+ * @param {string} [options.roleName] - Filtrar por nombre de rol
+ * @param {string} [options.organizationId] - Filtrar por organización
+ * @param {boolean} [options.isActive] - Filtrar por estado activo
  * @returns {Promise<Object>} - { users: Array, total: number }
  */
 export const listUsers = async (options = {}) => {
@@ -326,37 +326,37 @@ export const listUsers = async (options = {}) => {
         const {
             limit = 50,
             offset = 0,
-            role_id,
-            role_name,
-            organization_id,
-            is_active
+            roleId,
+            roleName,
+            organizationId,
+            isActive
         } = options;
 
         // Construir filtros dinámicos
         const where = {};
-        if (role_id) where.role_id = role_id;
-        if (organization_id !== undefined) where.organization_id = organization_id;
-        if (is_active !== undefined) where.is_active = is_active;
+        if (roleId) where.roleId = roleId;
+        if (organizationId !== undefined) where.organizationId = organizationId;
+        if (isActive !== undefined) where.isActive = isActive;
 
-        // Para filtrar por role_name, usamos include con where
-        const roleFilter = role_name ? {
+        // Para filtrar por roleName, usamos include con where
+        const roleFilter = roleName ? {
             model: Role,
             as: 'role',
-            attributes: ['id', 'name', 'description', 'is_active'],
-            where: { name: role_name }
+            attributes: ['id', 'name', 'description', 'isActive'],
+            where: { name: roleName }
         } : {
             model: Role,
             as: 'role',
-            attributes: ['id', 'name', 'description', 'is_active']
+            attributes: ['id', 'name', 'description', 'isActive']
         };
 
         const { count, rows } = await User.findAndCountAll({
             where,
             limit,
             offset,
-            attributes: { exclude: ['password_hash'] },
+            attributes: { exclude: ['passwordHash'] },
             include: [roleFilter],
-            order: [['created_at', 'DESC']]
+            order: [['createdAt', 'DESC']]
         });
 
         return {

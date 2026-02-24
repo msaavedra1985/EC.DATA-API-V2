@@ -26,7 +26,7 @@ export const cacheRole = async (role) => {
             id: role.id,
             name: role.name,
             description: role.description,
-            is_active: role.is_active
+            isActive: role.isActive
         };
 
         await setCache(key, roleData, ROLE_CACHE_TTL);

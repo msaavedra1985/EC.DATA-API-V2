@@ -21,7 +21,7 @@ import logger from '../../utils/logger.js';
  * @returns {Promise<{hasAccess: boolean, role: string}>}
  */
 export const checkGroupAccess = async (group, userId, requiredRole = 'viewer') => {
-  if (group.owner_id === userId) {
+  if (group.ownerId === userId) {
     return { hasAccess: true, role: 'owner' };
   }
 
@@ -83,7 +83,7 @@ export const listGroups = async (organizationId, query = {}, userId) => {
 };
 
 /**
- * Obtener grupo por public_code con todas las relaciones
+ * Obtener grupo por publicCode con todas las relaciones
  * @param {string} publicCode - Public code del grupo
  * @param {string} userId - UUID del usuario que consulta
  * @returns {Promise<Object>} - Grupo serializado
@@ -117,9 +117,9 @@ export const createGroup = async (groupData, userId, organizationId, ipAddress, 
   const group = await dashboardRepository.createGroup({
     ...groupData,
     id: uuid,
-    public_code: publicCode,
-    owner_id: userId,
-    organization_id: organizationId
+    publicCode,
+    ownerId: userId,
+    organizationId
   });
 
   await logAuditAction({
@@ -129,7 +129,7 @@ export const createGroup = async (groupData, userId, organizationId, ipAddress, 
     performedBy: userId,
     changes: { new: group },
     metadata: {
-      organization_id: organizationId
+      organizationId
     },
     ipAddress,
     userAgent
@@ -190,7 +190,7 @@ export const updateGroup = async (publicCode, updateData, userId, ipAddress, use
     performedBy: userId,
     changes,
     metadata: {
-      organization_id: groupInternal.organization_id
+      organizationId: groupInternal.organizationId
     },
     ipAddress,
     userAgent
@@ -222,7 +222,7 @@ export const deleteGroup = async (publicCode, userId, ipAddress, userAgent) => {
     throw error;
   }
 
-  if (groupInternal.owner_id !== userId) {
+  if (groupInternal.ownerId !== userId) {
     const error = new Error('Solo el propietario puede eliminar este grupo');
     error.status = 403;
     error.code = 'FORBIDDEN';
@@ -237,8 +237,8 @@ export const deleteGroup = async (publicCode, userId, ipAddress, userAgent) => {
     action: 'deleted',
     performedBy: userId,
     metadata: {
-      organization_id: groupInternal.organization_id,
-      group_name: groupInternal.name
+      organizationId: groupInternal.organizationId,
+      groupName: groupInternal.name
     },
     ipAddress,
     userAgent
@@ -282,7 +282,7 @@ export const addDashboardToGroup = async (groupPublicCode, dashboardPublicCode, 
     throw error;
   }
 
-  if (group.organization_id !== dashboard.organization_id) {
+  if (group.organizationId !== dashboard.organizationId) {
     const error = new Error('El dashboard y el grupo deben pertenecer a la misma organización');
     error.status = 400;
     error.code = 'ORGANIZATION_MISMATCH';
@@ -299,9 +299,9 @@ export const addDashboardToGroup = async (groupPublicCode, dashboardPublicCode, 
 
   const groupItem = await dashboardRepository.addDashboardToGroup({
     id: uuidv7(),
-    dashboard_group_id: group.id,
-    dashboard_id: dashboard.id,
-    order_index: orderIndex || 0
+    dashboardGroupId: group.id,
+    dashboardId: dashboard.id,
+    orderIndex: orderIndex || 0
   });
 
   await logAuditAction({
@@ -310,10 +310,10 @@ export const addDashboardToGroup = async (groupPublicCode, dashboardPublicCode, 
     action: 'created',
     performedBy: userId,
     metadata: {
-      group_id: group.id,
-      group_public_code: groupPublicCode,
-      dashboard_id: dashboard.id,
-      dashboard_public_code: dashboardPublicCode
+      groupId: group.id,
+      groupPublicCode,
+      dashboardId: dashboard.id,
+      dashboardPublicCode
     },
     ipAddress,
     userAgent
@@ -369,10 +369,10 @@ export const removeDashboardFromGroup = async (groupPublicCode, dashboardPublicC
     action: 'deleted',
     performedBy: userId,
     metadata: {
-      group_id: group.id,
-      group_public_code: groupPublicCode,
-      dashboard_id: dashboard.id,
-      dashboard_public_code: dashboardPublicCode
+      groupId: group.id,
+      groupPublicCode,
+      dashboardId: dashboard.id,
+      dashboardPublicCode
     },
     ipAddress,
     userAgent
@@ -407,7 +407,7 @@ export const addDashboardCollaborator = async (dashboardPublicCode, userPublicCo
     throw error;
   }
 
-  const targetUser = await User.findOne({ where: { public_code: userPublicCode } });
+  const targetUser = await User.findOne({ where: { publicCode: userPublicCode } });
 
   if (!targetUser) {
     const error = new Error('Usuario no encontrado');
@@ -416,7 +416,7 @@ export const addDashboardCollaborator = async (dashboardPublicCode, userPublicCo
     throw error;
   }
 
-  if (targetUser.id === dashboard.owner_id) {
+  if (targetUser.id === dashboard.ownerId) {
     const error = new Error('No se puede agregar al propietario como colaborador');
     error.status = 400;
     error.code = 'CANNOT_ADD_OWNER';
@@ -433,8 +433,8 @@ export const addDashboardCollaborator = async (dashboardPublicCode, userPublicCo
 
   const collaborator = await dashboardRepository.addCollaborator({
     id: uuidv7(),
-    dashboard_id: dashboard.id,
-    user_id: targetUser.id,
+    dashboardId: dashboard.id,
+    userId: targetUser.id,
     role
   });
 
@@ -444,10 +444,10 @@ export const addDashboardCollaborator = async (dashboardPublicCode, userPublicCo
     action: 'created',
     performedBy: userId,
     metadata: {
-      dashboard_id: dashboard.id,
-      dashboard_public_code: dashboardPublicCode,
-      target_user_id: targetUser.id,
-      target_user_public_code: userPublicCode,
+      dashboardId: dashboard.id,
+      dashboardPublicCode,
+      targetUserId: targetUser.id,
+      targetUserPublicCode: userPublicCode,
       role
     },
     ipAddress,
@@ -497,8 +497,8 @@ export const updateDashboardCollaborator = async (dashboardPublicCode, collabora
     performedBy: userId,
     changes: { role: { new: role } },
     metadata: {
-      dashboard_id: dashboard.id,
-      dashboard_public_code: dashboardPublicCode
+      dashboardId: dashboard.id,
+      dashboardPublicCode
     },
     ipAddress,
     userAgent
@@ -545,8 +545,8 @@ export const removeDashboardCollaborator = async (dashboardPublicCode, collabora
     action: 'deleted',
     performedBy: userId,
     metadata: {
-      dashboard_id: dashboard.id,
-      dashboard_public_code: dashboardPublicCode
+      dashboardId: dashboard.id,
+      dashboardPublicCode
     },
     ipAddress,
     userAgent
@@ -581,7 +581,7 @@ export const addGroupCollaborator = async (groupPublicCode, userPublicCode, role
     throw error;
   }
 
-  const targetUser = await User.findOne({ where: { public_code: userPublicCode } });
+  const targetUser = await User.findOne({ where: { publicCode: userPublicCode } });
 
   if (!targetUser) {
     const error = new Error('Usuario no encontrado');
@@ -590,7 +590,7 @@ export const addGroupCollaborator = async (groupPublicCode, userPublicCode, role
     throw error;
   }
 
-  if (targetUser.id === group.owner_id) {
+  if (targetUser.id === group.ownerId) {
     const error = new Error('No se puede agregar al propietario como colaborador');
     error.status = 400;
     error.code = 'CANNOT_ADD_OWNER';
@@ -607,8 +607,8 @@ export const addGroupCollaborator = async (groupPublicCode, userPublicCode, role
 
   const collaborator = await dashboardRepository.addGroupCollaborator({
     id: uuidv7(),
-    dashboard_group_id: group.id,
-    user_id: targetUser.id,
+    dashboardGroupId: group.id,
+    userId: targetUser.id,
     role
   });
 
@@ -618,10 +618,10 @@ export const addGroupCollaborator = async (groupPublicCode, userPublicCode, role
     action: 'created',
     performedBy: userId,
     metadata: {
-      group_id: group.id,
-      group_public_code: groupPublicCode,
-      target_user_id: targetUser.id,
-      target_user_public_code: userPublicCode,
+      groupId: group.id,
+      groupPublicCode,
+      targetUserId: targetUser.id,
+      targetUserPublicCode: userPublicCode,
       role
     },
     ipAddress,
@@ -671,8 +671,8 @@ export const updateGroupCollaborator = async (groupPublicCode, collaboratorId, r
     performedBy: userId,
     changes: { role: { new: role } },
     metadata: {
-      group_id: group.id,
-      group_public_code: groupPublicCode
+      groupId: group.id,
+      groupPublicCode
     },
     ipAddress,
     userAgent
@@ -719,8 +719,8 @@ export const removeGroupCollaborator = async (groupPublicCode, collaboratorId, u
     action: 'deleted',
     performedBy: userId,
     metadata: {
-      group_id: group.id,
-      group_public_code: groupPublicCode
+      groupId: group.id,
+      groupPublicCode
     },
     ipAddress,
     userAgent

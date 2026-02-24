@@ -38,12 +38,12 @@ const categoryLogger = logger.child({ component: 'asset-categories' });
  *           default: all
  *         description: Filtrar por alcance (organization, user, o all)
  *       - in: query
- *         name: parent_id
+ *         name: parentId
  *         schema:
  *           type: integer
  *         description: Filtrar por ID del padre (para obtener hijos directos)
  *       - in: query
- *         name: roots_only
+ *         name: rootsOnly
  *         schema:
  *           type: boolean
  *           default: false
@@ -70,25 +70,25 @@ router.get(
   validate(getCategoriesSchema),
   async (req, res) => {
     try {
-      const { scope, parent_id, roots_only } = req.query;
+      const { scope, parentId, rootsOnly } = req.query;
       const context = req.sessionContext;
 
       let categories;
 
       if (scope === 'organization') {
         categories = await categoryServices.getOrganizationCategories(
-          context.organization_id,
-          { parentId: roots_only ? null : parent_id }
+          context.organizationId,
+          { parentId: rootsOnly ? null : parentId }
         );
       } else if (scope === 'user') {
         categories = await categoryServices.getUserCategories(
-          context.user_id,
-          { parentId: roots_only ? null : parent_id }
+          context.userId,
+          { parentId: rootsOnly ? null : parentId }
         );
       } else {
         categories = await categoryServices.getAllVisibleCategories(
-          context.organization_id,
-          context.user_id
+          context.organizationId,
+          context.userId
         );
       }
 
@@ -132,7 +132,7 @@ router.get(
  *                 type: string
  *                 pattern: "^#[0-9A-Fa-f]{6}$"
  *                 example: "#3B82F6"
- *               parent_id:
+ *               parentId:
  *                 type: integer
  *                 nullable: true
  *                 description: ID de la categoría padre (null para raíz)
@@ -152,7 +152,7 @@ router.post(
       const category = await categoryServices.createOrganizationCategory(req.body, context);
 
       categoryLogger.info(
-        { categoryId: category.id, orgId: context.organization_id },
+        { categoryId: category.id, orgId: context.organizationId },
         'Categoría de organización creada'
       );
 
@@ -196,7 +196,7 @@ router.post(
  *                 type: string
  *                 pattern: "^#[0-9A-Fa-f]{6}$"
  *                 example: "#10B981"
- *               parent_id:
+ *               parentId:
  *                 type: integer
  *                 nullable: true
  *     responses:
@@ -214,7 +214,7 @@ router.post(
       const category = await categoryServices.createUserCategory(req.body, context);
 
       categoryLogger.info(
-        { categoryId: category.id, userId: context.user_id },
+        { categoryId: category.id, userId: context.userId },
         'Categoría personal creada'
       );
 
@@ -386,7 +386,7 @@ router.get(
  *               color:
  *                 type: string
  *                 pattern: "^#[0-9A-Fa-f]{6}$"
- *               parent_id:
+ *               parentId:
  *                 type: integer
  *                 nullable: true
  *     responses:
@@ -518,7 +518,7 @@ router.delete(
  *         path:
  *           type: string
  *           description: Ruta materializada (ej /1/5/12/)
- *         parent_id:
+ *         parentId:
  *           type: integer
  *           nullable: true
  *           description: ID del padre (null si es raíz)
@@ -526,7 +526,7 @@ router.delete(
  *           type: string
  *           enum: [organization, user]
  *           description: Alcance de la categoría
- *         is_active:
+ *         isActive:
  *           type: boolean
  *         parent:
  *           type: object
@@ -540,10 +540,10 @@ router.delete(
  *               type: string
  *             level:
  *               type: integer
- *         created_at:
+ *         createdAt:
  *           type: string
  *           format: date-time
- *         updated_at:
+ *         updatedAt:
  *           type: string
  *           format: date-time
  */

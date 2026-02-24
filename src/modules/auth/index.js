@@ -41,8 +41,8 @@ const router = express.Router();
  *             required:
  *               - email
  *               - password
- *               - first_name
- *               - last_name
+ *               - firstName
+ *               - lastName
  *             properties:
  *               email:
  *                 type: string
@@ -53,15 +53,15 @@ const router = express.Router();
  *                 minLength: 8
  *                 description: Debe contener al menos una mayúscula, una minúscula y un número
  *                 example: SecurePass123!
- *               first_name:
+ *               firstName:
  *                 type: string
  *                 minLength: 2
  *                 example: Juan
- *               last_name:
+ *               lastName:
  *                 type: string
  *                 minLength: 2
  *                 example: Pérez
- *               organization_id:
+ *               organizationId:
  *                 type: string
  *                 format: uuid
  *                 nullable: true
@@ -82,14 +82,14 @@ const router = express.Router();
  *                   properties:
  *                     user:
  *                       $ref: '#/components/schemas/User'
- *                     access_token:
+ *                     accessToken:
  *                       type: string
- *                     refresh_token:
+ *                     refreshToken:
  *                       type: string
- *                     expires_in:
+ *                     expiresIn:
  *                       type: string
  *                       example: 15m
- *                     token_type:
+ *                     tokenType:
  *                       type: string
  *                       example: Bearer
  *                 meta:
@@ -113,7 +113,7 @@ const router = express.Router();
  */
 router.post('/register', validate(registerSchema), async (req, res, next) => {
     try {
-        const { email, password, first_name, last_name, organization_id } = req.body;
+        const { email, password, firstName, lastName, organizationId } = req.body;
 
         // Extraer datos de sesión para auditoría
         const sessionData = {
@@ -124,9 +124,9 @@ router.post('/register', validate(registerSchema), async (req, res, next) => {
         const result = await authServices.register({
             email,
             password,
-            first_name,
-            last_name,
-            organization_id
+            firstName,
+            lastName,
+            organizationId
         }, sessionData);
 
         return successResponse(res, { ...result, message: 'auth.register.success' }, 201);
@@ -140,7 +140,7 @@ router.post('/register', validate(registerSchema), async (req, res, next) => {
  * /auth/login:
  *   post:
  *     summary: Iniciar sesión
- *     description: Autentica un usuario y devuelve tokens JWT (access + refresh). Opcionalmente acepta 'remember_me' para extender la duración de la sesión de 14 días (normal) a 90 días (extendida)
+ *     description: Autentica un usuario y devuelve tokens JWT (access + refresh). Opcionalmente acepta 'rememberMe' para extender la duración de la sesión de 14 días (normal) a 90 días (extendida)
  *     tags: [Auth]
  *     security: []
  *     requestBody:
@@ -162,7 +162,7 @@ router.post('/register', validate(registerSchema), async (req, res, next) => {
  *                 type: string
  *                 example: SecurePass123!
  *                 description: Contraseña del usuario
- *               remember_me:
+ *               rememberMe:
  *                 type: boolean
  *                 default: false
  *                 example: true
@@ -183,17 +183,17 @@ router.post('/register', validate(registerSchema), async (req, res, next) => {
  *                   properties:
  *                     user:
  *                       $ref: '#/components/schemas/User'
- *                     access_token:
+ *                     accessToken:
  *                       type: string
  *                       description: Token JWT de acceso (válido por 15 minutos)
- *                     refresh_token:
+ *                     refreshToken:
  *                       type: string
- *                       description: Token JWT de refresco (válido por 14 o 90 días según remember_me)
- *                     expires_in:
+ *                       description: Token JWT de refresco (válido por 14 o 90 días según rememberMe)
+ *                     expiresIn:
  *                       type: string
  *                       example: 15m
  *                       description: Duración del access token
- *                     token_type:
+ *                     tokenType:
  *                       type: string
  *                       example: Bearer
  *                       description: Tipo de token para usar en el header Authorization
@@ -212,18 +212,17 @@ router.post('/register', validate(registerSchema), async (req, res, next) => {
  */
 router.post('/login', loginRateLimitMiddleware, validate(loginSchema), async (req, res, next) => {
     try {
-        const { identifier: rawIdentifier, email, password, remember_me, captchaToken, captcha_token } = req.body;
+        const { identifier: rawIdentifier, email, password, rememberMe, captchaToken } = req.body;
         // Compatibilidad: usar identifier si existe, sino usar email (campo legacy)
         const identifier = rawIdentifier || email;
         const ip = req.ip || req.connection.remoteAddress;
 
         // Extraer datos de sesión para auditoría y validación
-        // Compatibilidad: aceptar captchaToken (camelCase) o captcha_token (snake_case)
         const sessionData = {
             userAgent: req.headers['user-agent'],
             ipAddress: ip,
-            rememberMe: remember_me || false,
-            captchaToken: captchaToken || captcha_token || null
+            rememberMe: rememberMe || false,
+            captchaToken: captchaToken || null
         };
 
         try {
@@ -234,25 +233,25 @@ router.post('/login', loginRateLimitMiddleware, validate(loginSchema), async (re
 
             // Obtener organización primaria del usuario con su información completa
             const primaryOrg = await organizationService.getPrimaryOrganization(result.user.id);
-            const activeOrgId = primaryOrg ? primaryOrg.organization_id : null;
+            const activeOrgId = primaryOrg ? primaryOrg.organizationId : null;
             const primaryOrgId = activeOrgId;
             const canAccessAllOrgs = result.user.role && result.user.role.name === 'system-admin';
             
-            // Obtener información de la organización primaria (public_code, nombre, logo)
+            // Obtener información de la organización primaria (publicCode, nombre, logo)
             let primaryOrgInfo = null;
             if (primaryOrgId) {
                 const orgDetails = await organizationRepository.findOrganizationByIdInternal(primaryOrgId);
                 if (orgDetails) {
                     primaryOrgInfo = {
-                        publicCode: orgDetails.public_code,
+                        publicCode: orgDetails.publicCode,
                         name: orgDetails.name,
-                        logoUrl: orgDetails.logo_url
+                        logoUrl: orgDetails.logoUrl
                     };
                 }
             }
 
             // Crear session_context y cachearlo en Redis
-            // Incluye public_codes para que el frontend no necesite resolverlos
+            // Incluye publicCodes para que el frontend no necesite resolverlos
             const sessionContext = {
                 activeOrgId,
                 activeOrgPublicCode: primaryOrgInfo?.publicCode || null,
@@ -265,22 +264,22 @@ router.post('/login', loginRateLimitMiddleware, validate(loginSchema), async (re
                 canAccessAllOrgs,
                 role: result.user.role?.name || null,
                 email: result.user.email,
-                firstName: result.user.first_name,
-                lastName: result.user.last_name,
+                firstName: result.user.firstName,
+                lastName: result.user.lastName,
                 userId: result.user.id,
-                userPublicCode: result.user.public_code || null
+                userPublicCode: result.user.publicCode || null
             };
 
             await sessionContextCache.setSessionContext(result.user.id, sessionContext);
 
             // Filtrar user a solo campos relevantes para el frontend
-            // NO exponemos: id, role_id, human_id, organization_id, created_at, updated_at, etc.
+            // NO exponemos: id, roleId, humanId, organizationId, createdAt, updatedAt, etc.
             const userResponse = {
-                public_code: result.user.public_code,
+                publicCode: result.user.publicCode,
                 email: result.user.email,
-                first_name: result.user.first_name,
-                last_name: result.user.last_name,
-                avatar_url: result.user.avatar_url || null,
+                firstName: result.user.firstName,
+                lastName: result.user.lastName,
+                avatarUrl: result.user.avatarUrl || null,
                 language: result.user.language || 'es',
                 timezone: result.user.timezone || 'America/Lima',
                 role: result.user.role?.name || null,
@@ -290,7 +289,7 @@ router.post('/login', loginRateLimitMiddleware, validate(loginSchema), async (re
             const responseData = {
                 ...result,
                 user: userResponse,
-                session_context: sessionContextCache.sanitizeSessionContext(sessionContext),
+                sessionContext: sessionContextCache.sanitizeSessionContext(sessionContext),
                 message: 'auth.login.success'
             };
 
@@ -330,9 +329,9 @@ router.post('/login', loginRateLimitMiddleware, validate(loginSchema), async (re
  *           schema:
  *             type: object
  *             required:
- *               - refresh_token
+ *               - refreshToken
  *             properties:
- *               refresh_token:
+ *               refreshToken:
  *                 type: string
  *                 description: Refresh token JWT obtenido en login o refresh anterior
  *     responses:
@@ -349,16 +348,16 @@ router.post('/login', loginRateLimitMiddleware, validate(loginSchema), async (re
  *                 data:
  *                   type: object
  *                   properties:
- *                     access_token:
+ *                     accessToken:
  *                       type: string
  *                       description: Nuevo access token (15 min validez)
- *                     refresh_token:
+ *                     refreshToken:
  *                       type: string
  *                       description: Nuevo refresh token (14 días validez)
- *                     expires_in:
+ *                     expiresIn:
  *                       type: string
  *                       example: 15m
- *                     token_type:
+ *                     tokenType:
  *                       type: string
  *                       example: Bearer
  *       400:
@@ -391,7 +390,7 @@ router.post('/login', loginRateLimitMiddleware, validate(loginSchema), async (re
  */
 router.post('/refresh', validate(refreshTokenSchema), async (req, res, next) => {
     try {
-        const { refresh_token } = req.body;
+        const { refreshToken } = req.body;
 
         // Extraer datos de sesión para auditoría
         const sessionData = {
@@ -399,7 +398,7 @@ router.post('/refresh', validate(refreshTokenSchema), async (req, res, next) => 
             ipAddress: req.ip || req.connection.remoteAddress
         };
 
-        const tokens = await authServices.refreshAccessToken(refresh_token, sessionData);
+        const tokens = await authServices.refreshAccessToken(refreshToken, sessionData);
 
         return successResponse(res, { ...tokens, message: 'auth.refresh.success' });
     } catch (error) {
@@ -423,13 +422,13 @@ router.post('/refresh', validate(refreshTokenSchema), async (req, res, next) => 
  *           schema:
  *             type: object
  *             required:
- *               - current_password
- *               - new_password
+ *               - currentPassword
+ *               - newPassword
  *             properties:
- *               current_password:
+ *               currentPassword:
  *                 type: string
  *                 description: Contraseña actual del usuario
- *               new_password:
+ *               newPassword:
  *                 type: string
  *                 minLength: 8
  *                 description: Nueva contraseña (debe contener mayúscula, minúscula y número)
@@ -467,9 +466,9 @@ router.post('/refresh', validate(refreshTokenSchema), async (req, res, next) => 
 router.post('/change-password', authenticate, validate(changePasswordSchema), async (req, res, next) => {
     try {
         const userId = req.user.userId;
-        const { current_password, new_password } = req.body;
+        const { currentPassword, newPassword } = req.body;
 
-        await authServices.changePassword(userId, current_password, new_password);
+        await authServices.changePassword(userId, currentPassword, newPassword);
 
         return successResponse(res, {
             message: 'auth.password.changed'
@@ -539,7 +538,7 @@ router.get('/me', authenticate, async (req, res, next) => {
         // Esto garantiza que el frontend siempre reciba session_context
         if (!sessionContext) {
             const primaryOrg = await organizationService.getPrimaryOrganization(userId);
-            const primaryOrgId = primaryOrg ? primaryOrg.organization_id : null;
+            const primaryOrgId = primaryOrg ? primaryOrg.organizationId : null;
             const canAccessAllOrgs = user.role?.name === 'system-admin';
             
             // CRÍTICO: Usar activeOrgId del JWT, NO asumir que siempre es la org primaria
@@ -552,9 +551,9 @@ router.get('/me', authenticate, async (req, res, next) => {
                 const primaryOrgDetails = await organizationRepository.findOrganizationByIdInternal(primaryOrgId);
                 if (primaryOrgDetails) {
                     primaryOrgInfo = {
-                        publicCode: primaryOrgDetails.public_code,
+                        publicCode: primaryOrgDetails.publicCode,
                         name: primaryOrgDetails.name,
-                        logoUrl: primaryOrgDetails.logo_url
+                        logoUrl: primaryOrgDetails.logoUrl
                     };
                 }
             }
@@ -565,9 +564,9 @@ router.get('/me', authenticate, async (req, res, next) => {
                 const activeOrgDetails = await organizationRepository.findOrganizationByIdInternal(activeOrgId);
                 if (activeOrgDetails) {
                     activeOrgInfo = {
-                        publicCode: activeOrgDetails.public_code,
+                        publicCode: activeOrgDetails.publicCode,
                         name: activeOrgDetails.name,
-                        logoUrl: activeOrgDetails.logo_url
+                        logoUrl: activeOrgDetails.logoUrl
                     };
                 }
             } else if (activeOrgId && activeOrgId === primaryOrgId) {
@@ -587,10 +586,10 @@ router.get('/me', authenticate, async (req, res, next) => {
                 canAccessAllOrgs,
                 role: user.role?.name || null,
                 email: user.email,
-                firstName: user.first_name,
-                lastName: user.last_name,
+                firstName: user.firstName,
+                lastName: user.lastName,
                 userId: user.id,
-                userPublicCode: user.public_code || null
+                userPublicCode: user.publicCode || null
             };
             
             await sessionContextCache.setSessionContext(userId, sessionContext);
@@ -598,11 +597,11 @@ router.get('/me', authenticate, async (req, res, next) => {
 
         // Filtrar user a solo campos relevantes para el frontend
         const userResponse = {
-            public_code: user.public_code,
+            publicCode: user.publicCode,
             email: user.email,
-            first_name: user.first_name,
-            last_name: user.last_name,
-            avatar_url: user.avatar_url || null,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            avatarUrl: user.avatarUrl || null,
             language: user.language || 'es',
             timezone: user.timezone || 'America/Lima',
             role: user.role?.name || null,
@@ -620,7 +619,7 @@ router.get('/me', authenticate, async (req, res, next) => {
 
         return successResponse(res, { 
             user: userResponse, 
-            session_context: sessionContextCache.sanitizeSessionContext(sessionContext),
+            sessionContext: sessionContextCache.sanitizeSessionContext(sessionContext),
             ...impersonationInfo,
             message: 'auth.profile.retrieved' 
         });
@@ -638,8 +637,8 @@ router.get('/me', authenticate, async (req, res, next) => {
  *       Cierra la sesión del usuario autenticado. Requiere el access token en el header Authorization.
  *       
  *       **Comportamiento:**
- *       - Si se envía `refresh_token` en el body: Solo cierra esa sesión específica
- *       - Si NO se envía `refresh_token`: Cierra TODAS las sesiones del usuario
+ *       - Si se envía `refreshToken` en el body: Solo cierra esa sesión específica
+ *       - Si NO se envía `refreshToken`: Cierra TODAS las sesiones del usuario
  *       
  *       **Efectos:**
  *       - Revoca refresh token(s) de la base de datos
@@ -657,7 +656,7 @@ router.get('/me', authenticate, async (req, res, next) => {
  *           schema:
  *             type: object
  *             properties:
- *               refresh_token:
+ *               refreshToken:
  *                 type: string
  *                 description: Refresh token específico a revocar (opcional). Si no se envía, se revocan todos.
  *                 example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
@@ -678,9 +677,9 @@ router.get('/me', authenticate, async (req, res, next) => {
  *                     message:
  *                       type: string
  *                       example: Sesión cerrada exitosamente
- *                     sessions_closed:
+ *                     sessionsClosed:
  *                       type: integer
- *                       description: Número de sesiones cerradas (solo si no se envió refresh_token)
+ *                       description: Número de sesiones cerradas (solo si no se envió refreshToken)
  *       401:
  *         description: No autenticado, token inválido o refresh token no encontrado
  *         content:
@@ -697,23 +696,23 @@ router.get('/me', authenticate, async (req, res, next) => {
 router.post('/logout', authenticate, async (req, res, next) => {
     try {
         const userId = req.user.userId;
-        const { refresh_token } = req.body;
+        const { refreshToken } = req.body;
 
-        // Si se proporciona refresh_token, hacer logout de esa sesión específica
-        if (refresh_token) {
-            await authServices.logout(refresh_token);
+        // Si se proporciona refreshToken, hacer logout de esa sesión específica
+        if (refreshToken) {
+            await authServices.logout(refreshToken);
             
             return successResponse(res, {
                 message: 'auth.logout.success'
             });
         }
 
-        // Si NO se proporciona refresh_token, hacer logout de TODAS las sesiones
+        // Si NO se proporciona refreshToken, hacer logout de TODAS las sesiones
         const sessionsRevoked = await authServices.logoutAll(userId);
 
         return successResponse(res, {
             message: 'auth.logout.all_success',
-            sessions_closed: sessionsRevoked
+            sessionsClosed: sessionsRevoked
         });
     } catch (error) {
         next(error);
@@ -746,7 +745,7 @@ router.post('/logout', authenticate, async (req, res, next) => {
  *                     message:
  *                       type: string
  *                       example: Todas las sesiones han sido cerradas
- *                     sessions_closed:
+ *                     sessionsClosed:
  *                       type: integer
  *                       description: Número de sesiones que fueron revocadas
  *                       example: 3
@@ -765,7 +764,7 @@ router.post('/logout-all', authenticate, async (req, res, next) => {
 
         return successResponse(res, {
             message: 'auth.logout.all_success',
-            sessions_closed: sessionsRevoked
+            sessionsClosed: sessionsRevoked
         });
     } catch (error) {
         next(error);
@@ -777,7 +776,7 @@ router.post('/logout-all', authenticate, async (req, res, next) => {
  * /auth/sessions:
  *   get:
  *     summary: Listar sesiones activas
- *     description: Devuelve todas las sesiones activas del usuario autenticado con metadata (created_at, last_used_at, user_agent, IP)
+ *     description: Devuelve todas las sesiones activas del usuario autenticado con metadata (createdAt, lastUsedAt, userAgent, IP)
  *     tags: [Auth]
  *     security:
  *       - BearerAuth: []
@@ -912,7 +911,7 @@ router.post('/sessions/:sessionId/revoke', authenticate, validate(revokeSessionS
  *                     message:
  *                       type: string
  *                       example: Acceso autorizado - Eres un administrador
- *                     user_role:
+ *                     userRole:
  *                       type: string
  *                       example: system-admin
  *       401:
@@ -924,8 +923,8 @@ router.get('/admin-test', authenticate, requireRole(['system-admin', 'org-admin'
     try {
         return successResponse(res, {
             message: 'Acceso autorizado - Eres un administrador',
-            user_role: req.user.role,
-            user_id: req.user.userId
+            userRole: req.user.role,
+            userId: req.user.userId
         });
     } catch (error) {
         next(error);
@@ -965,25 +964,23 @@ router.get('/admin-test', authenticate, requireRole(['system-admin', 'org-admin'
  *                       items:
  *                         type: object
  *                         properties:
- *                           organization_id:
+ *                           publicCode:
  *                             type: string
- *                             format: uuid
  *                           slug:
  *                             type: string
  *                           name:
  *                             type: string
- *                           logo_url:
+ *                           logoUrl:
  *                             type: string
  *                             nullable: true
- *                           is_primary:
+ *                           isPrimary:
  *                             type: boolean
- *                           is_active:
+ *                           isActive:
  *                             type: boolean
- *                           parent_id:
+ *                           parentPublicCode:
  *                             type: string
- *                             format: uuid
  *                             nullable: true
- *                           joined_at:
+ *                           joinedAt:
  *                             type: string
  *                             format: date-time
  *                     totalAccessible:
@@ -1030,12 +1027,11 @@ router.get('/organizations', authenticate, async (req, res, next) => {
  *           schema:
  *             type: object
  *             required:
- *               - organization_id
+ *               - organizationId
  *             properties:
- *               organization_id:
+ *               organizationId:
  *                 type: string
- *                 format: uuid
- *                 description: UUID de la organización a la que se desea cambiar
+ *                 description: UUID o publicCode de la organización a la que se desea cambiar
  *                 example: 01234567-89ab-cdef-0123-456789abcdef
  *     responses:
  *       200:
@@ -1051,19 +1047,19 @@ router.get('/organizations', authenticate, async (req, res, next) => {
  *                 data:
  *                   type: object
  *                   properties:
- *                     access_token:
+ *                     accessToken:
  *                       type: string
  *                       description: Nuevo access token JWT con activeOrgId actualizado
- *                     refresh_token:
+ *                     refreshToken:
  *                       type: string
  *                       description: Nuevo refresh token JWT
- *                     expires_in:
+ *                     expiresIn:
  *                       type: string
  *                       example: 15m
- *                     token_type:
+ *                     tokenType:
  *                       type: string
  *                       example: Bearer
- *                     active_organization_id:
+ *                     activeOrganizationId:
  *                       type: string
  *                       format: uuid
  *                       description: UUID de la nueva organización activa
@@ -1095,16 +1091,16 @@ router.get('/organizations', authenticate, async (req, res, next) => {
 router.post('/switch-org', authenticate, validate(switchOrgSchema), async (req, res, next) => {
     try {
         const userId = req.user.userId;
-        const { organization_id } = req.body;
+        const { organizationId } = req.body;
         
         // Obtener información completa de la organización
         let org;
-        if (!organization_id.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
-            // Es public_code
-            org = await organizationRepository.findOrganizationByPublicCodeInternal(organization_id);
+        if (!organizationId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+            // Es publicCode
+            org = await organizationRepository.findOrganizationByPublicCodeInternal(organizationId);
         } else {
             // Es UUID
-            org = await organizationRepository.findOrganizationByIdInternal(organization_id);
+            org = await organizationRepository.findOrganizationByIdInternal(organizationId);
         }
         
         if (!org) {
@@ -1127,33 +1123,33 @@ router.post('/switch-org', authenticate, validate(switchOrgSchema), async (req, 
         // Actualizar session_context en Redis con la nueva activeOrgId e info de la org
         // Si updateActiveOrg falla (cache expirado), reconstruir contexto completo
         let updatedContext = await sessionContextCache.updateActiveOrg(userId, organizationUuid, {
-            publicCode: org.public_code,
+            publicCode: org.publicCode,
             name: org.name,
-            logoUrl: org.logo_url
+            logoUrl: org.logoUrl
         });
         
         if (!updatedContext) {
             const user = await authRepository.findUserById(userId);
             const primaryOrg = await organizationService.getPrimaryOrganization(userId);
-            const primaryOrgId = primaryOrg ? primaryOrg.organization_id : null;
+            const primaryOrgId = primaryOrg ? primaryOrg.organizationId : null;
             
             let primaryOrgInfo = null;
             if (primaryOrgId) {
                 const primaryOrgDetails = await organizationRepository.findOrganizationByIdInternal(primaryOrgId);
                 if (primaryOrgDetails) {
                     primaryOrgInfo = {
-                        publicCode: primaryOrgDetails.public_code,
+                        publicCode: primaryOrgDetails.publicCode,
                         name: primaryOrgDetails.name,
-                        logoUrl: primaryOrgDetails.logo_url
+                        logoUrl: primaryOrgDetails.logoUrl
                     };
                 }
             }
             
             updatedContext = {
                 activeOrgId: organizationUuid,
-                activeOrgPublicCode: org.public_code,
+                activeOrgPublicCode: org.publicCode,
                 activeOrgName: org.name,
-                activeOrgLogoUrl: org.logo_url || null,
+                activeOrgLogoUrl: org.logoUrl || null,
                 primaryOrgId,
                 primaryOrgPublicCode: primaryOrgInfo?.publicCode || null,
                 primaryOrgName: primaryOrgInfo?.name || null,
@@ -1161,10 +1157,10 @@ router.post('/switch-org', authenticate, validate(switchOrgSchema), async (req, 
                 canAccessAllOrgs: user?.role?.name === 'system-admin',
                 role: user?.role?.name || null,
                 email: user?.email || null,
-                firstName: user?.first_name || null,
-                lastName: user?.last_name || null,
+                firstName: user?.firstName || null,
+                lastName: user?.lastName || null,
                 userId,
-                userPublicCode: user?.public_code || null
+                userPublicCode: user?.publicCode || null
             };
             
             await sessionContextCache.setSessionContext(userId, updatedContext);
@@ -1178,7 +1174,7 @@ router.post('/switch-org', authenticate, validate(switchOrgSchema), async (req, 
             performedBy: req.user.userId,
             metadata: {
                 previous_org_id: req.user.activeOrgId || null,
-                new_org_public_code: org.public_code,
+                new_org_public_code: org.publicCode,
                 new_org_name: org.name
             },
             ...extractAuditInfo(req)
@@ -1186,7 +1182,7 @@ router.post('/switch-org', authenticate, validate(switchOrgSchema), async (req, 
         
         return successResponse(res, {
             ...result,
-            session_context: sessionContextCache.sanitizeSessionContext(updatedContext)
+            sessionContext: sessionContextCache.sanitizeSessionContext(updatedContext)
         });
     } catch (error) {
         next(error);
@@ -1217,9 +1213,9 @@ router.post('/switch-org', authenticate, validate(switchOrgSchema), async (req, 
  *           schema:
  *             type: object
  *             required:
- *               - organization_id
+ *               - organizationId
  *             properties:
- *               organization_id:
+ *               organizationId:
  *                 type: string
  *                 description: Public code de la organización a impersonar (ej. ORG-XXXXX)
  *                 example: ORG-ABC123-4
@@ -1245,11 +1241,11 @@ router.post('/impersonate-org', authenticate, async (req, res, next) => {
             });
         }
         
-        const { organization_id } = req.body;
+        const { organizationId } = req.body;
         
-        if (!organization_id) {
+        if (!organizationId) {
             return errorResponse(res, {
-                message: 'organization_id is required',
+                message: 'organizationId is required',
                 status: 400,
                 code: 'MISSING_ORGANIZATION_ID'
             });
@@ -1257,12 +1253,12 @@ router.post('/impersonate-org', authenticate, async (req, res, next) => {
         
         // Obtener información completa de la organización a impersonar
         let org;
-        const isUuid = organization_id.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
+        const isUuid = organizationId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
         
         if (isUuid) {
-            org = await organizationRepository.findOrganizationByIdInternal(organization_id);
+            org = await organizationRepository.findOrganizationByIdInternal(organizationId);
         } else {
-            org = await organizationRepository.findOrganizationByPublicCodeInternal(organization_id);
+            org = await organizationRepository.findOrganizationByPublicCodeInternal(organizationId);
         }
         
         if (!org) {
@@ -1274,7 +1270,7 @@ router.post('/impersonate-org', authenticate, async (req, res, next) => {
         }
         
         const organizationUuid = org.id;
-        const orgPublicCode = org.public_code;
+        const orgPublicCode = org.publicCode;
         
         // Extraer datos de sesión
         const sessionData = {
@@ -1290,7 +1286,7 @@ router.post('/impersonate-org', authenticate, async (req, res, next) => {
         const existingContext = await sessionContextCache.getSessionContext(userId);
         const user = await authRepository.findUserById(userId);
         const primaryOrg = await organizationService.getPrimaryOrganization(userId);
-        const primaryOrgId = primaryOrg ? primaryOrg.organization_id : null;
+        const primaryOrgId = primaryOrg ? primaryOrg.organizationId : null;
         
         // Obtener info de la org primaria
         let primaryOrgInfo = null;
@@ -1298,9 +1294,9 @@ router.post('/impersonate-org', authenticate, async (req, res, next) => {
             const primaryOrgDetails = await organizationRepository.findOrganizationByIdInternal(primaryOrgId);
             if (primaryOrgDetails) {
                 primaryOrgInfo = {
-                    publicCode: primaryOrgDetails.public_code,
+                    publicCode: primaryOrgDetails.publicCode,
                     name: primaryOrgDetails.name,
-                    logoUrl: primaryOrgDetails.logo_url
+                    logoUrl: primaryOrgDetails.logoUrl
                 };
             }
         }
@@ -1308,9 +1304,9 @@ router.post('/impersonate-org', authenticate, async (req, res, next) => {
         const updatedContext = {
             ...(existingContext || {}),
             activeOrgId: organizationUuid,
-            activeOrgPublicCode: org.public_code,
+            activeOrgPublicCode: org.publicCode,
             activeOrgName: org.name,
-            activeOrgLogoUrl: org.logo_url || null,
+            activeOrgLogoUrl: org.logoUrl || null,
             primaryOrgId,
             primaryOrgPublicCode: primaryOrgInfo?.publicCode || null,
             primaryOrgName: primaryOrgInfo?.name || null,
@@ -1318,10 +1314,10 @@ router.post('/impersonate-org', authenticate, async (req, res, next) => {
             canAccessAllOrgs: true,
             role: user?.role?.name || 'system-admin',
             email: user?.email || existingContext?.email || null,
-            firstName: user?.first_name || existingContext?.firstName || null,
-            lastName: user?.last_name || existingContext?.lastName || null,
+            firstName: user?.firstName || existingContext?.firstName || null,
+            lastName: user?.lastName || existingContext?.lastName || null,
             userId,
-            userPublicCode: user?.public_code || existingContext?.userPublicCode || null
+            userPublicCode: user?.publicCode || existingContext?.userPublicCode || null
         };
         
         await sessionContextCache.setSessionContext(userId, updatedContext);
@@ -1342,7 +1338,7 @@ router.post('/impersonate-org', authenticate, async (req, res, next) => {
         
         return successResponse(res, {
             ...result,
-            session_context: sessionContextCache.sanitizeSessionContext(updatedContext),
+            sessionContext: sessionContextCache.sanitizeSessionContext(updatedContext),
             impersonating: true,
             impersonatedOrg: { publicCode: orgPublicCode },
             message: 'Impersonation started successfully'
@@ -1405,16 +1401,16 @@ router.post('/exit-impersonation', authenticate, async (req, res, next) => {
         
         // Reconstruir session_context completo para modo admin global (sin org activa)
         const primaryOrg = await organizationService.getPrimaryOrganization(userId);
-        const primaryOrgId = primaryOrg ? primaryOrg.organization_id : null;
+        const primaryOrgId = primaryOrg ? primaryOrg.organizationId : null;
         
         let primaryOrgInfo = null;
         if (primaryOrgId) {
             const primaryOrgDetails = await organizationRepository.findOrganizationByIdInternal(primaryOrgId);
             if (primaryOrgDetails) {
                 primaryOrgInfo = {
-                    publicCode: primaryOrgDetails.public_code,
+                    publicCode: primaryOrgDetails.publicCode,
                     name: primaryOrgDetails.name,
-                    logoUrl: primaryOrgDetails.logo_url
+                    logoUrl: primaryOrgDetails.logoUrl
                 };
             }
         }
@@ -1431,10 +1427,10 @@ router.post('/exit-impersonation', authenticate, async (req, res, next) => {
             canAccessAllOrgs: true,
             role: user.role?.name || 'system-admin',
             email: user.email,
-            firstName: user.first_name,
-            lastName: user.last_name,
+            firstName: user.firstName,
+            lastName: user.lastName,
             userId,
-            userPublicCode: user.public_code || null
+            userPublicCode: user.publicCode || null
         };
         
         await sessionContextCache.setSessionContext(userId, updatedContext);
@@ -1453,7 +1449,7 @@ router.post('/exit-impersonation', authenticate, async (req, res, next) => {
         
         return successResponse(res, {
             ...tokens,
-            session_context: sessionContextCache.sanitizeSessionContext(updatedContext),
+            sessionContext: sessionContextCache.sanitizeSessionContext(updatedContext),
             impersonating: false,
             impersonatedOrg: null,
             message: 'Exited impersonation mode successfully'
@@ -1495,7 +1491,7 @@ router.post('/exit-impersonation', authenticate, async (req, res, next) => {
  *                 data:
  *                   type: object
  *                   properties:
- *                     session_context:
+ *                     sessionContext:
  *                       type: object
  *                       properties:
  *                         activeOrgId:
@@ -1563,7 +1559,7 @@ router.get('/session-context', authenticate, async (req, res, next) => {
         } : {};
         
         return successResponse(res, { 
-            session_context: sessionContextCache.sanitizeSessionContext(sessionContext),
+            sessionContext: sessionContextCache.sanitizeSessionContext(sessionContext),
             ...impersonationInfo,
             message: 'Session context retrieved successfully'
         });

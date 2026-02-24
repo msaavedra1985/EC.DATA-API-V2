@@ -21,12 +21,11 @@ import logger from '../../utils/logger.js';
  * @returns {Promise<Object>} - Channel creado
  */
 export const createChannel = async (channelData, userId, ipAddress, userAgent) => {
-    // Convertir device_id de public_code a UUID si es necesario
-    let deviceUuid = channelData.device_id;
+    let deviceUuid = channelData.deviceId;
     let device = null;
     
-    if (!channelData.device_id.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
-        device = await deviceRepository.findDeviceByPublicCodeInternal(channelData.device_id);
+    if (!channelData.deviceId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+        device = await deviceRepository.findDeviceByPublicCodeInternal(channelData.deviceId);
         if (!device) {
             const error = new Error('Device no encontrado');
             error.status = 404;
@@ -35,7 +34,6 @@ export const createChannel = async (channelData, userId, ipAddress, userAgent) =
         }
         deviceUuid = device.id;
     } else {
-        // Si se proporciona UUID, obtener el device para validación
         device = await Device.findByPk(deviceUuid);
         if (!device) {
             const error = new Error('Device no encontrado');
@@ -45,37 +43,32 @@ export const createChannel = async (channelData, userId, ipAddress, userAgent) =
         }
     }
     
-    // CRÍTICO: Obtener organization_id del Device y asignar automáticamente
-    const organizationUuid = device.organization_id;
+    const organizationUuid = device.organizationId;
     
-    // VALIDACIÓN EXPLÍCITA: Rechazar si se proporciona organization_id (debe derivarse del Device)
-    if (channelData.organization_id) {
-        const error = new Error('No se debe proporcionar organization_id. Este se deriva automáticamente del Device.');
+    if (channelData.organizationId) {
+        const error = new Error('No se debe proporcionar organizationId. Este se deriva automáticamente del Device.');
         error.status = 400;
         error.code = 'ORGANIZATION_ID_NOT_ALLOWED';
         throw error;
     }
     
-    // Generar identificadores usando el helper centralizado
     const uuid = uuidv7();
     const humanId = await generateHumanId(Channel, null, null);
     const publicCode = generatePublicCode('CHN', uuid);
     
     const identifiers = {
         id: uuid,
-        human_id: humanId,
-        public_code: publicCode
+        humanId: humanId,
+        publicCode: publicCode
     };
     
-    // Crear channel con organization_id del Device
     const channel = await channelRepository.createChannel({
         ...channelData,
-        device_id: deviceUuid,
-        organization_id: organizationUuid, // Asignar automáticamente del Device
+        deviceId: deviceUuid,
+        organizationId: organizationUuid,
         ...identifiers
     });
     
-    // Audit log
     await logAuditAction({
         entityType: 'channel',
         entityId: channel.id,
@@ -83,14 +76,13 @@ export const createChannel = async (channelData, userId, ipAddress, userAgent) =
         performedBy: userId,
         changes: { new: channel },
         metadata: {
-            device_id: deviceUuid,
-            organization_id: organizationUuid
+            deviceId: deviceUuid,
+            organizationId: organizationUuid
         },
         ipAddress: ipAddress,
         userAgent: userAgent
     });
     
-    // Invalidar cache
     await invalidateChannelCache();
     
     logger.info({ channelId: channel.id, userId }, 'Channel created successfully');
@@ -99,7 +91,7 @@ export const createChannel = async (channelData, userId, ipAddress, userAgent) =
 };
 
 /**
- * Obtener channel por public_code
+ * Obtener channel por publicCode
  * @param {string} publicCode - Public code del channel
  * @returns {Promise<Object>} - Channel encontrado
  */
@@ -124,10 +116,9 @@ export const getChannelByPublicCode = async (publicCode) => {
 export const listChannels = async (filters) => {
     const { showAll = false } = filters;
     
-    // Convertir device_id de public_code a UUID si es necesario
-    let deviceUuid = filters.device_id;
-    if (filters.device_id && !filters.device_id.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
-        const device = await deviceRepository.findDeviceByPublicCodeInternal(filters.device_id);
+    let deviceUuid = filters.deviceId;
+    if (filters.deviceId && !filters.deviceId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+        const device = await deviceRepository.findDeviceByPublicCodeInternal(filters.deviceId);
         if (!device) {
             const error = new Error('Device no encontrado');
             error.status = 404;
@@ -137,30 +128,24 @@ export const listChannels = async (filters) => {
         deviceUuid = device.id;
     }
     
-    // En modo showAll (God View), no filtramos por organización
     if (showAll) {
-        const repoFilters = { ...filters, device_id: deviceUuid, showAll: true };
-        delete repoFilters.organization_id;
-        delete repoFilters.organization_ids;
+        const repoFilters = { ...filters, deviceId: deviceUuid, showAll: true };
+        delete repoFilters.organizationId;
+        delete repoFilters.organizationIds;
         
         return await channelRepository.listChannels(repoFilters);
     }
     
-    // Preparar filtros de organización
     let organizationUuid = null;
     let organizationUuids = null;
 
-    // Prioridad: organization_ids (array del middleware) > organization_id (singular)
-    if (filters.organization_ids && Array.isArray(filters.organization_ids) && filters.organization_ids.length > 0) {
-        // Array de UUIDs inyectado por el middleware (ya son UUIDs validados)
-        organizationUuids = filters.organization_ids;
-    } else if (filters.organization_id) {
-        // Convertir organization_id de public_code a UUID si es necesario
-        organizationUuid = filters.organization_id;
-        if (!filters.organization_id.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
-            // Importar organizationRepository para convertir public_code
+    if (filters.organizationIds && Array.isArray(filters.organizationIds) && filters.organizationIds.length > 0) {
+        organizationUuids = filters.organizationIds;
+    } else if (filters.organizationId) {
+        organizationUuid = filters.organizationId;
+        if (!filters.organizationId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
             const { findOrganizationByPublicCodeInternal } = await import('../organizations/repository.js');
-            const org = await findOrganizationByPublicCodeInternal(filters.organization_id);
+            const org = await findOrganizationByPublicCodeInternal(filters.organizationId);
             if (!org) {
                 const error = new Error('Organización no encontrada');
                 error.status = 404;
@@ -171,32 +156,27 @@ export const listChannels = async (filters) => {
         }
     }
     
-    // Generar cache key basada en filtros
     const cacheKey = JSON.stringify({
         ...filters,
-        device_id: deviceUuid,
-        organization_id: organizationUuid,
-        organization_ids: organizationUuids
+        deviceId: deviceUuid,
+        organizationId: organizationUuid,
+        organizationIds: organizationUuids
     });
     
-    // Intentar obtener del cache
     const cached = await getCachedChannelList(cacheKey);
     if (cached) {
         return cached;
     }
     
-    // Preparar filtros para el repository
     const repoFilters = {
         ...filters,
-        device_id: deviceUuid,
-        organization_id: organizationUuid,
-        organization_ids: organizationUuids
+        deviceId: deviceUuid,
+        organizationId: organizationUuid,
+        organizationIds: organizationUuids
     };
 
-    // Obtener de BD
     const result = await channelRepository.listChannels(repoFilters);
     
-    // Cachear resultado
     await cacheChannelList(cacheKey, result);
     
     return result;
@@ -212,7 +192,6 @@ export const listChannels = async (filters) => {
  * @returns {Promise<Object>} - Channel actualizado
  */
 export const updateChannel = async (publicCode, updateData, userId, ipAddress, userAgent) => {
-    // Buscar channel por public_code
     const existingChannel = await channelRepository.findChannelByPublicCodeInternal(publicCode);
     
     if (!existingChannel) {
@@ -222,13 +201,10 @@ export const updateChannel = async (publicCode, updateData, userId, ipAddress, u
         throw error;
     }
     
-    // Guardar estado anterior para audit log
     const oldData = existingChannel.toJSON();
     
-    // Actualizar channel
     const updatedChannel = await channelRepository.updateChannel(existingChannel.id, updateData);
     
-    // Audit log
     await logAuditAction({
         entityType: 'channel',
         entityId: existingChannel.id,
@@ -239,13 +215,12 @@ export const updateChannel = async (publicCode, updateData, userId, ipAddress, u
             new: updatedChannel 
         },
         metadata: {
-            updated_fields: Object.keys(updateData)
+            updatedFields: Object.keys(updateData)
         },
         ipAddress: ipAddress,
         userAgent: userAgent
     });
     
-    // Invalidar cache de channels y telemetría
     await invalidateChannelCache();
     await invalidateChannelTelemetryCache(existingChannel.id);
     
@@ -263,7 +238,6 @@ export const updateChannel = async (publicCode, updateData, userId, ipAddress, u
  * @returns {Promise<boolean>} - true si se eliminó
  */
 export const deleteChannel = async (publicCode, userId, ipAddress, userAgent) => {
-    // Buscar channel por public_code
     const existingChannel = await channelRepository.findChannelByPublicCodeInternal(publicCode);
     
     if (!existingChannel) {
@@ -273,14 +247,11 @@ export const deleteChannel = async (publicCode, userId, ipAddress, userAgent) =>
         throw error;
     }
     
-    // Guardar datos para audit log
     const channelData = existingChannel.toJSON();
     
-    // Soft delete
     const deleted = await channelRepository.deleteChannel(existingChannel.id);
     
     if (deleted) {
-        // Audit log
         await logAuditAction({
             entityType: 'channel',
             entityId: existingChannel.id,
@@ -290,14 +261,13 @@ export const deleteChannel = async (publicCode, userId, ipAddress, userAgent) =>
                 old: channelData 
             },
             metadata: {
-                device_id: existingChannel.device_id,
-                organization_id: existingChannel.organization_id
+                deviceId: existingChannel.deviceId,
+                organizationId: existingChannel.organizationId
             },
             ipAddress: ipAddress,
             userAgent: userAgent
         });
         
-        // Invalidar cache de channels y telemetría
         await invalidateChannelCache();
         await invalidateChannelTelemetryCache(existingChannel.id);
         

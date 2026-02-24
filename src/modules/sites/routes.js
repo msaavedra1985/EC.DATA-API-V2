@@ -334,7 +334,7 @@ router.get('/', authenticate, enforceActiveOrganization, validate(listSitesSchem
         // Si showAll=true (God View), no filtra por organización
         const result = await siteServices.listSites({
             ...req.query,
-            organization_id: req.organizationContext.id,
+            organizationId: req.organizationContext.id,
             showAll: req.organizationContext.showAll || false
         });
         

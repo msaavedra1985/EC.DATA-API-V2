@@ -129,11 +129,11 @@ export const createUser = async (userData, actor, metadata = {}) => {
         throw error;
     }
     
-    // Resolver organization_id si se proporciona public_code
+    // Resolver organizationId si se proporciona publicCode
     let organizationId = null;
-    if (userData.organization_id) {
+    if (userData.organizationId) {
         const org = await Organization.findOne({
-            where: { public_code: userData.organization_id }
+            where: { publicCode: userData.organizationId }
         });
         
         if (!org) {
@@ -150,9 +150,9 @@ export const createUser = async (userData, actor, metadata = {}) => {
     const userId = generateUuidV7();
     const publicCode = generatePublicCode('USR', userId);
     
-    // Generar human_id (siguiente número en la organización)
+    // Generar humanId (siguiente número en la organización)
     const User = (await import('../auth/models/User.js')).default;
-    const humanId = await generateHumanId(User, 'organization_id', organizationId);
+    const humanId = await generateHumanId(User, 'organizationId', organizationId);
     
     // Hashear password
     const passwordHash = await bcrypt.hash(userData.password, 10);
@@ -160,93 +160,93 @@ export const createUser = async (userData, actor, metadata = {}) => {
     // Crear usuario
     const newUser = await userRepository.createUser({
         id: userId,
-        human_id: humanId,
-        public_code: publicCode,
+        humanId,
+        publicCode,
         email,
-        password_hash: passwordHash,
-        first_name: userData.first_name,
-        last_name: userData.last_name,
-        role_id: role.id,
-        organization_id: organizationId,
-        is_active: true,
+        passwordHash,
+        firstName: userData.firstName,
+        lastName: userData.lastName,
+        roleId: role.id,
+        organizationId,
+        isActive: true,
         // Campos opcionales de perfil
         phone: userData.phone || null,
         language: userData.language || 'es',
         timezone: userData.timezone || 'America/Argentina/Buenos_Aires',
-        avatar_url: userData.avatar_url || null
+        avatarUrl: userData.avatarUrl || null
     });
     
     // Agregar usuario a organizaciones adicionales si se proporcionan
-    if (userData.organization_memberships && userData.organization_memberships.length > 0) {
+    if (userData.organizationMemberships && userData.organizationMemberships.length > 0) {
         const UserOrganization = (await import('../auth/models/UserOrganization.js')).default;
         
-        for (const membership of userData.organization_memberships) {
-            // Buscar organización por public_code
+        for (const membership of userData.organizationMemberships) {
+            // Buscar organización por publicCode
             const org = await Organization.findOne({
-                where: { public_code: membership.organization_id }
+                where: { publicCode: membership.organizationId }
             });
             
             if (!org) {
-                userLogger.warn({ organization_id: membership.organization_id }, 'Organization not found for membership');
+                userLogger.warn({ organizationId: membership.organizationId }, 'Organization not found for membership');
                 continue; // Saltar esta organización si no existe
             }
             
             // Verificar si ya existe la relación (puede ser la org primaria)
             const existingRelation = await UserOrganization.findOne({
                 where: {
-                    user_id: userId,
-                    organization_id: org.id
+                    userId,
+                    organizationId: org.id
                 }
             });
             
             if (existingRelation) {
                 // Si ya existe y se marca como primaria, actualizar
-                if (membership.is_primary && !existingRelation.is_primary) {
+                if (membership.isPrimary && !existingRelation.isPrimary) {
                     // Desmarcar todas las otras como primaria
                     await UserOrganization.update(
-                        { is_primary: false },
-                        { where: { user_id: userId } }
+                        { isPrimary: false },
+                        { where: { userId } }
                     );
                     
-                    existingRelation.is_primary = true;
+                    existingRelation.isPrimary = true;
                     await existingRelation.save();
                 }
                 continue;
             }
             
             // Si se marca como primaria, desmarcar todas las otras
-            if (membership.is_primary) {
+            if (membership.isPrimary) {
                 await UserOrganization.update(
-                    { is_primary: false },
-                    { where: { user_id: userId } }
+                    { isPrimary: false },
+                    { where: { userId } }
                 );
             }
             
             // Crear relación UserOrganization
             await UserOrganization.create({
-                user_id: userId,
-                organization_id: org.id,
-                is_primary: membership.is_primary || false,
-                joined_at: new Date()
+                userId,
+                organizationId: org.id,
+                isPrimary: membership.isPrimary || false,
+                joinedAt: new Date()
             });
         }
     }
     
     // Auditar creación
     await auditLog.log({
-        entity_type: 'user',
-        entity_id: userId,
+        entityType: 'user',
+        entityId: userId,
         action: 'create',
-        performed_by: actor.userId,
+        performedBy: actor.userId,
         changes: {
             email: { old: null, new: email },
             role: { old: null, new: userData.role },
-            organization_id: { old: null, new: organizationId }
+            organizationId: { old: null, new: organizationId }
         },
         metadata: {
             ...metadata,
-            send_invite: userData.send_invite || false,
-            organization_memberships_count: userData.organization_memberships?.length || 0
+            sendInvite: userData.sendInvite || false,
+            organizationMembershipsCount: userData.organizationMemberships?.length || 0
         }
     });
     
@@ -290,16 +290,16 @@ export const updateUser = async (targetUserId, updateData, actor, metadata = {})
     const changes = {};
     const dataToUpdate = {};
     
-    // Actualizar first_name
-    if (updateData.first_name !== undefined && updateData.first_name !== targetUser.first_name) {
-        changes.first_name = { old: targetUser.first_name, new: updateData.first_name };
-        dataToUpdate.first_name = updateData.first_name;
+    // Actualizar firstName
+    if (updateData.firstName !== undefined && updateData.firstName !== targetUser.firstName) {
+        changes.firstName = { old: targetUser.firstName, new: updateData.firstName };
+        dataToUpdate.firstName = updateData.firstName;
     }
     
-    // Actualizar last_name
-    if (updateData.last_name !== undefined && updateData.last_name !== targetUser.last_name) {
-        changes.last_name = { old: targetUser.last_name, new: updateData.last_name };
-        dataToUpdate.last_name = updateData.last_name;
+    // Actualizar lastName
+    if (updateData.lastName !== undefined && updateData.lastName !== targetUser.lastName) {
+        changes.lastName = { old: targetUser.lastName, new: updateData.lastName };
+        dataToUpdate.lastName = updateData.lastName;
     }
     
     // Actualizar role
@@ -316,11 +316,11 @@ export const updateUser = async (targetUserId, updateData, actor, metadata = {})
         }
         
         changes.role = { old: targetUser.role.name, new: updateData.role };
-        dataToUpdate.role_id = newRole.id;
+        dataToUpdate.roleId = newRole.id;
     }
     
-    // Actualizar organization_id (solo system-admin)
-    if (updateData.organization_id !== undefined) {
+    // Actualizar organizationId (solo system-admin)
+    if (updateData.organizationId !== undefined) {
         if (actor.role !== 'system-admin') {
             const error = new Error('Only system-admin can change user organization');
             error.status = 403;
@@ -329,9 +329,9 @@ export const updateUser = async (targetUserId, updateData, actor, metadata = {})
         }
         
         let newOrgId = null;
-        if (updateData.organization_id) {
+        if (updateData.organizationId) {
             const org = await Organization.findOne({
-                where: { public_code: updateData.organization_id }
+                where: { publicCode: updateData.organizationId }
             });
             
             if (!org) {
@@ -344,16 +344,16 @@ export const updateUser = async (targetUserId, updateData, actor, metadata = {})
             newOrgId = org.id;
         }
         
-        if (newOrgId !== targetUser.organization_id) {
-            changes.organization_id = { old: targetUser.organization_id, new: newOrgId };
-            dataToUpdate.organization_id = newOrgId;
+        if (newOrgId !== targetUser.organizationId) {
+            changes.organizationId = { old: targetUser.organizationId, new: newOrgId };
+            dataToUpdate.organizationId = newOrgId;
         }
     }
     
-    // Actualizar is_active
-    if (updateData.is_active !== undefined && updateData.is_active !== targetUser.is_active) {
-        changes.is_active = { old: targetUser.is_active, new: updateData.is_active };
-        dataToUpdate.is_active = updateData.is_active;
+    // Actualizar isActive
+    if (updateData.isActive !== undefined && updateData.isActive !== targetUser.isActive) {
+        changes.isActive = { old: targetUser.isActive, new: updateData.isActive };
+        dataToUpdate.isActive = updateData.isActive;
     }
     
     // Actualizar phone
@@ -374,10 +374,10 @@ export const updateUser = async (targetUserId, updateData, actor, metadata = {})
         dataToUpdate.timezone = updateData.timezone;
     }
     
-    // Actualizar avatar_url
-    if (updateData.avatar_url !== undefined && updateData.avatar_url !== targetUser.avatar_url) {
-        changes.avatar_url = { old: targetUser.avatar_url, new: updateData.avatar_url };
-        dataToUpdate.avatar_url = updateData.avatar_url;
+    // Actualizar avatarUrl
+    if (updateData.avatarUrl !== undefined && updateData.avatarUrl !== targetUser.avatarUrl) {
+        changes.avatarUrl = { old: targetUser.avatarUrl, new: updateData.avatarUrl };
+        dataToUpdate.avatarUrl = updateData.avatarUrl;
     }
     
     // Si no hay cambios, retornar usuario actual
@@ -390,10 +390,10 @@ export const updateUser = async (targetUserId, updateData, actor, metadata = {})
     
     // Auditar cambios
     await auditLog.log({
-        entity_type: 'user',
-        entity_id: targetUser.id,
+        entityType: 'user',
+        entityId: targetUser.id,
         action: 'update',
-        performed_by: actor.userId,
+        performedBy: actor.userId,
         changes,
         metadata
     });
@@ -448,12 +448,12 @@ export const deleteUser = async (targetUserId, actor, metadata = {}) => {
     
     // Auditar eliminación
     await auditLog.log({
-        entity_type: 'user',
-        entity_id: targetUser.id,
+        entityType: 'user',
+        entityId: targetUser.id,
         action: 'delete',
-        performed_by: actor.userId,
+        performedBy: actor.userId,
         changes: {
-            is_active: { old: true, new: false }
+            isActive: { old: true, new: false }
         },
         metadata
     });
@@ -483,7 +483,7 @@ export const changePassword = async (userId, currentPassword, newPassword, metad
     }
     
     // Verificar password actual
-    const isValid = await bcrypt.compare(currentPassword, user.password_hash);
+    const isValid = await bcrypt.compare(currentPassword, user.passwordHash);
     if (!isValid) {
         const error = new Error('Current password is incorrect');
         error.status = 401;
@@ -495,16 +495,16 @@ export const changePassword = async (userId, currentPassword, newPassword, metad
     const newHash = await bcrypt.hash(newPassword, 10);
     
     // Actualizar password
-    await userRepository.updateUser(user.id, { password_hash: newHash });
+    await userRepository.updateUser(user.id, { passwordHash: newHash });
     
     // Auditar cambio de password
     await auditLog.log({
-        entity_type: 'user',
-        entity_id: user.id,
+        entityType: 'user',
+        entityId: user.id,
         action: 'password_change',
-        performed_by: user.id,
+        performedBy: user.id,
         changes: {
-            password_hash: { old: '[REDACTED]', new: '[REDACTED]' }
+            passwordHash: { old: '[REDACTED]', new: '[REDACTED]' }
         },
         metadata
     });
@@ -567,21 +567,21 @@ export const toggleUserStatus = async (targetUserId, isActive, actor, metadata =
     }
     
     // Si el estado no cambia, retornar usuario actual
-    if (targetUser.is_active === isActive) {
+    if (targetUser.isActive === isActive) {
         return userRepository.toPublicUserDto(targetUser);
     }
     
     // Actualizar estado
-    const updatedUser = await userRepository.updateUser(targetUser.id, { is_active: isActive });
+    const updatedUser = await userRepository.updateUser(targetUser.id, { isActive });
     
     // Auditar cambio de estado
     await auditLog.log({
-        entity_type: 'user',
-        entity_id: targetUser.public_code,
+        entityType: 'user',
+        entityId: targetUser.publicCode,
         action: isActive ? 'activated' : 'deactivated',
-        performed_by: actor.userId,
+        performedBy: actor.userId,
         changes: {
-            is_active: { old: targetUser.is_active, new: isActive }
+            isActive: { old: targetUser.isActive, new: isActive }
         },
         metadata
     });
@@ -606,4 +606,3 @@ export const validateEmail = async ({ email, excludePublicCode }) => {
         excludePublicCode 
     });
 };
-

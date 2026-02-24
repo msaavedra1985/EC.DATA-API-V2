@@ -26,15 +26,13 @@ const hierarchyLogger = logger.child({ component: 'resource-hierarchy' });
  * @returns {Promise<Object>} - Nodo creado
  */
 export const createNode = async (nodeData, userId, ipAddress, userAgent) => {
-    // Resolver organization_id
-    const organizationUuid = await resolveOrganizationId(nodeData.organization_id);
+    const organizationUuid = await resolveOrganizationId(nodeData.organizationId);
     
-    // Resolver parent_id si se proporciona
     let parentUuid = null;
     let parentNode = null;
     
-    if (nodeData.parent_id) {
-        parentNode = await resolveNodeId(nodeData.parent_id);
+    if (nodeData.parentId) {
+        parentNode = await resolveNodeId(nodeData.parentId);
         if (!parentNode) {
             const error = new Error('Nodo padre no encontrado');
             error.status = 404;
@@ -43,7 +41,7 @@ export const createNode = async (nodeData, userId, ipAddress, userAgent) => {
         }
         
         // Validar que el padre pertenece a la misma organización
-        if (parentNode._organization_id !== organizationUuid) {
+        if (parentNode._organizationId !== organizationUuid) {
             const error = new Error('El nodo padre debe pertenecer a la misma organización');
             error.status = 400;
             error.code = 'PARENT_ORG_MISMATCH';
@@ -53,34 +51,30 @@ export const createNode = async (nodeData, userId, ipAddress, userAgent) => {
         parentUuid = parentNode._uuid;
     }
     
-    // Validar reglas de tipo de nodo
-    validateNodeTypeRules(nodeData.node_type, parentNode);
+    validateNodeTypeRules(nodeData.nodeType, parentNode);
     
-    // Validar que el reference_id no esté duplicado en la jerarquía de esta organización
-    if (nodeData.reference_id && (nodeData.node_type === 'site' || nodeData.node_type === 'channel')) {
-        const existingNode = await repository.findNodeByReferenceId(nodeData.reference_id, organizationUuid);
+    if (nodeData.referenceId && (nodeData.nodeType === 'site' || nodeData.nodeType === 'channel')) {
+        const existingNode = await repository.findNodeByReferenceId(nodeData.referenceId, organizationUuid);
         if (existingNode) {
-            const error = new Error(`Este recurso (${nodeData.reference_id}) ya existe en la jerarquía de la organización`);
+            const error = new Error(`Este recurso (${nodeData.referenceId}) ya existe en la jerarquía de la organización`);
             error.status = 409;
             error.code = 'REFERENCE_ALREADY_IN_HIERARCHY';
             throw error;
         }
     }
     
-    // Crear nodo
     const node = await repository.createNode({
-        organization_id: organizationUuid,
-        parent_id: parentUuid,
-        node_type: nodeData.node_type,
-        reference_id: nodeData.reference_id || null,
+        organizationId: organizationUuid,
+        parentId: parentUuid,
+        nodeType: nodeData.nodeType,
+        referenceId: nodeData.referenceId || null,
         name: nodeData.name,
         description: nodeData.description || null,
-        icon: nodeData.icon || getDefaultIcon(nodeData.node_type),
-        display_order: nodeData.display_order || 0,
+        icon: nodeData.icon || getDefaultIcon(nodeData.nodeType),
+        displayOrder: nodeData.displayOrder || 0,
         metadata: nodeData.metadata || {}
     });
     
-    // Audit log
     await logAuditAction({
         entityType: 'resource_hierarchy',
         entityId: node.id,
@@ -88,18 +82,17 @@ export const createNode = async (nodeData, userId, ipAddress, userAgent) => {
         performedBy: userId,
         changes: { new: node },
         metadata: {
-            node_type: nodeData.node_type,
-            parent_id: nodeData.parent_id,
-            organization_id: nodeData.organization_id
+            nodeType: nodeData.nodeType,
+            parentId: nodeData.parentId,
+            organizationId: nodeData.organizationId
         },
         ipAddress,
         userAgent
     });
     
-    // Invalidar cache de la organización (listas, árboles, hijos del padre)
-    await cache.invalidateNodeAndRelated(node.id, organizationUuid, parentNode?.public_code || null);
+    await cache.invalidateNodeAndRelated(node.id, organizationUuid, parentNode?.publicCode || null);
     
-    hierarchyLogger.info({ nodeId: node.id, nodeType: nodeData.node_type, userId }, 'Node created successfully');
+    hierarchyLogger.info({ nodeId: node.id, nodeType: nodeData.nodeType, userId }, 'Node created successfully');
     
     return sanitizeNode(node);
 };
@@ -370,8 +363,8 @@ export const moveNode = async (nodePublicCode, newParentPublicCode, userId, ipAd
         throw error;
     }
     
-    const oldParentId = node.parent_id;
-    const oldDisplayOrder = node.display_order;
+    const oldParentId = node.parentId;
+    const oldDisplayOrder = node.displayOrder;
     let newParentUuid = null;
     let newParent = null;
     
@@ -384,8 +377,7 @@ export const moveNode = async (nodePublicCode, newParentPublicCode, userId, ipAd
             throw error;
         }
         
-        // Validar misma organización
-        if (newParent.organization_id !== node.organization_id) {
+        if (newParent.organizationId !== node.organizationId) {
             const error = new Error('No se puede mover a una organización diferente');
             error.status = 400;
             error.code = 'CROSS_ORG_MOVE_NOT_ALLOWED';
@@ -427,9 +419,8 @@ export const moveNode = async (nodePublicCode, newParentPublicCode, userId, ipAd
         // Mover el nodo (cambia parent_id y path)
         updatedNode = await repository.moveNode(node.id, newParentUuid);
         
-        // Si se especificó display_order, actualizarlo también
         if (displayOrder !== undefined) {
-            updatedNode = await repository.updateNode(node.id, { display_order: displayOrder });
+            updatedNode = await repository.updateNode(node.id, { displayOrder: displayOrder });
         }
     } catch (repoError) {
         // Convertir errores del repository a errores HTTP
@@ -448,23 +439,20 @@ export const moveNode = async (nodePublicCode, newParentPublicCode, userId, ipAd
         throw repoError;
     }
     
-    // Construir objeto de cambios para auditoría
     const changes = {
-        parent_id: { 
+        parentId: { 
             old: oldParentId, 
             new: newParentUuid 
         }
     };
     
-    // Si cambió display_order, incluirlo en el audit
     if (displayOrder !== undefined && displayOrder !== oldDisplayOrder) {
-        changes.display_order = {
+        changes.displayOrder = {
             old: oldDisplayOrder,
             new: displayOrder
         };
     }
     
-    // Audit log
     await logAuditAction({
         entityType: 'resource_hierarchy',
         entityId: nodePublicCode,
@@ -472,17 +460,16 @@ export const moveNode = async (nodePublicCode, newParentPublicCode, userId, ipAd
         performedBy: userId,
         changes,
         metadata: {
-            node_type: node.node_type,
-            old_parent_public_code: oldParentId ? (await repository.findNodeById(oldParentId))?.public_code : null,
-            new_parent_public_code: newParentPublicCode
+            nodeType: node.nodeType,
+            oldParentPublicCode: oldParentId ? (await repository.findNodeById(oldParentId))?.publicCode : null,
+            newParentPublicCode: newParentPublicCode
         },
         ipAddress,
         userAgent
     });
     
-    // Invalidar cache del nodo y ambos padres (antiguo y nuevo)
-    const oldParentPublicCode = oldParentId ? (await repository.findNodeById(oldParentId))?.public_code : null;
-    await cache.invalidateAfterMove(nodePublicCode, node.organization_id, oldParentPublicCode, newParentPublicCode);
+    const oldParentPublicCode = oldParentId ? (await repository.findNodeById(oldParentId))?.publicCode : null;
+    await cache.invalidateAfterMove(nodePublicCode, node.organizationId, oldParentPublicCode, newParentPublicCode);
     
     hierarchyLogger.info({ nodeId: nodePublicCode, newParent: newParentPublicCode, userId }, 'Node moved successfully');
     
@@ -509,13 +496,12 @@ export const updateNode = async (nodePublicCode, updates, userId, ipAddress, use
         throw error;
     }
     
-    // Guardar valores anteriores para auditoría
     const oldValues = {
         name: node.name,
         description: node.description,
         icon: node.icon,
-        display_order: node.display_order,
-        is_active: node.is_active
+        displayOrder: node.displayOrder,
+        isActive: node.isActive
     };
     
     const updatedNode = await repository.updateNode(node.id, updates);
@@ -535,17 +521,15 @@ export const updateNode = async (nodePublicCode, updates, userId, ipAddress, use
         action: 'updated',
         performedBy: userId,
         changes,
-        metadata: { node_type: node.node_type },
+        metadata: { nodeType: node.nodeType },
         ipAddress,
         userAgent
     });
     
-    // Invalidar cache del nodo y estructura relacionada
-    // Usar timeout para evitar bloqueos indefinidos si Redis tiene problemas
     try {
-        const parentPublicCode = node.parent_id ? (await repository.findNodeById(node.parent_id))?.public_code : null;
+        const parentPublicCode = node.parentId ? (await repository.findNodeById(node.parentId))?.publicCode : null;
         await Promise.race([
-            cache.invalidateNodeAndRelated(nodePublicCode, node.organization_id, parentPublicCode),
+            cache.invalidateNodeAndRelated(nodePublicCode, node.organizationId, parentPublicCode),
             new Promise((_, reject) => setTimeout(() => reject(new Error('Cache timeout')), 5000))
         ]);
     } catch (err) {
@@ -604,13 +588,13 @@ export const deleteNode = async (nodePublicCode, cascade = false, userId, ipAddr
         action: 'deleted',
         performedBy: userId,
         changes: { 
-            old: { name: node.name, node_type: node.node_type }
+            old: { name: node.name, nodeType: node.nodeType }
         },
         metadata: {
             cascade,
-            user_confirmed_cascade: cascade,
-            deleted_count: result.deleted_count,
-            deleted_nodes: result.deleted_nodes
+            userConfirmedCascade: cascade,
+            deletedCount: result.deletedCount,
+            deletedNodes: result.deletedNodes
         },
         ipAddress,
         userAgent
@@ -619,26 +603,25 @@ export const deleteNode = async (nodePublicCode, cascade = false, userId, ipAddr
     // Invalidar cache de toda la organización
     // Usar timeout para evitar bloqueos indefinidos si Redis tiene problemas
     try {
-        const parentPublicCode = node.parent_id ? (await repository.findNodeById(node.parent_id))?.public_code : null;
+        const parentPublicCode = node.parentId ? (await repository.findNodeById(node.parentId))?.publicCode : null;
         await Promise.race([
-            cache.invalidateNodeAndRelated(nodePublicCode, node.organization_id, parentPublicCode),
+            cache.invalidateNodeAndRelated(nodePublicCode, node.organizationId, parentPublicCode),
             new Promise((_, reject) => setTimeout(() => reject(new Error('Cache timeout')), 5000))
         ]);
     } catch (err) {
-        // Si el cache falla o timeout, logueamos pero no bloqueamos al usuario
         hierarchyLogger.warn({ err: err.message, nodePublicCode }, 'Cache invalidation failed or timed out, continuing');
     }
     
     hierarchyLogger.info({ 
         nodeId: nodePublicCode, 
-        deletedCount: result.deleted_count, 
+        deletedCount: result.deletedCount, 
         cascade, 
         userId 
     }, 'Node deleted successfully');
     
     return {
-        deleted_count: result.deleted_count,
-        deleted_nodes: result.deleted_nodes,
+        deletedCount: result.deletedCount,
+        deletedNodes: result.deletedNodes,
         cascade
     };
 };
@@ -718,7 +701,7 @@ export const listNodes = async (organizationId, options = {}) => {
  * @returns {Promise<Object>} - Acceso creado/actualizado
  */
 export const grantNodeAccess = async (accessData, grantedBy, ipAddress, userAgent) => {
-    const node = await repository.findNodeByPublicCodeInternal(accessData.node_id);
+    const node = await repository.findNodeByPublicCodeInternal(accessData.nodeId);
     
     if (!node) {
         const error = new Error('Nodo no encontrado');
@@ -728,33 +711,32 @@ export const grantNodeAccess = async (accessData, grantedBy, ipAddress, userAgen
     }
     
     const access = await repository.grantAccess({
-        user_id: accessData.user_id,
-        resource_node_id: node.id,
-        organization_id: node.organization_id,
-        access_type: accessData.access_type || 'view',
-        include_descendants: accessData.include_descendants !== false,
-        granted_by: grantedBy,
-        expires_at: accessData.expires_at || null,
+        userId: accessData.userId,
+        resourceNodeId: node.id,
+        organizationId: node.organizationId,
+        accessType: accessData.accessType || 'view',
+        includeDescendants: accessData.includeDescendants !== false,
+        grantedBy: grantedBy,
+        expiresAt: accessData.expiresAt || null,
         notes: accessData.notes || null
     });
     
-    // Audit log
     await logAuditAction({
         entityType: 'user_resource_access',
-        entityId: `${accessData.user_id}:${accessData.node_id}`,
+        entityId: `${accessData.userId}:${accessData.nodeId}`,
         action: 'granted',
         performedBy: grantedBy,
         changes: { new: access },
         metadata: {
-            node_id: accessData.node_id,
-            access_type: accessData.access_type,
-            include_descendants: accessData.include_descendants
+            nodeId: accessData.nodeId,
+            accessType: accessData.accessType,
+            includeDescendants: accessData.includeDescendants
         },
         ipAddress,
         userAgent
     });
     
-    hierarchyLogger.info({ userId: accessData.user_id, nodeId: accessData.node_id, grantedBy }, 'Access granted successfully');
+    hierarchyLogger.info({ userId: accessData.userId, nodeId: accessData.nodeId, grantedBy }, 'Access granted successfully');
     
     return access;
 };
@@ -788,7 +770,7 @@ export const revokeNodeAccess = async (userId, nodePublicCode, revokedBy, ipAddr
             entityId: `${userId}:${nodePublicCode}`,
             action: 'revoked',
             performedBy: revokedBy,
-            metadata: { node_id: nodePublicCode },
+            metadata: { nodeId: nodePublicCode },
             ipAddress,
             userAgent
         });
@@ -835,7 +817,7 @@ export const getAccessibleNodes = async (userId, organizationId, accessType = 'v
     for (const nodeId of nodeIds) {
         const node = await repository.findNodeById(nodeId);
         if (node) {
-            nodes.push(sanitizeNode(repository.toNodeDto ? repository.toNodeDto(node) : node));
+            nodes.push(sanitizeNode(node));
         }
     }
     
@@ -883,7 +865,7 @@ const resolveNodeId = async (nodeId) => {
         if (node) {
             return {
                 _uuid: node.id,
-                _organization_id: node.organization_id
+                _organizationId: node.organizationId
             };
         }
         return null;
@@ -931,7 +913,7 @@ const getDefaultIcon = (nodeType) => {
 const sanitizeNode = (node) => {
     if (!node) return null;
     
-    const { _uuid, _organization_id, ...publicData } = node;
+    const { _uuid, _organizationId, ...publicData } = node;
     return publicData;
 };
 
@@ -996,17 +978,15 @@ export const batchGetNodes = async (publicCodes, options = {}) => {
  * }
  */
 export const batchCreateNodes = async (batchData, organizationId, userId, ipAddress, userAgent) => {
-    const { parent_id, nodes } = batchData;
+    const { parentId, nodes } = batchData;
     
-    // Resolver organization_id
     const organizationUuid = await resolveOrganizationId(organizationId);
     
-    // Resolver parent_id si se proporciona
     let parentUuid = null;
     let parentNode = null;
     
-    if (parent_id) {
-        parentNode = await resolveNodeId(parent_id);
+    if (parentId) {
+        parentNode = await resolveNodeId(parentId);
         if (!parentNode) {
             const error = new Error('Nodo padre no encontrado');
             error.status = 404;
@@ -1015,7 +995,7 @@ export const batchCreateNodes = async (batchData, organizationId, userId, ipAddr
         }
         
         // Validar que el padre pertenece a la misma organización
-        if (parentNode._organization_id !== organizationUuid) {
+        if (parentNode._organizationId !== organizationUuid) {
             const error = new Error('El nodo padre debe pertenecer a la misma organización');
             error.status = 400;
             error.code = 'PARENT_ORG_MISMATCH';
@@ -1025,7 +1005,6 @@ export const batchCreateNodes = async (batchData, organizationId, userId, ipAddr
         parentUuid = parentNode._uuid;
     }
     
-    // Arrays para resultados
     const inserted = [];
     const failed = [];
     
@@ -1034,52 +1013,47 @@ export const batchCreateNodes = async (batchData, organizationId, userId, ipAddr
     
     // Procesar cada nodo individualmente
     for (const nodeData of nodes) {
-        const nodeIdentifier = nodeData.reference_id || nodeData.name;
+        const nodeIdentifier = nodeData.referenceId || nodeData.name;
         
         try {
-            // Validar reglas de tipo de nodo
-            validateNodeTypeRules(nodeData.node_type, parentNode);
+            validateNodeTypeRules(nodeData.nodeType, parentNode);
             
-            // Validar duplicados dentro del batch (para sites y channels con reference_id)
-            if (nodeData.reference_id && (nodeData.node_type === 'site' || nodeData.node_type === 'channel')) {
-                if (seenReferenceIds.has(nodeData.reference_id)) {
+            if (nodeData.referenceId && (nodeData.nodeType === 'site' || nodeData.nodeType === 'channel')) {
+                if (seenReferenceIds.has(nodeData.referenceId)) {
                     failed.push({
-                        reference_id: nodeData.reference_id,
+                        referenceId: nodeData.referenceId,
                         name: nodeData.name,
-                        reason_code: 'DUPLICATE_IN_BATCH',
+                        reasonCode: 'DUPLICATE_IN_BATCH',
                         message: 'Este recurso está duplicado dentro del mismo batch'
                     });
                     continue;
                 }
-                seenReferenceIds.add(nodeData.reference_id);
+                seenReferenceIds.add(nodeData.referenceId);
                 
-                // Verificar que no exista ya en la jerarquía de esta organización
-                const existingNode = await repository.findNodeByReferenceId(nodeData.reference_id, organizationUuid);
+                const existingNode = await repository.findNodeByReferenceId(nodeData.referenceId, organizationUuid);
                 if (existingNode) {
                     failed.push({
-                        reference_id: nodeData.reference_id,
+                        referenceId: nodeData.referenceId,
                         name: nodeData.name,
-                        reason_code: 'ALREADY_IN_HIERARCHY',
+                        reasonCode: 'ALREADY_IN_HIERARCHY',
                         message: 'Este recurso ya existe en la jerarquía'
                     });
                     continue;
                 }
             }
             
-            // Crear nodo (transacción individual implícita via repository)
             const node = await repository.createNode({
-                organization_id: organizationUuid,
-                parent_id: parentUuid,
-                node_type: nodeData.node_type,
-                reference_id: nodeData.reference_id || null,
+                organizationId: organizationUuid,
+                parentId: parentUuid,
+                nodeType: nodeData.nodeType,
+                referenceId: nodeData.referenceId || null,
                 name: nodeData.name,
                 description: nodeData.description || null,
-                icon: nodeData.icon || getDefaultIcon(nodeData.node_type),
-                display_order: nodeData.display_order || 0,
+                icon: nodeData.icon || getDefaultIcon(nodeData.nodeType),
+                displayOrder: nodeData.displayOrder || 0,
                 metadata: nodeData.metadata || {}
             });
             
-            // Audit log para el nodo creado
             await logAuditAction({
                 entityType: 'resource_hierarchy',
                 entityId: node.id,
@@ -1087,26 +1061,24 @@ export const batchCreateNodes = async (batchData, organizationId, userId, ipAddr
                 performedBy: userId,
                 changes: { new: node },
                 metadata: {
-                    node_type: nodeData.node_type,
-                    parent_id: parent_id,
-                    organization_id: organizationId,
-                    batch_operation: true,
-                    batch_size: nodes.length
+                    nodeType: nodeData.nodeType,
+                    parentId: parentId,
+                    organizationId: organizationId,
+                    batchOperation: true,
+                    batchSize: nodes.length
                 },
                 ipAddress,
                 userAgent
             });
             
-            // Agregar a insertados con datos mínimos para el frontend
             inserted.push({
-                public_code: node.public_code,
-                reference_id: node.reference_id,
-                node_type: node.node_type,
+                publicCode: node.publicCode,
+                referenceId: node.referenceId,
+                nodeType: node.nodeType,
                 name: node.name
             });
             
         } catch (error) {
-            // Capturar error y agregarlo a fallidos
             hierarchyLogger.warn({ 
                 nodeIdentifier, 
                 error: error.message, 
@@ -1114,9 +1086,9 @@ export const batchCreateNodes = async (batchData, organizationId, userId, ipAddr
             }, 'Batch create: node failed');
             
             failed.push({
-                reference_id: nodeData.reference_id || null,
+                referenceId: nodeData.referenceId || null,
                 name: nodeData.name,
-                reason_code: error.code || 'UNKNOWN_ERROR',
+                reasonCode: error.code || 'UNKNOWN_ERROR',
                 message: error.message
             });
         }
@@ -1124,15 +1096,14 @@ export const batchCreateNodes = async (batchData, organizationId, userId, ipAddr
     
     // Invalidar cache si hubo al menos un nodo insertado
     if (inserted.length > 0) {
-        await cache.invalidateNodeAndRelated(null, organizationUuid, parentNode?.public_code || null);
+        await cache.invalidateNodeAndRelated(null, organizationUuid, parentNode?.publicCode || null);
     }
     
-    // Log de resultado
     hierarchyLogger.info({ 
         requested: nodes.length,
         inserted: inserted.length, 
         failed: failed.length,
-        parentId: parent_id, 
+        parentId, 
         userId 
     }, 'Batch create nodes completed');
     

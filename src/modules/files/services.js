@@ -9,73 +9,37 @@ import * as azureBlob from '../../services/azureBlob.js';
 import pino from 'pino';
 import { v7 as uuidv7 } from 'uuid';
 
-// Logger específico para el módulo de files
 const logger = pino({ name: 'files-service' });
 
-/**
- * Tipos de propietario válidos para archivos
- * Define las entidades que pueden ser dueñas de un archivo
- * Esto determina la estructura del blob_path en Azure
- */
 const VALID_OWNER_TYPES = ['organization', 'site', 'device', 'channel', 'user'];
 
-/**
- * Validar que el owner_type sea uno de los valores permitidos
- * 
- * @param {string} ownerType - Tipo de propietario a validar
- * @throws {Error} - Si el tipo no es válido
- */
 const validateOwnerType = (ownerType) => {
     if (!VALID_OWNER_TYPES.includes(ownerType)) {
         throw new Error(`owner_type inválido: ${ownerType}. Valores permitidos: ${VALID_OWNER_TYPES.join(', ')}`);
     }
 };
 
-/**
- * Sanitizar nombre de archivo
- * Remueve caracteres peligrosos y normaliza el nombre
- * 
- * @param {string} originalName - Nombre original del archivo
- * @returns {string} - Nombre sanitizado
- */
 const sanitizeFileName = (originalName) => {
-    // Obtener extensión
     const lastDot = originalName.lastIndexOf('.');
     const extension = lastDot > 0 ? originalName.slice(lastDot + 1).toLowerCase() : '';
     const baseName = lastDot > 0 ? originalName.slice(0, lastDot) : originalName;
 
-    // Sanitizar: solo alfanuméricos, guiones y guiones bajos
     const sanitized = baseName
         .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '') // Remover acentos
-        .replace(/[^a-zA-Z0-9_-]/g, '_') // Reemplazar caracteres especiales
-        .replace(/_+/g, '_') // Colapsar guiones bajos múltiples
-        .replace(/^_|_$/g, '') // Remover guiones bajos al inicio/final
-        .slice(0, 100); // Limitar longitud
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-zA-Z0-9_-]/g, '_')
+        .replace(/_+/g, '_')
+        .replace(/^_|_$/g, '')
+        .slice(0, 100);
 
     return extension ? `${sanitized}.${extension}` : sanitized;
 };
 
-/**
- * Extraer extensión de archivo
- * 
- * @param {string} fileName - Nombre del archivo
- * @returns {string} - Extensión sin punto
- */
 const getExtension = (fileName) => {
     const lastDot = fileName.lastIndexOf('.');
     return lastDot > 0 ? fileName.slice(lastDot + 1).toLowerCase() : '';
 };
 
-/**
- * Validar archivo según categoría
- * 
- * @param {string} category - Categoría del archivo
- * @param {string} mimeType - Tipo MIME
- * @param {number} sizeBytes - Tamaño en bytes
- * @param {string} extension - Extensión del archivo
- * @throws {Error} - Si la validación falla
- */
 const validateFileForCategory = (category, mimeType, sizeBytes, extension) => {
     const config = FILE_CATEGORY_CONFIG[category];
     
@@ -83,17 +47,14 @@ const validateFileForCategory = (category, mimeType, sizeBytes, extension) => {
         throw new Error(`Categoría no válida: ${category}`);
     }
 
-    // Validar tipo MIME
     if (!config.mimeTypes.includes(mimeType) && !config.mimeTypes.includes('application/octet-stream')) {
         throw new Error(`Tipo MIME no permitido para categoría ${category}: ${mimeType}. Permitidos: ${config.mimeTypes.join(', ')}`);
     }
 
-    // Validar extensión (si no es wildcard)
     if (!config.extensions.includes('*') && !config.extensions.includes(extension)) {
         throw new Error(`Extensión no permitida para categoría ${category}: .${extension}. Permitidas: ${config.extensions.join(', ')}`);
     }
 
-    // Validar tamaño
     if (sizeBytes > config.maxSizeBytes) {
         const maxMB = Math.round(config.maxSizeBytes / 1024 / 1024);
         const fileMB = Math.round(sizeBytes / 1024 / 1024 * 100) / 100;
@@ -101,119 +62,73 @@ const validateFileForCategory = (category, mimeType, sizeBytes, extension) => {
     }
 };
 
-/**
- * Generar ruta de blob en Azure
- * Formato: {owner_type}/{owner_id}/{uuid}_{sanitized_name}
- * Si no hay owner, usa: organization/{org_public_code}/{uuid}_{sanitized_name}
- * 
- * @param {string} ownerType - Tipo de propietario (site, device, user, organization)
- * @param {string} ownerId - Public code del propietario
- * @param {string} sanitizedName - Nombre sanitizado del archivo
- * @returns {string} - Ruta del blob
- */
 const generateBlobPath = (ownerType, ownerId, sanitizedName) => {
-    const uuid = uuidv7().split('-')[0]; // Usar solo primeros 8 caracteres del UUID
+    const uuid = uuidv7().split('-')[0];
     return `${ownerType}/${ownerId}/${uuid}_${sanitizedName}`;
 };
 
-/**
- * Solicitar URL de carga (SAS URL)
- * Crea registro en estado 'pending' y retorna URL para subir
- * 
- * @param {Object} data - Datos de la solicitud
- * @param {string} data.organization_id - Public code de la organización
- * @param {string} data.original_name - Nombre original del archivo
- * @param {string} data.mime_type - Tipo MIME
- * @param {number} data.size_bytes - Tamaño en bytes
- * @param {string} data.category - Categoría del archivo
- * @param {string} [data.owner_type] - Tipo de propietario (site, device, user, etc.)
- * @param {string} [data.owner_id] - Public code del propietario
- * @param {boolean} [data.is_public] - Si el archivo va al contenedor público
- * @param {Object} [data.metadata] - Metadatos adicionales
- * @param {string} userId - UUID del usuario que solicita
- * @param {string} ipAddress - IP del solicitante
- * @param {string} userAgent - User agent del solicitante
- * @returns {Promise<Object>} - DTO con URL de carga y datos del archivo
- */
 export const requestUploadUrl = async (data, userId, ipAddress, userAgent) => {
     logger.info({ data, userId }, 'Solicitando URL de carga');
 
-    // Buscar organización por public_code
-    const organization = await orgRepository.findOrganizationByPublicCodeInternal(data.organization_id);
+    const organization = await orgRepository.findOrganizationByPublicCodeInternal(data.organizationId);
     if (!organization) {
         throw new Error('Organización no encontrada');
     }
 
-    // Extraer extensión y sanitizar nombre
-    const extension = getExtension(data.original_name);
-    const sanitizedName = sanitizeFileName(data.original_name);
+    const extension = getExtension(data.originalName);
+    const sanitizedName = sanitizeFileName(data.originalName);
 
-    // Validar archivo según categoría
-    validateFileForCategory(data.category, data.mime_type, data.size_bytes, extension);
+    validateFileForCategory(data.category, data.mimeType, data.sizeBytes, extension);
 
-    // Validar coherencia de owner_type y owner_id
-    // Si se proporciona uno, se deben proporcionar ambos; si no, usar organization como default
     let ownerType;
     let ownerId;
     
-    if (data.owner_type && data.owner_id) {
-        // Ambos proporcionados - validar y usar valores del request
-        validateOwnerType(data.owner_type);
-        ownerType = data.owner_type;
-        ownerId = data.owner_id;
-    } else if (!data.owner_type && !data.owner_id) {
-        // Ninguno proporcionado - usar organization como default
+    if (data.ownerType && data.ownerId) {
+        validateOwnerType(data.ownerType);
+        ownerType = data.ownerType;
+        ownerId = data.ownerId;
+    } else if (!data.ownerType && !data.ownerId) {
         ownerType = 'organization';
-        ownerId = organization.public_code;
+        ownerId = organization.publicCode;
     } else {
-        // Solo uno proporcionado - error de validación
-        throw new Error('owner_type y owner_id deben proporcionarse juntos o ninguno');
+        throw new Error('ownerType y ownerId deben proporcionarse juntos o ninguno');
     }
 
-    // Generar ruta del blob: owner_type/owner_id/uuid_filename
     const blobPath = generateBlobPath(ownerType, ownerId, sanitizedName);
 
-    // Determinar si es público o privado
-    const isPublic = data.is_public || false;
+    const isPublic = data.isPublic || false;
 
-    // Generar SAS URL según el tipo de contenedor
     let sasResult;
-    let blobUrl; // URL final del archivo después del upload
+    let blobUrl;
     
     if (isPublic) {
-        // Archivo público: SAS URL temporal para subir, luego URL directa
         sasResult = azureBlob.generatePublicUploadSasUrl(blobPath);
-        blobUrl = sasResult.publicUrl; // URL pública directa
+        blobUrl = sasResult.publicUrl;
     } else {
-        // Archivo privado: SAS URL para subir
         sasResult = azureBlob.generateUploadSasUrl(blobPath);
-        // Para archivos privados, la URL se genera bajo demanda con SAS
         const baseUrl = azureBlob.getStorageBaseUrl();
         const { config: appConfig } = await import('../../config/env.js');
         blobUrl = `${baseUrl}/${appConfig.azure.containerPrivate}/${blobPath}`;
     }
 
-    // Crear registro en estado pending con blob_url pre-calculada
-    // Usar valores resueltos de ownerType/ownerId (no los originales del request)
     const file = await repository.createFileUpload({
-        organization_id: organization.id,
-        blob_path: blobPath,
-        blob_url: blobUrl, // Guardar URL para uso en confirmUpload
-        original_name: data.original_name,
-        file_name: sanitizedName,
-        mime_type: data.mime_type,
+        organizationId: organization.id,
+        blobPath,
+        blobUrl,
+        originalName: data.originalName,
+        fileName: sanitizedName,
+        mimeType: data.mimeType,
         extension,
-        size_bytes: data.size_bytes,
+        sizeBytes: data.sizeBytes,
         category: data.category,
-        owner_type: ownerType, // Valor resuelto (default: 'organization')
-        owner_id: ownerId, // Valor resuelto (default: organization.public_code)
-        uploaded_by: userId,
-        expires_at: sasResult.expiresAt,
+        ownerType,
+        ownerId,
+        uploadedBy: userId,
+        expiresAt: sasResult.expiresAt,
         metadata: data.metadata,
-        is_public: isPublic
+        isPublic
     });
 
-    // Auditoría
     await logAuditAction({
         entityType: 'file_upload',
         entityId: file.id,
@@ -221,80 +136,58 @@ export const requestUploadUrl = async (data, userId, ipAddress, userAgent) => {
         performedBy: userId,
         changes: {
             created: {
-                public_code: file.public_code,
-                blob_path: blobPath,
-                original_name: data.original_name,
+                publicCode: file.publicCode,
+                blobPath,
+                originalName: data.originalName,
                 category: data.category,
-                size_bytes: data.size_bytes,
-                is_public: isPublic
+                sizeBytes: data.sizeBytes,
+                isPublic
             }
         },
         ipAddress,
         userAgent
     });
 
-    logger.info({ fileId: file.public_code, blobPath, isPublic }, 'URL de carga solicitada exitosamente');
+    logger.info({ fileId: file.publicCode, blobPath, isPublic }, 'URL de carga solicitada exitosamente');
 
-    // Obtener configuración de categoría para respuesta
     const categoryConfig = FILE_CATEGORY_CONFIG[data.category];
 
-    // Retornar DTO con información para el BFF
     return toUploadUrlDto({
-        public_code: file.public_code,
-        upload_url: sasResult.sasUrl,
-        blob_path: blobPath,
-        expires_at: sasResult.expiresAt,
-        max_size_bytes: categoryConfig.maxSizeBytes,
-        allowed_mime_types: categoryConfig.mimeTypes,
-        is_public: isPublic,
-        public_url: isPublic ? sasResult.publicUrl : null
+        publicCode: file.publicCode,
+        uploadUrl: sasResult.sasUrl,
+        blobPath,
+        expiresAt: sasResult.expiresAt,
+        maxSizeBytes: categoryConfig.maxSizeBytes,
+        allowedMimeTypes: categoryConfig.mimeTypes,
+        isPublic,
+        publicUrl: isPublic ? sasResult.publicUrl : null
     });
 };
 
-/**
- * Confirmar que el upload fue exitoso
- * Cambia estado de 'pending' a 'uploaded'
- * 
- * @param {string} publicCode - Public code del archivo
- * @param {Object} confirmData - Datos de confirmación
- * @param {string} [confirmData.checksum_sha256] - Checksum del archivo
- * @param {Object} [confirmData.metadata] - Metadatos adicionales
- * @param {string} userId - UUID del usuario
- * @param {string} ipAddress - IP del solicitante
- * @param {string} userAgent - User agent
- * @returns {Promise<Object>} - DTO del archivo confirmado
- */
 export const confirmUpload = async (publicCode, confirmData, userId, ipAddress, userAgent) => {
     logger.info({ publicCode, userId }, 'Confirmando upload');
 
-    // Buscar archivo
     const file = await repository.findByPublicCodeInternal(publicCode);
     if (!file) {
         throw new Error('Archivo no encontrado');
     }
 
-    // Validar que esté en estado pending
     if (file.status !== 'pending') {
         throw new Error(`No se puede confirmar archivo en estado: ${file.status}`);
     }
 
-    // Validar que no haya expirado
-    if (file.expires_at && new Date(file.expires_at) < new Date()) {
+    if (file.expiresAt && new Date(file.expiresAt) < new Date()) {
         throw new Error('La URL de carga ha expirado');
     }
 
-    // El blob_url ya fue calculado y guardado en requestUploadUrl
-    // Usamos ese valor directamente para consistencia
-    const blobUrl = file.blob_url;
+    const blobUrl = file.blobUrl;
 
-    // Actualizar archivo
     const updatedFile = await repository.confirmUpload(file.id, {
-        blob_url: blobUrl,
-        checksum_sha256: confirmData.checksum_sha256,
+        blobUrl,
+        checksumSha256: confirmData.checksumSha256,
         metadata: confirmData.metadata
     });
 
-    // Auditoría
     await logAuditAction({
         entityType: 'file_upload',
         entityId: file.id,
@@ -304,8 +197,8 @@ export const confirmUpload = async (publicCode, confirmData, userId, ipAddress, 
             old: { status: 'pending' },
             new: { 
                 status: 'uploaded',
-                checksum_sha256: confirmData.checksum_sha256,
-                uploaded_at: updatedFile.uploaded_at
+                checksumSha256: confirmData.checksumSha256,
+                uploadedAt: updatedFile.uploadedAt
             }
         },
         ipAddress,
@@ -317,12 +210,6 @@ export const confirmUpload = async (publicCode, confirmData, userId, ipAddress, 
     return toUploadConfirmDto(updatedFile);
 };
 
-/**
- * Obtener archivo por public_code
- * 
- * @param {string} publicCode - Public code del archivo
- * @returns {Promise<Object>} - DTO del archivo
- */
 export const getFileByPublicCode = async (publicCode) => {
     const file = await repository.findByPublicCode(publicCode);
     
@@ -333,40 +220,28 @@ export const getFileByPublicCode = async (publicCode) => {
     return toPublicFileDto(file);
 };
 
-/**
- * Listar archivos con filtros
- * 
- * @param {Object} filters - Filtros de búsqueda
- * @returns {Promise<Object>} - Lista paginada de archivos
- */
 export const listFiles = async (filters) => {
     const { showAll = false } = filters;
     
-    // En modo showAll (God View), no filtramos por organización
     if (showAll) {
         const repoFilters = { ...filters, showAll: true };
-        delete repoFilters.organization_id;
-        delete repoFilters.organization_ids;
+        delete repoFilters.organizationId;
+        delete repoFilters.organizationIds;
         
         const result = await repository.listFiles(repoFilters);
         return toPublicFileListDto(result);
     }
     
-    // Preparar filtros de organización
     let organizationUuid = null;
     let organizationUuids = null;
 
-    // Prioridad: organization_ids (array del middleware) > organization_id (singular)
-    if (filters.organization_ids && Array.isArray(filters.organization_ids) && filters.organization_ids.length > 0) {
-        // Array de UUIDs inyectado por el middleware (ya son UUIDs validados)
-        organizationUuids = filters.organization_ids;
-    } else if (filters.organization_id) {
-        // Si viene organization_id como public_code, convertir a UUID
-        const org = await orgRepository.findOrganizationByPublicCodeInternal(filters.organization_id);
+    if (filters.organizationIds && Array.isArray(filters.organizationIds) && filters.organizationIds.length > 0) {
+        organizationUuids = filters.organizationIds;
+    } else if (filters.organizationId) {
+        const org = await orgRepository.findOrganizationByPublicCodeInternal(filters.organizationId);
         if (org) {
             organizationUuid = org.id;
         } else {
-            // Si no existe la org, retornar vacío
             return toPublicFileListDto({
                 files: [],
                 total: 0,
@@ -376,28 +251,16 @@ export const listFiles = async (filters) => {
         }
     }
 
-    // Preparar filtros para el repository
     const repoFilters = {
         ...filters,
-        organization_id: organizationUuid,
-        organization_ids: organizationUuids
+        organizationId: organizationUuid,
+        organizationIds: organizationUuids
     };
 
     const result = await repository.listFiles(repoFilters);
     return toPublicFileListDto(result);
 };
 
-/**
- * Vincular archivo a una entidad
- * 
- * @param {string} publicCode - Public code del archivo
- * @param {string} ownerType - Tipo de entidad
- * @param {string} ownerId - Public code de la entidad
- * @param {string} userId - UUID del usuario
- * @param {string} ipAddress - IP
- * @param {string} userAgent - User agent
- * @returns {Promise<Object>} - DTO del archivo actualizado
- */
 export const linkFile = async (publicCode, ownerType, ownerId, userId, ipAddress, userAgent) => {
     const file = await repository.findByPublicCodeInternal(publicCode);
     
@@ -405,16 +268,14 @@ export const linkFile = async (publicCode, ownerType, ownerId, userId, ipAddress
         throw new Error('Archivo no encontrado');
     }
 
-    // Validar que esté en estado uploaded
     if (file.status !== 'uploaded') {
         throw new Error(`No se puede vincular archivo en estado: ${file.status}`);
     }
 
-    const oldOwner = { owner_type: file.owner_type, owner_id: file.owner_id };
+    const oldOwner = { ownerType: file.ownerType, ownerId: file.ownerId };
     
     const updatedFile = await repository.linkToEntity(file.id, ownerType, ownerId);
 
-    // Auditoría
     await logAuditAction({
         entityType: 'file_upload',
         entityId: file.id,
@@ -422,7 +283,7 @@ export const linkFile = async (publicCode, ownerType, ownerId, userId, ipAddress
         performedBy: userId,
         changes: {
             old: oldOwner,
-            new: { owner_type: ownerType, owner_id: ownerId, status: 'linked' }
+            new: { ownerType, ownerId, status: 'linked' }
         },
         ipAddress,
         userAgent
@@ -433,15 +294,6 @@ export const linkFile = async (publicCode, ownerType, ownerId, userId, ipAddress
     return toPublicFileDto(updatedFile);
 };
 
-/**
- * Eliminar archivo (soft delete)
- * 
- * @param {string} publicCode - Public code del archivo
- * @param {string} userId - UUID del usuario
- * @param {string} ipAddress - IP
- * @param {string} userAgent - User agent
- * @returns {Promise<Object>} - Resultado de eliminación
- */
 export const deleteFile = async (publicCode, userId, ipAddress, userAgent) => {
     const file = await repository.findByPublicCodeInternal(publicCode);
     
@@ -451,13 +303,12 @@ export const deleteFile = async (publicCode, userId, ipAddress, userAgent) => {
 
     const oldData = {
         status: file.status,
-        blob_path: file.blob_path,
-        original_name: file.original_name
+        blobPath: file.blobPath,
+        originalName: file.originalName
     };
 
     await repository.softDelete(file.id);
 
-    // Auditoría
     await logAuditAction({
         entityType: 'file_upload',
         entityId: file.id,
@@ -465,7 +316,7 @@ export const deleteFile = async (publicCode, userId, ipAddress, userAgent) => {
         performedBy: userId,
         changes: {
             old: oldData,
-            new: { status: 'deleted', deleted_at: new Date() }
+            new: { status: 'deleted', deletedAt: new Date() }
         },
         ipAddress,
         userAgent
@@ -473,20 +324,12 @@ export const deleteFile = async (publicCode, userId, ipAddress, userAgent) => {
 
     logger.info({ fileId: publicCode }, 'Archivo eliminado');
 
-    // TODO: Marcar blob para eliminación en Azure (job asíncrono)
-
     return {
         deleted: true,
-        file_id: publicCode
+        fileId: publicCode
     };
 };
 
-/**
- * Obtener estadísticas de almacenamiento
- * 
- * @param {string} orgPublicCode - Public code de la organización
- * @returns {Promise<Object>} - Estadísticas de almacenamiento
- */
 export const getStorageStats = async (orgPublicCode) => {
     const org = await orgRepository.findOrganizationByPublicCodeInternal(orgPublicCode);
     
@@ -496,7 +339,6 @@ export const getStorageStats = async (orgPublicCode) => {
 
     const stats = await repository.getStorageStats(org.id);
 
-    // Formatear bytes a formato legible
     const formatBytes = (bytes) => {
         if (bytes === 0) return '0 Bytes';
         const k = 1024;
@@ -506,11 +348,11 @@ export const getStorageStats = async (orgPublicCode) => {
     };
 
     return {
-        organization_id: orgPublicCode,
-        total_files: stats.total_files,
-        total_bytes: stats.total_bytes,
-        total_formatted: formatBytes(stats.total_bytes),
-        by_category: Object.entries(stats.by_category).reduce((acc, [category, data]) => {
+        organizationId: orgPublicCode,
+        totalFiles: stats.totalFiles,
+        totalBytes: stats.totalBytes,
+        totalFormatted: formatBytes(stats.totalBytes),
+        byCategory: Object.entries(stats.byCategory).reduce((acc, [category, data]) => {
             acc[category] = {
                 count: data.count,
                 bytes: data.bytes,

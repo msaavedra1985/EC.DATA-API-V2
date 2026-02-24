@@ -5,10 +5,10 @@ import { z } from 'zod';
 
 /**
  * Schema Zod para validar datos de mover organización
- * Valida que el parent_id sea un public_code válido o null
+ * Valida que el parentId sea un public_code válido o null
  */
 const moveOrganizationSchema = z.object({
-    parent_id: z.string()
+    parentId: z.string()
         .regex(/^ORG-[A-Z0-9]{5,10}(-[A-Z0-9])?$/, 'Invalid organization ID format')
         .nullable()
         .optional()

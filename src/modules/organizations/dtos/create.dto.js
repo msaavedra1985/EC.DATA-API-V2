@@ -11,7 +11,7 @@ const countrySchema = z.object({
         .length(2, 'Country code must be exactly 2 characters (ISO 3166-1 alpha-2)')
         .toUpperCase()
         .regex(/^[A-Z]{2}$/, 'Country code must be 2 uppercase letters'),
-    is_primary: z.boolean().optional().default(false)
+    isPrimary: z.boolean().optional().default(false)
 });
 
 /**
@@ -19,11 +19,11 @@ const countrySchema = z.object({
  * Validaciones:
  * - name: requerido, string 2-200 caracteres
  * - slug: opcional (se auto-genera si no viene), alfanumérico con guiones
- * - logo_url: opcional, URL válida
- * - parent_id: opcional, public_code del padre
+ * - logoUrl: opcional, URL válida
+ * - parentId: opcional, public_code del padre
  * - description: opcional, texto hasta 5000 caracteres
  * - config: opcional, objeto JSON
- * - countries: requerido, array de objetos {code, is_primary}
+ * - countries: requerido, array de objetos {code, isPrimary}
  */
 export const createOrganizationSchema = z.object({
     name: z.string()
@@ -38,13 +38,13 @@ export const createOrganizationSchema = z.object({
         .trim()
         .optional(),
     
-    logo_url: z.string()
+    logoUrl: z.string()
         .url('Logo URL must be a valid URL')
         .max(500, 'Logo URL must not exceed 500 characters')
         .optional()
         .nullable(),
     
-    parent_id: z.string()
+    parentId: z.string()
         .min(1, 'Parent ID (public_code) cannot be empty')
         .optional()
         .nullable(),
@@ -55,7 +55,7 @@ export const createOrganizationSchema = z.object({
         .optional()
         .nullable(),
     
-    tax_id: z.string()
+    taxId: z.string()
         .max(50, 'Tax ID must not exceed 50 characters')
         .trim()
         .optional()
@@ -88,30 +88,30 @@ export const createOrganizationSchema = z.object({
     countries: z.array(countrySchema)
         .min(1, 'At least one country is required'),
     
-    selected_users: z.any().optional(),
+    selectedUsers: z.any().optional(),
     
-    is_active: z.boolean()
+    isActive: z.boolean()
         .optional()
         .default(true)
 }).transform((data) => {
-    // Eliminar selected_users (no se procesa)
-    const { selected_users, ...rest } = data;
+    // Eliminar selectedUsers (no se procesa)
+    const { selectedUsers, ...rest } = data;
     
     // Si solo hay un país, auto-asignar como primary
     if (rest.countries.length === 1) {
-        rest.countries[0].is_primary = true;
+        rest.countries[0].isPrimary = true;
     }
     
     // Validar que exactamente un país sea primary
-    const primaryCount = rest.countries.filter(c => c.is_primary).length;
+    const primaryCount = rest.countries.filter(c => c.isPrimary).length;
     if (primaryCount === 0) {
         // Si ninguno es primary, asignar el primero
-        rest.countries[0].is_primary = true;
+        rest.countries[0].isPrimary = true;
     }
     
     return rest;
 }).refine((data) => {
-    const primaryCount = data.countries.filter(c => c.is_primary).length;
+    const primaryCount = data.countries.filter(c => c.isPrimary).length;
     return primaryCount === 1;
 }, {
     message: 'Exactly one country must be marked as primary',

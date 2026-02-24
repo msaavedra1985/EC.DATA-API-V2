@@ -12,10 +12,10 @@ import AssetCategory from './models/AssetCategory.js';
  * @param {Object} data - Datos de la categoría
  * @param {string} data.name - Nombre de la categoría
  * @param {string} data.color - Color hex (opcional)
- * @param {number} data.parent_id - ID del padre (opcional, null = raíz)
+ * @param {number} data.parentId - ID del padre (opcional, null = raíz)
  * @param {string} data.scope - 'organization' o 'user'
- * @param {string} data.organization_id - UUID de la organización (si scope=organization)
- * @param {string} data.user_id - UUID del usuario (si scope=user)
+ * @param {string} data.organizationId - UUID de la organización (si scope=organization)
+ * @param {string} data.userId - UUID del usuario (si scope=user)
  * @param {Object} transaction - Transacción Sequelize (opcional)
  * @returns {Promise<AssetCategory>} Categoría creada
  */
@@ -53,16 +53,16 @@ export const findCategoryById = async (id, options = {}) => {
 export const findCategoriesByOrganization = async (organizationId, options = {}) => {
   const where = {
     scope: 'organization',
-    organization_id: organizationId
+    organizationId: organizationId
   };
 
   if (options.activeOnly !== false) {
-    where.is_active = true;
+    where.isActive = true;
   }
 
   // Si se especifica parentId, filtrar por padre
   if (options.parentId !== undefined) {
-    where.parent_id = options.parentId;
+    where.parentId = options.parentId;
   }
 
   return AssetCategory.findAll({
@@ -86,15 +86,15 @@ export const findCategoriesByOrganization = async (organizationId, options = {})
 export const findCategoriesByUser = async (userId, options = {}) => {
   const where = {
     scope: 'user',
-    user_id: userId
+    userId: userId
   };
 
   if (options.activeOnly !== false) {
-    where.is_active = true;
+    where.isActive = true;
   }
 
   if (options.parentId !== undefined) {
-    where.parent_id = options.parentId;
+    where.parentId = options.parentId;
   }
 
   return AssetCategory.findAll({
@@ -120,13 +120,13 @@ export const findCategoriesByUser = async (userId, options = {}) => {
 export const findAllVisibleCategories = async (organizationId, userId, options = {}) => {
   const where = {
     [Op.or]: [
-      { scope: 'organization', organization_id: organizationId },
-      { scope: 'user', user_id: userId }
+      { scope: 'organization', organizationId: organizationId },
+      { scope: 'user', userId: userId }
     ]
   };
 
   if (options.activeOnly !== false) {
-    where.is_active = true;
+    where.isActive = true;
   }
 
   return AssetCategory.findAll({
@@ -169,7 +169,7 @@ export const deactivateCategory = async (id, transaction = null) => {
 
   // Desactivar la categoría y todos sus descendientes usando el path
   const [deactivated] = await AssetCategory.update(
-    { is_active: false },
+    { isActive: false },
     {
       where: {
         path: { [Op.like]: `${category.path}%` }
@@ -189,7 +189,7 @@ export const deactivateCategory = async (id, transaction = null) => {
  * @returns {Promise<AssetCategory|null>}
  */
 export const reactivateCategory = async (id, transaction = null) => {
-  return updateCategory(id, { is_active: true }, transaction);
+  return updateCategory(id, { isActive: true }, transaction);
 };
 
 /**
@@ -210,7 +210,7 @@ export const getDescendants = async (categoryId) => {
     where: {
       path: { [Op.like]: `${category.path}%` },
       id: { [Op.ne]: categoryId },
-      is_active: true
+      isActive: true
     },
     order: [['level', 'ASC'], ['name', 'ASC']]
   });
@@ -262,7 +262,7 @@ export const getCategoryAndDescendantIds = async (categoryId) => {
   const descendants = await AssetCategory.findAll({
     where: {
       path: { [Op.like]: `${category.path}%` },
-      is_active: true
+      isActive: true
     },
     attributes: ['id']
   });
@@ -282,7 +282,7 @@ export const categoryBelongsToOrganization = async (categoryId, organizationId) 
     where: {
       id: categoryId,
       scope: 'organization',
-      organization_id: organizationId
+      organizationId: organizationId
     }
   });
   return !!category;
@@ -300,7 +300,7 @@ export const categoryBelongsToUser = async (categoryId, userId) => {
     where: {
       id: categoryId,
       scope: 'user',
-      user_id: userId
+      userId: userId
     }
   });
   return !!category;
@@ -320,8 +320,8 @@ export const userHasAccessToCategory = async (categoryId, organizationId, userId
     where: {
       id: categoryId,
       [Op.or]: [
-        { scope: 'organization', organization_id: organizationId },
-        { scope: 'user', user_id: userId }
+        { scope: 'organization', organizationId: organizationId },
+        { scope: 'user', userId: userId }
       ]
     }
   });

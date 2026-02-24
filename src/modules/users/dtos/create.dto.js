@@ -9,18 +9,18 @@ import { z } from 'zod';
  * 
  * Campos requeridos:
  * - email: Email único (se normalizará con trim + toLowerCase)
- * - first_name: Nombre (1-100 caracteres)
- * - last_name: Apellido (1-100 caracteres)
+ * - firstName: Nombre (1-100 caracteres)
+ * - lastName: Apellido (1-100 caracteres)
  * - password: Contraseña (mínimo 8 caracteres)
  * - role: Slug del rol (ej: 'user', 'org-admin')
  * 
  * Campos opcionales:
- * - organization_id: ID público de organización (solo system-admin puede asignar)
- * - send_invite: Enviar email de invitación (default: false)
+ * - organizationId: ID público de organización (solo system-admin puede asignar)
+ * - sendInvite: Enviar email de invitación (default: false)
  * - phone: Número de teléfono (formato internacional)
  * - language: Idioma preferido (es, en - default: es)
  * - timezone: Zona horaria IANA (default: America/Argentina/Buenos_Aires)
- * - avatar_url: URL del avatar del usuario
+ * - avatarUrl: URL del avatar del usuario
  */
 export const createUserSchema = z.object({
     email: z.string()
@@ -30,12 +30,12 @@ export const createUserSchema = z.object({
         .trim()
         .toLowerCase(),
     
-    first_name: z.string()
+    firstName: z.string()
         .min(1, 'First name is required')
         .max(100, 'First name must be at most 100 characters')
         .trim(),
     
-    last_name: z.string()
+    lastName: z.string()
         .min(1, 'Last name is required')
         .max(100, 'Last name must be at most 100 characters')
         .trim(),
@@ -48,7 +48,7 @@ export const createUserSchema = z.object({
         .min(1, 'Role is required')
         .regex(/^[a-z-]+$/, 'Role must be a valid slug (lowercase with hyphens)'),
     
-    organization_id: z.string()
+    organizationId: z.string()
         .optional()
         .nullable()
         .refine(
@@ -56,7 +56,7 @@ export const createUserSchema = z.object({
             'Invalid organization public code format'
         ),
     
-    send_invite: z.boolean()
+    sendInvite: z.boolean()
         .optional()
         .default(false),
     
@@ -80,19 +80,19 @@ export const createUserSchema = z.object({
         .nullable()
         .default('America/Argentina/Buenos_Aires'),
     
-    avatar_url: z.string()
+    avatarUrl: z.string()
         .url('Avatar URL must be a valid URL')
         .optional()
         .nullable(),
     
-    organization_memberships: z.array(
+    organizationMemberships: z.array(
         z.object({
-            organization_id: z.string()
+            organizationId: z.string()
                 .refine(
                     (val) => /^ORG-[A-Z0-9]{5}-[A-Z0-9]$/.test(val),
                     'Invalid organization public code format'
                 ),
-            is_primary: z.boolean().optional().default(false)
+            isPrimary: z.boolean().optional().default(false)
         })
     )
         .optional()
@@ -101,7 +101,7 @@ export const createUserSchema = z.object({
             (memberships) => {
                 if (!memberships || memberships.length === 0) return true;
                 // Solo puede haber una organización primaria
-                const primaryCount = memberships.filter(m => m.is_primary).length;
+                const primaryCount = memberships.filter(m => m.isPrimary).length;
                 return primaryCount <= 1;
             },
             'Only one organization can be marked as primary'

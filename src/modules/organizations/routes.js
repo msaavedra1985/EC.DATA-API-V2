@@ -200,13 +200,13 @@ router.get('/', authenticate, async (req, res) => {
         // Construir filtros incluyendo scope
         const filters = {
             search,
-            parent_id,
-            is_active: active_only === 'true'
+            parentId: parent_id,
+            isActive: active_only === 'true'
         };
 
         // Agregar filtro de scope si no es system-admin
         if (!scope.canAccessAll) {
-            filters.organization_ids = scope.organizationIds;
+            filters.organizationIds = scope.organizationIds;
         }
 
         // Buscar organizaciones con scope aplicado
@@ -409,15 +409,15 @@ router.get('/hierarchy', authenticate, async (req, res) => {
             });
         }
 
-        // Intentar obtener del caché usando public_code
-        let tree = await getCachedOrganizationHierarchy(rootOrgInternal.public_code);
+        // Intentar obtener del caché usando publicCode
+        let tree = await getCachedOrganizationHierarchy(rootOrgInternal.publicCode);
 
         if (!tree) {
             // Construir árbol usando el UUID interno real
             tree = await getHierarchyTree(rootOrgInternal.id, active_only === 'true');
             
             // Guardar en caché
-            await cacheOrganizationHierarchy(rootOrgInternal.public_code, tree);
+            await cacheOrganizationHierarchy(rootOrgInternal.publicCode, tree);
         }
 
         res.json({
@@ -860,11 +860,11 @@ router.post('/validate', async (req, res) => {
         // Validar datos del request
         const validatedData = validateOrganizationValidation(req.body);
         
-        // Llamar al servicio de validación (mapear exclude_id a excludePublicCode)
+        // Llamar al servicio de validación (mapear excludeId a excludePublicCode)
         const result = await orgServices.validateOrganization({
             name: validatedData.name,
             slug: validatedData.slug,
-            excludePublicCode: validatedData.exclude_id || null
+            excludePublicCode: validatedData.excludeId || null
         });
 
         res.json({
@@ -1148,10 +1148,10 @@ router.post('/', authenticate, requireOrgPermission('create'), async (req, res) 
         const slugBase = validatedData.slug || validatedData.name;
         validatedData.slug = await generateUniqueSlug(slugBase);
 
-        // Validar parent_id si viene
+        // Validar parentId si viene
         let parentOrg = null;
-        if (validatedData.parent_id) {
-            parentOrg = await orgRepository.findOrganizationByPublicCode(validatedData.parent_id);
+        if (validatedData.parentId) {
+            parentOrg = await orgRepository.findOrganizationByPublicCode(validatedData.parentId);
             if (!parentOrg) {
                 return res.status(404).json({
                     ok: false,
@@ -1174,8 +1174,8 @@ router.post('/', authenticate, requireOrgPermission('create'), async (req, res) 
                 });
             }
 
-            // Usar parent_id interno (UUID)
-            validatedData.parent_id = parentOrg.id;
+            // Usar parentId interno (UUID)
+            validatedData.parentId = parentOrg.id;
         }
 
         // Crear organización
@@ -1194,7 +1194,7 @@ router.post('/', authenticate, requireOrgPermission('create'), async (req, res) 
 
         // Invalidar caché de jerarquía del padre
         if (parentOrg) {
-            await invalidateOrganizationCache(parentOrg.public_code);
+            await invalidateOrganizationCache(parentOrg.publicCode);
         }
 
         orgLogger.info({ orgId: organization.id, userId: req.user.userId }, 'Organization created');
@@ -1475,9 +1475,9 @@ router.put('/:id', authenticate, requireOrgPermission('edit'), async (req, res) 
             validatedData.slug = await generateUniqueSlug(validatedData.slug, organization.id);
         }
 
-        // Si se actualiza parent_id, validar
-        if (validatedData.parent_id && validatedData.parent_id !== organization.parent_id) {
-            const newParent = await orgRepository.findOrganizationByPublicCode(validatedData.parent_id);
+        // Si se actualiza parentId, validar
+        if (validatedData.parentId && validatedData.parentId !== organization.parentId) {
+            const newParent = await orgRepository.findOrganizationByPublicCode(validatedData.parentId);
             if (!newParent) {
                 return res.status(404).json({
                     ok: false,
@@ -1500,7 +1500,7 @@ router.put('/:id', authenticate, requireOrgPermission('edit'), async (req, res) 
                 });
             }
 
-            validatedData.parent_id = newParent.id;
+            validatedData.parentId = newParent.id;
         }
 
         // Actualizar (usa UUID interno)
@@ -1518,8 +1518,8 @@ router.put('/:id', authenticate, requireOrgPermission('edit'), async (req, res) 
         });
 
         // Invalidar cachés
-        await invalidateOrganizationCache(id, organization.parent_id);
-        await invalidateOrgResolveCache(req.organizationInternal.id, organization.public_code);
+        await invalidateOrganizationCache(id, organization.parentId);
+        await invalidateOrgResolveCache(req.organizationInternal.id, organization.publicCode);
 
         res.json({
             ok: true,
@@ -1671,12 +1671,12 @@ router.patch('/:id/move', authenticate, requireOrgPermission('edit'), async (req
             });
         }
 
-        const oldParentId = organization.parent_id;
+        const oldParentId = organization.parentId;
         let newParentUuid = null;
 
         // Validar nuevo padre si se proporciona
-        if (validatedData.parent_id) {
-            const newParent = await orgRepository.findOrganizationByPublicCodeInternal(validatedData.parent_id);
+        if (validatedData.parentId) {
+            const newParent = await orgRepository.findOrganizationByPublicCodeInternal(validatedData.parentId);
             if (!newParent) {
                 return res.status(404).json({
                     ok: false,
@@ -1714,9 +1714,9 @@ router.patch('/:id/move', authenticate, requireOrgPermission('edit'), async (req
             newParentUuid = newParent.id;
         }
 
-        // Actualizar parent_id (usa UUID interno)
+        // Actualizar parentId (usa UUID interno)
         const updated = await orgRepository.updateOrganization(req.organizationInternal.id, {
-            parent_id: newParentUuid
+            parentId: newParentUuid
         });
 
         // Auditoría
@@ -1726,8 +1726,8 @@ router.patch('/:id/move', authenticate, requireOrgPermission('edit'), async (req
             action: 'move',
             performedBy: req.user.userId,
             changes: {
-                old: { parent_id: oldParentId },
-                new: { parent_id: validatedData.parent_id }
+                old: { parentId: oldParentId },
+                new: { parentId: validatedData.parentId }
             },
             ipAddress: req.ip,
             userAgent: req.get('user-agent')
@@ -1737,17 +1737,17 @@ router.patch('/:id/move', authenticate, requireOrgPermission('edit'), async (req
         if (oldParentId) {
             await invalidateOrganizationCache(oldParentId);
         }
-        if (validatedData.parent_id) {
-            await invalidateOrganizationCache(validatedData.parent_id);
+        if (validatedData.parentId) {
+            await invalidateOrganizationCache(validatedData.parentId);
         }
 
-        orgLogger.info({ orgId: id, oldParent: oldParentId, newParent: validatedData.parent_id }, 'Organization moved');
+        orgLogger.info({ orgId: id, oldParent: oldParentId, newParent: validatedData.parentId }, 'Organization moved');
 
         res.json({
             ok: true,
             data: {
                 ...updated,
-                old_parent_id: oldParentId
+                oldParentId
             }
         });
     } catch (error) {
@@ -1880,7 +1880,7 @@ router.delete('/:id', authenticate, requireOrgPermission('delete'), async (req, 
 
         // Eliminar membresías de usuarios
         const memberships = await UserOrganization.findAll({
-            where: { organization_id: req.organizationInternal.id }
+            where: { organizationId: req.organizationInternal.id }
         });
 
         const membershipsCount = memberships.length;
@@ -1911,15 +1911,15 @@ router.delete('/:id', authenticate, requireOrgPermission('delete'), async (req, 
             performedBy: req.user.userId,
             changes: {
                 deleted: true,
-                memberships_removed: membershipsCount
+                membershipsRemoved: membershipsCount
             },
             ipAddress: req.ip,
             userAgent: req.get('user-agent')
         });
 
         // Invalidar cachés
-        await invalidateOrganizationCache(id, organization.parent_id);
-        await invalidateOrgResolveCache(req.organizationInternal.id, organization.public_code);
+        await invalidateOrganizationCache(id, organization.parentId);
+        await invalidateOrgResolveCache(req.organizationInternal.id, organization.publicCode);
 
         orgLogger.info({ orgId: id, membershipsRemoved: membershipsCount }, 'Organization deleted');
 
@@ -1927,8 +1927,8 @@ router.delete('/:id', authenticate, requireOrgPermission('delete'), async (req, 
             ok: true,
             data: {
                 deleted: true,
-                organization_id: id,
-                memberships_removed: membershipsCount
+                organizationId: id,
+                membershipsRemoved: membershipsCount
             }
         });
     } catch (error) {
@@ -2104,11 +2104,11 @@ router.delete('/:id', authenticate, requireOrgPermission('delete'), async (req, 
 router.post('/batch-delete', authenticate, requireRole(['system-admin', 'org-admin']), async (req, res) => {
     try {
         const validatedData = validateBatchDelete(req.body);
-        const { organization_ids, hard_delete, delete_users, reassign_org_id } = validatedData;
+        const { organizationIds, hardDelete, deleteUsers, reassignOrgId } = validatedData;
 
         // Convertir public_codes a UUIDs
         const orgUuids = [];
-        for (const publicCode of organization_ids) {
+        for (const publicCode of organizationIds) {
             const org = await orgRepository.findOrganizationByPublicCode(publicCode);
             if (org) {
                 orgUuids.push(org.id);
@@ -2129,9 +2129,9 @@ router.post('/batch-delete', authenticate, requireRole(['system-admin', 'org-adm
         const result = await cascadeDelete(
             orgUuids,
             {
-                hardDelete: hard_delete,
-                deleteOrphanUsers: delete_users,
-                reassignOrgId: reassign_org_id
+                hardDelete,
+                deleteOrphanUsers: deleteUsers,
+                reassignOrgId
             }
         );
 
@@ -2303,14 +2303,14 @@ router.post('/batch-delete', authenticate, requireRole(['system-admin', 'org-adm
 router.post('/upload-url', authenticate, async (req, res) => {
     try {
         const validatedData = validateGenerateUploadUrl(req.body);
-        const { filename, content_type, prefix, expiry_minutes } = validatedData;
+        const { filename, contentType, prefix, expiryMinutes } = validatedData;
 
         // Generar presigned URL de Azure
         const result = await generatePresignedUploadUrl(
             filename,
-            content_type,
+            contentType,
             prefix,
-            expiry_minutes
+            expiryMinutes
         );
 
         res.json({
@@ -2917,21 +2917,21 @@ router.get('/:id/subtree', authenticate, requireOrgPermission('view'), async (re
  */
 router.post('/delete-preview', authenticate, requireRole(['system-admin', 'org-admin']), async (req, res) => {
     try {
-        const { organization_ids } = req.body;
+        const { organizationIds } = req.body;
 
-        if (!organization_ids || !Array.isArray(organization_ids)) {
+        if (!organizationIds || !Array.isArray(organizationIds)) {
             return res.status(400).json({
                 ok: false,
                 error: {
                     code: 'INVALID_INPUT',
-                    message: 'organization_ids must be an array'
+                    message: 'organizationIds must be an array'
                 }
             });
         }
 
         // Convertir public_codes a UUIDs
         const orgUuids = [];
-        for (const publicCode of organization_ids) {
+        for (const publicCode of organizationIds) {
             const org = await orgRepository.findOrganizationByPublicCode(publicCode);
             if (org) {
                 orgUuids.push(org.id);
@@ -3091,7 +3091,7 @@ router.get('/:id/stats', authenticate, requireOrgPermission('view'), async (req,
 
         // Contar usuarios (usa UUID interno)
         const usersCount = await UserOrganization.count({
-            where: { organization_id: req.organizationInternal.id }
+            where: { organizationId: req.organizationInternal.id }
         });
 
         // Contar hijos directos
@@ -3103,11 +3103,11 @@ router.get('/:id/stats', authenticate, requireOrgPermission('view'), async (req,
         res.json({
             ok: true,
             data: {
-                total_users: usersCount,
-                total_children: children.length,
-                total_descendants: descendants.length,
-                created_at: organization.created_at,
-                updated_at: organization.updated_at
+                totalUsers: usersCount,
+                totalChildren: children.length,
+                totalDescendants: descendants.length,
+                createdAt: organization.createdAt,
+                updatedAt: organization.updatedAt
             }
         });
     } catch (error) {
@@ -3244,7 +3244,7 @@ router.put('/:id/activate', authenticate, requireOrgPermission('edit'), async (r
         const organization = req.organization;
 
         const updated = await orgRepository.updateOrganization(req.organizationInternal.id, {
-            is_active: true
+            isActive: true
         });
 
         await logAuditAction({
@@ -3252,18 +3252,18 @@ router.put('/:id/activate', authenticate, requireOrgPermission('edit'), async (r
             entityId: organization.id,
             action: 'activate',
             performedBy: req.user.userId,
-            changes: { is_active: true },
+            changes: { isActive: true },
             ipAddress: req.ip,
             userAgent: req.get('user-agent')
         });
 
-        await invalidateOrganizationCache(organization.public_code);
+        await invalidateOrganizationCache(organization.publicCode);
 
         res.json({
             ok: true,
             data: {
-                id: updated.public_code,
-                is_active: updated.is_active
+                id: updated.publicCode,
+                isActive: updated.isActive
             }
         });
     } catch (error) {
@@ -3400,7 +3400,7 @@ router.put('/:id/deactivate', authenticate, requireOrgPermission('edit'), async 
         const organization = req.organization;
 
         const updated = await orgRepository.updateOrganization(req.organizationInternal.id, {
-            is_active: false
+            isActive: false
         });
 
         await logAuditAction({
@@ -3408,18 +3408,18 @@ router.put('/:id/deactivate', authenticate, requireOrgPermission('edit'), async 
             entityId: organization.id,
             action: 'deactivate',
             performedBy: req.user.userId,
-            changes: { is_active: false },
+            changes: { isActive: false },
             ipAddress: req.ip,
             userAgent: req.get('user-agent')
         });
 
-        await invalidateOrganizationCache(organization.public_code);
+        await invalidateOrganizationCache(organization.publicCode);
 
         res.json({
             ok: true,
             data: {
-                id: updated.public_code,
-                is_active: updated.is_active
+                id: updated.publicCode,
+                isActive: updated.isActive
             }
         });
     } catch (error) {

@@ -47,15 +47,15 @@ const deviceLogger = logger.child({ component: 'devices' });
  *           schema:
  *             type: object
  *             required:
- *               - organization_id
+ *               - organizationId
  *               - name
  *               - device_type
  *             properties:
- *               organization_id:
+ *               organizationId:
  *                 type: string
  *                 description: Public code de la organización (ej ORG-abc123-1)
  *                 example: "ORG-yOM9ewfqOeWa-4"
- *               site_id:
+ *               siteId:
  *                 type: string
  *                 description: Public code del site (opcional)
  *                 example: "SITE-abc123xyz-1"
@@ -78,19 +78,19 @@ const deviceLogger = logger.child({ component: 'devices' });
  *                 description: Estado del dispositivo
  *                 default: active
  *                 example: "active"
- *               firmware_version:
+ *               firmwareVersion:
  *                 type: string
  *                 description: Versión del firmware
  *                 example: "v2.5.1"
- *               serial_number:
+ *               serialNumber:
  *                 type: string
  *                 description: Número de serie del dispositivo
  *                 example: "SN-2024-001234"
- *               ip_address:
+ *               ipAddress:
  *                 type: string
  *                 description: Dirección IP del dispositivo
  *                 example: "192.168.1.100"
- *               mac_address:
+ *               macAddress:
  *                 type: string
  *                 description: Dirección MAC del dispositivo
  *                 example: "00:1A:2B:3C:4D:5E"
@@ -102,7 +102,7 @@ const deviceLogger = logger.child({ component: 'devices' });
  *                 type: object
  *                 description: Metadatos adicionales en formato JSON
  *                 example: { "manufacturer": "Acme Corp", "model": "TH-100" }
- *               is_active:
+ *               isActive:
  *                 type: boolean
  *                 description: Si el device está activo
  *                 default: true
@@ -192,13 +192,13 @@ router.post('/', authenticate, requireRole(['system-admin', 'org-admin']), valid
  *       - bearerAuth: []
  *     parameters:
  *       - in: query
- *         name: organization_id
+ *         name: organizationId
  *         description: Filtrar por organización (public_code)
  *         schema:
  *           type: string
  *           example: "ORG-yOM9ewfqOeWa-4"
  *       - in: query
- *         name: site_id
+ *         name: siteId
  *         description: Filtrar por site (public_code)
  *         schema:
  *           type: string
@@ -219,7 +219,7 @@ router.post('/', authenticate, requireRole(['system-admin', 'org-admin']), valid
  *           example: "active"
  *       - in: query
  *         name: search
- *         description: Buscar por nombre o serial_number
+ *         description: Buscar por nombre o serialNumber
  *         schema:
  *           type: string
  *           example: "Sensor"
@@ -280,7 +280,7 @@ router.get('/', authenticate, enforceActiveOrganization, validate(getDevicesSche
         // Si showAll=true (God View), no filtra por organización
         const result = await deviceServices.listDevices({
             ...req.query,
-            organization_id: req.organizationContext.id,
+            organizationId: req.organizationContext.id,
             showAll: req.organizationContext.showAll || false
         });
         
@@ -384,7 +384,7 @@ router.get('/:id', authenticate, validateDeviceOwnership, validate(getDeviceById
  *           schema:
  *             type: object
  *             properties:
- *               site_id:
+ *               siteId:
  *                 type: string
  *                 example: "SITE-abc123xyz-1"
  *               name:
@@ -398,19 +398,19 @@ router.get('/:id', authenticate, validateDeviceOwnership, validate(getDeviceById
  *               status:
  *                 type: string
  *                 enum: [active, inactive, maintenance, decommissioned]
- *               firmware_version:
+ *               firmwareVersion:
  *                 type: string
- *               serial_number:
+ *               serialNumber:
  *                 type: string
- *               ip_address:
+ *               ipAddress:
  *                 type: string
- *               mac_address:
+ *               macAddress:
  *                 type: string
  *               location_hint:
  *                 type: string
  *               metadata:
  *                 type: object
- *               is_active:
+ *               isActive:
  *                 type: boolean
  *     responses:
  *       200:
@@ -479,24 +479,24 @@ router.put('/:id', authenticate, requireRole(['system-admin', 'org-admin']), val
  *                   properties:
  *                     device:
  *                       type: object
- *                       description: Device serializado (sin deleted_at)
+ *                       description: Device serializado (sin deletedAt)
  *                     cascade:
  *                       type: object
  *                       properties:
- *                         channels_affected:
+ *                         channelsAffected:
  *                           type: integer
  *                           example: 5
- *                         channel_updates:
+ *                         channelUpdates:
  *                           type: array
  *                           items:
  *                             type: object
- *                     deletion_status:
+ *                     deletionStatus:
  *                       type: object
  *                       properties:
  *                         deleted:
  *                           type: boolean
  *                           example: true
- *                         deleted_at:
+ *                         deletedAt:
  *                           type: string
  *                           format: date-time
  *                 meta:
@@ -529,7 +529,7 @@ router.delete('/:id', authenticate, requireRole(['system-admin']), validateDevic
         // Respuesta canónica con envelope estándar
         res.json({
             ok: true,
-            data: result, // { device, cascade, deletion_status }
+            data: result, // { device, cascade, deletionStatus }
             meta: {
                 timestamp: new Date().toISOString(),
                 locale: req.locale,

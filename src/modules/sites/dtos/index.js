@@ -9,11 +9,11 @@ import { z } from 'zod';
  */
 export const createSiteSchema = z.object({
     body: z.object({
-        organization_id: z
+        organizationId: z
             .string({
-                required_error: 'organization_id es requerido'
+                required_error: 'organizationId es requerido'
             })
-            .min(1, 'organization_id no puede estar vacío'),
+            .min(1, 'organizationId no puede estar vacío'),
         name: z
             .string({
                 required_error: 'name es requerido'
@@ -38,71 +38,71 @@ export const createSiteSchema = z.object({
             .string()
             .max(500, 'address no puede exceder 500 caracteres')
             .optional(),
-        street_number: z
+        streetNumber: z
             .string()
-            .max(20, 'street_number no puede exceder 20 caracteres')
+            .max(20, 'streetNumber no puede exceder 20 caracteres')
             .optional(),
         city: z
             .string()
             .max(100, 'city no puede exceder 100 caracteres')
             .optional(),
-        state_province: z
+        stateProvince: z
             .string()
-            .max(100, 'state_province no puede exceder 100 caracteres')
+            .max(100, 'stateProvince no puede exceder 100 caracteres')
             .optional(),
-        postal_code: z
+        postalCode: z
             .string()
-            .max(20, 'postal_code no puede exceder 20 caracteres')
+            .max(20, 'postalCode no puede exceder 20 caracteres')
             .optional(),
-        country_code: z
+        countryCode: z
             .string({
-                required_error: 'country_code es requerido'
+                required_error: 'countryCode es requerido'
             })
-            .length(2, 'country_code debe ser exactamente 2 caracteres (ISO 3166-1 alpha-2)')
+            .length(2, 'countryCode debe ser exactamente 2 caracteres (ISO 3166-1 alpha-2)')
             .toUpperCase()
-            .regex(/^[A-Z]{2}$/, 'country_code debe ser 2 letras mayúsculas'),
+            .regex(/^[A-Z]{2}$/, 'countryCode debe ser 2 letras mayúsculas'),
         timezone: z
             .string()
             .max(100, 'timezone no puede exceder 100 caracteres')
             .optional(),
-        building_type: z
+        buildingType: z
             .enum(['office', 'warehouse', 'factory', 'retail', 'hospital', 'school', 
                    'datacenter', 'hotel', 'restaurant', 'residential', 'mixed', 'other'], {
-                errorMap: () => ({ message: 'building_type debe ser un tipo válido' })
+                errorMap: () => ({ message: 'buildingType debe ser un tipo válido' })
             })
             .optional(),
-        area_m2: z
+        areaM2: z
             .number()
-            .positive('area_m2 debe ser un número positivo')
+            .positive('areaM2 debe ser un número positivo')
             .optional(),
         floors: z
             .number()
             .int('floors debe ser un número entero')
             .positive('floors debe ser un número positivo')
             .optional(),
-        operating_hours: z
+        operatingHours: z
             .string()
-            .max(200, 'operating_hours no puede exceder 200 caracteres')
+            .max(200, 'operatingHours no puede exceder 200 caracteres')
             .optional(),
-        image_url: z
+        imageUrl: z
             .string()
-            .url('image_url debe ser una URL válida')
-            .max(500, 'image_url no puede exceder 500 caracteres')
+            .url('imageUrl debe ser una URL válida')
+            .max(500, 'imageUrl no puede exceder 500 caracteres')
             .optional(),
-        contact_name: z
+        contactName: z
             .string()
-            .max(100, 'contact_name no puede exceder 100 caracteres')
+            .max(100, 'contactName no puede exceder 100 caracteres')
             .optional(),
-        contact_phone: z
+        contactPhone: z
             .string()
-            .max(50, 'contact_phone no puede exceder 50 caracteres')
+            .max(50, 'contactPhone no puede exceder 50 caracteres')
             .optional(),
-        contact_email: z
+        contactEmail: z
             .string()
-            .email('contact_email debe ser un email válido')
-            .max(100, 'contact_email no puede exceder 100 caracteres')
+            .email('contactEmail debe ser un email válido')
+            .max(100, 'contactEmail no puede exceder 100 caracteres')
             .optional(),
-        is_active: z
+        isActive: z
             .boolean()
             .optional()
             .default(true)
@@ -145,70 +145,70 @@ export const updateSiteSchema = z.object({
             .string()
             .max(500, 'address no puede exceder 500 caracteres')
             .optional(),
-        street_number: z
+        streetNumber: z
             .string()
-            .max(20, 'street_number no puede exceder 20 caracteres')
+            .max(20, 'streetNumber no puede exceder 20 caracteres')
             .optional(),
         city: z
             .string()
             .max(100, 'city no puede exceder 100 caracteres')
             .optional(),
-        state_province: z
+        stateProvince: z
             .string()
-            .max(100, 'state_province no puede exceder 100 caracteres')
+            .max(100, 'stateProvince no puede exceder 100 caracteres')
             .optional(),
-        postal_code: z
+        postalCode: z
             .string()
-            .max(20, 'postal_code no puede exceder 20 caracteres')
+            .max(20, 'postalCode no puede exceder 20 caracteres')
             .optional(),
-        country_code: z
+        countryCode: z
             .string()
-            .length(2, 'country_code debe ser exactamente 2 caracteres (ISO 3166-1 alpha-2)')
+            .length(2, 'countryCode debe ser exactamente 2 caracteres (ISO 3166-1 alpha-2)')
             .toUpperCase()
-            .regex(/^[A-Z]{2}$/, 'country_code debe ser 2 letras mayúsculas')
+            .regex(/^[A-Z]{2}$/, 'countryCode debe ser 2 letras mayúsculas')
             .optional(),
         timezone: z
             .string()
             .max(100, 'timezone no puede exceder 100 caracteres')
             .optional(),
-        building_type: z
+        buildingType: z
             .enum(['office', 'warehouse', 'factory', 'retail', 'hospital', 'school', 
                    'datacenter', 'hotel', 'restaurant', 'residential', 'mixed', 'other'], {
-                errorMap: () => ({ message: 'building_type debe ser un tipo válido' })
+                errorMap: () => ({ message: 'buildingType debe ser un tipo válido' })
             })
             .optional(),
-        area_m2: z
+        areaM2: z
             .number()
-            .positive('area_m2 debe ser un número positivo')
+            .positive('areaM2 debe ser un número positivo')
             .optional(),
         floors: z
             .number()
             .int('floors debe ser un número entero')
             .positive('floors debe ser un número positivo')
             .optional(),
-        operating_hours: z
+        operatingHours: z
             .string()
-            .max(200, 'operating_hours no puede exceder 200 caracteres')
+            .max(200, 'operatingHours no puede exceder 200 caracteres')
             .optional(),
-        image_url: z
+        imageUrl: z
             .string()
-            .url('image_url debe ser una URL válida')
-            .max(500, 'image_url no puede exceder 500 caracteres')
+            .url('imageUrl debe ser una URL válida')
+            .max(500, 'imageUrl no puede exceder 500 caracteres')
             .optional(),
-        contact_name: z
+        contactName: z
             .string()
-            .max(100, 'contact_name no puede exceder 100 caracteres')
+            .max(100, 'contactName no puede exceder 100 caracteres')
             .optional(),
-        contact_phone: z
+        contactPhone: z
             .string()
-            .max(50, 'contact_phone no puede exceder 50 caracteres')
+            .max(50, 'contactPhone no puede exceder 50 caracteres')
             .optional(),
-        contact_email: z
+        contactEmail: z
             .string()
-            .email('contact_email debe ser un email válido')
-            .max(100, 'contact_email no puede exceder 100 caracteres')
+            .email('contactEmail debe ser un email válido')
+            .max(100, 'contactEmail no puede exceder 100 caracteres')
             .optional(),
-        is_active: z
+        isActive: z
             .boolean()
             .optional()
     }).refine(
@@ -229,10 +229,10 @@ export const updateSiteSchema = z.object({
  */
 export const listSitesSchema = z.object({
     query: z.object({
-        organization_id: z
+        organizationId: z
             .string()
             .optional(),
-        organization_ids: z
+        organizationIds: z
             .array(z.string())
             .optional()
             .describe('INTERNO: Array de UUIDs de organizaciones (inyectado por middleware)'),
@@ -240,19 +240,19 @@ export const listSitesSchema = z.object({
             .string()
             .optional()
             .describe('Solo admins: si es "true", muestra todos los sites sin filtrar por organización'),
-        country_code: z
+        countryCode: z
             .string()
-            .length(2, 'country_code debe ser exactamente 2 caracteres')
+            .length(2, 'countryCode debe ser exactamente 2 caracteres')
             .toUpperCase()
             .optional(),
-        is_active: z
+        isActive: z
             .string()
             .transform(val => val === 'true')
             .optional(),
         city: z
             .string()
             .optional(),
-        not_in_hierarchy: z
+        notInHierarchy: z
             .string()
             .transform(val => val === 'true')
             .optional()

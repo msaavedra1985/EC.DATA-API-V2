@@ -81,7 +81,7 @@ const listFiltersSchema = z.object({
     page: z.coerce.number().int().min(1).optional(),
     limit: z.coerce.number().int().min(1).max(100).optional().default(50),
     offset: z.coerce.number().int().min(0).optional().default(0),
-    sortBy: z.enum(['id', 'display_order', 'column_name', 'name', 'measurement_type_id', 'created_at', 'updated_at']).optional().default('display_order'),
+    sortBy: z.enum(['id', 'displayOrder', 'columnName', 'name', 'measurementTypeId', 'createdAt', 'updatedAt']).optional().default('displayOrder'),
     sortOrder: z.enum(['ASC', 'DESC', 'asc', 'desc']).optional().default('ASC')
 });
 

@@ -7,21 +7,21 @@ import { z } from 'zod';
  * Schema Zod para eliminación batch de organizaciones
  */
 export const batchDeleteOrganizationSchema = z.object({
-    organization_ids: z.array(
+    organizationIds: z.array(
         z.string().min(1, 'Organization ID (public_code) cannot be empty')
     )
     .min(1, 'At least one organization ID is required')
     .max(50, 'Maximum 50 organizations can be deleted at once'),
     
-    hard_delete: z.boolean()
+    hardDelete: z.boolean()
         .optional()
         .default(false),
     
-    delete_users: z.boolean()
+    deleteUsers: z.boolean()
         .optional()
         .default(false),
     
-    reassign_org_id: z.string()
+    reassignOrgId: z.string()
         .min(1, 'Reassign organization ID (public_code) cannot be empty')
         .optional()
         .nullable()
@@ -35,7 +35,7 @@ export const generateUploadUrlSchema = z.object({
         .min(1, 'Filename is required')
         .max(255, 'Filename must not exceed 255 characters'),
     
-    content_type: z.string()
+    contentType: z.string()
         .min(1, 'Content type is required')
         .regex(/^image\/(png|jpeg|jpg|webp|svg\+xml)$/, 'Content type must be a valid image format (png, jpeg, jpg, webp, svg+xml)'),
     
@@ -44,7 +44,7 @@ export const generateUploadUrlSchema = z.object({
         .optional()
         .default('org-logo'),
     
-    expiry_minutes: z.number()
+    expiryMinutes: z.number()
         .int()
         .min(5, 'Expiry must be at least 5 minutes')
         .max(120, 'Expiry cannot exceed 120 minutes')

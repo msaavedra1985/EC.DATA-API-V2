@@ -5,12 +5,12 @@ import { z } from 'zod';
 
 /**
  * Schema de validación para PATCH /users/:id/status
- * Solo permite cambiar el campo is_active
+ * Solo permite cambiar el campo isActive
  */
 const toggleStatusSchema = z.object({
-    is_active: z.boolean({
-        required_error: 'is_active es requerido',
-        invalid_type_error: 'is_active debe ser un booleano (true/false)'
+    isActive: z.boolean({
+        required_error: 'isActive es requerido',
+        invalid_type_error: 'isActive debe ser un booleano (true/false)'
     })
 });
 

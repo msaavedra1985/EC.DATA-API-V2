@@ -13,10 +13,10 @@ import * as repository from './repository.js';
  * @param {Object} data - Datos de la categoría
  * @param {string} data.name - Nombre de la categoría
  * @param {string} data.color - Color hex (opcional)
- * @param {number} data.parent_id - ID del padre (opcional)
+ * @param {number} data.parentId - ID del padre (opcional)
  * @param {Object} context - Contexto de sesión
- * @param {string} context.organization_id - UUID de la organización
- * @param {string} context.user_id - UUID del usuario que crea
+ * @param {string} context.organizationId - UUID de la organización
+ * @param {string} context.userId - UUID del usuario que crea
  * @returns {Promise<Object>} Categoría creada
  */
 export const createOrganizationCategory = async (data, context) => {
@@ -24,10 +24,10 @@ export const createOrganizationCategory = async (data, context) => {
 
   try {
     // Validar que el padre exista y pertenezca a la misma organización
-    if (data.parent_id) {
+    if (data.parentId) {
       const parentExists = await repository.categoryBelongsToOrganization(
-        data.parent_id,
-        context.organization_id
+        data.parentId,
+        context.organizationId
       );
       if (!parentExists) {
         throw new Error('La categoría padre no existe o no pertenece a esta organización');
@@ -37,9 +37,9 @@ export const createOrganizationCategory = async (data, context) => {
     const category = await repository.createCategory({
       name: data.name,
       color: data.color || '#6B7280',
-      parent_id: data.parent_id || null,
+      parentId: data.parentId || null,
       scope: 'organization',
-      organization_id: context.organization_id
+      organizationId: context.organizationId
     }, transaction);
 
     // Audit log
@@ -47,9 +47,9 @@ export const createOrganizationCategory = async (data, context) => {
       entityType: 'asset_category',
       entityId: category.id.toString(),
       action: 'created',
-      performedBy: context.user_id,
+      performedBy: context.userId,
       changes: { name: { old: null, new: category.name } },
-      metadata: { scope: 'organization', organization_id: context.organization_id }
+      metadata: { scope: 'organization', organizationId: context.organizationId }
     });
 
     await transaction.commit();
@@ -74,10 +74,10 @@ export const createUserCategory = async (data, context) => {
 
   try {
     // Validar que el padre exista y pertenezca al mismo usuario
-    if (data.parent_id) {
+    if (data.parentId) {
       const parentExists = await repository.categoryBelongsToUser(
-        data.parent_id,
-        context.user_id
+        data.parentId,
+        context.userId
       );
       if (!parentExists) {
         throw new Error('La categoría padre no existe o no es tuya');
@@ -87,9 +87,9 @@ export const createUserCategory = async (data, context) => {
     const category = await repository.createCategory({
       name: data.name,
       color: data.color || '#6B7280',
-      parent_id: data.parent_id || null,
+      parentId: data.parentId || null,
       scope: 'user',
-      user_id: context.user_id
+      userId: context.userId
     }, transaction);
 
     // Audit log
@@ -97,9 +97,9 @@ export const createUserCategory = async (data, context) => {
       entityType: 'asset_category',
       entityId: category.id.toString(),
       action: 'created',
-      performedBy: context.user_id,
+      performedBy: context.userId,
       changes: { name: { old: null, new: category.name } },
-      metadata: { scope: 'user', user_id: context.user_id }
+      metadata: { scope: 'user', userId: context.userId }
     });
 
     await transaction.commit();
@@ -169,8 +169,8 @@ export const getAllVisibleCategories = async (organizationId, userId) => {
 export const getCategoryById = async (categoryId, context) => {
   const hasAccess = await repository.userHasAccessToCategory(
     categoryId,
-    context.organization_id,
-    context.user_id
+    context.organizationId,
+    context.userId
   );
 
   if (!hasAccess) {
@@ -191,8 +191,8 @@ export const getCategoryById = async (categoryId, context) => {
 export const getCategoryTree = async (categoryId, context) => {
   const hasAccess = await repository.userHasAccessToCategory(
     categoryId,
-    context.organization_id,
-    context.user_id
+    context.organizationId,
+    context.userId
   );
 
   if (!hasAccess) {
@@ -235,20 +235,20 @@ export const updateCategory = async (categoryId, data, context) => {
 
     // Validar acceso
     const hasAccess = category.scope === 'organization'
-      ? category.organization_id === context.organization_id
-      : category.user_id === context.user_id;
+      ? category.organizationId === context.organizationId
+      : category.userId === context.userId;
 
     if (!hasAccess) {
       await transaction.rollback();
       return null;
     }
 
-    // Si cambia parent_id, validar que el nuevo padre sea válido
-    if (data.parent_id !== undefined && data.parent_id !== category.parent_id) {
-      if (data.parent_id !== null) {
+    // Si cambia parentId, validar que el nuevo padre sea válido
+    if (data.parentId !== undefined && data.parentId !== category.parentId) {
+      if (data.parentId !== null) {
         const parentValid = category.scope === 'organization'
-          ? await repository.categoryBelongsToOrganization(data.parent_id, context.organization_id)
-          : await repository.categoryBelongsToUser(data.parent_id, context.user_id);
+          ? await repository.categoryBelongsToOrganization(data.parentId, context.organizationId)
+          : await repository.categoryBelongsToUser(data.parentId, context.userId);
 
         if (!parentValid) {
           throw new Error('La categoría padre no es válida');
@@ -256,7 +256,7 @@ export const updateCategory = async (categoryId, data, context) => {
 
         // Evitar ciclos: no permitir que un descendiente sea padre
         const descendantIds = await repository.getCategoryAndDescendantIds(categoryId);
-        if (descendantIds.includes(data.parent_id)) {
+        if (descendantIds.includes(data.parentId)) {
           throw new Error('No se puede mover una categoría a uno de sus descendientes');
         }
       }
@@ -265,13 +265,13 @@ export const updateCategory = async (categoryId, data, context) => {
     const oldData = {
       name: category.name,
       color: category.color,
-      parent_id: category.parent_id
+      parentId: category.parentId
     };
 
     const updated = await repository.updateCategory(categoryId, {
       name: data.name !== undefined ? data.name : category.name,
       color: data.color !== undefined ? data.color : category.color,
-      parent_id: data.parent_id !== undefined ? data.parent_id : category.parent_id
+      parentId: data.parentId !== undefined ? data.parentId : category.parentId
     }, transaction);
 
     // Audit log
@@ -282,8 +282,8 @@ export const updateCategory = async (categoryId, data, context) => {
     if (data.color && data.color !== oldData.color) {
       changes.color = { old: oldData.color, new: data.color };
     }
-    if (data.parent_id !== undefined && data.parent_id !== oldData.parent_id) {
-      changes.parent_id = { old: oldData.parent_id, new: data.parent_id };
+    if (data.parentId !== undefined && data.parentId !== oldData.parentId) {
+      changes.parentId = { old: oldData.parentId, new: data.parentId };
     }
 
     if (Object.keys(changes).length > 0) {
@@ -291,7 +291,7 @@ export const updateCategory = async (categoryId, data, context) => {
         entityType: 'asset_category',
         entityId: categoryId.toString(),
         action: 'updated',
-        performedBy: context.user_id,
+        performedBy: context.userId,
         changes,
         metadata: { scope: category.scope }
       });
@@ -323,8 +323,8 @@ export const deactivateCategory = async (categoryId, context) => {
 
   // Validar acceso
   const hasAccess = category.scope === 'organization'
-    ? category.organization_id === context.organization_id
-    : category.user_id === context.user_id;
+    ? category.organizationId === context.organizationId
+    : category.userId === context.userId;
 
   if (!hasAccess) {
     return { success: false, deactivated: 0 };
@@ -340,11 +340,11 @@ export const deactivateCategory = async (categoryId, context) => {
       entityType: 'asset_category',
       entityId: categoryId.toString(),
       action: 'deleted',
-      performedBy: context.user_id,
-      changes: { is_active: { old: true, new: false } },
+      performedBy: context.userId,
+      changes: { isActive: { old: true, new: false } },
       metadata: { 
         scope: category.scope,
-        descendants_deactivated: result.deactivated - 1
+        descendantsDeactivated: result.deactivated - 1
       }
     });
 
@@ -384,17 +384,17 @@ const serializeCategory = (category) => {
     color: data.color,
     level: data.level,
     path: data.path,
-    parent_id: data.parent_id,
+    parentId: data.parentId,
     scope: data.scope,
-    is_active: data.is_active,
+    isActive: data.isActive,
     parent: data.parent ? {
       id: data.parent.id,
       name: data.parent.name,
       color: data.parent.color,
       level: data.parent.level
     } : null,
-    created_at: data.created_at,
-    updated_at: data.updated_at
+    createdAt: data.createdAt,
+    updatedAt: data.updatedAt
   };
 };
 

@@ -25,10 +25,10 @@ export const createOrganizationCategorySchema = z.object({
       .regex(hexColorRegex, 'color debe ser un código hexadecimal válido (ej: #3B82F6)')
       .optional()
       .default('#6B7280'),
-    parent_id: z
+    parentId: z
       .number()
       .int()
-      .positive('parent_id debe ser un número positivo')
+      .positive('parentId debe ser un número positivo')
       .optional()
       .nullable()
   })
@@ -51,10 +51,10 @@ export const createUserCategorySchema = z.object({
       .regex(hexColorRegex, 'color debe ser un código hexadecimal válido (ej: #3B82F6)')
       .optional()
       .default('#6B7280'),
-    parent_id: z
+    parentId: z
       .number()
       .int()
-      .positive('parent_id debe ser un número positivo')
+      .positive('parentId debe ser un número positivo')
       .optional()
       .nullable()
   })
@@ -81,10 +81,10 @@ export const updateCategorySchema = z.object({
       .string()
       .regex(hexColorRegex, 'color debe ser un código hexadecimal válido (ej: #3B82F6)')
       .optional(),
-    parent_id: z
+    parentId: z
       .number()
       .int()
-      .positive('parent_id debe ser un número positivo')
+      .positive('parentId debe ser un número positivo')
       .optional()
       .nullable()
   })
@@ -126,13 +126,13 @@ export const getCategoriesSchema = z.object({
       .enum(['organization', 'user', 'all'])
       .optional()
       .default('all'),
-    parent_id: z
+    parentId: z
       .string()
-      .regex(/^\d+$/, 'parent_id debe ser un número')
+      .regex(/^\d+$/, 'parentId debe ser un número')
       .transform(val => parseInt(val, 10))
       .optional()
       .nullable(),
-    roots_only: z
+    rootsOnly: z
       .enum(['true', 'false'])
       .transform(val => val === 'true')
       .optional()

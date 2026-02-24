@@ -13,12 +13,12 @@ export const toPublicDataSourceDto = (dataSource) => {
 
     return {
         id: dataSource.id,
-        entity_type: dataSource.entity_type,
-        entity_id: dataSource.entity_id,
+        entityType: dataSource.entityType,
+        entityId: dataSource.entityId,
         label: dataSource.label,
-        series_config: dataSource.series_config,
-        order_index: dataSource.order_index,
-        created_at: dataSource.created_at
+        seriesConfig: dataSource.seriesConfig,
+        orderIndex: dataSource.orderIndex,
+        createdAt: dataSource.createdAt
     };
 };
 
@@ -37,16 +37,16 @@ export const toPublicWidgetDto = (widget) => {
         type: widget.type,
         title: widget.title,
         layout: widget.layout,
-        style_config: widget.style_config,
-        data_config: widget.data_config,
-        order_index: widget.order_index,
-        created_at: widget.created_at,
-        updated_at: widget.updated_at
+        styleConfig: widget.styleConfig,
+        dataConfig: widget.dataConfig,
+        orderIndex: widget.orderIndex,
+        createdAt: widget.createdAt,
+        updatedAt: widget.updatedAt
     };
 
     // --- Relaciones hijas ---
     if (widget.dataSources) {
-        dto.data_sources = widget.dataSources.map(toPublicDataSourceDto);
+        dto.dataSources = widget.dataSources.map(toPublicDataSourceDto);
     }
 
     return dto;
@@ -55,7 +55,7 @@ export const toPublicWidgetDto = (widget) => {
 /**
  * Convertir modelo DashboardPage a DTO público
  * Entidad hija: expone UUID directamente (se accede a través del contexto padre)
- * No se expone dashboard_id (implícito por contexto)
+ * No se expone dashboardId (implícito por contexto)
  * 
  * @param {DashboardPage} page - Modelo Sequelize DashboardPage
  * @returns {Object|null} - DTO público para respuestas API
@@ -66,9 +66,9 @@ export const toPublicPageDto = (page) => {
     const dto = {
         id: page.id,
         name: page.name,
-        order_index: page.order_index,
-        created_at: page.created_at,
-        updated_at: page.updated_at
+        orderIndex: page.orderIndex,
+        createdAt: page.createdAt,
+        updatedAt: page.updatedAt
     };
 
     // --- Relaciones hijas ---
@@ -92,16 +92,16 @@ export const toPublicCollaboratorDto = (collaborator) => {
     const dto = {
         id: collaborator.id,
         role: collaborator.role,
-        created_at: collaborator.created_at
+        createdAt: collaborator.createdAt
     };
 
     // --- Usuario asociado ---
     if (collaborator.user) {
         dto.user = {
-            id: collaborator.user.public_code,
+            id: collaborator.user.publicCode,
             email: collaborator.user.email,
-            first_name: collaborator.user.first_name,
-            last_name: collaborator.user.last_name
+            firstName: collaborator.user.firstName,
+            lastName: collaborator.user.lastName
         };
     }
 
@@ -121,16 +121,16 @@ export const toPublicGroupCollaboratorDto = (collaborator) => {
     const dto = {
         id: collaborator.id,
         role: collaborator.role,
-        created_at: collaborator.created_at
+        createdAt: collaborator.createdAt
     };
 
     // --- Usuario asociado ---
     if (collaborator.user) {
         dto.user = {
-            id: collaborator.user.public_code,
+            id: collaborator.user.publicCode,
             email: collaborator.user.email,
-            first_name: collaborator.user.first_name,
-            last_name: collaborator.user.last_name
+            firstName: collaborator.user.firstName,
+            lastName: collaborator.user.lastName
         };
     }
 
@@ -139,11 +139,11 @@ export const toPublicGroupCollaboratorDto = (collaborator) => {
 
 /**
  * Convertir modelo Dashboard a DTO público
- * Expone public_code como 'id', oculta UUID interno
+ * Expone publicCode como 'id', oculta UUID interno
  * 
  * POLÍTICA DE SEGURIDAD:
  * - Nunca exponer el UUID interno en APIs públicas
- * - Siempre usar public_code como 'id' en respuestas
+ * - Siempre usar publicCode como 'id' en respuestas
  * - UUIDs solo para operaciones internas de base de datos
  * 
  * @param {Dashboard} dashboard - Modelo Sequelize Dashboard
@@ -153,38 +153,38 @@ export const toPublicDashboardDto = (dashboard) => {
     if (!dashboard) return null;
 
     const dto = {
-        id: dashboard.public_code,
+        id: dashboard.publicCode,
         name: dashboard.name,
         description: dashboard.description,
         icon: dashboard.icon,
         size: dashboard.size,
         positioning: dashboard.positioning,
-        custom_width: dashboard.custom_width,
-        custom_height: dashboard.custom_height,
-        is_home: dashboard.is_home,
-        is_public: dashboard.is_public,
-        is_active: dashboard.is_active,
+        customWidth: dashboard.customWidth,
+        customHeight: dashboard.customHeight,
+        isHome: dashboard.isHome,
+        isPublic: dashboard.isPublic,
+        isActive: dashboard.isActive,
         settings: dashboard.settings || {},
-        created_at: dashboard.created_at,
-        updated_at: dashboard.updated_at
+        createdAt: dashboard.createdAt,
+        updatedAt: dashboard.updatedAt
     };
 
     // --- Relaciones principales ---
     if (dashboard.owner) {
         dto.owner = {
-            id: dashboard.owner.public_code,
+            id: dashboard.owner.publicCode,
             email: dashboard.owner.email,
-            first_name: dashboard.owner.first_name,
-            last_name: dashboard.owner.last_name
+            firstName: dashboard.owner.firstName,
+            lastName: dashboard.owner.lastName
         };
     }
 
     if (dashboard.organization) {
         dto.organization = {
-            id: dashboard.organization.public_code,
+            id: dashboard.organization.publicCode,
             slug: dashboard.organization.slug,
             name: dashboard.organization.name,
-            logo_url: dashboard.organization.logo_url
+            logoUrl: dashboard.organization.logoUrl
         };
     }
 
@@ -213,11 +213,11 @@ export const toPublicDashboardDtoList = (dashboards) => {
 
 /**
  * Convertir modelo DashboardGroup a DTO público
- * Expone public_code como 'id', oculta UUID interno
+ * Expone publicCode como 'id', oculta UUID interno
  * 
  * POLÍTICA DE SEGURIDAD:
  * - Nunca exponer el UUID interno en APIs públicas
- * - Siempre usar public_code como 'id' en respuestas
+ * - Siempre usar publicCode como 'id' en respuestas
  * - UUIDs solo para operaciones internas de base de datos
  * 
  * @param {DashboardGroup} group - Modelo Sequelize DashboardGroup
@@ -227,27 +227,27 @@ export const toPublicGroupDto = (group) => {
     if (!group) return null;
 
     const dto = {
-        id: group.public_code,
+        id: group.publicCode,
         name: group.name,
         description: group.description,
-        is_active: group.is_active,
-        created_at: group.created_at,
-        updated_at: group.updated_at
+        isActive: group.isActive,
+        createdAt: group.createdAt,
+        updatedAt: group.updatedAt
     };
 
     // --- Relaciones principales ---
     if (group.owner) {
         dto.owner = {
-            id: group.owner.public_code,
+            id: group.owner.publicCode,
             email: group.owner.email,
-            first_name: group.owner.first_name,
-            last_name: group.owner.last_name
+            firstName: group.owner.firstName,
+            lastName: group.owner.lastName
         };
     }
 
     if (group.organization) {
         dto.organization = {
-            id: group.organization.public_code,
+            id: group.organization.publicCode,
             slug: group.organization.slug,
             name: group.organization.name
         };
@@ -257,14 +257,14 @@ export const toPublicGroupDto = (group) => {
     if (group.dashboards) {
         dto.dashboards = group.dashboards.map((dashboard) => {
             const item = {
-                id: dashboard.public_code,
+                id: dashboard.publicCode,
                 name: dashboard.name,
                 description: dashboard.description
             };
 
-            // order_index viene de la tabla intermedia DashboardGroupItem
+            // orderIndex viene de la tabla intermedia DashboardGroupItem
             if (dashboard.DashboardGroupItem) {
-                item.order_index = dashboard.DashboardGroupItem.order_index;
+                item.orderIndex = dashboard.DashboardGroupItem.orderIndex;
             }
 
             return item;
