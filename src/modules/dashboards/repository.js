@@ -190,6 +190,18 @@ export const createDashboard = async (data) => {
     return dashboard;
 };
 
+export const createDashboardWithFirstPage = async (dashboardData, pageData) => {
+    return await sequelize.transaction(async (t) => {
+        const dashboard = await Dashboard.create(dashboardData, { transaction: t });
+        await DashboardPage.create(
+            { ...pageData, dashboardId: dashboard.id },
+            { transaction: t }
+        );
+        await dashboard.reload({ include: dashboardFullIncludes, transaction: t });
+        return dashboard;
+    });
+};
+
 export const updateDashboard = async (id, data) => {
     const dashboard = await Dashboard.findByPk(id);
 

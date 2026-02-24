@@ -20,8 +20,9 @@ const DashboardPage = sequelize.define('DashboardPage', {
     },
     name: {
         type: DataTypes.STRING(200),
-        allowNull: false,
-        comment: 'Nombre de la pestaña (ej: Energía, Clima)'
+        allowNull: true,
+        defaultValue: null,
+        comment: 'Nombre de la pestaña (ej: Energía, Clima). null para páginas únicas sin navegador'
     },
     orderIndex: {
         type: DataTypes.INTEGER,

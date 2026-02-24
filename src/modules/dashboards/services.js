@@ -125,12 +125,20 @@ export const createDashboard = async (dashboardData, userId, organizationId, ipA
   const uuid = uuidv7();
   const publicCode = generatePublicCode('DSH', uuid);
 
-  const dashboard = await dashboardRepository.createDashboard({
+  const pageUuid = uuidv7();
+
+  const dashboard = await dashboardRepository.createDashboardWithFirstPage({
     ...dashboardData,
     id: uuid,
     publicCode,
     ownerId: userId,
-    organizationId
+    organizationId,
+    pageCount: 1
+  }, {
+    id: pageUuid,
+    orderNumber: 1,
+    orderIndex: 0,
+    name: null
   });
 
   await logAuditAction({

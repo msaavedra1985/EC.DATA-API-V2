@@ -282,11 +282,12 @@ export const createPageSchema = z.object({
     }),
     body: z.object({
         name: z
-            .string({
-                required_error: 'name es requerido'
-            })
+            .string()
             .min(1, 'name no puede estar vacío')
-            .max(200, 'name no puede exceder 200 caracteres'),
+            .max(200, 'name no puede exceder 200 caracteres')
+            .nullable()
+            .optional()
+            .default(null),
         orderIndex: z
             .number({ invalid_type_error: 'orderIndex debe ser un número' })
             .int('orderIndex debe ser un entero')
