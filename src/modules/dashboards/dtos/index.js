@@ -221,7 +221,12 @@ export const getDashboardsSchema = z.object({
                 message: 'offset debe ser mayor o igual a 0'
             })
             .optional()
-            .default('0')
+            .default('0'),
+        includeWidgets: z
+            .string()
+            .transform((val) => val === 'true')
+            .optional()
+            .default('false')
     }).transform((data) => {
         if (data.page !== undefined && data.page >= 1) {
             const limit = data.limit || 20;
@@ -303,10 +308,11 @@ export const updatePageSchema = z.object({
             })
             .min(1, 'dashboardId no puede estar vacío'),
         pageId: z
-            .string({
-                required_error: 'pageId es requerido'
+            .string({ required_error: 'pageId es requerido' })
+            .transform((val) => parseInt(val, 10))
+            .refine((val) => !isNaN(val) && val >= 1, {
+                message: 'pageId debe ser un entero mayor o igual a 1'
             })
-            .min(1, 'pageId no puede estar vacío')
     }),
     body: z.object({
         name: z
@@ -334,10 +340,11 @@ export const deletePageSchema = z.object({
             })
             .min(1, 'dashboardId no puede estar vacío'),
         pageId: z
-            .string({
-                required_error: 'pageId es requerido'
+            .string({ required_error: 'pageId es requerido' })
+            .transform((val) => parseInt(val, 10))
+            .refine((val) => !isNaN(val) && val >= 1, {
+                message: 'pageId debe ser un entero mayor o igual a 1'
             })
-            .min(1, 'pageId no puede estar vacío')
     })
 });
 
@@ -357,10 +364,11 @@ export const createWidgetSchema = z.object({
             })
             .min(1, 'dashboardId no puede estar vacío'),
         pageId: z
-            .string({
-                required_error: 'pageId es requerido'
+            .string({ required_error: 'pageId es requerido' })
+            .transform((val) => parseInt(val, 10))
+            .refine((val) => !isNaN(val) && val >= 1, {
+                message: 'pageId debe ser un entero mayor o igual a 1'
             })
-            .min(1, 'pageId no puede estar vacío')
     }),
     body: z.object({
         type: z
@@ -406,15 +414,17 @@ export const updateWidgetSchema = z.object({
             })
             .min(1, 'dashboardId no puede estar vacío'),
         pageId: z
-            .string({
-                required_error: 'pageId es requerido'
-            })
-            .min(1, 'pageId no puede estar vacío'),
+            .string({ required_error: 'pageId es requerido' })
+            .transform((val) => parseInt(val, 10))
+            .refine((val) => !isNaN(val) && val >= 1, {
+                message: 'pageId debe ser un entero mayor o igual a 1'
+            }),
         widgetId: z
-            .string({
-                required_error: 'widgetId es requerido'
+            .string({ required_error: 'widgetId es requerido' })
+            .transform((val) => parseInt(val, 10))
+            .refine((val) => !isNaN(val) && val >= 1, {
+                message: 'widgetId debe ser un entero mayor o igual a 1'
             })
-            .min(1, 'widgetId no puede estar vacío')
     }),
     body: z.object({
         type: z
@@ -460,15 +470,17 @@ export const deleteWidgetSchema = z.object({
             })
             .min(1, 'dashboardId no puede estar vacío'),
         pageId: z
-            .string({
-                required_error: 'pageId es requerido'
-            })
-            .min(1, 'pageId no puede estar vacío'),
+            .string({ required_error: 'pageId es requerido' })
+            .transform((val) => parseInt(val, 10))
+            .refine((val) => !isNaN(val) && val >= 1, {
+                message: 'pageId debe ser un entero mayor o igual a 1'
+            }),
         widgetId: z
-            .string({
-                required_error: 'widgetId es requerido'
+            .string({ required_error: 'widgetId es requerido' })
+            .transform((val) => parseInt(val, 10))
+            .refine((val) => !isNaN(val) && val >= 1, {
+                message: 'widgetId debe ser un entero mayor o igual a 1'
             })
-            .min(1, 'widgetId no puede estar vacío')
     })
 });
 

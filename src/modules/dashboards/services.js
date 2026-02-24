@@ -394,14 +394,14 @@ export const createPage = async (dashboardPublicCode, pageData, userId, ipAddres
 /**
  * Actualizar una página de un dashboard
  * @param {string} dashboardPublicCode - Public code del dashboard
- * @param {string} pageId - UUID de la página
+ * @param {number} pageOrderNumber - Número de orden de la página
  * @param {Object} pageData - Datos a actualizar
  * @param {string} userId - UUID del usuario que actualiza
  * @param {string} ipAddress - IP del usuario
  * @param {string} userAgent - User agent del usuario
  * @returns {Promise<Object>} - Página actualizada
  */
-export const updatePage = async (dashboardPublicCode, pageId, pageData, userId, ipAddress, userAgent) => {
+export const updatePage = async (dashboardPublicCode, pageOrderNumber, pageData, userId, ipAddress, userAgent) => {
   const dashboard = await dashboardRepository.findDashboardByPublicCodeInternal(dashboardPublicCode);
 
   if (!dashboard) {
@@ -419,7 +419,7 @@ export const updatePage = async (dashboardPublicCode, pageId, pageData, userId, 
     throw error;
   }
 
-  const page = await dashboardRepository.findPageById(pageId);
+  const page = await dashboardRepository.findPageByOrderNumber(dashboard.id, pageOrderNumber);
 
   if (!page) {
     const error = new Error('Página no encontrada');
@@ -428,16 +428,9 @@ export const updatePage = async (dashboardPublicCode, pageId, pageData, userId, 
     throw error;
   }
 
-  if (page.dashboardId !== dashboard.id) {
-    const error = new Error('La página no pertenece al dashboard especificado');
-    error.status = 400;
-    error.code = 'PAGE_DASHBOARD_MISMATCH';
-    throw error;
-  }
-
   const oldData = { ...page.dataValues };
 
-  const updatedPage = await dashboardRepository.updatePage(pageId, pageData);
+  const updatedPage = await dashboardRepository.updatePage(page.id, pageData);
 
   const changes = {};
   Object.keys(pageData).forEach(key => {
@@ -451,13 +444,14 @@ export const updatePage = async (dashboardPublicCode, pageId, pageData, userId, 
 
   await logAuditAction({
     entityType: 'dashboard_page',
-    entityId: pageId,
+    entityId: page.id,
     action: 'updated',
     performedBy: userId,
     changes,
     metadata: {
       dashboardId: dashboard.id,
-      dashboardPublicCode
+      dashboardPublicCode,
+      pageOrderNumber
     },
     ipAddress,
     userAgent
@@ -465,7 +459,7 @@ export const updatePage = async (dashboardPublicCode, pageId, pageData, userId, 
 
   await invalidateDashboardCache();
 
-  logger.info({ pageId, dashboardId: dashboard.id, userId }, 'Dashboard page updated successfully');
+  logger.info({ pageId: page.id, dashboardId: dashboard.id, userId }, 'Dashboard page updated successfully');
 
   return updatedPage;
 };
@@ -473,13 +467,13 @@ export const updatePage = async (dashboardPublicCode, pageId, pageData, userId, 
 /**
  * Eliminar una página de un dashboard
  * @param {string} dashboardPublicCode - Public code del dashboard
- * @param {string} pageId - UUID de la página
+ * @param {number} pageOrderNumber - Número de orden de la página
  * @param {string} userId - UUID del usuario que elimina
  * @param {string} ipAddress - IP del usuario
  * @param {string} userAgent - User agent del usuario
  * @returns {Promise<void>}
  */
-export const deletePage = async (dashboardPublicCode, pageId, userId, ipAddress, userAgent) => {
+export const deletePage = async (dashboardPublicCode, pageOrderNumber, userId, ipAddress, userAgent) => {
   const dashboard = await dashboardRepository.findDashboardByPublicCodeInternal(dashboardPublicCode);
 
   if (!dashboard) {
@@ -497,7 +491,7 @@ export const deletePage = async (dashboardPublicCode, pageId, userId, ipAddress,
     throw error;
   }
 
-  const page = await dashboardRepository.findPageById(pageId);
+  const page = await dashboardRepository.findPageByOrderNumber(dashboard.id, pageOrderNumber);
 
   if (!page) {
     const error = new Error('Página no encontrada');
@@ -506,18 +500,11 @@ export const deletePage = async (dashboardPublicCode, pageId, userId, ipAddress,
     throw error;
   }
 
-  if (page.dashboardId !== dashboard.id) {
-    const error = new Error('La página no pertenece al dashboard especificado');
-    error.status = 400;
-    error.code = 'PAGE_DASHBOARD_MISMATCH';
-    throw error;
-  }
-
-  await dashboardRepository.deletePage(pageId);
+  await dashboardRepository.deletePage(page.id);
 
   await logAuditAction({
     entityType: 'dashboard_page',
-    entityId: pageId,
+    entityId: page.id,
     action: 'deleted',
     performedBy: userId,
     metadata: {
@@ -531,7 +518,7 @@ export const deletePage = async (dashboardPublicCode, pageId, userId, ipAddress,
 
   await invalidateDashboardCache();
 
-  logger.info({ pageId, dashboardId: dashboard.id, userId }, 'Dashboard page deleted successfully');
+  logger.info({ pageId: page.id, dashboardId: dashboard.id, userId }, 'Dashboard page deleted successfully');
 };
 
 // =============================================
@@ -541,14 +528,14 @@ export const deletePage = async (dashboardPublicCode, pageId, userId, ipAddress,
 /**
  * Crear un nuevo widget en una página
  * @param {string} dashboardPublicCode - Public code del dashboard
- * @param {string} pageId - UUID de la página
+ * @param {number} pageOrderNumber - Número de orden de la página
  * @param {Object} widgetData - Datos del widget
  * @param {string} userId - UUID del usuario que crea
  * @param {string} ipAddress - IP del usuario
  * @param {string} userAgent - User agent del usuario
  * @returns {Promise<Object>} - Widget creado
  */
-export const createWidget = async (dashboardPublicCode, pageId, widgetData, userId, ipAddress, userAgent) => {
+export const createWidget = async (dashboardPublicCode, pageOrderNumber, widgetData, userId, ipAddress, userAgent) => {
   const dashboard = await dashboardRepository.findDashboardByPublicCodeInternal(dashboardPublicCode);
 
   if (!dashboard) {
@@ -566,7 +553,7 @@ export const createWidget = async (dashboardPublicCode, pageId, widgetData, user
     throw error;
   }
 
-  const page = await dashboardRepository.findPageById(pageId);
+  const page = await dashboardRepository.findPageByOrderNumber(dashboard.id, pageOrderNumber);
 
   if (!page) {
     const error = new Error('Página no encontrada');
@@ -575,19 +562,12 @@ export const createWidget = async (dashboardPublicCode, pageId, widgetData, user
     throw error;
   }
 
-  if (page.dashboardId !== dashboard.id) {
-    const error = new Error('La página no pertenece al dashboard especificado');
-    error.status = 400;
-    error.code = 'PAGE_DASHBOARD_MISMATCH';
-    throw error;
-  }
-
   const uuid = uuidv7();
 
   const widget = await dashboardRepository.createWidget({
     ...widgetData,
     id: uuid,
-    dashboardPageId: pageId
+    dashboardPageId: page.id
   });
 
   await logAuditAction({
@@ -599,7 +579,8 @@ export const createWidget = async (dashboardPublicCode, pageId, widgetData, user
     metadata: {
       dashboardId: dashboard.id,
       dashboardPublicCode,
-      pageId
+      pageId: page.id,
+      pageOrderNumber
     },
     ipAddress,
     userAgent
@@ -607,7 +588,7 @@ export const createWidget = async (dashboardPublicCode, pageId, widgetData, user
 
   await invalidateDashboardCache();
 
-  logger.info({ widgetId: uuid, pageId, dashboardId: dashboard.id, userId }, 'Widget created successfully');
+  logger.info({ widgetId: uuid, pageOrderNumber, dashboardId: dashboard.id, userId }, 'Widget created successfully');
 
   return widget;
 };
@@ -615,15 +596,15 @@ export const createWidget = async (dashboardPublicCode, pageId, widgetData, user
 /**
  * Actualizar un widget
  * @param {string} dashboardPublicCode - Public code del dashboard
- * @param {string} pageId - UUID de la página
- * @param {string} widgetId - UUID del widget
+ * @param {number} pageOrderNumber - Número de orden de la página
+ * @param {number} widgetOrderNumber - Número de orden del widget
  * @param {Object} widgetData - Datos a actualizar
  * @param {string} userId - UUID del usuario que actualiza
  * @param {string} ipAddress - IP del usuario
  * @param {string} userAgent - User agent del usuario
  * @returns {Promise<Object>} - Widget actualizado
  */
-export const updateWidget = async (dashboardPublicCode, pageId, widgetId, widgetData, userId, ipAddress, userAgent) => {
+export const updateWidget = async (dashboardPublicCode, pageOrderNumber, widgetOrderNumber, widgetData, userId, ipAddress, userAgent) => {
   const dashboard = await dashboardRepository.findDashboardByPublicCodeInternal(dashboardPublicCode);
 
   if (!dashboard) {
@@ -641,7 +622,7 @@ export const updateWidget = async (dashboardPublicCode, pageId, widgetId, widget
     throw error;
   }
 
-  const page = await dashboardRepository.findPageById(pageId);
+  const page = await dashboardRepository.findPageByOrderNumber(dashboard.id, pageOrderNumber);
 
   if (!page) {
     const error = new Error('Página no encontrada');
@@ -650,14 +631,7 @@ export const updateWidget = async (dashboardPublicCode, pageId, widgetId, widget
     throw error;
   }
 
-  if (page.dashboardId !== dashboard.id) {
-    const error = new Error('La página no pertenece al dashboard especificado');
-    error.status = 400;
-    error.code = 'PAGE_DASHBOARD_MISMATCH';
-    throw error;
-  }
-
-  const widget = await dashboardRepository.findWidgetById(widgetId);
+  const widget = await dashboardRepository.findWidgetByOrderNumber(page.id, widgetOrderNumber);
 
   if (!widget) {
     const error = new Error('Widget no encontrado');
@@ -666,16 +640,9 @@ export const updateWidget = async (dashboardPublicCode, pageId, widgetId, widget
     throw error;
   }
 
-  if (widget.dashboardPageId !== pageId) {
-    const error = new Error('El widget no pertenece a la página especificada');
-    error.status = 400;
-    error.code = 'WIDGET_PAGE_MISMATCH';
-    throw error;
-  }
-
   const oldData = { ...widget.dataValues };
 
-  const updatedWidget = await dashboardRepository.updateWidget(widgetId, widgetData);
+  const updatedWidget = await dashboardRepository.updateWidget(widget.id, widgetData);
 
   const changes = {};
   Object.keys(widgetData).forEach(key => {
@@ -689,14 +656,15 @@ export const updateWidget = async (dashboardPublicCode, pageId, widgetId, widget
 
   await logAuditAction({
     entityType: 'widget',
-    entityId: widgetId,
+    entityId: widget.id,
     action: 'updated',
     performedBy: userId,
     changes,
     metadata: {
       dashboardId: dashboard.id,
       dashboardPublicCode,
-      pageId
+      pageOrderNumber,
+      widgetOrderNumber
     },
     ipAddress,
     userAgent
@@ -704,7 +672,7 @@ export const updateWidget = async (dashboardPublicCode, pageId, widgetId, widget
 
   await invalidateDashboardCache();
 
-  logger.info({ widgetId, pageId, dashboardId: dashboard.id, userId }, 'Widget updated successfully');
+  logger.info({ widgetId: widget.id, pageOrderNumber, dashboardId: dashboard.id, userId }, 'Widget updated successfully');
 
   return updatedWidget;
 };
@@ -712,14 +680,14 @@ export const updateWidget = async (dashboardPublicCode, pageId, widgetId, widget
 /**
  * Eliminar un widget
  * @param {string} dashboardPublicCode - Public code del dashboard
- * @param {string} pageId - UUID de la página
- * @param {string} widgetId - UUID del widget
+ * @param {number} pageOrderNumber - Número de orden de la página
+ * @param {number} widgetOrderNumber - Número de orden del widget
  * @param {string} userId - UUID del usuario que elimina
  * @param {string} ipAddress - IP del usuario
  * @param {string} userAgent - User agent del usuario
  * @returns {Promise<void>}
  */
-export const deleteWidget = async (dashboardPublicCode, pageId, widgetId, userId, ipAddress, userAgent) => {
+export const deleteWidget = async (dashboardPublicCode, pageOrderNumber, widgetOrderNumber, userId, ipAddress, userAgent) => {
   const dashboard = await dashboardRepository.findDashboardByPublicCodeInternal(dashboardPublicCode);
 
   if (!dashboard) {
@@ -737,7 +705,7 @@ export const deleteWidget = async (dashboardPublicCode, pageId, widgetId, userId
     throw error;
   }
 
-  const page = await dashboardRepository.findPageById(pageId);
+  const page = await dashboardRepository.findPageByOrderNumber(dashboard.id, pageOrderNumber);
 
   if (!page) {
     const error = new Error('Página no encontrada');
@@ -746,14 +714,7 @@ export const deleteWidget = async (dashboardPublicCode, pageId, widgetId, userId
     throw error;
   }
 
-  if (page.dashboardId !== dashboard.id) {
-    const error = new Error('La página no pertenece al dashboard especificado');
-    error.status = 400;
-    error.code = 'PAGE_DASHBOARD_MISMATCH';
-    throw error;
-  }
-
-  const widget = await dashboardRepository.findWidgetById(widgetId);
+  const widget = await dashboardRepository.findWidgetByOrderNumber(page.id, widgetOrderNumber);
 
   if (!widget) {
     const error = new Error('Widget no encontrado');
@@ -762,24 +723,18 @@ export const deleteWidget = async (dashboardPublicCode, pageId, widgetId, userId
     throw error;
   }
 
-  if (widget.dashboardPageId !== pageId) {
-    const error = new Error('El widget no pertenece a la página especificada');
-    error.status = 400;
-    error.code = 'WIDGET_PAGE_MISMATCH';
-    throw error;
-  }
-
-  await dashboardRepository.deleteWidget(widgetId);
+  await dashboardRepository.deleteWidget(widget.id);
 
   await logAuditAction({
     entityType: 'widget',
-    entityId: widgetId,
+    entityId: widget.id,
     action: 'deleted',
     performedBy: userId,
     metadata: {
       dashboardId: dashboard.id,
       dashboardPublicCode,
-      pageId,
+      pageOrderNumber,
+      widgetOrderNumber,
       widgetTitle: widget.title
     },
     ipAddress,
@@ -788,7 +743,7 @@ export const deleteWidget = async (dashboardPublicCode, pageId, widgetId, userId
 
   await invalidateDashboardCache();
 
-  logger.info({ widgetId, pageId, dashboardId: dashboard.id, userId }, 'Widget deleted successfully');
+  logger.info({ widgetId: widget.id, pageOrderNumber, dashboardId: dashboard.id, userId }, 'Widget deleted successfully');
 };
 
 // =============================================

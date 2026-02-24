@@ -87,6 +87,32 @@ const groupFullIncludes = [
     groupCollaboratorWithUserInclude
 ];
 
+// --- Helpers para auto-increment de orderNumber ---
+
+const getNextPageOrderNumber = async (dashboardId, transaction = null) => {
+    const result = await DashboardPage.max('orderNumber', {
+        where: { dashboardId },
+        ...(transaction && { transaction })
+    });
+    return (result || 0) + 1;
+};
+
+const getNextWidgetOrderNumber = async (dashboardPageId, transaction = null) => {
+    const result = await Widget.max('orderNumber', {
+        where: { dashboardPageId },
+        ...(transaction && { transaction })
+    });
+    return (result || 0) + 1;
+};
+
+const getNextDataSourceOrderNumber = async (widgetId, transaction = null) => {
+    const result = await WidgetDataSource.max('orderNumber', {
+        where: { widgetId },
+        ...(transaction && { transaction })
+    });
+    return (result || 0) + 1;
+};
+
 // =============================================
 // Dashboard CRUD
 // =============================================
@@ -97,7 +123,8 @@ export const findAllDashboards = async ({
     isPublic,
     search,
     limit = 20,
-    offset = 0
+    offset = 0,
+    includeWidgets = false
 }) => {
     const where = {};
 
@@ -120,12 +147,15 @@ export const findAllDashboards = async ({
         ];
     }
 
+    const includes = includeWidgets ? dashboardFullIncludes : dashboardListIncludes;
+
     const { count, rows } = await Dashboard.findAndCountAll({
         where,
-        include: dashboardListIncludes,
+        include: includes,
         limit: parseInt(limit),
         offset: parseInt(offset),
-        order: [['createdAt', 'DESC']]
+        order: [['createdAt', 'DESC']],
+        distinct: true
     });
 
     return {
@@ -230,9 +260,39 @@ export const findPageById = async (pageId) => {
     });
 };
 
+export const findPageByOrderNumber = async (dashboardId, orderNumber) => {
+    return await DashboardPage.findOne({
+        where: { dashboardId, orderNumber },
+        include: [widgetWithDataSourcesInclude]
+    });
+};
+
+export const findWidgetByOrderNumber = async (dashboardPageId, orderNumber) => {
+    return await Widget.findOne({
+        where: { dashboardPageId, orderNumber },
+        include: [dataSourceInclude]
+    });
+};
+
+export const findDataSourceByOrderNumber = async (widgetId, orderNumber) => {
+    return await WidgetDataSource.findOne({
+        where: { widgetId, orderNumber }
+    });
+};
+
 export const createPage = async (data) => {
-    const page = await DashboardPage.create(data);
-    return page;
+    return await sequelize.transaction(async (t) => {
+        const orderNumber = await getNextPageOrderNumber(data.dashboardId, t);
+        const page = await DashboardPage.create(
+            { ...data, orderNumber },
+            { transaction: t }
+        );
+        await Dashboard.increment('pageCount', {
+            where: { id: data.dashboardId },
+            transaction: t
+        });
+        return page;
+    });
 };
 
 export const updatePage = async (pageId, data) => {
@@ -248,12 +308,15 @@ export const updatePage = async (pageId, data) => {
 
 export const deletePage = async (pageId) => {
     const page = await DashboardPage.findByPk(pageId);
+    if (!page) return false;
 
-    if (!page) {
-        return false;
-    }
-
-    await page.destroy({ force: true });
+    await sequelize.transaction(async (t) => {
+        await page.destroy({ force: true, transaction: t });
+        await Dashboard.decrement('pageCount', {
+            where: { id: page.dashboardId },
+            transaction: t
+        });
+    });
     return true;
 };
 
@@ -278,9 +341,23 @@ export const findWidgetById = async (widgetId) => {
 };
 
 export const createWidget = async (data) => {
-    const widget = await Widget.create(data);
-    await widget.reload({ include: [dataSourceInclude] });
-    return widget;
+    return await sequelize.transaction(async (t) => {
+        const orderNumber = await getNextWidgetOrderNumber(data.dashboardPageId, t);
+        const widget = await Widget.create(
+            { ...data, orderNumber },
+            { transaction: t }
+        );
+        await widget.reload({ include: [dataSourceInclude], transaction: t });
+
+        const page = await DashboardPage.findByPk(data.dashboardPageId, { transaction: t });
+        if (page) {
+            await Dashboard.increment('widgetCount', {
+                where: { id: page.dashboardId },
+                transaction: t
+            });
+        }
+        return widget;
+    });
 };
 
 export const updateWidget = async (widgetId, data) => {
@@ -297,12 +374,18 @@ export const updateWidget = async (widgetId, data) => {
 
 export const deleteWidget = async (widgetId) => {
     const widget = await Widget.findByPk(widgetId);
+    if (!widget) return false;
 
-    if (!widget) {
-        return false;
-    }
-
-    await widget.destroy({ force: true });
+    await sequelize.transaction(async (t) => {
+        const page = await DashboardPage.findByPk(widget.dashboardPageId, { transaction: t });
+        await widget.destroy({ force: true, transaction: t });
+        if (page) {
+            await Dashboard.decrement('widgetCount', {
+                where: { id: page.dashboardId },
+                transaction: t
+            });
+        }
+    });
     return true;
 };
 
@@ -320,8 +403,14 @@ export const findDataSourcesByWidgetId = async (widgetId) => {
 };
 
 export const createDataSource = async (data) => {
-    const dataSource = await WidgetDataSource.create(data);
-    return dataSource;
+    return await sequelize.transaction(async (t) => {
+        const orderNumber = await getNextDataSourceOrderNumber(data.widgetId, t);
+        const dataSource = await WidgetDataSource.create(
+            { ...data, orderNumber },
+            { transaction: t }
+        );
+        return dataSource;
+    });
 };
 
 export const updateDataSource = async (dataSourceId, data) => {

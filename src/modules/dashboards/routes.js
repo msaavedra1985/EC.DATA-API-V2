@@ -74,9 +74,11 @@ const dashboardLogger = logger.child({ component: 'dashboards' });
 router.get('/', authenticate, enforceActiveOrganization, validate(getDashboardsSchema), async (req, res, next) => {
     try {
         const orgId = req.organizationContext.id;
-        const result = await dashboardServices.listDashboards(orgId, req.query, req.user.userId);
+        const { includeWidgets, ...queryParams } = req.query;
+        const result = await dashboardServices.listDashboards(orgId, { ...queryParams, includeWidgets }, req.user.userId);
 
-        return successResponse(res, result.items.map(toPublicDashboardListDto), 200, {
+        const serializer = includeWidgets ? toPublicDashboardDto : toPublicDashboardListDto;
+        return successResponse(res, result.items.map(serializer), 200, {
             total: result.total,
             limit: result.limit,
             offset: result.offset
