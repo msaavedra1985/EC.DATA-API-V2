@@ -120,5 +120,6 @@
     "auth.login.captcha_required": "auth.login.captcha_required",
     "auth.login.captcha_invalid": "auth.login.captcha_invalid",
     "errors.device.not_found": "errors.device.not_found",
-    "column site.country_id does not exist": "column site.country_id does not exist"
+    "column site.country_id does not exist": "column site.country_id does not exist",
+    "column Dashboard.page_count does not exist": "column Dashboard.page_count does not exist"
 }
