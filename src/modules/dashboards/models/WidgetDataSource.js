@@ -44,6 +44,11 @@ const WidgetDataSource = sequelize.define('WidgetDataSource', {
         allowNull: false,
         defaultValue: 0,
         comment: 'Orden de la serie dentro del widget'
+    },
+    orderNumber: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        comment: 'ID público secuencial del data source dentro del widget (1, 2, 3...)'
     }
 }, {
     tableName: 'widget_data_sources',

@@ -14,7 +14,7 @@
 
 > **CRÍTICO**: Violación de esta política = vulnerabilidad de seguridad
 
-- **NEVER expose internal UUIDs** in API responses - Use `public_code` exclusively
+- **NEVER expose internal UUIDs** in API responses - Use `publicCode` exclusively (mapped to `id` in serializers)
   - Ejemplos válidos: `CHN-5LYJX-4`, `SIT-xxx`, `RES-xxx`, `ORG-xxx`
 - **Public codes use Hashids + Luhn checksum** - Opaque, non-enumerable, and tamper-detectable
 - **UUIDv7 stays internal only** - Contains timestamp info that could leak creation patterns

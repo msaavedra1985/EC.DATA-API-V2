@@ -28,6 +28,11 @@ const DashboardPage = sequelize.define('DashboardPage', {
         allowNull: false,
         defaultValue: 0,
         comment: 'Orden de la pestaña dentro del dashboard'
+    },
+    orderNumber: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        comment: 'ID público secuencial de la página dentro del dashboard (1, 2, 3...)'
     }
 }, {
     tableName: 'dashboard_pages',

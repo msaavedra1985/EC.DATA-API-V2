@@ -96,6 +96,18 @@ const Dashboard = sequelize.define('Dashboard', {
         defaultValue: {},
         comment: 'Configuración extensible del dashboard (forceK, backgroundImage, etc.)'
     },
+    pageCount: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        defaultValue: 0,
+        comment: 'Contador de páginas en el dashboard (denormalizado para performance)'
+    },
+    widgetCount: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        defaultValue: 0,
+        comment: 'Contador total de widgets en el dashboard (denormalizado para performance)'
+    },
     templateId: {
         type: DataTypes.UUID,
         allowNull: true,

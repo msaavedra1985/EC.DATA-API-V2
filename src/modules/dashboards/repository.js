@@ -13,15 +13,6 @@ import Organization from '../organizations/models/Organization.js';
 import User from '../auth/models/User.js';
 import { Op } from 'sequelize';
 import sequelize from '../../db/sql/sequelize.js';
-import {
-    toPublicDashboardDto,
-    toPublicGroupDto,
-    toPublicPageDto,
-    toPublicWidgetDto,
-    toPublicDataSourceDto,
-    toPublicCollaboratorDto,
-    toPublicGroupCollaboratorDto
-} from './helpers/serializers.js';
 
 // --- Includes comunes ---
 
@@ -138,7 +129,7 @@ export const findAllDashboards = async ({
     });
 
     return {
-        items: rows.map(dashboard => toPublicDashboardDto(dashboard)),
+        items: rows,
         total: count
     };
 };
@@ -166,7 +157,7 @@ export const findDashboardById = async (id) => {
 export const createDashboard = async (data) => {
     const dashboard = await Dashboard.create(data);
     await dashboard.reload({ include: dashboardListIncludes });
-    return toPublicDashboardDto(dashboard);
+    return dashboard;
 };
 
 export const updateDashboard = async (id, data) => {
@@ -178,7 +169,7 @@ export const updateDashboard = async (id, data) => {
 
     await dashboard.update(data);
     await dashboard.reload({ include: dashboardListIncludes });
-    return toPublicDashboardDto(dashboard);
+    return dashboard;
 };
 
 export const deleteDashboard = async (id) => {
@@ -215,7 +206,7 @@ export const setHomeDashboard = async (dashboardId, userId, organizationId) => {
 
         await dashboard.update({ isHome: true }, { transaction: t });
         await dashboard.reload({ include: dashboardListIncludes, transaction: t });
-        return toPublicDashboardDto(dashboard);
+        return dashboard;
     });
 };
 
@@ -230,7 +221,7 @@ export const findPagesByDashboardId = async (dashboardId) => {
         order: [['orderIndex', 'ASC']]
     });
 
-    return pages.map(page => toPublicPageDto(page));
+    return pages;
 };
 
 export const findPageById = async (pageId) => {
@@ -241,7 +232,7 @@ export const findPageById = async (pageId) => {
 
 export const createPage = async (data) => {
     const page = await DashboardPage.create(data);
-    return toPublicPageDto(page);
+    return page;
 };
 
 export const updatePage = async (pageId, data) => {
@@ -252,7 +243,7 @@ export const updatePage = async (pageId, data) => {
     }
 
     await page.update(data);
-    return toPublicPageDto(page);
+    return page;
 };
 
 export const deletePage = async (pageId) => {
@@ -277,7 +268,7 @@ export const findWidgetsByPageId = async (pageId) => {
         order: [['orderIndex', 'ASC']]
     });
 
-    return widgets.map(widget => toPublicWidgetDto(widget));
+    return widgets;
 };
 
 export const findWidgetById = async (widgetId) => {
@@ -289,7 +280,7 @@ export const findWidgetById = async (widgetId) => {
 export const createWidget = async (data) => {
     const widget = await Widget.create(data);
     await widget.reload({ include: [dataSourceInclude] });
-    return toPublicWidgetDto(widget);
+    return widget;
 };
 
 export const updateWidget = async (widgetId, data) => {
@@ -301,7 +292,7 @@ export const updateWidget = async (widgetId, data) => {
 
     await widget.update(data);
     await widget.reload({ include: [dataSourceInclude] });
-    return toPublicWidgetDto(widget);
+    return widget;
 };
 
 export const deleteWidget = async (widgetId) => {
@@ -325,12 +316,12 @@ export const findDataSourcesByWidgetId = async (widgetId) => {
         order: [['orderIndex', 'ASC']]
     });
 
-    return dataSources.map(ds => toPublicDataSourceDto(ds));
+    return dataSources;
 };
 
 export const createDataSource = async (data) => {
     const dataSource = await WidgetDataSource.create(data);
-    return toPublicDataSourceDto(dataSource);
+    return dataSource;
 };
 
 export const updateDataSource = async (dataSourceId, data) => {
@@ -341,7 +332,7 @@ export const updateDataSource = async (dataSourceId, data) => {
     }
 
     await dataSource.update(data);
-    return toPublicDataSourceDto(dataSource);
+    return dataSource;
 };
 
 export const deleteDataSource = async (dataSourceId) => {
@@ -387,7 +378,7 @@ export const findAllGroups = async ({
     });
 
     return {
-        items: rows.map(group => toPublicGroupDto(group)),
+        items: rows,
         total: count
     };
 };
@@ -415,7 +406,7 @@ export const findGroupById = async (id) => {
 export const createGroup = async (data) => {
     const group = await DashboardGroup.create(data);
     await group.reload({ include: groupListIncludes });
-    return toPublicGroupDto(group);
+    return group;
 };
 
 export const updateGroup = async (id, data) => {
@@ -427,7 +418,7 @@ export const updateGroup = async (id, data) => {
 
     await group.update(data);
     await group.reload({ include: groupListIncludes });
-    return toPublicGroupDto(group);
+    return group;
 };
 
 export const deleteGroup = async (id) => {
@@ -484,13 +475,13 @@ export const findCollaboratorsByDashboardId = async (dashboardId) => {
         include: [userInclude]
     });
 
-    return collaborators.map(c => toPublicCollaboratorDto(c));
+    return collaborators;
 };
 
 export const addCollaborator = async (data) => {
     const collaborator = await DashboardCollaborator.create(data);
     await collaborator.reload({ include: [userInclude] });
-    return toPublicCollaboratorDto(collaborator);
+    return collaborator;
 };
 
 export const updateCollaborator = async (collaboratorId, data) => {
@@ -502,7 +493,7 @@ export const updateCollaborator = async (collaboratorId, data) => {
 
     await collaborator.update(data);
     await collaborator.reload({ include: [userInclude] });
-    return toPublicCollaboratorDto(collaborator);
+    return collaborator;
 };
 
 export const removeCollaborator = async (collaboratorId) => {
@@ -536,13 +527,13 @@ export const findGroupCollaboratorsByGroupId = async (groupId) => {
         include: [userInclude]
     });
 
-    return collaborators.map(c => toPublicGroupCollaboratorDto(c));
+    return collaborators;
 };
 
 export const addGroupCollaborator = async (data) => {
     const collaborator = await DashboardGroupCollaborator.create(data);
     await collaborator.reload({ include: [userInclude] });
-    return toPublicGroupCollaboratorDto(collaborator);
+    return collaborator;
 };
 
 export const updateGroupCollaborator = async (collaboratorId, data) => {
@@ -554,7 +545,7 @@ export const updateGroupCollaborator = async (collaboratorId, data) => {
 
     await collaborator.update(data);
     await collaborator.reload({ include: [userInclude] });
-    return toPublicGroupCollaboratorDto(collaborator);
+    return collaborator;
 };
 
 export const removeGroupCollaborator = async (collaboratorId) => {

@@ -3,16 +3,13 @@
 
 /**
  * Convertir modelo WidgetDataSource a DTO público
- * Entidad hija: expone UUID directamente (se accede a través del contexto padre)
- * 
- * @param {WidgetDataSource} dataSource - Modelo Sequelize WidgetDataSource
- * @returns {Object|null} - DTO público para respuestas API
+ * Usa orderNumber como ID público (no expone UUID)
  */
 export const toPublicDataSourceDto = (dataSource) => {
     if (!dataSource) return null;
 
     return {
-        id: dataSource.id,
+        id: dataSource.orderNumber,
         entityType: dataSource.entityType,
         entityId: dataSource.entityId,
         label: dataSource.label,
@@ -24,16 +21,13 @@ export const toPublicDataSourceDto = (dataSource) => {
 
 /**
  * Convertir modelo Widget a DTO público
- * Entidad hija: expone UUID directamente (se accede a través del contexto padre)
- * 
- * @param {Widget} widget - Modelo Sequelize Widget
- * @returns {Object|null} - DTO público para respuestas API
+ * Usa orderNumber como ID público (no expone UUID)
  */
 export const toPublicWidgetDto = (widget) => {
     if (!widget) return null;
 
     const dto = {
-        id: widget.id,
+        id: widget.orderNumber,
         type: widget.type,
         title: widget.title,
         layout: widget.layout,
@@ -44,7 +38,6 @@ export const toPublicWidgetDto = (widget) => {
         updatedAt: widget.updatedAt
     };
 
-    // --- Relaciones hijas ---
     if (widget.dataSources) {
         dto.dataSources = widget.dataSources.map(toPublicDataSourceDto);
     }
@@ -54,24 +47,19 @@ export const toPublicWidgetDto = (widget) => {
 
 /**
  * Convertir modelo DashboardPage a DTO público
- * Entidad hija: expone UUID directamente (se accede a través del contexto padre)
- * No se expone dashboardId (implícito por contexto)
- * 
- * @param {DashboardPage} page - Modelo Sequelize DashboardPage
- * @returns {Object|null} - DTO público para respuestas API
+ * Usa orderNumber como ID público (no expone UUID)
  */
 export const toPublicPageDto = (page) => {
     if (!page) return null;
 
     const dto = {
-        id: page.id,
+        id: page.orderNumber,
         name: page.name,
         orderIndex: page.orderIndex,
         createdAt: page.createdAt,
         updatedAt: page.updatedAt
     };
 
-    // --- Relaciones hijas ---
     if (page.widgets) {
         dto.widgets = page.widgets.map(toPublicWidgetDto);
     }
@@ -81,10 +69,7 @@ export const toPublicPageDto = (page) => {
 
 /**
  * Convertir modelo DashboardCollaborator a DTO público
- * Entidad hija: expone UUID directamente (se accede a través del contexto padre)
- * 
- * @param {DashboardCollaborator} collaborator - Modelo Sequelize DashboardCollaborator
- * @returns {Object|null} - DTO público para respuestas API
+ * Entidad hija: expone UUID directamente (accedida vía contexto padre)
  */
 export const toPublicCollaboratorDto = (collaborator) => {
     if (!collaborator) return null;
@@ -95,7 +80,6 @@ export const toPublicCollaboratorDto = (collaborator) => {
         createdAt: collaborator.createdAt
     };
 
-    // --- Usuario asociado ---
     if (collaborator.user) {
         dto.user = {
             id: collaborator.user.publicCode,
@@ -110,10 +94,6 @@ export const toPublicCollaboratorDto = (collaborator) => {
 
 /**
  * Convertir modelo DashboardGroupCollaborator a DTO público
- * Misma estructura que colaboradores de dashboard
- * 
- * @param {DashboardGroupCollaborator} collaborator - Modelo Sequelize DashboardGroupCollaborator
- * @returns {Object|null} - DTO público para respuestas API
  */
 export const toPublicGroupCollaboratorDto = (collaborator) => {
     if (!collaborator) return null;
@@ -124,7 +104,6 @@ export const toPublicGroupCollaboratorDto = (collaborator) => {
         createdAt: collaborator.createdAt
     };
 
-    // --- Usuario asociado ---
     if (collaborator.user) {
         dto.user = {
             id: collaborator.user.publicCode,
@@ -138,18 +117,11 @@ export const toPublicGroupCollaboratorDto = (collaborator) => {
 };
 
 /**
- * Convertir modelo Dashboard a DTO público
- * Expone publicCode como 'id', oculta UUID interno
- * 
- * POLÍTICA DE SEGURIDAD:
- * - Nunca exponer el UUID interno en APIs públicas
- * - Siempre usar publicCode como 'id' en respuestas
- * - UUIDs solo para operaciones internas de base de datos
- * 
- * @param {Dashboard} dashboard - Modelo Sequelize Dashboard
- * @returns {Object|null} - DTO público para respuestas API
+ * Convertir modelo Dashboard a DTO público (listado ligero)
+ * No incluye pages/widgets/collaborators
+ * Incluye pageCount y widgetCount como contadores
  */
-export const toPublicDashboardDto = (dashboard) => {
+export const toPublicDashboardListDto = (dashboard) => {
     if (!dashboard) return null;
 
     const dto = {
@@ -165,11 +137,12 @@ export const toPublicDashboardDto = (dashboard) => {
         isPublic: dashboard.isPublic,
         isActive: dashboard.isActive,
         settings: dashboard.settings || {},
+        pageCount: dashboard.pageCount,
+        widgetCount: dashboard.widgetCount,
         createdAt: dashboard.createdAt,
         updatedAt: dashboard.updatedAt
     };
 
-    // --- Relaciones principales ---
     if (dashboard.owner) {
         dto.owner = {
             id: dashboard.owner.publicCode,
@@ -188,7 +161,18 @@ export const toPublicDashboardDto = (dashboard) => {
         };
     }
 
-    // --- Relaciones hijas ---
+    return dto;
+};
+
+/**
+ * Convertir modelo Dashboard a DTO público (detalle completo)
+ * Incluye pages, widgets, dataSources y collaborators
+ */
+export const toPublicDashboardDto = (dashboard) => {
+    if (!dashboard) return null;
+
+    const dto = toPublicDashboardListDto(dashboard);
+
     if (dashboard.pages) {
         dto.pages = dashboard.pages.map(toPublicPageDto);
     }
@@ -201,27 +185,7 @@ export const toPublicDashboardDto = (dashboard) => {
 };
 
 /**
- * Convertir array de dashboards a DTOs públicos
- * 
- * @param {Dashboard[]} dashboards - Array de modelos Sequelize Dashboard
- * @returns {Object[]} - Array de DTOs públicos
- */
-export const toPublicDashboardDtoList = (dashboards) => {
-    if (!Array.isArray(dashboards)) return [];
-    return dashboards.map(toPublicDashboardDto);
-};
-
-/**
  * Convertir modelo DashboardGroup a DTO público
- * Expone publicCode como 'id', oculta UUID interno
- * 
- * POLÍTICA DE SEGURIDAD:
- * - Nunca exponer el UUID interno en APIs públicas
- * - Siempre usar publicCode como 'id' en respuestas
- * - UUIDs solo para operaciones internas de base de datos
- * 
- * @param {DashboardGroup} group - Modelo Sequelize DashboardGroup
- * @returns {Object|null} - DTO público para respuestas API
  */
 export const toPublicGroupDto = (group) => {
     if (!group) return null;
@@ -235,7 +199,6 @@ export const toPublicGroupDto = (group) => {
         updatedAt: group.updatedAt
     };
 
-    // --- Relaciones principales ---
     if (group.owner) {
         dto.owner = {
             id: group.owner.publicCode,
@@ -253,7 +216,6 @@ export const toPublicGroupDto = (group) => {
         };
     }
 
-    // --- Dashboards del grupo (a través de DashboardGroupItem) ---
     if (group.dashboards) {
         dto.dashboards = group.dashboards.map((dashboard) => {
             const item = {
@@ -262,7 +224,6 @@ export const toPublicGroupDto = (group) => {
                 description: dashboard.description
             };
 
-            // orderIndex viene de la tabla intermedia DashboardGroupItem
             if (dashboard.DashboardGroupItem) {
                 item.orderIndex = dashboard.DashboardGroupItem.orderIndex;
             }
@@ -271,7 +232,6 @@ export const toPublicGroupDto = (group) => {
         });
     }
 
-    // --- Colaboradores del grupo ---
     if (group.collaborators) {
         dto.collaborators = group.collaborators.map(toPublicGroupCollaboratorDto);
     }
@@ -281,9 +241,6 @@ export const toPublicGroupDto = (group) => {
 
 /**
  * Convertir array de grupos de dashboards a DTOs públicos
- * 
- * @param {DashboardGroup[]} groups - Array de modelos Sequelize DashboardGroup
- * @returns {Object[]} - Array de DTOs públicos
  */
 export const toPublicGroupDtoList = (groups) => {
     if (!Array.isArray(groups)) return [];

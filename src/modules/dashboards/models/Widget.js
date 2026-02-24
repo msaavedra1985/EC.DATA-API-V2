@@ -51,6 +51,11 @@ const Widget = sequelize.define('Widget', {
         allowNull: false,
         defaultValue: 0,
         comment: 'Orden del widget (para renderizado secuencial en mobile)'
+    },
+    orderNumber: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        comment: 'ID público secuencial del widget dentro de la página (1, 2, 3...)'
     }
 }, {
     tableName: 'widgets',
