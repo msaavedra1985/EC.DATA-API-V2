@@ -356,7 +356,8 @@ export const listUsers = async (options = {}) => {
             offset,
             attributes: { exclude: ['passwordHash'] },
             include: [roleFilter],
-            order: [['createdAt', 'DESC']]
+            order: [['createdAt', 'DESC'], ['id', 'ASC']],
+            distinct: true
         });
 
         return {

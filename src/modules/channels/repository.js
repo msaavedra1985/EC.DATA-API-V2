@@ -210,7 +210,8 @@ export const listChannels = async ({
         include: defaultIncludes,
         limit: parseInt(limit),
         offset: parseInt(offset),
-        order: [['createdAt', 'DESC']]
+        order: [['createdAt', 'DESC'], ['id', 'ASC']],
+        distinct: true
     });
     
     return {

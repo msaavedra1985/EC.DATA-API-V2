@@ -226,9 +226,10 @@ export const listFiles = async (filters = {}) => {
                 attributes: ['id', 'email', 'firstName', 'lastName']
             }
         ],
-        order: [['createdAt', 'DESC']],
+        order: [['createdAt', 'DESC'], ['id', 'ASC']],
         limit: parseInt(limit, 10),
-        offset: parseInt(offset, 10)
+        offset: parseInt(offset, 10),
+        distinct: true
     });
 
     return {

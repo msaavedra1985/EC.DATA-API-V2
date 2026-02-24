@@ -249,7 +249,7 @@ export const listOrganizations = async (limit = 50, offset = 0, filters = {}) =>
         include,
         limit,
         offset,
-        order: [['createdAt', 'DESC']],
+        order: [['createdAt', 'DESC'], ['id', 'ASC']],
         distinct: true
     });
     

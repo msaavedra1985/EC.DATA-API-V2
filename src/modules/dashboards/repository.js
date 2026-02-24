@@ -154,7 +154,7 @@ export const findAllDashboards = async ({
         include: includes,
         limit: parseInt(limit),
         offset: parseInt(offset),
-        order: [['createdAt', 'DESC']],
+        order: [['createdAt', 'DESC'], ['id', 'ASC']],
         distinct: true
     });
 
@@ -475,7 +475,8 @@ export const findAllGroups = async ({
         include: groupListIncludes,
         limit: parseInt(limit),
         offset: parseInt(offset),
-        order: [['createdAt', 'DESC']]
+        order: [['createdAt', 'DESC'], ['id', 'ASC']],
+        distinct: true
     });
 
     return {

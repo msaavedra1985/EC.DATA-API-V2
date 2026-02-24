@@ -777,7 +777,7 @@ router.get('/:id/audit-logs', authenticate, async (req, res, next) => {
             where,
             limit: parsedLimit,
             offset: parsedOffset,
-            order: [['performedAt', 'DESC']],
+            order: [['performedAt', 'DESC'], ['id', 'ASC']],
             attributes: [
                 'id',
                 'entityType',

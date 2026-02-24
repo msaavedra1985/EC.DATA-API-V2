@@ -256,7 +256,8 @@ export const listUsers = async (limit = 50, offset = 0, filters = {}) => {
                 ]
             }
         ],
-        order: [['createdAt', 'DESC']]
+        order: [['createdAt', 'DESC'], ['id', 'ASC']],
+        distinct: true
     });
     
     const result = {
