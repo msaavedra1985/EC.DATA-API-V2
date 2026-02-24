@@ -9,7 +9,7 @@ import * as dashboardServices from './services.js';
 import { successResponse, errorResponse } from '../../utils/response.js';
 import {
     toPublicDashboardDto,
-    toPublicDashboardDtoList,
+    toPublicDashboardListDto,
     toPublicPageDto,
     toPublicWidgetDto,
     toPublicDataSourceDto,
@@ -76,7 +76,7 @@ router.get('/', authenticate, enforceActiveOrganization, validate(getDashboardsS
         const orgId = req.organizationContext.id;
         const result = await dashboardServices.listDashboards(orgId, req.query, req.user.userId);
 
-        return successResponse(res, toPublicDashboardDtoList(result.items), 200, {
+        return successResponse(res, result.items.map(toPublicDashboardListDto), 200, {
             total: result.total,
             limit: result.limit,
             offset: result.offset
