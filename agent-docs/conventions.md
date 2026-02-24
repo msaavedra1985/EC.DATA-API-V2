@@ -111,22 +111,58 @@ npm run db:dbml              # Generate DBML visualization
 | API response keys | camelCase | `{ "publicCode": "DSH-X", "isHome": true }` |
 | Public codes | PREFIX-HASH-CHECK | `ORG-5LYJX-4` |
 
-## API Case Transform (Bidireccional)
+## camelCase End-to-End (Sin Middleware de Transformación)
 
-El API usa transformación automática de case mediante middlewares globales en `src/middleware/caseTransform.js`:
+El API trabaja en **camelCase nativo** en todas las capas. No existe middleware de transformación de case.
 
-- **Request** (Frontend → API): `req.body` y `req.query` se convierten de camelCase a snake_case
-- **Response** (API → Frontend): `res.json()` convierte keys de snake_case a camelCase
+### Flujo de datos
+```
+Frontend (camelCase) → Express (camelCase) → Service (camelCase) → Sequelize (camelCase)
+                                                                        ↓
+                                                            DB (snake_case automático)
+                                                            via underscored: true
+```
 
-Esto permite que:
-- El **código interno** del API trabaje en snake_case (alineado con DB y Sequelize)
-- El **frontend** trabaje exclusivamente en camelCase
-- Los **DTOs Zod** sigan validando en snake_case sin cambios
-- La transformación es **transparente** y no requiere acción por módulo
+### Cómo funciona Sequelize `underscored: true`
+Todos los modelos tienen `underscored: true` en sus opciones. Esto hace que Sequelize mapee automáticamente:
 
-**Utilidades**: `src/utils/caseTransform.js` (snakeToCamel, camelToSnake, toCamelCase, toSnakeCase)
+```javascript
+// En el modelo definimos en camelCase:
+organizationId: { type: DataTypes.UUID }
+// Sequelize mapea a columna DB: organization_id
 
-**Orden en app.js**: Se monta después de `express.json()` + `compression()` y antes de `i18n` y rutas
+// En queries escribimos camelCase:
+User.findAll({ where: { organizationId: '...' }, order: [['createdAt', 'DESC']] });
+// Sequelize genera SQL: WHERE organization_id = '...' ORDER BY created_at DESC
+
+// Acceso a instancias en camelCase:
+const name = user.firstName;  // Sequelize lee de columna first_name
+```
+
+### Reglas por capa
+
+| Capa | Convención | Ejemplo |
+|------|-----------|---------|
+| **DTOs (Zod)** | Keys camelCase | `firstName: z.string()` |
+| **Serializers** | Output keys + instance access camelCase | `{ isActive: org.isActive }` |
+| **Services** | Variables y propiedades camelCase | `const { organizationId } = data` |
+| **Repositories** | Queries Sequelize camelCase | `where: { publicCode }` |
+| **Routes** | req.body destructuring camelCase | `const { firstName } = req.body` |
+| **Modelos** | Propiedades camelCase | `organizationId`, `publicCode` |
+
+### Cuidado con `raw: true`
+Cuando se usa `raw: true` en Sequelize, los resultados vienen con nombres de columna DB (snake_case):
+
+```javascript
+// Con raw: true, acceder en snake_case (son columnas DB directas)
+const [results] = await sequelize.query('SELECT organization_id FROM users', { raw: true });
+results[0].organization_id;  // CORRECTO
+results[0].organizationId;   // INCORRECTO - undefined
+
+// Sin raw: true (default), acceder en camelCase (Sequelize mapea)
+const user = await User.findByPk(id);
+user.organizationId;  // CORRECTO
+```
 
 ## Module Creation Checklist
 

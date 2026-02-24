@@ -27,23 +27,25 @@
 // INCORRECTO - Expone UUID interno
 { id: "01919eb8-5e8a-7890-b456-123456789abc", name: "Hotel Lima" }
 
-// CORRECTO - Usa public_code
-{ public_code: "ORG-5LYJX-4", name: "Hotel Lima" }
+// CORRECTO - Usa publicCode como "id" en la respuesta
+{ id: "ORG-5LYJX-4", name: "Hotel Lima" }
 ```
 
 ## Audit Standards (MANDATORY)
 
 - **Every CREATE, UPDATE, DELETE operation MUST log to `audit_logs` table** - No exceptions
 - Use the centralized `auditLog` helper service (never direct database inserts)
-- Log structure:
+- Log structure (camelCase):
   ```javascript
   {
-    entity_type,      // 'organization', 'user', 'site', etc.
-    entity_id,        // UUID interno (ok para audit)
+    entityType,       // 'organization', 'user', 'site', etc.
+    entityId,         // UUID interno (ok para audit)
     action,           // 'create', 'update', 'delete'
-    performed_by,     // user_id
+    performedBy,      // userId
     changes: { field: { old, new } },
-    metadata          // IP, user-agent, etc.
+    metadata,         // IP, user-agent, etc.
+    ipAddress,        // req.ip
+    userAgent         // req.headers['user-agent']
   }
   ```
 - Include IP address and user agent for security tracking
@@ -91,6 +93,76 @@
   - Notas de implementación (audit log, rate limit, etc.)
 - **Fecha de actualización**: Actualizar el campo "Última actualización" al modificar
 - Esta documentación sirve tanto para LLMs como para desarrolladores humanos
+
+## camelCase Convention (MANDATORY)
+
+> **CRÍTICO**: Todo el código JavaScript usa camelCase end-to-end. NO existe middleware de transformación.
+
+### Regla general
+- **Todo código JS** (modelos, DTOs, serializers, services, repositories, routes) usa **camelCase**
+- **Sequelize** con `underscored: true` mapea automáticamente camelCase → snake_case en la DB
+- El **frontend** envía y recibe JSON con keys en camelCase directamente
+
+### Qué DEBE ser camelCase
+| Elemento | Ejemplo |
+|----------|---------|
+| Propiedades de modelos Sequelize | `organizationId`, `publicCode`, `isActive` |
+| Keys de DTOs Zod | `firstName`, `lastName`, `rememberMe` |
+| Keys de output en serializers | `{ isActive: org.isActive, logoUrl: org.logoUrl }` |
+| Acceso a instancias Sequelize | `user.firstName`, `device.organizationId` |
+| Where clauses | `where: { organizationId, isActive: true }` |
+| Attributes arrays | `attributes: ['publicCode', 'firstName']` |
+| Order arrays | `order: [['createdAt', 'DESC']]` |
+| Model.create() keys | `Model.create({ entityType, performedBy })` |
+| req.body destructuring | `const { firstName, organizationId } = req.body` |
+| Response JSON keys | `{ accessToken, refreshToken, expiresIn }` |
+
+### Excepciones (mantienen snake_case)
+| Elemento | Razón | Ejemplo |
+|----------|-------|---------|
+| Nombres de tabla | Son identificadores de DB | `tableName: 'refresh_tokens'` |
+| Valores ENUM | Son valores de DB, no keys | `'system-admin'`, `'org-admin'` |
+| i18n keys | Son identificadores de traducción | `'auth.register.email_exists'` |
+| Raw SQL queries | Acceden a columnas DB directas | `SELECT organization_id FROM...` |
+| Resultados de `raw: true` | Sequelize devuelve columnas DB | `row.organization_id` (NO `row.organizationId`) |
+| Migration files (.cjs) | Son CommonJS y usan queryInterface | `addColumn('users', 'first_name')` |
+| Error codes | Son constantes de string | `'EMAIL_ALREADY_EXISTS'` |
+
+### Ejemplo completo de un flujo correcto
+
+```javascript
+// DTO (Zod) - Keys camelCase
+export const createSchema = z.object({
+    body: z.object({
+        firstName: z.string().min(2),
+        lastName: z.string().min(2),
+        organizationId: z.string().uuid().optional()
+    })
+});
+
+// Service - Variables y Sequelize en camelCase
+export const create = async ({ firstName, lastName, organizationId }) => {
+    const user = await User.create({ firstName, lastName, organizationId });
+    // Sequelize genera: INSERT INTO users (first_name, last_name, organization_id) VALUES (...)
+    return user;
+};
+
+// Serializer - Output keys camelCase, acceso a instancia camelCase
+export const toPublicDto = (user) => ({
+    id: user.publicCode,      // "id" en response = publicCode (NUNCA UUID)
+    firstName: user.firstName,
+    lastName: user.lastName,
+    isActive: user.isActive,
+    createdAt: user.createdAt
+});
+
+// Route - Destructuring camelCase del body
+router.post('/', async (req, res) => {
+    const { firstName, lastName, organizationId } = req.body;
+    const user = await create({ firstName, lastName, organizationId });
+    res.json({ ok: true, data: toPublicDto(user) });
+});
+```
 
 ## File Size Limit
 

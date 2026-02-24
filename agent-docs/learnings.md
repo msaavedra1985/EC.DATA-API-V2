@@ -432,18 +432,43 @@ const safeAddIndex = async (table, fields, options) => {
 
 ---
 
-## API Case Transform
+## camelCase End-to-End
 
-### Middleware bidireccional camelCase ↔ snake_case
-**Fecha**: 2026-02-23
-**Contexto**: Frontend Next.js usa camelCase, DB/Sequelize usa snake_case
-**Solución**:
-- `src/middleware/caseTransform.js` con dos middlewares: `requestCaseTransform` y `responseCaseTransform`
-- `src/utils/caseTransform.js` con funciones puras de transformación recursiva
-- Se monta en `app.js` después de `express.json()` y antes de rutas
-- Los DTOs Zod siguen validando en snake_case sin cambios
-- `req.params` NO se transforma (son path segments)
-- Query params SÍ se transforman (`?isPublic=true` → `is_public`)
+### Migración de snake_case a camelCase completa
+**Fecha**: 2026-02-24
+**Contexto**: El codebase originalmente usaba snake_case internamente con un middleware `caseTransform` que traducía bidireccionalmente entre camelCase (frontend) y snake_case (backend). Esto generaba una capa de complejidad innecesaria.
+**Decisión**: Eliminar el middleware y migrar TODO el código JavaScript a camelCase nativo.
+**Cambios realizados** (Fase 1 + Fase 2):
+- Fase 1: Todos los modelos Sequelize (~50) convertidos a propiedades camelCase
+- Fase 2: DTOs, serializers, services, repositories, routes de los 14 módulos convertidos
+- Middleware `caseTransform` eliminado de `app.js`
+- Sequelize `underscored: true` maneja el mapeo automático JS↔DB
+
+**Resultado**: Arquitectura más simple. Frontend envía/recibe camelCase directo sin intermediarios.
+
+### Gotcha: raw queries devuelven snake_case
+**Fecha**: 2026-02-24
+**Síntoma**: Al usar `raw: true` o `sequelize.query()`, las propiedades vienen en snake_case (nombres de columna DB)
+**Causa**: Sequelize solo mapea camelCase↔snake_case en instancias de modelo, no en resultados raw
+**Solución**: 
+- En queries `raw: true`, acceder a propiedades en snake_case: `row.organization_id`
+- En queries normales (sin raw), acceder en camelCase: `user.organizationId`
+- Si necesitás usar raw results en un serializer, mapear explícitamente:
+  ```javascript
+  const dto = { organizationId: row.organization_id, isActive: row.is_active };
+  ```
+
+### Gotcha: Migraciones siguen en snake_case
+**Fecha**: 2026-02-24
+**Contexto**: Las migraciones (.cjs) usan `queryInterface` que opera directamente contra la DB
+**Regla**: En migraciones, usar snake_case para nombres de columna y tabla:
+```javascript
+// CORRECTO en migración
+await queryInterface.addColumn('users', 'avatar_url', { type: Sequelize.STRING });
+
+// INCORRECTO en migración
+await queryInterface.addColumn('users', 'avatarUrl', { type: Sequelize.STRING });
+```
 
 ---
 
