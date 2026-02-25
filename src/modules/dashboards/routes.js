@@ -26,7 +26,8 @@ import {
     createDataSourceSchema, updateDataSourceSchema, deleteDataSourceSchema,
     createGroupSchema, updateGroupSchema, getGroupsSchema, getGroupByIdSchema, deleteGroupSchema,
     addGroupItemSchema, removeGroupItemSchema,
-    addCollaboratorSchema, updateCollaboratorSchema, removeCollaboratorSchema
+    addCollaboratorSchema, updateCollaboratorSchema, removeCollaboratorSchema,
+    getWidgetDataSchema
 } from './dtos/index.js';
 
 const router = express.Router();
@@ -519,6 +520,30 @@ router.delete('/:dashboardId/pages/:pageId/widgets/:widgetId', authenticate, enf
         );
 
         return successResponse(res, { message: 'Widget eliminado exitosamente' });
+    } catch (error) {
+        if (error.status) {
+            return errorResponse(res, {
+                message: error.message,
+                status: error.status,
+                code: error.code
+            });
+        }
+        next(error);
+    }
+});
+
+// Obtener datos de telemetría de un widget
+router.post('/:dashboardId/pages/:pageId/widgets/:widgetId/data', authenticate, enforceActiveOrganization, validate(getWidgetDataSchema), async (req, res, next) => {
+    try {
+        const result = await dashboardServices.getWidgetData(
+            req.params.dashboardId,
+            req.params.pageId,
+            req.params.widgetId,
+            req.body,
+            req.user.userId
+        );
+
+        return successResponse(res, result);
     } catch (error) {
         if (error.status) {
             return errorResponse(res, {

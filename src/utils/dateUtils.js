@@ -140,6 +140,61 @@ export const isDateInRange = (date, from, to) => {
 };
 
 /**
+ * Resuelve un dateRange con nombre a fechas from/to concretas
+ * 
+ * @param {string} dateRange - Rango con nombre: today, yesterday, last_7d, last_30d, this_week, this_month, last_month, this_year, custom
+ * @param {Object} [opts] - Opciones adicionales
+ * @param {string} [opts.tz] - Timezone IANA para calcular "hoy" (default: UTC)
+ * @param {string} [opts.from] - Requerido si dateRange=custom
+ * @param {string} [opts.to] - Requerido si dateRange=custom
+ * @returns {{ from: string, to: string }} Fechas en formato YYYY-MM-DD
+ */
+export const resolveDateRange = (dateRange, opts = {}) => {
+    const { tz, from, to } = opts;
+    const now = tz ? dayjs().tz(tz) : dayjs.utc();
+    const fmt = 'YYYY-MM-DD';
+
+    switch (dateRange) {
+        case 'today':
+            return { from: now.format(fmt), to: now.format(fmt) };
+
+        case 'yesterday': {
+            const y = now.subtract(1, 'day');
+            return { from: y.format(fmt), to: y.format(fmt) };
+        }
+
+        case 'last_7d':
+            return { from: now.subtract(6, 'day').format(fmt), to: now.format(fmt) };
+
+        case 'last_30d':
+            return { from: now.subtract(29, 'day').format(fmt), to: now.format(fmt) };
+
+        case 'this_week':
+            return { from: now.startOf('week').format(fmt), to: now.format(fmt) };
+
+        case 'this_month':
+            return { from: now.startOf('month').format(fmt), to: now.format(fmt) };
+
+        case 'last_month': {
+            const lastMonth = now.subtract(1, 'month');
+            return { from: lastMonth.startOf('month').format(fmt), to: lastMonth.endOf('month').format(fmt) };
+        }
+
+        case 'this_year':
+            return { from: now.startOf('year').format(fmt), to: now.format(fmt) };
+
+        case 'custom':
+            if (!from || !to) {
+                throw new Error('dateRange "custom" requiere from y to');
+            }
+            return { from, to };
+
+        default:
+            throw new Error(`dateRange no soportado: ${dateRange}`);
+    }
+};
+
+/**
  * Exporta dayjs configurado para uso directo si se necesita
  */
 export { dayjs };
@@ -151,5 +206,6 @@ export default {
     formatInTimezone,
     nowInTimezone,
     isDateInRange,
+    resolveDateRange,
     dayjs
 };

@@ -98,8 +98,10 @@ Sistema de tags jerárquicos para clasificar canales:
 Dashboards multi-página con widgets y analytics:
 - **Modelos**: Dashboard, DashboardPage, Widget, WidgetDataSource, DashboardGroup, DashboardGroupItem, DashboardCollaborator, DashboardGroupCollaborator
 - **Public codes**: DSH-XXXXX-X (dashboards), DGR-XXXXX-X (grupos)
-- **Widgets**: line_chart, bar_chart, gauge, stat_card, table, map, heatmap, pie_chart, area_chart, scatter_chart
+- **Widgets**: type es string libre (regex `/^[a-zA-Z][a-zA-Z0-9_]*$/`), definido por frontend
 - **Data sources**: entity_type (channel/device/site/resource_hierarchy) + entity_id (public_code)
+- **Widget Data**: POST `/:dashboardId/pages/:pageId/widgets/:widgetId/data` — consulta telemetría Cassandra para cada dataSource del widget en paralelo. Acepta overrides (dateRange, resolution, tz, variables) para pisar la config guardada
+- **Date ranges**: resolveDateRange() en dateUtils.js resuelve today, yesterday, last_7d, last_30d, this_week, this_month, last_month, this_year, custom
 - **ACL**: Colaboradores con roles viewer/editor por dashboard y por grupo
 - **Cache**: Redis con prefijos ec:v1:dashboards:list: y ec:v1:dashboard-groups:list:
 - **Endpoints**: Ver [dashboards.md](endpoints/dashboards.md)

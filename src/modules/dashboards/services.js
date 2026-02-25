@@ -6,6 +6,8 @@ import * as dashboardRepository from './repository.js';
 import { cacheDashboardList, getCachedDashboardList, invalidateDashboardCache } from './cache.js';
 import { logAuditAction } from '../../helpers/auditLog.js';
 import { generatePublicCode } from '../../utils/identifiers.js';
+import { resolveDateRange } from '../../utils/dateUtils.js';
+import { search as telemetrySearch } from '../telemetry/services/telemetryService.js';
 import logger from '../../utils/logger.js';
 
 export {
@@ -953,4 +955,141 @@ export const deleteDataSource = async (widgetId, dataSourceId, userId, ipAddress
 
 export const getWidgetTypeUsage = async (organizationId) => {
   return await dashboardRepository.countWidgetTypeUsage(organizationId);
+};
+
+// =============================================
+// Widget Data (Obtener datos de telemetría)
+// =============================================
+
+/**
+ * Obtener datos de un widget consultando telemetría para cada dataSource
+ * @param {string} dashboardPublicCode - Public code del dashboard
+ * @param {number} pageOrderNumber - Número de orden de la página
+ * @param {number} widgetOrderNumber - Número de orden del widget
+ * @param {Object} overrides - Overrides opcionales sobre dataConfig del widget
+ * @param {string} userId - UUID del usuario
+ * @returns {Promise<Object>} - Widget info + series de datos por dataSource
+ */
+export const getWidgetData = async (dashboardPublicCode, pageOrderNumber, widgetOrderNumber, overrides, userId) => {
+  const dashboard = await dashboardRepository.findDashboardByPublicCodeInternal(dashboardPublicCode);
+
+  if (!dashboard) {
+    const error = new Error('Dashboard no encontrado');
+    error.status = 404;
+    error.code = 'DASHBOARD_NOT_FOUND';
+    throw error;
+  }
+
+  const access = await checkDashboardAccess(dashboard, userId, 'viewer');
+  if (!access.hasAccess) {
+    const error = new Error('No tienes permisos para ver este dashboard');
+    error.status = 403;
+    error.code = 'FORBIDDEN';
+    throw error;
+  }
+
+  const page = await dashboardRepository.findPageByOrderNumber(dashboard.id, pageOrderNumber);
+
+  if (!page) {
+    const error = new Error('Página no encontrada');
+    error.status = 404;
+    error.code = 'PAGE_NOT_FOUND';
+    throw error;
+  }
+
+  const widget = await dashboardRepository.findWidgetByOrderNumber(page.id, widgetOrderNumber);
+
+  if (!widget) {
+    const error = new Error('Widget no encontrado');
+    error.status = 404;
+    error.code = 'WIDGET_NOT_FOUND';
+    throw error;
+  }
+
+  const savedConfig = widget.dataConfig || {};
+  const mergedConfig = { ...savedConfig, ...overrides };
+
+  const { dateRange, from: customFrom, to: customTo, resolution, tz, variables } = mergedConfig;
+
+  if (!dateRange) {
+    const error = new Error('No se encontró dateRange en la configuración del widget ni en los overrides');
+    error.status = 400;
+    error.code = 'MISSING_DATE_RANGE';
+    throw error;
+  }
+
+  const resolvedDates = resolveDateRange(dateRange, { tz, from: customFrom, to: customTo });
+
+  const dataSources = widget.dataSources || [];
+
+  if (dataSources.length === 0) {
+    return {
+      widget: {
+        type: widget.type,
+        title: widget.title,
+        dataConfig: mergedConfig
+      },
+      resolvedDates,
+      series: []
+    };
+  }
+
+  const seriesPromises = dataSources.map(async (ds) => {
+    const dsPlain = ds.toJSON ? ds.toJSON() : ds;
+    const base = {
+      orderNumber: dsPlain.orderNumber,
+      label: dsPlain.label,
+      entityType: dsPlain.entityType,
+      entityId: dsPlain.entityId
+    };
+
+    if (dsPlain.entityType !== 'channel') {
+      return {
+        ...base,
+        success: false,
+        error: `entityType "${dsPlain.entityType}" no soportado aún — solo "channel" está implementado`
+      };
+    }
+
+    try {
+      const searchParams = {
+        identifier: dsPlain.entityId,
+        from: resolvedDates.from,
+        to: resolvedDates.to,
+        resolution: resolution || '1m',
+        tz: tz || undefined,
+        variables: variables || (dsPlain.seriesConfig?.variables) || null,
+        filters: {}
+      };
+
+      const result = await telemetrySearch(searchParams);
+
+      return {
+        ...base,
+        success: true,
+        metadata: result.metadata,
+        variables: result.variables,
+        data: result.data
+      };
+    } catch (err) {
+      logger.warn({ dataSourceId: dsPlain.id, entityId: dsPlain.entityId, error: err.message }, 'Error al consultar telemetría para dataSource');
+      return {
+        ...base,
+        success: false,
+        error: err.message
+      };
+    }
+  });
+
+  const series = await Promise.all(seriesPromises);
+
+  return {
+    widget: {
+      type: widget.type,
+      title: widget.title,
+      dataConfig: mergedConfig
+    },
+    resolvedDates,
+    series
+  };
 };

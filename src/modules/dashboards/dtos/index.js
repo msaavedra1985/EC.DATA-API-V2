@@ -858,3 +858,69 @@ export const removeCollaboratorSchema = z.object({
             .min(1, 'collaboratorId no puede estar vacío')
     })
 });
+
+// =============================================
+// WIDGET DATA (Obtener datos de un widget)
+// =============================================
+
+const dateRangeEnum = ['today', 'yesterday', 'last_7d', 'last_30d', 'this_week', 'this_month', 'last_month', 'this_year', 'custom'];
+const resolutionEnum = ['raw', '1m', '15m', '60m', 'daily', 'monthly'];
+
+/**
+ * Schema para obtener datos de un widget
+ * POST /dashboards/:dashboardId/pages/:pageId/widgets/:widgetId/data
+ */
+export const getWidgetDataSchema = z.object({
+    params: z.object({
+        dashboardId: z
+            .string({ required_error: 'dashboardId es requerido' })
+            .min(1, 'dashboardId no puede estar vacío'),
+        pageId: z
+            .string({ required_error: 'pageId es requerido' })
+            .transform((val) => parseInt(val, 10))
+            .refine((val) => !isNaN(val) && val >= 1, {
+                message: 'pageId debe ser un entero mayor o igual a 1'
+            }),
+        widgetId: z
+            .string({ required_error: 'widgetId es requerido' })
+            .transform((val) => parseInt(val, 10))
+            .refine((val) => !isNaN(val) && val >= 1, {
+                message: 'widgetId debe ser un entero mayor o igual a 1'
+            })
+    }),
+    body: z.object({
+        dateRange: z
+            .enum(dateRangeEnum, {
+                errorMap: () => ({ message: `dateRange debe ser uno de: ${dateRangeEnum.join(', ')}` })
+            })
+            .optional(),
+        from: z
+            .string()
+            .regex(/^\d{4}-\d{2}-\d{2}(T.*)?$/, 'from debe ser formato YYYY-MM-DD o ISO')
+            .optional(),
+        to: z
+            .string()
+            .regex(/^\d{4}-\d{2}-\d{2}(T.*)?$/, 'to debe ser formato YYYY-MM-DD o ISO')
+            .optional(),
+        resolution: z
+            .enum(resolutionEnum, {
+                errorMap: () => ({ message: `resolution debe ser uno de: ${resolutionEnum.join(', ')}` })
+            })
+            .optional(),
+        tz: z
+            .string()
+            .min(1, 'tz no puede estar vacío')
+            .optional(),
+        variables: z
+            .array(z.number().int().positive())
+            .optional()
+    }).refine(
+        (data) => {
+            if (data.dateRange === 'custom') {
+                return !!data.from && !!data.to;
+            }
+            return true;
+        },
+        { message: 'from y to son requeridos cuando dateRange es "custom"', path: ['from'] }
+    ).default({})
+});

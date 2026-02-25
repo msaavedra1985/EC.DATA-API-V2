@@ -41,6 +41,7 @@
 | POST | `/api/v1/dashboards/:dashboardId/pages/:pageId/widgets` | Crear widget (con dataSources inline) |
 | PATCH | `/api/v1/dashboards/:dashboardId/pages/:pageId/widgets/:widgetId` | Actualizar widget (widgetId = orderNumber integer) |
 | DELETE | `/api/v1/dashboards/:dashboardId/pages/:pageId/widgets/:widgetId` | Eliminar widget |
+| POST | `/api/v1/dashboards/:dashboardId/pages/:pageId/widgets/:widgetId/data` | Obtener datos de telemetría del widget |
 
 ### Widget Data Sources (operaciones individuales)
 | Método | Endpoint | Descripción |
@@ -715,6 +716,139 @@
   "data": { "message": "Widget eliminado exitosamente" }
 }
 ```
+
+---
+
+### POST /api/v1/dashboards/:dashboardId/pages/:pageId/widgets/:widgetId/data
+
+**Propósito**: Obtener datos de telemetría (Cassandra) de un widget. Lee la configuración guardada del widget y consulta todos sus dataSources en paralelo. Acepta overrides opcionales en el body para pisar la configuración guardada.
+
+**Requiere**: `viewer` (owner, colaborador viewer/editor, o dashboard público)
+
+**Path Parameters**:
+| Parámetro | Tipo | Descripción |
+|-----------|------|-------------|
+| dashboardId | string | Public code del dashboard |
+| pageId | integer | orderNumber de la página |
+| widgetId | integer | orderNumber del widget |
+
+**Body** (JSON, todos opcionales — pisan el `dataConfig` guardado en el widget):
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| dateRange | string | Rango temporal: `today`, `yesterday`, `last_7d`, `last_30d`, `this_week`, `this_month`, `last_month`, `this_year`, `custom` |
+| from | string | Fecha inicio (YYYY-MM-DD o ISO). Requerido si dateRange=`custom` |
+| to | string | Fecha fin (YYYY-MM-DD o ISO). Requerido si dateRange=`custom` |
+| resolution | string | Resolución: `raw`, `1m`, `15m`, `60m`, `daily`, `monthly` |
+| tz | string | Timezone IANA (ej: `America/Lima`) |
+| variables | integer[] | IDs de variables a consultar |
+
+**Resolución de date ranges**:
+- `today` → hoy (en la tz del request o UTC)
+- `yesterday` → ayer
+- `last_7d` → últimos 7 días (hoy inclusive)
+- `last_30d` → últimos 30 días (hoy inclusive)
+- `this_week` → desde inicio de semana hasta hoy
+- `this_month` → desde inicio del mes hasta hoy
+- `last_month` → mes anterior completo
+- `this_year` → desde inicio del año hasta hoy
+- `custom` → usa `from` y `to` del body
+
+**Flujo interno**:
+1. Resuelve dashboard → page → widget (verificando acceso viewer)
+2. Lee `widget.dataConfig` de SQL
+3. Merge body overrides sobre dataConfig (overrides pisan valores guardados)
+4. Resuelve dateRange a from/to concretos
+5. Para cada dataSource tipo `channel`, llama `telemetryService.search()` en paralelo
+6. Retorna resultados unificados por dataSource
+
+**Request ejemplo** (body vacío = usa config guardada del widget):
+```json
+{}
+```
+
+**Request ejemplo** (override de dateRange):
+```json
+{
+  "dateRange": "yesterday"
+}
+```
+
+**Request ejemplo** (override custom con fechas explícitas):
+```json
+{
+  "dateRange": "custom",
+  "from": "2026-01-01",
+  "to": "2026-01-31",
+  "resolution": "daily"
+}
+```
+
+**Respuesta exitosa** (200):
+```json
+{
+  "ok": true,
+  "data": {
+    "widget": {
+      "type": "ENERGY_BY_CHANNEL",
+      "title": "Consumo por canal",
+      "dataConfig": {
+        "dateRange": "yesterday",
+        "resolution": "60m"
+      }
+    },
+    "resolvedDates": {
+      "from": "2026-02-24",
+      "to": "2026-02-24"
+    },
+    "series": [
+      {
+        "orderNumber": 1,
+        "label": "Canal 1",
+        "entityType": "channel",
+        "entityId": "CHN-XXXXX-X",
+        "success": true,
+        "metadata": {
+          "uuid": "device-uuid",
+          "timezone": "America/Lima",
+          "deviceName": "Medidor 1",
+          "channelName": "Canal 1",
+          "channelCh": 1,
+          "resolution": "60m",
+          "tableName": "60m_t_datos",
+          "from": "2026-02-24T05:00:00.000Z",
+          "to": "2026-02-25T04:59:59.999Z",
+          "totalRecords": 24
+        },
+        "variables": {
+          "1": { "name": "Energía Activa", "unit": "kWh", "column": "val1" }
+        },
+        "data": [
+          { "ts": "2026-02-24T05:00:00.000Z", "values": { "1": 123.45 } }
+        ]
+      },
+      {
+        "orderNumber": 2,
+        "label": "Canal 2",
+        "entityType": "device",
+        "entityId": "DEV-XXXXX-X",
+        "success": false,
+        "error": "entityType \"device\" no soportado aún — solo \"channel\" está implementado"
+      }
+    ]
+  }
+}
+```
+
+**Errores parciales**: Si un dataSource falla (canal no encontrado, Cassandra timeout, etc.), su entrada en `series` incluye `success: false` + `error` con el mensaje. Los demás dataSources se resuelven normalmente. Solo entityType `channel` está soportado actualmente.
+
+**Errores comunes**:
+| Código | Status | Mensaje |
+|--------|--------|---------|
+| DASHBOARD_NOT_FOUND | 404 | Dashboard no encontrado |
+| FORBIDDEN | 403 | No tienes permisos para ver este dashboard |
+| PAGE_NOT_FOUND | 404 | Página no encontrada |
+| WIDGET_NOT_FOUND | 404 | Widget no encontrado |
+| MISSING_DATE_RANGE | 400 | No se encontró dateRange en la configuración del widget ni en los overrides |
 
 ---
 
