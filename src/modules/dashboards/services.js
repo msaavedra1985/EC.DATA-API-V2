@@ -946,3 +946,11 @@ export const deleteDataSource = async (widgetId, dataSourceId, userId, ipAddress
 
   logger.info({ dataSourceId, widgetId, userId }, 'Widget data source deleted successfully');
 };
+
+// =============================================
+// Widget Type Analytics
+// =============================================
+
+export const getWidgetTypeUsage = async (organizationId) => {
+  return await dashboardRepository.countWidgetTypeUsage(organizationId);
+};

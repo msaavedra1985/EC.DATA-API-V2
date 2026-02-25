@@ -12,12 +12,14 @@
 - **`pageId` y `widgetId` en URLs** son integers (orderNumber), no UUIDs
 - **Al crear un dashboard**, se crea automáticamente la página 1 con `name: null`
 - **Layout usa formato GridStack JS**: `{ x, y, w, h, minW?, minH?, maxW?, maxH? }`
+- **Widget `type` es string libre**: El frontend define los nombres (snake_case, regex: `/^[a-z][a-z0-9_]*$/`). No hay enum fijo en el backend.
 
 ## Resumen
 
 ### Dashboards
 | Método | Endpoint | Descripción |
 |--------|----------|-------------|
+| GET | `/api/v1/dashboards/widget-types` | Conteo de uso de tipos de widget por organización |
 | GET | `/api/v1/dashboards` | Listar dashboards |
 | GET | `/api/v1/dashboards/:id` | Obtener dashboard por publicCode |
 | POST | `/api/v1/dashboards` | Crear dashboard (crea página 1 automáticamente) |
@@ -79,6 +81,35 @@
 | POST | `/api/v1/dashboard-groups/:id/collaborators` | Agregar colaborador |
 | PATCH | `/api/v1/dashboard-groups/:id/collaborators/:collaboratorId` | Actualizar rol |
 | DELETE | `/api/v1/dashboard-groups/:id/collaborators/:collaboratorId` | Eliminar colaborador |
+
+---
+
+## WIDGET TYPE ANALYTICS
+
+### GET /api/v1/dashboards/widget-types
+
+**Propósito**: Obtener conteo de uso de cada tipo de widget en la organización activa
+
+**Autenticación**: Bearer JWT
+
+**Respuesta exitosa** (200):
+```json
+{
+  "ok": true,
+  "data": [
+    { "type": "line_chart", "count": 12 },
+    { "type": "stat_card", "count": 8 },
+    { "type": "energy_gauge", "count": 5 },
+    { "type": "bar_chart", "count": 3 }
+  ]
+}
+```
+
+**Notas**:
+- Ordenado por count descendente (más usado primero)
+- Solo cuenta widgets de dashboards activos (no eliminados)
+- Filtrado por la organización activa del usuario
+- Audit log: No (solo lectura)
 
 ---
 
@@ -582,19 +613,7 @@
 
 > **Nota**: El `orderIndex` de cada dataSource se calcula automáticamente por su posición en el array (0, 1, 2...). No es necesario enviarlo.
 
-**Widget types**:
-| Tipo | Descripción |
-|------|-------------|
-| `line_chart` | Gráfico de líneas |
-| `bar_chart` | Gráfico de barras |
-| `area_chart` | Gráfico de área |
-| `pie_chart` | Gráfico de torta/pastel |
-| `scatter_chart` | Gráfico de dispersión |
-| `gauge` | Medidor/gauge |
-| `stat_card` | Tarjeta de estadística |
-| `table` | Tabla de datos |
-| `map` | Mapa geográfico |
-| `heatmap` | Mapa de calor |
+**Widget `type`**: String libre definido por el frontend. Debe cumplir el regex `/^[a-z][a-z0-9_]*$/` (snake_case alfanumérico, max 50 chars). Ejemplos: `line_chart`, `bar_chart`, `energy_gauge`, `custom_kpi_card`. Para ver qué tipos están en uso, consultar `GET /api/v1/dashboards/widget-types`.
 
 **Respuesta exitosa** (201):
 ```json

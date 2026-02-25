@@ -735,3 +735,40 @@ export const findGroupCollaborator = async (groupId, userId) => {
         include: [userInclude]
     });
 };
+
+// =============================================
+// Widget Type Analytics
+// =============================================
+
+export const countWidgetTypeUsage = async (organizationId) => {
+    const results = await Widget.findAll({
+        attributes: [
+            'type',
+            [sequelize.fn('COUNT', sequelize.col('Widget.id')), 'count']
+        ],
+        include: [{
+            model: DashboardPage,
+            as: 'page',
+            attributes: [],
+            required: true,
+            include: [{
+                model: Dashboard,
+                as: 'dashboard',
+                attributes: [],
+                required: true,
+                where: {
+                    organizationId,
+                    deletedAt: null
+                }
+            }]
+        }],
+        group: ['Widget.type'],
+        order: [[sequelize.fn('COUNT', sequelize.col('Widget.id')), 'DESC']],
+        raw: true
+    });
+
+    return results.map(row => ({
+        type: row.type,
+        count: parseInt(row.count, 10)
+    }));
+};

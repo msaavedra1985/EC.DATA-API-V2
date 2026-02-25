@@ -71,6 +71,23 @@ const dashboardLogger = logger.child({ component: 'dashboards' });
  *       401:
  *         description: No autenticado
  */
+router.get('/widget-types', authenticate, enforceActiveOrganization, async (req, res, next) => {
+    try {
+        const orgId = req.organizationContext.id;
+        const data = await dashboardServices.getWidgetTypeUsage(orgId);
+        return successResponse(res, data);
+    } catch (error) {
+        if (error.status) {
+            return errorResponse(res, {
+                message: error.message,
+                status: error.status,
+                code: error.code
+            });
+        }
+        next(error);
+    }
+});
+
 router.get('/', authenticate, enforceActiveOrganization, validate(getDashboardsSchema), async (req, res, next) => {
     try {
         const orgId = req.organizationContext.id;

@@ -21,7 +21,7 @@ const Widget = sequelize.define('Widget', {
     type: {
         type: DataTypes.STRING(50),
         allowNull: false,
-        comment: 'Tipo de widget: line_chart, bar_chart, gauge, stat_card, table, map, heatmap, etc.'
+        comment: 'Tipo de widget: string libre definido por el frontend (snake_case, ej: line_chart, energy_gauge)'
     },
     title: {
         type: DataTypes.STRING(200),
