@@ -31,8 +31,8 @@ const Widget = sequelize.define('Widget', {
     layout: {
         type: DataTypes.JSONB,
         allowNull: false,
-        defaultValue: { x: 0, y: 0, w: 4, h: 3 },
-        comment: 'Posición y tamaño en el grid: {x, y, w, h}'
+        defaultValue: { x: 0, y: 0, w: 4, h: 2 },
+        comment: 'Posición y tamaño en el grid GridStack: {x, y, w, h, minW?, minH?, maxW?, maxH?}'
     },
     styleConfig: {
         type: DataTypes.JSONB,

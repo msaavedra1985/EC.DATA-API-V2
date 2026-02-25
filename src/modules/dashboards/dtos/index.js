@@ -18,6 +18,32 @@ const collaboratorRoleEnum = ['viewer', 'editor'];
 const dashboardSizeEnum = ['FREE', 'HD', 'VERTICAL', 'CUSTOM'];
 const dashboardPositioningEnum = ['AUTO', 'FLOAT'];
 
+// --- Schema reutilizable para layout GridStack ---
+
+const gridStackLayoutSchema = z.object({
+    x: z.number({ invalid_type_error: 'layout.x debe ser un número' }).int().min(0),
+    y: z.number({ invalid_type_error: 'layout.y debe ser un número' }).int().min(0),
+    w: z.number({ invalid_type_error: 'layout.w debe ser un número' }).int().min(1),
+    h: z.number({ invalid_type_error: 'layout.h debe ser un número' }).int().min(1),
+    minW: z.number().int().min(1).optional(),
+    minH: z.number().int().min(1).optional(),
+    maxW: z.number().int().min(1).optional(),
+    maxH: z.number().int().min(1).optional()
+});
+
+// --- Schema reutilizable para dataSource inline ---
+
+const inlineDataSourceSchema = z.object({
+    entityType: z.enum(entityTypeEnum, {
+        errorMap: () => ({ message: `entityType debe ser uno de: ${entityTypeEnum.join(', ')}` })
+    }),
+    entityId: z.string({ required_error: 'entityId es requerido' })
+        .min(1, 'entityId no puede estar vacío')
+        .max(100, 'entityId no puede exceder 100 caracteres'),
+    label: z.string().max(200, 'label no puede exceder 200 caracteres').nullable().optional().default(null),
+    seriesConfig: z.record(z.any()).optional().default({})
+});
+
 // =============================================
 // DASHBOARDS
 // =============================================
@@ -379,27 +405,31 @@ export const createWidgetSchema = z.object({
         title: z
             .string()
             .max(200, 'title no puede exceder 200 caracteres')
-            .optional(),
-        layout: z
-            .object({
-                x: z.number({ invalid_type_error: 'layout.x debe ser un número' }),
-                y: z.number({ invalid_type_error: 'layout.y debe ser un número' }),
-                w: z.number({ invalid_type_error: 'layout.w debe ser un número' }),
-                h: z.number({ invalid_type_error: 'layout.h debe ser un número' })
-            })
-            .optional(),
+            .nullable()
+            .optional()
+            .default(null),
+        layout: gridStackLayoutSchema
+            .optional()
+            .default({ x: 0, y: 0, w: 4, h: 2 }),
         styleConfig: z
             .record(z.any())
-            .optional(),
+            .optional()
+            .default({}),
         dataConfig: z
             .record(z.any())
-            .optional(),
+            .optional()
+            .default({}),
         orderIndex: z
             .number({ invalid_type_error: 'orderIndex debe ser un número' })
             .int('orderIndex debe ser un entero')
             .min(0, 'orderIndex debe ser mayor o igual a 0')
             .optional()
-            .default(0)
+            .default(0),
+        dataSources: z
+            .array(inlineDataSourceSchema)
+            .max(20, 'Un widget no puede tener más de 20 data sources')
+            .optional()
+            .default([])
     })
 });
 
@@ -436,14 +466,9 @@ export const updateWidgetSchema = z.object({
         title: z
             .string()
             .max(200, 'title no puede exceder 200 caracteres')
+            .nullable()
             .optional(),
-        layout: z
-            .object({
-                x: z.number({ invalid_type_error: 'layout.x debe ser un número' }),
-                y: z.number({ invalid_type_error: 'layout.y debe ser un número' }),
-                w: z.number({ invalid_type_error: 'layout.w debe ser un número' }),
-                h: z.number({ invalid_type_error: 'layout.h debe ser un número' })
-            })
+        layout: gridStackLayoutSchema
             .optional(),
         styleConfig: z
             .record(z.any())
@@ -455,6 +480,10 @@ export const updateWidgetSchema = z.object({
             .number({ invalid_type_error: 'orderIndex debe ser un número' })
             .int('orderIndex debe ser un entero')
             .min(0, 'orderIndex debe ser mayor o igual a 0')
+            .optional(),
+        dataSources: z
+            .array(inlineDataSourceSchema)
+            .max(20, 'Un widget no puede tener más de 20 data sources')
             .optional()
     })
 });

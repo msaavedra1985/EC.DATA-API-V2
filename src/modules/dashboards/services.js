@@ -572,11 +572,29 @@ export const createWidget = async (dashboardPublicCode, pageOrderNumber, widgetD
 
   const uuid = uuidv7();
 
-  const widget = await dashboardRepository.createWidget({
-    ...widgetData,
-    id: uuid,
-    dashboardPageId: page.id
-  });
+  const { dataSources: inlineDataSources, ...widgetFields } = widgetData;
+
+  const hasDataSources = inlineDataSources && inlineDataSources.length > 0;
+
+  let widget;
+
+  if (hasDataSources) {
+    const dsWithIds = inlineDataSources.map(ds => ({
+      ...ds,
+      id: uuidv7()
+    }));
+    widget = await dashboardRepository.createWidgetWithDataSources({
+      ...widgetFields,
+      id: uuid,
+      dashboardPageId: page.id
+    }, dsWithIds);
+  } else {
+    widget = await dashboardRepository.createWidget({
+      ...widgetFields,
+      id: uuid,
+      dashboardPageId: page.id
+    });
+  }
 
   await logAuditAction({
     entityType: 'widget',
@@ -588,7 +606,8 @@ export const createWidget = async (dashboardPublicCode, pageOrderNumber, widgetD
       dashboardId: dashboard.id,
       dashboardPublicCode,
       pageId: page.id,
-      pageOrderNumber
+      pageOrderNumber,
+      dataSourceCount: hasDataSources ? inlineDataSources.length : 0
     },
     ipAddress,
     userAgent
@@ -650,17 +669,40 @@ export const updateWidget = async (dashboardPublicCode, pageOrderNumber, widgetO
 
   const oldData = { ...widget.dataValues };
 
-  const updatedWidget = await dashboardRepository.updateWidget(widget.id, widgetData);
+  const { dataSources: inlineDataSources, ...widgetFields } = widgetData;
+
+  let updatedWidget;
+
+  if (Object.keys(widgetFields).length > 0) {
+    updatedWidget = await dashboardRepository.updateWidget(widget.id, widgetFields);
+  } else {
+    updatedWidget = widget;
+  }
+
+  if (inlineDataSources !== undefined) {
+    const dsWithIds = inlineDataSources.map(ds => ({
+      ...ds,
+      id: uuidv7()
+    }));
+    updatedWidget = await dashboardRepository.replaceWidgetDataSources(widget.id, dsWithIds);
+  }
 
   const changes = {};
-  Object.keys(widgetData).forEach(key => {
-    if (oldData[key] !== widgetData[key]) {
+  Object.keys(widgetFields).forEach(key => {
+    if (oldData[key] !== widgetFields[key]) {
       changes[key] = {
         old: oldData[key],
-        new: widgetData[key]
+        new: widgetFields[key]
       };
     }
   });
+
+  if (inlineDataSources !== undefined) {
+    changes.dataSources = {
+      old: `${(oldData.dataSources || []).length} data sources`,
+      new: `${inlineDataSources.length} data sources`
+    };
+  }
 
   await logAuditAction({
     entityType: 'widget',

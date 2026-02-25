@@ -372,6 +372,71 @@ export const createWidget = async (data) => {
     });
 };
 
+export const createWidgetWithDataSources = async (widgetData, dataSources) => {
+    return await sequelize.transaction(async (t) => {
+        const orderNumber = await getNextWidgetOrderNumber(widgetData.dashboardPageId, t);
+        const widget = await Widget.create(
+            { ...widgetData, orderNumber },
+            { transaction: t }
+        );
+
+        if (dataSources && dataSources.length > 0) {
+            const dsRecords = dataSources.map((ds, index) => ({
+                id: ds.id,
+                widgetId: widget.id,
+                entityType: ds.entityType,
+                entityId: ds.entityId,
+                label: ds.label || null,
+                seriesConfig: ds.seriesConfig || {},
+                orderIndex: index,
+                orderNumber: index + 1
+            }));
+            await WidgetDataSource.bulkCreate(dsRecords, { transaction: t });
+        }
+
+        const page = await DashboardPage.findByPk(widgetData.dashboardPageId, { transaction: t });
+        if (page) {
+            await Dashboard.increment('widgetCount', {
+                where: { id: page.dashboardId },
+                transaction: t
+            });
+        }
+
+        await widget.reload({ include: [dataSourceInclude], transaction: t });
+        return widget;
+    });
+};
+
+export const replaceWidgetDataSources = async (widgetId, dataSources) => {
+    return await sequelize.transaction(async (t) => {
+        await WidgetDataSource.destroy({
+            where: { widgetId },
+            force: true,
+            transaction: t
+        });
+
+        if (dataSources && dataSources.length > 0) {
+            const dsRecords = dataSources.map((ds, index) => ({
+                id: ds.id,
+                widgetId,
+                entityType: ds.entityType,
+                entityId: ds.entityId,
+                label: ds.label || null,
+                seriesConfig: ds.seriesConfig || {},
+                orderIndex: index,
+                orderNumber: index + 1
+            }));
+            await WidgetDataSource.bulkCreate(dsRecords, { transaction: t });
+        }
+
+        const widget = await Widget.findByPk(widgetId, {
+            include: [dataSourceInclude],
+            transaction: t
+        });
+        return widget;
+    });
+};
+
 export const updateWidget = async (widgetId, data) => {
     const widget = await Widget.findByPk(widgetId);
 
