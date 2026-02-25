@@ -12,7 +12,7 @@
 - **`pageId` y `widgetId` en URLs** son integers (orderNumber), no UUIDs
 - **Al crear un dashboard**, se crea automáticamente la página 1 con `name: null`
 - **Layout usa formato GridStack JS**: `{ x, y, w, h, minW?, minH?, maxW?, maxH? }`
-- **Widget `type` es string libre**: El frontend define los nombres (snake_case, regex: `/^[a-z][a-z0-9_]*$/`). No hay enum fijo en el backend.
+- **Widget `type` es string libre**: El frontend define los nombres (regex: `/^[a-zA-Z][a-zA-Z0-9_]*$/`). No hay enum fijo en el backend.
 
 ## Resumen
 
@@ -613,7 +613,7 @@
 
 > **Nota**: El `orderIndex` de cada dataSource se calcula automáticamente por su posición en el array (0, 1, 2...). No es necesario enviarlo.
 
-**Widget `type`**: String libre definido por el frontend. Debe cumplir el regex `/^[a-z][a-z0-9_]*$/` (snake_case alfanumérico, max 50 chars). Ejemplos: `line_chart`, `bar_chart`, `energy_gauge`, `custom_kpi_card`. Para ver qué tipos están en uso, consultar `GET /api/v1/dashboards/widget-types`.
+**Widget `type`**: String libre definido por el frontend. Debe cumplir el regex `/^[a-zA-Z][a-zA-Z0-9_]*$/` (alfanumérico con underscores, max 50 chars). Ejemplos: `ENERGY_BY_CHANNEL`, `line_chart`, `CUSTOM_KPI_CARD`. Para ver qué tipos están en uso, consultar `GET /api/v1/dashboards/widget-types`.
 
 **Respuesta exitosa** (201):
 ```json

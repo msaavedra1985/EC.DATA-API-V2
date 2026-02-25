@@ -5,7 +5,7 @@ import { z } from 'zod';
 
 // --- Enums reutilizables ---
 
-const WIDGET_TYPE_REGEX = /^[a-z][a-z0-9_]*$/;
+const WIDGET_TYPE_REGEX = /^[a-zA-Z][a-zA-Z0-9_]*$/;
 
 const entityTypeEnum = ['channel', 'device', 'site', 'resource_hierarchy'];
 
@@ -398,7 +398,7 @@ export const createWidgetSchema = z.object({
             .string({ required_error: 'type es requerido' })
             .min(1, 'type no puede estar vacío')
             .max(50, 'type no puede exceder 50 caracteres')
-            .regex(WIDGET_TYPE_REGEX, 'type debe ser snake_case alfanumérico (ej: line_chart, energy_gauge)'),
+            .regex(WIDGET_TYPE_REGEX, 'type debe ser alfanumérico con underscores (ej: line_chart, ENERGY_BY_CHANNEL)'),
         title: z
             .string()
             .max(200, 'title no puede exceder 200 caracteres')
@@ -459,7 +459,7 @@ export const updateWidgetSchema = z.object({
             .string()
             .min(1, 'type no puede estar vacío')
             .max(50, 'type no puede exceder 50 caracteres')
-            .regex(WIDGET_TYPE_REGEX, 'type debe ser snake_case alfanumérico (ej: line_chart, energy_gauge)')
+            .regex(WIDGET_TYPE_REGEX, 'type debe ser alfanumérico con underscores (ej: line_chart, ENERGY_BY_CHANNEL)')
             .optional(),
         title: z
             .string()
