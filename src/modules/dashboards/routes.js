@@ -22,7 +22,7 @@ import logger from '../../utils/logger.js';
 import {
     createDashboardSchema, updateDashboardSchema, getDashboardsSchema, getDashboardByIdSchema, deleteDashboardSchema,
     createPageSchema, updatePageSchema, deletePageSchema,
-    createWidgetSchema, updateWidgetSchema, deleteWidgetSchema,
+    createWidgetSchema, updateWidgetSchema, deleteWidgetSchema, updateLayoutsBatchSchema,
     createDataSourceSchema, updateDataSourceSchema, deleteDataSourceSchema,
     createGroupSchema, updateGroupSchema, getGroupsSchema, getGroupByIdSchema, deleteGroupSchema,
     addGroupItemSchema, removeGroupItemSchema,
@@ -440,6 +440,31 @@ router.delete('/:dashboardId/pages/:pageId', authenticate, enforceActiveOrganiza
         );
 
         return successResponse(res, { message: 'Página eliminada exitosamente' });
+    } catch (error) {
+        if (error.status) {
+            return errorResponse(res, {
+                message: error.message,
+                status: error.status,
+                code: error.code
+            });
+        }
+        next(error);
+    }
+});
+
+// Actualizar layouts de widgets en batch (posición/tamaño GridStack)
+router.patch('/:dashboardId/pages/:pageId/layouts', authenticate, enforceActiveOrganization, validate(updateLayoutsBatchSchema), async (req, res, next) => {
+    try {
+        const result = await dashboardServices.updatePageLayouts(
+            req.params.dashboardId,
+            req.params.pageId,
+            req.body.widgets,
+            req.user.userId,
+            req.ip,
+            req.headers['user-agent']
+        );
+
+        return successResponse(res, result);
     } catch (error) {
         if (error.status) {
             return errorResponse(res, {

@@ -860,6 +860,44 @@ export const removeCollaboratorSchema = z.object({
 });
 
 // =============================================
+// BATCH LAYOUT UPDATE (Actualización masiva de posiciones de widgets)
+// =============================================
+
+export const updateLayoutsBatchSchema = z.object({
+    params: z.object({
+        dashboardId: z
+            .string({ required_error: 'dashboardId es requerido' })
+            .min(1, 'dashboardId no puede estar vacío'),
+        pageId: z
+            .string({ required_error: 'pageId es requerido' })
+            .transform((val) => parseInt(val, 10))
+            .refine((val) => !isNaN(val) && val >= 1, {
+                message: 'pageId debe ser un entero mayor o igual a 1'
+            })
+    }),
+    body: z.object({
+        widgets: z
+            .array(
+                z.object({
+                    widgetId: z.number({ required_error: 'widgetId es requerido', invalid_type_error: 'widgetId debe ser un número' })
+                        .int('widgetId debe ser un entero')
+                        .min(1, 'widgetId debe ser mayor o igual a 1'),
+                    layout: gridStackLayoutSchema
+                })
+            )
+            .min(1, 'widgets debe contener al menos un elemento')
+            .max(50, 'widgets no puede exceder 50 elementos')
+            .refine(
+                (widgets) => {
+                    const ids = widgets.map(w => w.widgetId);
+                    return new Set(ids).size === ids.length;
+                },
+                { message: 'widgets contiene widgetId duplicados' }
+            )
+    })
+});
+
+// =============================================
 // WIDGET DATA (Obtener datos de un widget)
 // =============================================
 

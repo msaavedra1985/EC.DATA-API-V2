@@ -33,6 +33,7 @@
 | GET | `/api/v1/dashboards/:dashboardId/pages` | Listar páginas de un dashboard |
 | POST | `/api/v1/dashboards/:dashboardId/pages` | Crear página |
 | PATCH | `/api/v1/dashboards/:dashboardId/pages/:pageId` | Actualizar página (pageId = orderNumber integer) |
+| PATCH | `/api/v1/dashboards/:dashboardId/pages/:pageId/layouts` | Batch update de layouts de widgets (GridStack) |
 | DELETE | `/api/v1/dashboards/:dashboardId/pages/:pageId` | Eliminar página |
 
 ### Widgets
@@ -518,6 +519,71 @@
   "orderIndex": 1
 }
 ```
+
+---
+
+### PATCH /api/v1/dashboards/:dashboardId/pages/:pageId/layouts
+
+**Propósito**: Actualizar en batch las posiciones y tamaños de widgets dentro de una grilla GridStack. Diseñado para cuando mover/redimensionar un widget afecta a otros.
+
+**Permisos**: `editor` sobre el dashboard (owner o collaborator con rol editor)
+
+**Path Parameters**:
+| Param | Tipo | Descripción |
+|-------|------|-------------|
+| dashboardId | string | Public code del dashboard |
+| pageId | integer | orderNumber de la página (1, 2, 3...) |
+
+**Body** (JSON):
+```json
+{
+  "widgets": [
+    { "widgetId": 1, "layout": { "x": 60, "y": 0, "w": 60, "h": 320 } },
+    { "widgetId": 2, "layout": { "x": 0, "y": 0, "w": 60, "h": 320 } }
+  ]
+}
+```
+
+| Campo | Tipo | Requerido | Descripción |
+|-------|------|-----------|-------------|
+| widgets | array | Sí | Array de 1-50 widgets a actualizar |
+| widgets[].widgetId | integer | Sí | orderNumber del widget (≥1) |
+| widgets[].layout | object | Sí | Nuevo layout GridStack |
+| widgets[].layout.x | integer | Sí | Posición X (≥0) |
+| widgets[].layout.y | integer | Sí | Posición Y (≥0) |
+| widgets[].layout.w | integer | Sí | Ancho (≥1) |
+| widgets[].layout.h | integer | Sí | Alto (≥1) |
+
+**Validaciones**:
+- No se permiten `widgetId` duplicados en el array
+- Todos los `widgetId` deben pertenecer a la página indicada
+- Solo actualiza el campo `layout` — no toca `styleConfig`, `dataConfig`, ni `dataSources`
+- Se ejecuta en una transacción SQL (todo o nada)
+
+**Response (200)**:
+```json
+{
+  "ok": true,
+  "data": {
+    "updated": 2,
+    "widgets": [
+      { "id": 1, "layout": { "x": 60, "y": 0, "w": 60, "h": 320 } },
+      { "id": 2, "layout": { "x": 0, "y": 0, "w": 60, "h": 320 } }
+    ]
+  }
+}
+```
+
+**Errores posibles**:
+| Status | Código | Descripción |
+|--------|--------|-------------|
+| 400 | WIDGETS_NOT_FOUND | Uno o más widgetId no pertenecen a la página |
+| 400 | VALIDATION_ERROR | Body inválido (duplicados, layout inválido, etc.) |
+| 403 | FORBIDDEN | Sin permisos de editor |
+| 404 | DASHBOARD_NOT_FOUND | Dashboard no encontrado |
+| 404 | PAGE_NOT_FOUND | Página no encontrada |
+
+**Tip frontend**: Solo incluir widgets cuyo layout realmente cambió, para minimizar payload.
 
 ---
 

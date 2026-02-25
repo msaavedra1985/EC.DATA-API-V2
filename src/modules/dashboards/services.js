@@ -798,6 +798,65 @@ export const deleteWidget = async (dashboardPublicCode, pageOrderNumber, widgetO
   logger.info({ widgetId: widget.id, pageOrderNumber, dashboardId: dashboard.id, userId }, 'Widget deleted successfully');
 };
 
+export const updatePageLayouts = async (dashboardPublicCode, pageOrderNumber, widgetsPayload, userId, ipAddress, userAgent) => {
+  const dashboard = await dashboardRepository.findDashboardByPublicCodeInternal(dashboardPublicCode);
+
+  if (!dashboard) {
+    const error = new Error('Dashboard no encontrado');
+    error.status = 404;
+    error.code = 'DASHBOARD_NOT_FOUND';
+    throw error;
+  }
+
+  const access = await checkDashboardAccess(dashboard, userId, 'editor');
+  if (!access.hasAccess) {
+    const error = new Error('No tienes permisos para editar este dashboard');
+    error.status = 403;
+    error.code = 'FORBIDDEN';
+    throw error;
+  }
+
+  const page = await dashboardRepository.findPageByOrderNumber(dashboard.id, pageOrderNumber);
+
+  if (!page) {
+    const error = new Error('Página no encontrada');
+    error.status = 404;
+    error.code = 'PAGE_NOT_FOUND';
+    throw error;
+  }
+
+  const result = await dashboardRepository.updateWidgetLayoutsBatch(page.id, widgetsPayload);
+
+  if (result.notFound) {
+    const error = new Error(`Widgets no encontrados en esta página: ${result.notFound.join(', ')}`);
+    error.status = 400;
+    error.code = 'WIDGETS_NOT_FOUND';
+    throw error;
+  }
+
+  await logAuditAction({
+    entityType: 'dashboard_page',
+    entityId: page.id,
+    action: 'layouts_updated',
+    performedBy: userId,
+    changes: {
+      widgetsUpdated: result.updated,
+      layouts: widgetsPayload.map(w => ({ widgetId: w.widgetId, layout: w.layout }))
+    },
+    metadata: {
+      dashboardId: dashboard.id,
+      dashboardPublicCode,
+      pageOrderNumber
+    },
+    ipAddress,
+    userAgent
+  });
+
+  logger.info({ pageId: page.id, widgetsUpdated: result.updated, dashboardId: dashboard.id, userId }, 'Widget layouts batch updated');
+
+  return result;
+};
+
 // =============================================
 // DataSource CRUD
 // =============================================

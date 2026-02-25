@@ -466,6 +466,45 @@ export const deleteWidget = async (widgetId) => {
     return true;
 };
 
+export const updateWidgetLayoutsBatch = async (pageId, widgetLayouts) => {
+    return await sequelize.transaction(async (t) => {
+        const widgets = await Widget.findAll({
+            where: { dashboardPageId: pageId },
+            attributes: ['id', 'orderNumber', 'layout'],
+            transaction: t
+        });
+
+        const widgetMap = new Map(widgets.map(w => [w.orderNumber, w]));
+        const notFound = [];
+        const updates = [];
+
+        for (const { widgetId, layout } of widgetLayouts) {
+            const widget = widgetMap.get(widgetId);
+            if (!widget) {
+                notFound.push(widgetId);
+                continue;
+            }
+            updates.push({ widget, layout });
+        }
+
+        if (notFound.length > 0) {
+            return { notFound };
+        }
+
+        for (const { widget, layout } of updates) {
+            await widget.update({ layout }, { transaction: t });
+        }
+
+        return {
+            updated: updates.length,
+            widgets: updates.map(({ widget }) => ({
+                id: widget.orderNumber,
+                layout: widget.layout
+            }))
+        };
+    });
+};
+
 // =============================================
 // DataSource CRUD
 // =============================================
