@@ -472,6 +472,21 @@ await queryInterface.addColumn('users', 'avatarUrl', { type: Sequelize.STRING })
 
 ---
 
+## Telemetría
+
+### Public codes case-sensitive en resolveChannelIdentifier
+- **Síntoma**: `Canal no encontrado: "CHN-3GKyM6HXvQB-1"` aunque existe en DB
+- **Causa**: `resolveChannelIdentifier` hacía `.toUpperCase()` antes de consultar, convirtiendo `CHN-3GKyM6HXvQB-1` a `CHN-3GKYM6HXVQB-1`. Los public codes generados por Hashids son case-sensitive (usan base62 con mayúsculas y minúsculas).
+- **Solución**: Eliminado `.toUpperCase()` en la query de publicCode en `metadataRepository.js`. La comparación ahora es exacta.
+
+### Regex de public codes con longitud fija
+- **Síntoma**: `publicCode inválido: CHN-3GKyM6HXvQB-1 no tiene formato CHN-XXXXX-X`
+- **Causa**: Las regex `isChannelPublicCode` e `isDevicePublicCode` usaban `{5}` (exactamente 5 chars), pero Hashids genera longitud variable según el valor numérico. También `normalizeIdentifier` en `telemetryService.js` tenía la misma regex hardcoded.
+- **Solución**: Cambiar regex de `[A-Z0-9]{5}` a `[A-Za-z0-9]+` en los 3 lugares: `metadataRepository.js` (x2) y `telemetryService.js` (x1).
+- **Archivos**: `src/modules/telemetry/repositories/metadataRepository.js`, `src/modules/telemetry/services/telemetryService.js`
+
+---
+
 ## Deployment
 
 (Agregar problemas de deployment aquí)

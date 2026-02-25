@@ -78,8 +78,8 @@ const normalizeIdentifier = (identifier) => {
     
     // Si es string, intentar determinar el tipo automáticamente
     if (typeof identifier === 'string') {
-        // Formato CHN-XXXXX-X -> publicCode
-        if (/^CHN-[A-Z0-9]{5}-[0-9]$/i.test(identifier)) {
+        // Formato CHN-XXXXX-X -> publicCode (longitud variable por Hashids)
+        if (/^CHN-[A-Za-z0-9]+-[0-9]$/i.test(identifier)) {
             return { publicCode: identifier };
         }
         

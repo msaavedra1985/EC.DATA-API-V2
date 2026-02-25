@@ -409,7 +409,7 @@ export const warmUpTelemetryCache = async (langs = ['es', 'en']) => {
  * @returns {boolean}
  */
 const isChannelPublicCode = (str) => {
-    return /^CHN-[A-Z0-9]{5}-[0-9]$/i.test(str);
+    return /^CHN-[A-Za-z0-9]+-[0-9]$/i.test(str);
 };
 
 /**
@@ -418,7 +418,7 @@ const isChannelPublicCode = (str) => {
  * @returns {boolean}
  */
 const isDevicePublicCode = (str) => {
-    return /^DEV-[A-Z0-9]{5}-[0-9]$/i.test(str);
+    return /^DEV-[A-Za-z0-9]+-[0-9]$/i.test(str);
 };
 
 /**
@@ -603,7 +603,7 @@ export const resolveChannelIdentifier = async (identifier) => {
         
         const rows = await sequelize.query(
             `SELECT id FROM channels WHERE public_code = :publicCode AND deleted_at IS NULL`,
-            { replacements: { publicCode: publicCode.toUpperCase() }, type: QueryTypes.SELECT }
+            { replacements: { publicCode }, type: QueryTypes.SELECT }
         );
         
         if (rows.length === 0) {
