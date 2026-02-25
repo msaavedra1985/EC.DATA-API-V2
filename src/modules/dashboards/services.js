@@ -1052,13 +1052,22 @@ export const getWidgetData = async (dashboardPublicCode, pageOrderNumber, widget
     }
 
     try {
+      let resolvedVariables = variables || null;
+      if (!resolvedVariables) {
+        if (dsPlain.seriesConfig?.variables) {
+          resolvedVariables = dsPlain.seriesConfig.variables;
+        } else if (dsPlain.seriesConfig?.variableId) {
+          resolvedVariables = [dsPlain.seriesConfig.variableId];
+        }
+      }
+
       const searchParams = {
         identifier: dsPlain.entityId,
         from: resolvedDates.from,
         to: resolvedDates.to,
         resolution: resolution || '1m',
         tz: tz || undefined,
-        variables: variables || (dsPlain.seriesConfig?.variables) || null,
+        variables: resolvedVariables,
         filters: {}
       };
 

@@ -134,6 +134,56 @@ export const getChannelVariables = async (channelId, lang = 'es', variableIds = 
 };
 
 /**
+ * Fallback: obtiene variables directamente de la tabla global por measurement_type_id
+ * Se usa cuando un canal no tiene channel_variables explícitas (ej: canales eléctricos)
+ * 
+ * @param {number} measurementTypeId - ID del tipo de medición del canal
+ * @param {string} lang - Código de idioma (default: 'es')
+ * @param {number[]} variableIds - IDs específicos (opcional, si null trae todas del tipo)
+ * @returns {Promise<Array>} Lista de variables con metadata
+ */
+export const getVariablesByMeasurementType = async (measurementTypeId, lang = 'es', variableIds = null) => {
+    let query = `
+        SELECT 
+            v.id AS variable_id,
+            v.column_name,
+            v.unit,
+            v.chart_type,
+            v.axis_name,
+            v.axis_id,
+            v.axis_min,
+            v.axis_function,
+            v.aggregation_type,
+            v.is_realtime,
+            v.is_default,
+            v.display_order,
+            COALESCE(vt.name, vt_default.name, 'Unknown') AS variable_name,
+            COALESCE(vt.description, vt_default.description) AS variable_description
+        FROM variables v
+        LEFT JOIN variable_translations vt 
+            ON v.id = vt.variable_id AND vt.lang = :lang
+        LEFT JOIN variable_translations vt_default 
+            ON v.id = vt_default.variable_id AND vt_default.lang = 'es'
+        WHERE v.measurement_type_id = :measurementTypeId
+            AND v.is_active = true
+    `;
+
+    const replacements = { measurementTypeId, lang };
+
+    if (variableIds && variableIds.length > 0) {
+        query += ` AND v.id IN (:variableIds)`;
+        replacements.variableIds = variableIds;
+    }
+
+    query += ` ORDER BY v.display_order ASC NULLS LAST, v.id ASC`;
+
+    return await sequelize.query(query, {
+        replacements,
+        type: QueryTypes.SELECT
+    });
+};
+
+/**
  * Obtiene la metadata completa para telemetría incluyendo variables
  * 
  * CACHE: TTL 10min para evitar queries repetitivas a PostgreSQL
@@ -174,8 +224,25 @@ export const getTelemetryMetadata = async (channelId, lang = 'es', variableIds =
         return null;
     }
 
-    // Obtener variables del canal
-    const variables = await getChannelVariables(resolvedChannelId, lang, variableIds);
+    // Obtener variables del canal (desde channel_variables)
+    let variables = await getChannelVariables(resolvedChannelId, lang, variableIds);
+
+    // Fallback: si el canal NO tiene channel_variables (ninguna, ni siquiera sin filtro),
+    // buscar directo en tabla variables global por measurement_type_id.
+    // Solo aplica a canales sin mappings explícitos (ej: eléctricos).
+    // Si el canal SÍ tiene channel_variables pero el filtro de variableIds no matcheó, NO hacer fallback.
+    if (variables.length === 0 && channelMeta.measurement_type_id) {
+        const allChannelVars = variableIds
+            ? await getChannelVariables(resolvedChannelId, lang, null)
+            : [];
+        const channelHasNoExplicitVars = !variableIds || allChannelVars.length === 0;
+
+        if (channelHasNoExplicitVars) {
+            variables = await getVariablesByMeasurementType(
+                channelMeta.measurement_type_id, lang, variableIds
+            );
+        }
+    }
 
     // Construir mapa de variables por ID
     const variablesMap = {};

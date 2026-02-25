@@ -485,6 +485,17 @@ await queryInterface.addColumn('users', 'avatarUrl', { type: Sequelize.STRING })
 - **Solución**: Cambiar regex de `[A-Z0-9]{5}` a `[A-Za-z0-9]+` en los 3 lugares: `metadataRepository.js` (x2) y `telemetryService.js` (x1).
 - **Archivos**: `src/modules/telemetry/repositories/metadataRepository.js`, `src/modules/telemetry/services/telemetryService.js`
 
+### Variables vacías en canales eléctricos (sin channel_variables)
+- **Fecha**: 2026-02-25
+- **Síntoma**: Widget data endpoint retorna `variables: {}` y `data` solo con timestamps sin valores para canales eléctricos.
+- **Causa**: `getTelemetryMetadata` solo buscaba variables en `channel_variables` (join tabla). Los canales eléctricos (measurement_type_id=1) no tienen registros en `channel_variables` — sus variables estándar (`e`, `p`, `v`, `i`, etc.) están solo en la tabla global `variables`. Además, `seriesConfig.variableId` (singular) no se pasaba como `variables` array al search.
+- **Solución**:
+  1. Nuevo helper `getVariablesByMeasurementType()` en `metadataRepository.js` — busca variables directamente en tabla `variables` por `measurement_type_id`, con filtro opcional de `variableIds`
+  2. Fallback en `getTelemetryMetadata`: si `getChannelVariables` retorna vacío, llama a `getVariablesByMeasurementType` con el `measurement_type_id` del canal
+  3. En `dashboards/services.js`: extraer `seriesConfig.variableId` (singular) como `[variableId]` array, además de `seriesConfig.variables` (plural)
+- **Archivos**: `src/modules/telemetry/repositories/metadataRepository.js`, `src/modules/dashboards/services.js`
+- **Regla**: Canales IoT → `channel_variables`. Canales eléctricos → fallback a tabla `variables` global por `measurement_type_id`.
+
 ---
 
 ## Deployment
