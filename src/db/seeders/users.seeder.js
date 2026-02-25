@@ -128,7 +128,7 @@ export const seedUsers = async () => {
             // generateHumanId para usuarios (sin scope, es global)
             const humanId = await generateHumanId(User, null, null);
             // publicCode se genera a partir del UUID, no del humanId
-            const publicCode = generatePublicCode('USR', id);
+            const publicCode = generatePublicCode('USR');
             
             const roleId = roleMap[userData.role_name];
 

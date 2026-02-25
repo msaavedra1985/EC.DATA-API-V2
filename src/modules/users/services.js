@@ -148,7 +148,7 @@ export const createUser = async (userData, actor, metadata = {}) => {
     
     // Generar identificadores usando utilidades del proyecto
     const userId = generateUuidV7();
-    const publicCode = generatePublicCode('USR', userId);
+    const publicCode = generatePublicCode('USR');
     
     // Generar humanId (siguiente número en la organización)
     const User = (await import('../auth/models/User.js')).default;

@@ -134,7 +134,7 @@ const ResourceHierarchy = sequelize.define('ResourceHierarchy', {
     hooks: {
         beforeCreate: (instance) => {
             if (!instance.publicCode) {
-                instance.publicCode = generatePublicCode('RES', instance.id);
+                instance.publicCode = generatePublicCode('RES');
             }
         },
         beforeValidate: (instance) => {

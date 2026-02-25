@@ -159,7 +159,7 @@ const seedOrganizations = async () => {
         if (!orgData.parent_slug) {
             const id = generateUuidV7();
             const humanId = await generateHumanId(Organization, null, null);
-            const publicCode = generatePublicCode('ORG', id);
+            const publicCode = generatePublicCode('ORG');
 
             const newOrg = await Organization.create({
                 id,
@@ -197,7 +197,7 @@ const seedOrganizations = async () => {
 
         const id = generateUuidV7();
         const humanId = await generateHumanId(Organization, null, null);
-        const publicCode = generatePublicCode('ORG', id);
+        const publicCode = generatePublicCode('ORG');
 
         const newOrg = await Organization.create({
             id,
@@ -287,7 +287,7 @@ const seedUsers = async () => {
         // Generar campos obligatorios para nuevo usuario
         const id = generateUuidV7();
         const humanId = await generateHumanId(User, 'organizationId', primaryOrgId);
-        const publicCode = generatePublicCode('EC', id);
+        const publicCode = generatePublicCode('EC');
 
         // Crear usuario (sin organizationId directo)
         const newUser = await User.create({

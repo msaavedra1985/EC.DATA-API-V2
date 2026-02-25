@@ -54,7 +54,7 @@ export const createChannel = async (channelData, userId, ipAddress, userAgent) =
     
     const uuid = uuidv7();
     const humanId = await generateHumanId(Channel, null, null);
-    const publicCode = generatePublicCode('CHN', uuid);
+    const publicCode = generatePublicCode('CHN');
     
     const identifiers = {
         id: uuid,

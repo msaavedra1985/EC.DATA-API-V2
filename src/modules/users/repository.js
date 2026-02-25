@@ -117,8 +117,8 @@ export const findUserById = async (id, includeRelations = true, useCache = true)
     
     const where = {};
     
-    // Detectar si es publicCode (formato: USR-XXXXX-X) o UUID
-    if (/^USR-[A-Z0-9]{5}-[A-Z0-9]$/.test(id)) {
+    // Detectar si es publicCode (formato: USR-XXX-XXX) o UUID
+    if (/^USR-[A-Z2-9]{3}-[A-Z2-9]{3}$/.test(id)) {
         where.publicCode = id;
     } else {
         where.id = id;
@@ -396,7 +396,7 @@ export const deleteUser = async (userId) => {
 export const getUserModelById = async (id, includeRelations = true) => {
     const where = {};
     
-    if (/^USR-[A-Z0-9]{5}-[A-Z0-9]$/.test(id)) {
+    if (/^USR-[A-Z2-9]{3}-[A-Z2-9]{3}$/.test(id)) {
         where.publicCode = id;
     } else {
         where.id = id;

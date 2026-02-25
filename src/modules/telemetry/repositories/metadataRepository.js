@@ -476,7 +476,7 @@ export const warmUpTelemetryCache = async (langs = ['es', 'en']) => {
  * @returns {boolean}
  */
 const isChannelPublicCode = (str) => {
-    return /^CHN-[A-Za-z0-9]+-[0-9]$/i.test(str);
+    return /^CHN-[A-Z2-9]{3}-[A-Z2-9]{3}$/.test(str);
 };
 
 /**
@@ -485,7 +485,7 @@ const isChannelPublicCode = (str) => {
  * @returns {boolean}
  */
 const isDevicePublicCode = (str) => {
-    return /^DEV-[A-Za-z0-9]+-[0-9]$/i.test(str);
+    return /^DEV-[A-Z2-9]{3}-[A-Z2-9]{3}$/.test(str);
 };
 
 /**

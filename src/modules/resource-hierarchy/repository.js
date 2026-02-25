@@ -70,7 +70,7 @@ const getNodeByIdWithChildrenCount = async (nodeId) => {
  */
 export const createNode = async (data) => {
     const id = generateUuidV7();
-    const publicCode = generatePublicCode('RES', id);
+    const publicCode = generatePublicCode('RES');
     
     // Usar transacción para que el incremento del contador y el insert sean atómicos
     // Si el insert falla, el contador también se revierte
@@ -1116,7 +1116,7 @@ export const batchCreateNodes = async (nodesData, options = {}) => {
         const data = nodesData[i];
         const id = generateUuidV7();
         const humanId = await generateHumanId(ResourceHierarchy, null, transaction);
-        const publicCode = generatePublicCode('RES', id);
+        const publicCode = generatePublicCode('RES');
         
         const node = await ResourceHierarchy.create({
             id,

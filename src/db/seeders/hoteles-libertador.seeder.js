@@ -13,41 +13,14 @@ import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import sequelize from '../sql/sequelize.js';
 import { v7 as uuidv7 } from 'uuid';
-import Hashids from 'hashids';
+import { generatePublicCode } from '../../utils/identifiers.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// Hashids para generar public_codes
-const deviceHashids = new Hashids('ecdata-devices-salt', 5, 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789');
-const channelHashids = new Hashids('ecdata-channels-salt', 5, 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789');
-const orgHashids = new Hashids('ecdata-orgs-salt', 5, 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789');
-
-// Función para calcular dígito Luhn
-const calculateLuhnDigit = (str) => {
-    const chars = str.toUpperCase().split('').reverse();
-    let sum = 0;
-    for (let i = 0; i < chars.length; i++) {
-        let value = chars[i].charCodeAt(0) - 48;
-        if (chars[i] >= 'A') value = chars[i].charCodeAt(0) - 55;
-        if (i % 2 === 0) value *= 2;
-        if (value > 9) value -= 9;
-        sum += value;
-    }
-    return (10 - (sum % 10)) % 10;
-};
-
 // Genera human_id incremental
 const generateHumanId = (prefix, counter) => {
     return `${prefix}-${String(counter).padStart(6, '0')}`;
-};
-
-// Genera public_code con checksum Luhn
-const generatePublicCode = (prefix, hashids, id) => {
-    const hash = hashids.encode(id);
-    const base = `${prefix}-${hash}`;
-    const checkDigit = calculateLuhnDigit(base);
-    return `${base}-${checkDigit}`;
 };
 
 // Cargar JSONs
@@ -237,7 +210,7 @@ const runMigration = async () => {
         
         const orgId = uuidv7();
         const orgHumanId = maxHumanId[0].next_id;
-        const orgPublicCode = generatePublicCode('ORG', orgHashids, orgHumanId);
+        const orgPublicCode = generatePublicCode('ORG');
         
         // Peru country_id = 391
         const peruCountryId = 391;
@@ -288,7 +261,7 @@ const runMigration = async () => {
         
         for (const equipo of uniqueEquipos) {
             const newDeviceId = uuidv7();
-            const publicCode = generatePublicCode('DEV', deviceHashids, deviceCounter);
+            const publicCode = generatePublicCode('DEV');
             
             // Guardar UUID original en metadata para consultas Cassandra
             const metadata = {
@@ -386,7 +359,7 @@ const runMigration = async () => {
             seenDeviceName.add(deviceNameKey);
             
             const newChannelId = uuidv7();
-            const publicCode = generatePublicCode('CHN', channelHashids, channelCounter);
+            const publicCode = generatePublicCode('CHN');
             
             // Guardar ID original en metadata para referencia
             const channelMetadata = {

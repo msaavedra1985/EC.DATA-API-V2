@@ -45,7 +45,7 @@ export const createSite = async (siteData, userId, ipAddress, userAgent) => {
     // Generar identificadores usando el helper centralizado
     const uuid = uuidv7();
     const humanId = await generateHumanId(Site, null, null);
-    const publicCode = generatePublicCode('SITE', uuid);
+    const publicCode = generatePublicCode('SITE');
     
     const identifiers = {
         id: uuid,

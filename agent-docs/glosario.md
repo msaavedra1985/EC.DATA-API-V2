@@ -5,9 +5,9 @@
 ## Identificadores
 
 ### public_code
-Identificador público expuesto en APIs. Formato: `PREFIX-HASH-CHECKSUM`
-- **Generación**: Hashids + Luhn checksum
-- **Ejemplos**: `ORG-5LYJX-4`, `SIT-ABC12-7`, `CHN-XYZ99-3`
+Identificador público expuesto en APIs. Formato: `PREFIX-XXX-XXX` (estilo boleto de avión)
+- **Generación**: nanoid con alfabeto seguro `2345679ACDEFGHJKLMNPQRSTUVWXYZ` (sin 0/O/1/I/8/B)
+- **Ejemplos**: `ORG-HZ6-QUL`, `DEV-4X9-R2T`, `CHN-F74-CEL`
 - **Uso**: ÚNICO identificador permitido en respuestas API
 - **Prefijos comunes**:
   - `ORG-` → Organización

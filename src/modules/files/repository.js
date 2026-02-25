@@ -34,7 +34,7 @@ User.hasMany(FileUpload, {
 export const createFileUpload = async (fileData) => {
     const id = generateUuidV7();
     const humanId = await generateHumanId(FileUpload, null, null);
-    const publicCode = generatePublicCode('FILE', id);
+    const publicCode = generatePublicCode('FILE');
 
     const file = await FileUpload.create({
         id,

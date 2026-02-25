@@ -125,7 +125,7 @@ export const getDashboard = async (publicCode, userId) => {
  */
 export const createDashboard = async (dashboardData, userId, organizationId, ipAddress, userAgent) => {
   const uuid = uuidv7();
-  const publicCode = generatePublicCode('DSH', uuid);
+  const publicCode = generatePublicCode('DSH');
 
   const pageUuid = uuidv7();
 

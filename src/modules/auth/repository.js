@@ -32,7 +32,7 @@ export const createUser = async (userData) => {
         );
         
         // Generar publicCode con prefijo EC- usando UUID v7 para garantizar unicidad global
-        const publicCode = generatePublicCode('EC', id);
+        const publicCode = generatePublicCode('EC');
         
         // Crear usuario con identificadores
         const user = await User.create({
@@ -121,10 +121,10 @@ export const findUserByIdentifier = async (identifier, includePassword = false) 
         // Buscar por username (normalizado a lowercase)
         conditions.push({ username: lowercaseIdentifier });
         
-        // Si el identificador tiene formato de publicCode (EC-XXXXX-X), buscar también por publicCode
-        const publicCodePattern = /^EC-[A-Z0-9]+-\d$/i;
+        // Si el identificador tiene formato de publicCode (EC-XXX-XXX), buscar también por publicCode
+        const publicCodePattern = /^EC-[A-Z2-9]{3}-[A-Z2-9]{3}$/;
         if (publicCodePattern.test(trimmedIdentifier)) {
-            conditions.push({ publicCode: trimmedIdentifier.toUpperCase() });
+            conditions.push({ publicCode: trimmedIdentifier });
         }
         
         const user = await User.findOne({

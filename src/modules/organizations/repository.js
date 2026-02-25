@@ -45,7 +45,7 @@ export const createOrganization = async (data) => {
         const humanId = await generateHumanId(Organization, null, null);
         
         // Generar public_code con prefijo ORG- usando UUID v7
-        const publicCode = generatePublicCode('ORG', id);
+        const publicCode = generatePublicCode('ORG');
         
         // Crear organización
         const organization = await Organization.create({

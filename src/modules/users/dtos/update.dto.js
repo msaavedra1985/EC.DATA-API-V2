@@ -44,7 +44,7 @@ export const updateUserSchema = z.object({
     
     organizationId: z.string()
         .refine(
-            (val) => !val || /^ORG-[A-Z0-9]{5}-[A-Z0-9]$/.test(val),
+            (val) => !val || /^ORG-[A-Z2-9]{3}-[A-Z2-9]{3}$/.test(val),
             'Invalid organization public code format'
         )
         .optional()

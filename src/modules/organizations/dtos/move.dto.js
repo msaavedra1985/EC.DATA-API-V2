@@ -9,7 +9,7 @@ import { z } from 'zod';
  */
 const moveOrganizationSchema = z.object({
     parentId: z.string()
-        .regex(/^ORG-[A-Z0-9]{5,10}(-[A-Z0-9])?$/, 'Invalid organization ID format')
+        .regex(/^ORG-[A-Z2-9]{3}-[A-Z2-9]{3}$/, 'Invalid organization ID format')
         .nullable()
         .optional()
         .describe('Public code de la nueva organización padre, o null para convertir en raíz')

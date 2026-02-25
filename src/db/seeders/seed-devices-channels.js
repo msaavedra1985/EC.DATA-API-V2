@@ -197,7 +197,7 @@ const createDevicesForOrganization = async (organization, sites, adminUser) => {
             // Generar datos del device
             const deviceId = generateUuidV7();
             const deviceHumanId = await generateHumanId(Device, null, null);
-            const devicePublicCode = generatePublicCode('DEV', deviceId);
+            const devicePublicCode = generatePublicCode('DEV');
             
             const deviceName = deviceGenerators.getDeviceName(deviceType, i);
             const status = deviceGenerators.getRandomStatus();
@@ -305,7 +305,7 @@ const createChannelsForDevice = async (device, adminUser) => {
             // Generar datos del channel
             const channelId = generateUuidV7();
             const channelHumanId = await generateHumanId(Channel, null, null);
-            const channelPublicCode = generatePublicCode('CHN', channelId);
+            const channelPublicCode = generatePublicCode('CHN');
             
             const channelName = config.getName(i);
             const direction = channelGenerators.getRandomDirection();

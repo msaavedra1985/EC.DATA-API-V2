@@ -52,7 +52,7 @@ export const createUserSchema = z.object({
         .optional()
         .nullable()
         .refine(
-            (val) => !val || /^USR-[A-Z0-9]{5}-[A-Z0-9]$/.test(val) || /^ORG-[A-Z0-9]{5}-[A-Z0-9]$/.test(val),
+            (val) => !val || /^USR-[A-Z2-9]{3}-[A-Z2-9]{3}$/.test(val) || /^ORG-[A-Z2-9]{3}-[A-Z2-9]{3}$/.test(val),
             'Invalid organization public code format'
         ),
     

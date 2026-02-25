@@ -179,7 +179,7 @@ async function migrate() {
 
         for (const eq of equipos) {
             const newUuid = uuidv7();
-            const publicCode = generatePublicCode('DEV', newUuid);
+            const publicCode = generatePublicCode('DEV');
 
             await Device.create({
                 id: newUuid,
@@ -239,7 +239,7 @@ async function migrate() {
             }
 
             const newUuid = uuidv7();
-            const publicCode = generatePublicCode('CHN', newUuid);
+            const publicCode = generatePublicCode('CHN');
 
             await Channel.create({
                 id: newUuid,

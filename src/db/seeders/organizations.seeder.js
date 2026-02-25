@@ -127,7 +127,7 @@ export const seedOrganizations = async () => {
 
         const rootId = generateUuidV7();
         const rootHumanId = await generateHumanId(Organization, null, null);
-        const rootPublicCode = generatePublicCode('ORG', rootId);
+        const rootPublicCode = generatePublicCode('ORG');
         
         const rootOrg = await Organization.create({
             id: rootId,
@@ -163,7 +163,7 @@ export const seedOrganizations = async () => {
 
             const id = generateUuidV7();
             const humanId = await generateHumanId(Organization, null, null);
-            const publicCode = generatePublicCode('ORG', id);
+            const publicCode = generatePublicCode('ORG');
             
             const org = await Organization.create({
                 id,

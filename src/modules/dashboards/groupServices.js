@@ -112,7 +112,7 @@ export const getGroup = async (publicCode, userId) => {
  */
 export const createGroup = async (groupData, userId, organizationId, ipAddress, userAgent) => {
   const uuid = uuidv7();
-  const publicCode = generatePublicCode('DGR', uuid);
+  const publicCode = generatePublicCode('DGR');
 
   const group = await dashboardRepository.createGroup({
     ...groupData,

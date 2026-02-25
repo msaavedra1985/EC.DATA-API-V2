@@ -63,7 +63,7 @@ export const createDevice = async (deviceData, userId, ipAddress, userAgent) => 
     // Generar identificadores usando el helper centralizado
     const uuid = uuidv7();
     const humanId = await generateHumanId(Device, null, null);
-    const publicCode = generatePublicCode('DEV', uuid);
+    const publicCode = generatePublicCode('DEV');
     
     const identifiers = {
         id: uuid,

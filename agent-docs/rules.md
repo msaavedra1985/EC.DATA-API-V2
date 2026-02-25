@@ -15,8 +15,8 @@
 > **CRÍTICO**: Violación de esta política = vulnerabilidad de seguridad
 
 - **NEVER expose internal UUIDs** in API responses - Use `publicCode` exclusively (mapped to `id` in serializers)
-  - Ejemplos válidos: `CHN-5LYJX-4`, `SIT-xxx`, `RES-xxx`, `ORG-xxx`
-- **Public codes use Hashids + Luhn checksum** - Opaque, non-enumerable, and tamper-detectable
+  - Ejemplos válidos: `CHN-F74-CEL`, `SIT-XXX-XXX`, `RES-XXX-XXX`, `ORG-HZ6-QUL`
+- **Public codes use nanoid** with custom alphabet (`2345679ACDEFGHJKLMNPQRSTUVWXYZ`) - Format: `PREFIX-XXX-XXX`, all uppercase, no confusable chars
 - **UUIDv7 stays internal only** - Contains timestamp info that could leak creation patterns
 - **When creating new tables, ask if data is sensitive** to decide between classic IDs vs public_codes
 - **`reference_id` fields store public_codes** (VARCHAR), not UUIDs - Enables safe cross-module references

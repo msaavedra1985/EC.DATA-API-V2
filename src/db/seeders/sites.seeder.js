@@ -69,7 +69,7 @@ export const seedSites = async () => {
                 // Generar identificadores
                 const id = generateUuidV7();
                 const human_id = await generateHumanId(Site, null, null);
-                const public_code = generatePublicCode('SITE', id);
+                const public_code = generatePublicCode('SITE');
 
                 // Crear sitio
                 await Site.create({

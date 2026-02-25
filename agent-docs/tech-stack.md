@@ -28,7 +28,7 @@
 | Helmet | 8.0.x | Security headers |
 | Zod | 3.24.x | Input validation |
 | Cloudflare Turnstile | - | CAPTCHA on login |
-| Hashids | 2.3.x | Public code generation |
+| nanoid | 5.1.x | Public code generation (custom alphabet) |
 
 ## Observability
 
