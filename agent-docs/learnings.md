@@ -538,6 +538,14 @@ await queryInterface.addColumn('users', 'avatarUrl', { type: Sequelize.STRING })
 **Migración**: `20260226180000-fix-dashboard-order-number-constraints.cjs`
 **Archivos afectados**: Solo migración (los modelos Sequelize no declaran uniqueness inline para estos campos)
 
+### Ruta POST /realtime/token sin middleware enforceActiveOrganization
+**Fecha**: 2026-02-26
+**Síntoma**: WS subscribe a dashboard devuelve `NO_ASSETS` a pesar de tener widgets con variables realtime correctas. La query SQL muestra `AND db.organization_id = NULL` que nunca matchea.
+**Causa**: La ruta `POST /api/v1/realtime/token` usaba `authenticate` pero no `enforceActiveOrganization`. Sin ese middleware, `req.organizationContext` es `undefined`, y `organizationId` queda como `null` en el token efímero → session WS → query de `resolveDashboardAssets`.
+**Solución**: Agregar `enforceActiveOrganization` a la cadena de middlewares de la ruta token.
+**Regla general**: Toda ruta que necesite `organizationId` para operaciones downstream debe tener el middleware `enforceActiveOrganization` en su cadena, no solo `authenticate`.
+**Archivos afectados**: `src/modules/realtime/routes.js`
+
 ---
 
 ## Deployment

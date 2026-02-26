@@ -6,6 +6,7 @@ import { getUserConnectionCount } from './services/sessionService.js';
 import { getMqttStatus } from './mqtt/client.js';
 import { getWsStatus } from './wsServer.js';
 import { authenticate } from '../../middleware/auth.js';
+import { enforceActiveOrganization } from '../../middleware/enforceActiveOrganization.js';
 import { incrWithTTL } from '../../db/redis/client.js';
 import { config } from '../../config/env.js';
 import logger from '../../utils/logger.js';
@@ -71,7 +72,7 @@ const router = Router();
  *       429:
  *         description: Rate limit excedido
  */
-router.post('/token', authenticate, async (req, res) => {
+router.post('/token', authenticate, enforceActiveOrganization, async (req, res) => {
     try {
         const { userId, role, email } = req.user;
         const organizationId = req.organizationContext?.activeOrgId || null;
