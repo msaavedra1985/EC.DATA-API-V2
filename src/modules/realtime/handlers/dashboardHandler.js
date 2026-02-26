@@ -68,7 +68,7 @@ const resolveDashboardAssets = async (dashboardPublicCode) => {
         JOIN channels c ON c.public_code = wds.entity_id AND c.deleted_at IS NULL AND c.is_active = true
         JOIN devices d ON d.id = c.device_id AND d.deleted_at IS NULL AND d.is_active = true
         LEFT JOIN variables v ON v.id = CASE
-                WHEN wds.series_config->>'variableId' ~ '^\d+$'
+                WHEN wds.series_config->>'variableId' ~ '^\\d+$'
                 THEN (wds.series_config->>'variableId')::int
                 ELSE NULL
             END

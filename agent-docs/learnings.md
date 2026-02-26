@@ -546,6 +546,14 @@ await queryInterface.addColumn('users', 'avatarUrl', { type: Sequelize.STRING })
 **Regla general**: No agregar filtros de seguridad multi-tenant en queries WS cuando el recurso ya se identifica por `public_code` único y el acceso está protegido por autenticación. El aislamiento multi-tenant se gestiona mejor en la capa REST (acceso al dashboard) que en la capa WS (suscripción realtime).
 **Archivos afectados**: `src/modules/realtime/handlers/dashboardHandler.js`
 
+### Regex en template string JS pierde backslash al llegar a PostgreSQL
+**Fecha**: 2026-02-26
+**Síntoma**: La query `resolveDashboardAssets` devolvía 0 rows para todos los dashboards. El log mostraba `~ '^d+$'` en vez de `~ '^\d+$'`.
+**Causa**: En un template string de JavaScript (backticks), `\d` no es un escape reconocido por JS, así que lo convierte silenciosamente en `d`. PostgreSQL recibía `'^d+$'` (literal "d") que nunca matchea strings numéricas como `"2"` o `"3"`.
+**Solución**: Escapar el backslash: `'^\\d+$'` para que JS pase `\d` a PostgreSQL.
+**Regla general**: Siempre usar doble backslash (`\\d`, `\\w`, `\\s`) en regex PostgreSQL dentro de template strings JS. Esto aplica a cualquier query SQL con regex que se escriba en template literals.
+**Archivos afectados**: `src/modules/realtime/handlers/dashboardHandler.js`
+
 ---
 
 ## Deployment
