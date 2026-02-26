@@ -116,8 +116,18 @@
 - [x] Placeholders: notifyHandler, iotHandler, chatbotHandler
 - [x] Integración en src/index.js: MQTT init, WS mount, ruta REST /realtime
 
+### Completado ✅ (2026-02-26)
+- [x] Fase 3: Dashboard integration completa
+  - Triple filtrado (is_realtime + canal uid hex + variable mqtt_key)
+  - Campo `mqtt_key` en tabla `variables` con migración
+  - Redis last-value cache (`ec:rt:last:{channelPublicCode}:{variableId}`, TTL 5min)
+  - SNAPSHOT en reconexión (últimos valores cacheados al suscribirse)
+  - Documentación completa con diagramas de reconexión y ejemplo frontend
+  - Glosario Redis completo (`agent-docs/redis-glossary.md`)
+
 ### Pendiente (Fases Futuras)
-- [ ] Fase 3: Dashboard integration completa (filtrado avanzado de datos MQTT, transformación hex→decimal)
+- [ ] IoT mqtt_keys: popular `mqtt_key` para variables IoT cuando se definan sus payloads MQTT
+- [ ] Payloads MQTT alternativos: procesar JSONs que no contienen `rtdata` (formato por definir)
 - [ ] Fase 4: EC:NOTIFY handler completo (notificaciones push, alertas, badges)
 - [ ] Fase 5: EC:IOT handler completo (control bidireccional de equipos via MQTT publish)
 - [ ] Fase 6: EC:CHATBOT handler con streaming (integración LLM)

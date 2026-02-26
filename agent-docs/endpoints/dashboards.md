@@ -89,6 +89,7 @@
 |---------|-----------|-------------|
 | `EC:DASHBOARD:{id}:SUBSCRIBE` | Client → Server | Suscribirse a datos realtime de un dashboard |
 | `EC:DASHBOARD:{id}:SUBSCRIBED` | Server → Client | Confirmación con metadata de channels/variables |
+| `EC:DASHBOARD:{id}:SNAPSHOT` | Server → Client | Últimos valores conocidos (cache Redis, al suscribirse) |
 | `EC:DASHBOARD:{id}:DATA` | Server → Client | Datos MQTT filtrados y agrupados por channel |
 | `EC:DASHBOARD:{id}:UNSUBSCRIBE` | Client → Server | Desuscribirse |
 | `EC:DASHBOARD:{id}:UNSUBSCRIBED` | Server → Client | Confirmación de desuscripción |
@@ -1221,15 +1222,125 @@ Misma estructura que Dashboard Collaborators pero bajo la ruta `/api/v1/dashboar
 
 ## WEBSOCKET REALTIME (DASHBOARD)
 
-### Flujo completo
+### Flujo completo (conexión inicial)
 
 ```
 1. GET /api/v1/auth/realtime-token          → obtener token WS
 2. ws://host:port/ws                        → conectar WebSocket
 3. EC:SYSTEM:AUTH { token }                 → autenticar sesión
 4. EC:DASHBOARD:{id}:SUBSCRIBE              → suscribirse a dashboard
-5. EC:DASHBOARD:{id}:DATA (server→client)   → recibir datos filtrados
-6. EC:DASHBOARD:{id}:UNSUBSCRIBE            → desuscribirse
+5. EC:DASHBOARD:{id}:SUBSCRIBED             → metadata de channels/variables
+6. EC:DASHBOARD:{id}:SNAPSHOT (opcional)    → últimos valores conocidos (cache Redis)
+7. EC:DASHBOARD:{id}:DATA (continuo)        → datos MQTT filtrados en tiempo real
+8. EC:DASHBOARD:{id}:UNSUBSCRIBE            → desuscribirse
+```
+
+### Flujo de reconexión (después de desconexión/refresh)
+
+```
+  FRONTEND                              SERVIDOR                        REDIS
+  ────────                              ────────                        ─────
+      │                                     │                              │
+      │ ── 1. GET /realtime-token ────────► │                              │
+      │ ◄── token JWT (5min) ──────────────│                              │
+      │                                     │                              │
+      │ ── 2. ws://host/ws ───────────────► │                              │
+      │ ◄── connection open ───────────────│                              │
+      │                                     │                              │
+      │ ── 3. EC:SYSTEM:AUTH { token } ───► │                              │
+      │ ◄── EC:SYSTEM:AUTH_OK ─────────────│                              │
+      │                                     │                              │
+      │ ── 4. EC:DASHBOARD:{id}:SUBSCRIBE ► │                              │
+      │                                     │── resolveDashboardAssets() ──►│
+      │                                     │◄─ { devices, channels } ─────│
+      │                                     │                              │
+      │ ◄── 5. SUBSCRIBED (metadata) ──────│                              │
+      │                                     │── getCache(ec:rt:last:*) ───►│
+      │                                     │◄─ últimos valores ───────────│
+      │                                     │                              │
+      │ ◄── 6. SNAPSHOT (si hay cache) ────│                              │
+      │     (renderizar datos inmediatos)   │                              │
+      │                                     │                              │
+      │ ◄── 7. DATA (continuo, MQTT) ─────│ ──setCache(fire-and-forget)─►│
+      │     (actualizar en tiempo real)     │                              │
+      ▼                                     ▼                              ▼
+```
+
+**Notas sobre reconexión**:
+- El frontend debe re-ejecutar el flujo completo (pasos 1-4) en cada reconexión. No hay "resume" de sesión.
+- El SNAPSHOT permite que el dashboard muestre datos inmediatamente sin esperar el siguiente ciclo MQTT (~1-5 seg).
+- **Gap de datos**: Entre la desconexión y el SNAPSHOT puede haber un gap de hasta 5 minutos (TTL del cache Redis). Para datos históricos en ese gap, usar el endpoint REST `POST .../widgets/:widgetId/data`.
+- Si no hay valores cacheados (primera suscripción, o TTL expiró), el servidor no envía SNAPSHOT — el frontend simplemente espera el primer DATA.
+- El SNAPSHOT se envía asíncronamente después del SUBSCRIBED. El orden garantizado es: SUBSCRIBED primero, SNAPSHOT después (si hay datos).
+
+### Implementación frontend recomendada
+
+```javascript
+// Reconexión con backoff exponencial
+class DashboardWS {
+  constructor(dashboardId) {
+    this.dashboardId = dashboardId;
+    this.retryDelay = 1000;
+    this.maxRetryDelay = 30000;
+    this.channelMeta = []; // metadata de SUBSCRIBED
+  }
+
+  async connect() {
+    const { token } = await fetch('/api/v1/auth/realtime-token').then(r => r.json());
+    this.ws = new WebSocket(`ws://${host}/ws`);
+
+    this.ws.onopen = () => {
+      this.retryDelay = 1000; // reset backoff
+      this.ws.send(JSON.stringify({
+        type: 'EC:SYSTEM:AUTH',
+        payload: { token }
+      }));
+    };
+
+    this.ws.onmessage = (event) => {
+      const msg = JSON.parse(event.data);
+
+      if (msg.type === 'EC:SYSTEM:AUTH_OK') {
+        // Autenticado → suscribirse al dashboard
+        this.ws.send(JSON.stringify({
+          type: `EC:DASHBOARD:${this.dashboardId}:SUBSCRIBE`,
+          requestId: crypto.randomUUID()
+        }));
+      }
+
+      if (msg.type.endsWith(':SUBSCRIBED')) {
+        // Guardar metadata para mapping widget→channel
+        this.channelMeta = msg.payload.subscribedChannels;
+      }
+
+      if (msg.type.endsWith(':SNAPSHOT') || msg.type.endsWith(':DATA')) {
+        // Mismo formato de payload → misma función de renderizado
+        this.renderChannelData(msg.payload.channels || msg.payload);
+      }
+    };
+
+    this.ws.onclose = () => {
+      // Reconectar con backoff exponencial
+      setTimeout(() => this.connect(), this.retryDelay);
+      this.retryDelay = Math.min(this.retryDelay * 2, this.maxRetryDelay);
+    };
+  }
+
+  renderChannelData(channels) {
+    for (const [channelCode, data] of Object.entries(channels)) {
+      for (const meta of this.channelMeta) {
+        if (meta.id === channelCode) {
+          // Encontrar widget por pageNumber + widgetNumber
+          updateWidget(meta.pageNumber, meta.widgetNumber, {
+            variableId: meta.variableId,
+            value: data.values[String(meta.variableId)],
+            ts: data.ts
+          });
+        }
+      }
+    }
+  }
+}
 ```
 
 ### Triple filtrado de seguridad
@@ -1318,6 +1429,43 @@ Variables con `is_realtime=false` (energía, energía reactiva, costos, etc.) ti
 - Un mismo channel puede aparecer múltiples veces si distintos widgets lo usan con diferentes variables.
 - `pageNumber`, `widgetNumber`, `datasourceNumber` son orderNumbers (integers, 1-based) para que el frontend mapee qué widget renderiza qué dato.
 - No se expone `ch` (interno) — solo `id` (publicCode).
+
+### EC:DASHBOARD:{id}:SNAPSHOT
+
+**Server → Client** — Últimos valores conocidos desde Redis cache. Se envía automáticamente después del SUBSCRIBED si hay datos cacheados. Formato idéntico a DATA (sin `deviceId`).
+
+```json
+{
+  "type": "EC:DASHBOARD:DSH-NKH-NNQ:SNAPSHOT",
+  "payload": {
+    "channels": {
+      "CHN-F74-CEL": {
+        "ts": 1772071967,
+        "values": {
+          "3": 22614,
+          "7": 120.374
+        }
+      },
+      "CHN-ABC-DEF": {
+        "ts": 1772071900,
+        "values": {
+          "3": 15203
+        }
+      }
+    }
+  },
+  "timestamp": "2026-02-26T02:12:47.700Z"
+}
+```
+
+**Notas**:
+- El SNAPSHOT se envía solo si hay al menos un valor cacheado en Redis para los channels del dashboard.
+- Si no hay valores (primera conexión, o cache expiró por TTL de 5 minutos), no se envía SNAPSHOT — el frontend espera silenciosamente al primer DATA.
+- Cada channel muestra el `ts` más reciente entre todas sus variables cacheadas.
+- No incluye `deviceId` porque los valores pueden provenir de distintos momentos/devices.
+- El frontend debe tratar SNAPSHOT y DATA con la misma lógica de renderizado — el formato de `channels` es idéntico.
+- No incluye `requestId` — es un mensaje asíncrono derivado del SUBSCRIBE.
+- **Redis key**: `ec:rt:last:{channelPublicCode}:{variableId}` con TTL 300s. Valor almacenado: `{ ts, value, devicePublicCode }`.
 
 ### EC:DASHBOARD:{id}:DATA
 
@@ -1437,7 +1585,8 @@ const value = data.channels[channel.id]?.values[String(channel.variableId)];
 
 **Funciones principales**:
 - `resolveDashboardAssets(dashboardPublicCode, organizationId)`: Query SQL que resuelve dashboard → pages → widgets → dataSources → channels → devices, con JOIN a `variables` filtrado por `is_realtime=true`. Retorna `{ devices, channels }` donde cada channel incluye `mqttKey`, `variableId`, `pageNumber`, `widgetNumber`, `datasourceNumber`.
-- `processMqttForDashboards(mqttData)`: Procesa mensajes MQTT. Solo extrae `rtdata`. Para cada suscripción activa, filtra por device → canal (uid hex) → variable (mqtt_key). Construye payload agrupado por channel y lo envía por WS.
+- `processMqttForDashboards(mqttData)`: Procesa mensajes MQTT. Solo extrae `rtdata`. Para cada suscripción activa, filtra por device → canal (uid hex) → variable (mqtt_key). Construye payload agrupado por channel y lo envía por WS. Guarda último valor en Redis (fire-and-forget).
+- `sendSnapshot(ws, dashboardId, channels)`: Lee últimos valores conocidos de Redis (`ec:rt:last:*`) para todos los channels del dashboard. Si hay valores cacheados, envía mensaje SNAPSHOT al cliente. Se ejecuta asíncronamente después del SUBSCRIBED.
 - `handleSubscribe/handleUnsubscribe`: Handlers WS para suscripción/desuscripción.
 - `sweepIdleDashboardSubscriptions()`: Timer periódico que limpia suscripciones sin datos.
 

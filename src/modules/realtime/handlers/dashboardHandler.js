@@ -8,6 +8,10 @@ import sequelize from '../../../db/sql/sequelize.js';
 import { QueryTypes } from 'sequelize';
 import { config } from '../../../config/env.js';
 import logger from '../../../utils/logger.js';
+import { setCache, getCache } from '../../../db/redis/client.js';
+
+const RT_LAST_VALUE_PREFIX = 'ec:rt:last:';
+const RT_LAST_VALUE_TTL = 300;
 
 const dashboardSubscriptions = new Map();
 let idleSweepTimer = null;
@@ -204,6 +208,17 @@ const processMqttForDashboards = (mqttData) => {
         // Si no hay data relevante para este dashboard, no enviar mensaje
         if (Object.keys(channelsData).length === 0) continue;
 
+        // Cachear último valor por channel+variable en Redis (fire-and-forget)
+        for (const [channelCode, channelData] of Object.entries(channelsData)) {
+            for (const [varId, value] of Object.entries(channelData.values)) {
+                setCache(
+                    `${RT_LAST_VALUE_PREFIX}${channelCode}:${varId}`,
+                    { ts: channelData.ts, value, devicePublicCode: matchingDevice.publicCode },
+                    RT_LAST_VALUE_TTL
+                ).catch(() => {});
+            }
+        }
+
         subscription.lastDataAt = Date.now();
 
         const outMsg = {
@@ -229,6 +244,58 @@ const ensureMqttCallback = () => {
     if (mqttCallbackRegistered) return;
     onMessage('dashboard-handler', processMqttForDashboards);
     mqttCallbackRegistered = true;
+};
+
+// Lee últimos valores conocidos de Redis y envía SNAPSHOT al cliente
+const sendSnapshot = async (ws, dashboardId, channels) => {
+    if (ws.readyState !== 1 || channels.length === 0) return;
+
+    const channelsData = {};
+
+    // Leer último valor de cada channel+variable desde Redis
+    const cachePromises = channels.map(async (ch) => {
+        if (!ch.variableId || !ch.publicCode) return null;
+        const key = `${RT_LAST_VALUE_PREFIX}${ch.publicCode}:${ch.variableId}`;
+        const cached = await getCache(key);
+        if (!cached) return null;
+        return { channel: ch, cached };
+    });
+
+    const results = await Promise.all(cachePromises);
+
+    for (const result of results) {
+        if (!result) continue;
+        const { channel, cached } = result;
+
+        if (!channelsData[channel.publicCode]) {
+            channelsData[channel.publicCode] = {
+                ts: cached.ts,
+                values: {},
+            };
+        }
+
+        channelsData[channel.publicCode].values[String(channel.variableId)] = cached.value;
+        // Usar el ts más reciente si hay múltiples variables
+        if (cached.ts > channelsData[channel.publicCode].ts) {
+            channelsData[channel.publicCode].ts = cached.ts;
+        }
+    }
+
+    // Si no hay valores cacheados, no enviar SNAPSHOT (silencioso)
+    if (Object.keys(channelsData).length === 0) return;
+
+    const snapshotMsg = {
+        type: `EC:DASHBOARD:${dashboardId}:SNAPSHOT`,
+        payload: { channels: channelsData },
+        timestamp: new Date().toISOString(),
+    };
+
+    try {
+        ws.send(JSON.stringify(snapshotMsg));
+        logger.debug({ dashboardId, channelCount: Object.keys(channelsData).length }, 'Dashboard → SNAPSHOT enviado');
+    } catch (err) {
+        logger.error({ err, dashboardId }, 'Error enviando SNAPSHOT de dashboard');
+    }
 };
 
 const handleSubscribe = async (ws, message, parsed, session) => {
@@ -305,6 +372,9 @@ const handleSubscribe = async (ws, message, parsed, session) => {
         deviceCount: devices.length,
         channelCount: channels.length,
     }, 'Dashboard suscrito a datos realtime (auto-resolved desde DB)');
+
+    // Enviar SNAPSHOT con últimos valores conocidos (fire-and-forget, después del SUBSCRIBED)
+    sendSnapshot(ws, dashboardId, channels).catch(() => {});
 
     return {
         type: `EC:DASHBOARD:${dashboardId}:SUBSCRIBED`,

@@ -514,6 +514,18 @@ await queryInterface.addColumn('users', 'avatarUrl', { type: Sequelize.STRING })
   4. Las keys de `values` son `variableId` (string) — consistente con endpoint REST
 - **Archivos afectados**: `src/modules/realtime/handlers/dashboardHandler.js`
 
+### Redis last-value cache para dashboard realtime (SNAPSHOT)
+**Fecha**: 2026-02-26
+**Contexto**: Al reconectarse al WS, el frontend veía pantalla vacía hasta que llegaba el siguiente ciclo MQTT (~1-5 seg).
+**Solución**:
+- Cache fire-and-forget en Redis con key `ec:rt:last:{channelPublicCode}:{variableId}` (TTL 300s)
+- Al `handleSubscribe`, leer todos los valores cacheados y enviar mensaje `EC:DASHBOARD:{id}:SNAPSHOT`
+- El SNAPSHOT usa el mismo formato que DATA, así el frontend reutiliza la misma lógica de renderizado
+- Si no hay cache (primera vez o TTL expiró), no se envía SNAPSHOT (silencioso)
+- `setCache` es fire-and-forget (no bloquea flujo MQTT→WS), `getCache` sí se espera (solo en subscribe, una vez)
+**Archivos afectados**: `src/modules/realtime/handlers/dashboardHandler.js`
+**Regla**: Toda nueva key Redis debe declararse en `agent-docs/redis-glossary.md`
+
 ---
 
 ## Deployment
