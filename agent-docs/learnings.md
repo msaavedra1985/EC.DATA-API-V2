@@ -526,6 +526,18 @@ await queryInterface.addColumn('users', 'avatarUrl', { type: Sequelize.STRING })
 **Archivos afectados**: `src/modules/realtime/handlers/dashboardHandler.js`
 **Regla**: Toda nueva key Redis debe declararse en `agent-docs/redis-glossary.md`
 
+### Soft delete + unique constraints = conflict silencioso
+**Fecha**: 2026-02-26
+**Síntoma**: Error 500 al crear widget: `duplicate key value violates unique constraint "widgets_page_order_number_uk"`, a pesar de haber eliminado el widget anterior.
+**Causa**: Los unique constraints `(dashboard_page_id, order_number)` no excluían registros con `deleted_at IS NOT NULL`. Con `paranoid: true` (soft delete global), los registros "eliminados" seguían bloqueando la creación de nuevos registros con el mismo `order_number`.
+**Solución**: Reemplazar los 3 constraints por **partial unique indexes** con `WHERE deleted_at IS NULL`:
+- `dashboard_pages_dashboard_order_number_uk`
+- `widgets_page_order_number_uk`
+- `widget_data_sources_widget_order_number_uk`
+**Regla general**: Toda tabla con `paranoid: true` que tenga unique constraints debe usar partial indexes (`WHERE deleted_at IS NULL`), no constraints planos.
+**Migración**: `20260226180000-fix-dashboard-order-number-constraints.cjs`
+**Archivos afectados**: Solo migración (los modelos Sequelize no declaran uniqueness inline para estos campos)
+
 ---
 
 ## Deployment
