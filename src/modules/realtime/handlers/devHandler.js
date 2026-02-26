@@ -1,9 +1,8 @@
 // Handler para mensajes EC:DEV:*
-// Herramientas de desarrollo/testing - solo disponible en entorno development
+// Herramientas de debug/testing — disponible en todos los entornos
 // Maneja: MQTT:SUBSCRIBE (suscripción directa a device por UUID), MQTT:UNSUBSCRIBE, MQTT:STATUS
 // EXCEPCIÓN DE SEGURIDAD: Este servicio expone UUIDs internos intencionalmente
-// para debugging. Está protegido por: 1) solo environment=development, 2) solo roles admin+,
-// 3) no se registra como handler en producción (wsServer.js)
+// para debugging. Está protegido por roles admin+ (superadmin, admin, system-admin)
 import { subscribeToDevice, unsubscribeFromDevice, onMessage, removeMessageCallback, getMqttStatus } from '../mqtt/client.js';
 import { addSubscription, removeSubscription } from '../services/sessionService.js';
 import { config } from '../../../config/env.js';
@@ -226,19 +225,6 @@ const handleMqttStatus = () => {
 };
 
 export const handleDevMessage = (ws, message, parsed, session) => {
-    if (config.env !== 'development') {
-        return {
-            type: 'EC:DEV:ERROR',
-            payload: {
-                code: 'DEV_ONLY',
-                message: 'DEV service is only available in development environment',
-                fatal: false,
-            },
-            timestamp: new Date().toISOString(),
-            requestId: message.requestId,
-        };
-    }
-
     const role = session?.role;
     if (!['superadmin', 'admin', 'system-admin'].includes(role)) {
         return {

@@ -249,10 +249,8 @@ export const initializeWebSocket = (httpServer) => {
     registerHandler('IOT', handleIotMessage);
     registerHandler('CHATBOT', handleChatbotMessage);
 
-    if (config.env === 'development') {
-        registerHandler('DEV', handleDevMessage);
-        logger.info('🔧 Servicio EC:DEV registrado (solo development)');
-    }
+    registerHandler('DEV', handleDevMessage);
+    logger.info('🔧 Servicio EC:DEV registrado (debug MQTT, requiere rol admin+)');
 
     httpServer.on('upgrade', (request, socket, head) => {
         const pathname = new URL(request.url, `http://${request.headers.host}`).pathname;

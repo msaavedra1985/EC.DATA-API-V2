@@ -1593,3 +1593,264 @@ const value = data.channels[channel.id]?.values[String(channel.variableId)];
 **Helpers**:
 - `intToHex(num)`: Convierte número de canal a formato hex de 2 bytes (`5` → `00:05`).
 - `extractChannelFromUid(uid)`: Extrae número de canal desde uid MQTT (`EC:...:00:05` → `5`).
+
+---
+
+## WEBSOCKET DEBUG (EC:DEV — MQTT CRUDO)
+
+Handler para suscripción directa a un device por UUID. Reenvía el payload MQTT completo sin filtrar. Disponible en todos los entornos, requiere rol admin+.
+
+**Archivo**: `src/modules/realtime/handlers/devHandler.js`
+
+### Comparación: Debug vs Dashboard
+
+| Aspecto | Debug (`EC:DEV`) | Dashboard (`EC:DASHBOARD`) |
+|---------|-----------------|---------------------------|
+| **Propósito** | Testing / diagnóstico MQTT | Visualización en widgets |
+| **Suscripción por** | UUID del device | publicCode del dashboard |
+| **Payload** | MQTT crudo completo (sin filtrar) | Filtrado por canal + variable + is_realtime |
+| **Roles requeridos** | admin, superadmin, system-admin | Cualquier usuario autenticado |
+| **Tipo de dato** | Todo lo que llega por MQTT | Solo variables con `is_realtime=true` y `mqtt_key` |
+| **SNAPSHOT** | No | Sí (últimos valores de Redis al suscribirse) |
+| **Campo `source`** | `"debug"` | `"dashboard"` (o ausente) |
+| **Disponibilidad** | Todos los entornos | Todos los entornos |
+
+### Flujo completo (debug)
+
+```
+1. GET /api/v1/auth/realtime-token          → obtener token WS
+2. ws://host:port/ws                        → conectar WebSocket
+3. EC:SYSTEM:AUTH { token }                 → autenticar sesión
+4. EC:DEV:MQTT:SUBSCRIBE { deviceUuid }     → suscribirse a device
+5. EC:DEV:MQTT:DATA (server→client)         → datos MQTT crudos
+6. EC:DEV:MQTT:UNSUBSCRIBE { deviceUuid }   → desuscribirse
+```
+
+### EC:DEV:MQTT:SUBSCRIBE
+
+**Client → Server** — Suscripción directa a un device por UUID para recibir datos MQTT sin filtrar.
+
+```json
+{
+  "type": "EC:DEV:MQTT:SUBSCRIBE",
+  "payload": {
+    "deviceUuid": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+    "source": "debug"
+  },
+  "requestId": "req_123",
+  "timestamp": "2026-02-26T15:30:00.000Z"
+}
+```
+
+### EC:DEV:MQTT:SUBSCRIBED
+
+**Server → Client** — Confirmación con estado de los brokers MQTT.
+
+```json
+{
+  "type": "EC:DEV:MQTT:SUBSCRIBED",
+  "payload": {
+    "deviceUuid": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+    "message": "Subscribed to MQTT data for device xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx. Real-time data will arrive as EC:DEV:MQTT:DATA messages.",
+    "brokers": [
+      { "index": 0, "connected": true },
+      { "index": 1, "connected": true },
+      { "index": 2, "connected": true }
+    ]
+  },
+  "timestamp": "2026-02-26T15:30:00.100Z",
+  "requestId": "req_123"
+}
+```
+
+### EC:DEV:MQTT:DATA
+
+**Server → Client** — Payload MQTT completo, sin ningún filtrado. Se recibe cada vez que el device publica por MQTT.
+
+```json
+{
+  "type": "EC:DEV:MQTT:DATA",
+  "payload": {
+    "deviceUuid": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+    "topic": "Solution/some/level/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx/data",
+    "brokerIndex": 0,
+    "data": {
+      "rtdata": [
+        {
+          "uid": "EC:C3:8A:60:43:CC:00:05",
+          "canal": 5,
+          "ts": "2026-02-26T15:30:01.000Z",
+          "P": 22614,
+          "V": 120.374,
+          "I": 3.5,
+          "PF": 0.95,
+          "S": 23804,
+          "F": 60.01
+        }
+      ]
+    },
+    "raw": true
+  },
+  "timestamp": "2026-02-26T15:30:01.050Z"
+}
+```
+
+**Notas**:
+- `data` contiene el JSON completo tal como llega por MQTT — incluye `rtdata` y cualquier otra key que traiga el payload.
+- `topic` es el topic MQTT original (útil para diagnóstico).
+- `brokerIndex` indica de cuál broker MQTT llegó el mensaje (0, 1, o 2).
+- `raw: true` indica que el payload fue parseado como JSON exitosamente.
+- No se aplica ningún filtrado por canal, variable, ni `is_realtime`.
+
+### EC:DEV:MQTT:UNSUBSCRIBE
+
+**Client → Server**
+
+```json
+{
+  "type": "EC:DEV:MQTT:UNSUBSCRIBE",
+  "payload": {
+    "deviceUuid": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+    "source": "debug"
+  },
+  "requestId": "req_124",
+  "timestamp": "2026-02-26T15:35:00.000Z"
+}
+```
+
+### EC:DEV:MQTT:UNSUBSCRIBED
+
+**Server → Client**
+
+```json
+{
+  "type": "EC:DEV:MQTT:UNSUBSCRIBED",
+  "payload": {
+    "deviceUuid": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+    "message": "Unsubscribed from MQTT data for device xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  },
+  "timestamp": "2026-02-26T15:35:00.100Z",
+  "requestId": "req_124"
+}
+```
+
+### EC:DEV:MQTT:STATUS
+
+**Client → Server** — Consultar estado de conexiones MQTT y suscripciones activas.
+
+```json
+{
+  "type": "EC:DEV:MQTT:STATUS",
+  "requestId": "req_125"
+}
+```
+
+**Server → Client**
+
+```json
+{
+  "type": "EC:DEV:MQTT:STATUS",
+  "payload": {
+    "mqtt": {
+      "brokers": [
+        { "index": 0, "connected": true, "url": "mqtt://broker1:1883" }
+      ],
+      "activeTopics": ["Solution/+/+/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx/#"]
+    },
+    "devSubscriptions": [
+      {
+        "deviceUuid": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+        "sessionId": "sess_abc",
+        "subscribedAt": "2026-02-26T15:30:00.000Z"
+      }
+    ]
+  },
+  "timestamp": "2026-02-26T15:35:00.100Z"
+}
+```
+
+### EC:DEV:MQTT:IDLE_TIMEOUT
+
+**Server → Client** — Suscripción auto-removida por inactividad.
+
+```json
+{
+  "type": "EC:DEV:MQTT:IDLE_TIMEOUT",
+  "payload": {
+    "deviceUuid": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+    "idleSeconds": 300,
+    "message": "Subscription auto-removed: no data received for 300s"
+  },
+  "timestamp": "2026-02-26T15:35:00.000Z"
+}
+```
+
+### EC:DEV:ERROR
+
+**Server → Client**
+
+```json
+{
+  "type": "EC:DEV:ERROR",
+  "payload": {
+    "code": "FORBIDDEN",
+    "message": "DEV service requires admin or superadmin role",
+    "fatal": false
+  },
+  "timestamp": "2026-02-26T15:30:00.000Z",
+  "requestId": "req_123"
+}
+```
+
+**Códigos de error**:
+| code | fatal | Descripción |
+|------|-------|-------------|
+| FORBIDDEN | false | Rol insuficiente (requiere admin, superadmin, o system-admin) |
+| INVALID_PAYLOAD | false | Falta `deviceUuid` en el payload |
+| INVALID_UUID | false | `deviceUuid` no tiene formato UUID válido |
+| NOT_SUBSCRIBED | false | Intentó desuscribirse de un device al que no estaba suscrito |
+| ALREADY_SUBSCRIBED | false | Ya está suscrito a ese device |
+
+### Campo `source` en mensajes WS
+
+El campo `source` en el payload es informativo — indica desde qué sección del frontend se originó la suscripción:
+
+- `"debug"`: Sección de testing/diagnóstico → usa `EC:DEV:MQTT:*`
+- `"dashboard"`: Dashboard de visualización → usa `EC:DASHBOARD:{id}:*`
+
+El backend no usa `source` para routing (eso se determina por el tipo de mensaje `EC:DEV` vs `EC:DASHBOARD`). El campo queda loggeado para trazabilidad.
+
+### Ejemplo: suscripción desde dashboard con `source`
+
+```json
+{
+  "type": "EC:DASHBOARD:DSH-NKH-NNQ:SUBSCRIBE",
+  "payload": {
+    "source": "dashboard"
+  },
+  "requestId": "req-001",
+  "timestamp": "2026-02-26T15:30:00.000Z"
+}
+```
+
+```json
+{
+  "type": "EC:DASHBOARD:DSH-NKH-NNQ:UNSUBSCRIBE",
+  "payload": {
+    "source": "dashboard"
+  },
+  "requestId": "req-002",
+  "timestamp": "2026-02-26T15:35:00.000Z"
+}
+```
+
+### Arquitectura interna (devHandler)
+
+**Archivo**: `src/modules/realtime/handlers/devHandler.js`
+
+**Funciones principales**:
+- `processMqttForDev(mqttData)`: Recibe todos los mensajes MQTT y los reenvía sin filtrar a las suscripciones activas que coincidan por `deviceUuid`.
+- `handleMqttSubscribe/handleMqttUnsubscribe`: Handlers para suscripción/desuscripción.
+- `handleMqttStatus`: Retorna estado de brokers MQTT y suscripciones activas.
+- `sweepIdleDevSubscriptions()`: Timer periódico que limpia suscripciones sin datos.
+- `cleanupDevSubscriptions(sessionId)`: Limpia suscripciones al desconectarse el WS.

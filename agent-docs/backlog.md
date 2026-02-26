@@ -124,6 +124,10 @@
   - SNAPSHOT en reconexión (últimos valores cacheados al suscribirse)
   - Documentación completa con diagramas de reconexión y ejemplo frontend
   - Glosario Redis completo (`agent-docs/redis-glossary.md`)
+- [x] Handler EC:DEV habilitado en todos los entornos (antes solo development)
+  - Datos MQTT crudos sin filtrar via `EC:DEV:MQTT:SUBSCRIBE`
+  - Protegido por roles admin+ (superadmin, admin, system-admin)
+  - Documentación completa con comparación debug vs dashboard
 
 ### Pendiente (Fases Futuras)
 - [ ] IoT mqtt_keys: popular `mqtt_key` para variables IoT cuando se definan sus payloads MQTT

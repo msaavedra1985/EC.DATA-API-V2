@@ -116,11 +116,15 @@ Infraestructura WebSocket + MQTT para telemetría en tiempo real:
   - `services/tokenService.js` - Tokens efímeros (5min TTL, single-use, Redis)
   - `handlers/systemHandler.js` - EC:SYSTEM (AUTH, PING/PONG, sesiones)
   - `handlers/dashboardHandler.js` - EC:DASHBOARD (SUBSCRIBE/UNSUBSCRIBE, datos MQTT→WS)
+  - `handlers/devHandler.js` - EC:DEV (debug MQTT crudo, roles admin+, todos los entornos)
   - `handlers/notifyHandler.js` - EC:NOTIFY (placeholder Fase 4)
   - `handlers/iotHandler.js` - EC:IOT (placeholder Fase 5)
   - `handlers/chatbotHandler.js` - EC:CHATBOT (placeholder Fase 6)
 - **Protocolo**: Mensajes EC:* con formato `{type, payload, timestamp, requestId}`
+- **Dos modos de suscripción MQTT**:
+  - `EC:DASHBOARD:{id}:SUBSCRIBE` → datos filtrados por canal/variable/is_realtime (para widgets)
+  - `EC:DEV:MQTT:SUBSCRIBE` → datos MQTT crudos sin filtrar (para testing/debug, requiere rol admin+)
 - **Seguridad**: Token efímero single-use para conexión WS, RBAC por mensaje, rate limiting (60 msgs/min)
 - **MQTT**: 3 brokers como load balancers, topic pattern `Solution/+/+/{deviceUUID}/#`, deduplicación 5s
 - **Endpoint REST**: `POST /api/v1/realtime/token` → genera token efímero para conexión WS
-- **Fases futuras**: Fase 3 (Dashboard completo), Fase 4 (Notificaciones), Fase 5 (IoT), Fase 6 (Chatbot)
+- **Fases futuras**: Fase 4 (Notificaciones), Fase 5 (IoT), Fase 6 (Chatbot)
