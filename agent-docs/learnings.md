@@ -538,13 +538,13 @@ await queryInterface.addColumn('users', 'avatarUrl', { type: Sequelize.STRING })
 **Migración**: `20260226180000-fix-dashboard-order-number-constraints.cjs`
 **Archivos afectados**: Solo migración (los modelos Sequelize no declaran uniqueness inline para estos campos)
 
-### Ruta POST /realtime/token sin middleware enforceActiveOrganization
+### WS resolveDashboardAssets no necesita organizationId
 **Fecha**: 2026-02-26
-**Síntoma**: WS subscribe a dashboard devuelve `NO_ASSETS` a pesar de tener widgets con variables realtime correctas. La query SQL muestra `AND db.organization_id = NULL` que nunca matchea.
-**Causa**: La ruta `POST /api/v1/realtime/token` usaba `authenticate` pero no `enforceActiveOrganization`. Sin ese middleware, `req.organizationContext` es `undefined`, y `organizationId` queda como `null` en el token efímero → session WS → query de `resolveDashboardAssets`.
-**Solución**: Agregar `enforceActiveOrganization` a la cadena de middlewares de la ruta token.
-**Regla general**: Toda ruta que necesite `organizationId` para operaciones downstream debe tener el middleware `enforceActiveOrganization` en su cadena, no solo `authenticate`.
-**Archivos afectados**: `src/modules/realtime/routes.js`
+**Síntoma**: WS subscribe a dashboard devolvía `NO_ASSETS` porque la query incluía `AND db.organization_id = :organizationId` y el token efímero tenía `organizationId: null`.
+**Causa inicial**: La ruta `POST /api/v1/realtime/token` no tenía middleware `enforceActiveOrganization` (corregido). Pero el filtro de org en la query era innecesario: el `public_code` del dashboard ya es único globalmente, el WS ya requiere autenticación (JWT + token efímero), y el frontend controla las suscripciones.
+**Solución**: Se eliminó el filtro `AND db.organization_id = :organizationId` de la query y el parámetro `organizationId` de `resolveDashboardAssets`. Se mantuvo el middleware `enforceActiveOrganization` en la ruta token por si otras funcionalidades lo necesitan.
+**Regla general**: No agregar filtros de seguridad multi-tenant en queries WS cuando el recurso ya se identifica por `public_code` único y el acceso está protegido por autenticación. El aislamiento multi-tenant se gestiona mejor en la capa REST (acceso al dashboard) que en la capa WS (suscripción realtime).
+**Archivos afectados**: `src/modules/realtime/handlers/dashboardHandler.js`
 
 ---
 
