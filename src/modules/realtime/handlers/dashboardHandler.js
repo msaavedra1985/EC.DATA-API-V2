@@ -41,6 +41,11 @@ const extractChannelFromUid = (uid) => {
 // Solo incluye variables con is_realtime=true y mqtt_key definido
 // via: dashboard → pages → widgets → widget_data_sources → channels → devices → variables
 const resolveDashboardAssets = async (dashboardPublicCode, organizationId) => {
+    if (!organizationId) {
+        logger.warn({ dashboardPublicCode }, 'resolveDashboardAssets: organizationId es null/undefined — session WS sin org context');
+        return { devices: [], channels: [], missingOrg: true };
+    }
+
     const rows = await sequelize.query(`
         SELECT DISTINCT
             c.id AS channel_id,
@@ -315,7 +320,20 @@ const handleSubscribe = async (ws, message, parsed, session) => {
     }
 
     // Resolver devices y channels desde la DB (solo variables con is_realtime=true)
-    const { devices, channels } = await resolveDashboardAssets(dashboardId, session.organizationId);
+    const { devices, channels, missingOrg } = await resolveDashboardAssets(dashboardId, session.organizationId);
+
+    if (missingOrg) {
+        return {
+            type: 'EC:DASHBOARD:ERROR',
+            payload: {
+                code: 'MISSING_ORG',
+                message: 'Session has no organization context. Please refresh the page to get a new WebSocket token.',
+                fatal: true,
+            },
+            timestamp: new Date().toISOString(),
+            requestId: message.requestId,
+        };
+    }
 
     if (devices.length === 0) {
         return {
