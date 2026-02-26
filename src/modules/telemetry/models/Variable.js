@@ -106,6 +106,12 @@ const Variable = sequelize.define('Variable', {
         defaultValue: false,
         comment: 'Indica si es la variable por defecto del tipo de medición'
     },
+    mqttKey: {
+        type: DataTypes.STRING(50),
+        allowNull: true,
+        defaultValue: null,
+        comment: 'Key exacta como llega en el payload MQTT (ej: PF, E, P). NULL si no aplica para realtime'
+    },
     isActive: {
         type: DataTypes.BOOLEAN,
         allowNull: false,

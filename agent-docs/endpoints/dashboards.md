@@ -1,6 +1,6 @@
 # Dashboards Endpoints
 
-> **Última actualización**: 2026-02-25
+> **Última actualización**: 2026-02-26
 > 
 > **IMPORTANTE**: Este archivo DEBE actualizarse cuando se modifique cualquier endpoint del módulo.
 
@@ -83,6 +83,17 @@
 | POST | `/api/v1/dashboard-groups/:id/collaborators` | Agregar colaborador |
 | PATCH | `/api/v1/dashboard-groups/:id/collaborators/:collaboratorId` | Actualizar rol |
 | DELETE | `/api/v1/dashboard-groups/:id/collaborators/:collaboratorId` | Eliminar colaborador |
+
+### WebSocket Realtime
+| Mensaje | Dirección | Descripción |
+|---------|-----------|-------------|
+| `EC:DASHBOARD:{id}:SUBSCRIBE` | Client → Server | Suscribirse a datos realtime de un dashboard |
+| `EC:DASHBOARD:{id}:SUBSCRIBED` | Server → Client | Confirmación con metadata de channels/variables |
+| `EC:DASHBOARD:{id}:DATA` | Server → Client | Datos MQTT filtrados y agrupados por channel |
+| `EC:DASHBOARD:{id}:UNSUBSCRIBE` | Client → Server | Desuscribirse |
+| `EC:DASHBOARD:{id}:UNSUBSCRIBED` | Server → Client | Confirmación de desuscripción |
+| `EC:DASHBOARD:{id}:IDLE_TIMEOUT` | Server → Client | Suscripción auto-removida por inactividad |
+| `EC:DASHBOARD:ERROR` | Server → Client | Error en operación |
 
 ---
 
@@ -1205,3 +1216,231 @@ Misma estructura que Dashboard Collaborators pero bajo la ruta `/api/v1/dashboar
 | POST | `/:id/collaborators` | `{ "userId": "USR-X", "role": "editor" }` |
 | PATCH | `/:id/collaborators/:collaboratorId` | `{ "role": "viewer" }` |
 | DELETE | `/:id/collaborators/:collaboratorId` | - |
+
+---
+
+## WEBSOCKET REALTIME (DASHBOARD)
+
+### Flujo completo
+
+```
+1. GET /api/v1/auth/realtime-token          → obtener token WS
+2. ws://host:port/ws                        → conectar WebSocket
+3. EC:SYSTEM:AUTH { token }                 → autenticar sesión
+4. EC:DASHBOARD:{id}:SUBSCRIBE              → suscribirse a dashboard
+5. EC:DASHBOARD:{id}:DATA (server→client)   → recibir datos filtrados
+6. EC:DASHBOARD:{id}:UNSUBSCRIBE            → desuscribirse
+```
+
+### Triple filtrado de seguridad
+
+Los datos MQTT pasan por 3 filtros antes de llegar al frontend:
+
+1. **Guard `is_realtime=true`**: Solo variables marcadas como realtime en la DB participan en WS. Variables acumuladoras (energía, energía reactiva, etc.) se excluyen silenciosamente — no generan error, simplemente no aplican para datos instantáneos.
+
+2. **Filtro por canal (ch/uid)**: Solo se reenvían datos de canales que están configurados como data sources en el dashboard. El uid MQTT (`EC:C3:8A:60:43:CC:00:05`) contiene el número de canal en los últimos 2 bytes hex (`00:05` = canal 5). Se compara contra `channels.ch` de la DB.
+
+3. **Filtro por variable (mqtt_key)**: Solo se extrae el valor específico que pidió el widget via `seriesConfig.variableId`. Por ejemplo, si un widget pide potencia (variableId=3, mqtt_key=`P`), solo se envía el valor `P` del payload, no voltaje, corriente, ni ningún otro valor.
+
+### Campo `mqtt_key` en tabla `variables`
+
+La tabla `variables` tiene un campo `mqtt_key VARCHAR(50)` que mapea la key exacta como llega en el payload MQTT. Esto es necesario porque `column_name.toUpperCase()` no siempre coincide con la key MQTT (ej: `column_name=fp` pero en MQTT llega como `PF`).
+
+**Mapeo actual (variables eléctricas con `is_realtime=true`)**:
+
+| id | code | column_name | mqtt_key | is_realtime |
+|----|------|-------------|----------|-------------|
+| 3  | ee_power | p | P | true |
+| 5  | ee_power_factor | fp | PF | true |
+| 7  | ee_voltage_ln | v | V | true |
+| 8  | ee_current | i | I | true |
+| 9  | ee_apparent_power | s | S | true |
+| 10 | ee_voltage_ll | u | U | true |
+| 13 | ee_harmonic_distortion | d | D | true |
+| 16 | ee_reactive_power | q | Q | true |
+| 19 | ee_frequency | f | F | true |
+
+Variables con `is_realtime=false` (energía, energía reactiva, costos, etc.) tienen `mqtt_key=NULL` y no participan en WS.
+
+### EC:DASHBOARD:{id}:SUBSCRIBE
+
+**Client → Server**
+
+```json
+{
+  "type": "EC:DASHBOARD:DSH-NKH-NNQ:SUBSCRIBE",
+  "requestId": "req-001"
+}
+```
+
+### EC:DASHBOARD:{id}:SUBSCRIBED
+
+**Server → Client** — Confirmación con metadata completa para mapping en frontend.
+
+```json
+{
+  "type": "EC:DASHBOARD:DSH-NKH-NNQ:SUBSCRIBED",
+  "payload": {
+    "dashboardId": "DSH-NKH-NNQ",
+    "subscribedDevices": ["DEV-X7K-QWR"],
+    "subscribedChannels": [
+      {
+        "id": "CHN-F74-CEL",
+        "name": "Coffe Shop y Sport Bar",
+        "deviceId": "DEV-X7K-QWR",
+        "variableId": 3,
+        "measurementTypeId": 1,
+        "label": "Coffe Shop",
+        "pageNumber": 1,
+        "widgetNumber": 1,
+        "datasourceNumber": 1
+      },
+      {
+        "id": "CHN-F74-CEL",
+        "name": "Coffe Shop y Sport Bar",
+        "deviceId": "DEV-X7K-QWR",
+        "variableId": 7,
+        "measurementTypeId": 1,
+        "label": "Coffe Shop Voltaje",
+        "pageNumber": 1,
+        "widgetNumber": 2,
+        "datasourceNumber": 1
+      }
+    ]
+  },
+  "timestamp": "2026-02-26T02:12:47.664Z",
+  "requestId": "req-001"
+}
+```
+
+**Notas**:
+- `subscribedChannels` solo incluye entries con variables `is_realtime=true`. Si un widget pide energía (variable 2, `is_realtime=false`), ese data source no aparece aquí — el frontend sabe que no habrá datos WS para ese widget.
+- Un mismo channel puede aparecer múltiples veces si distintos widgets lo usan con diferentes variables.
+- `pageNumber`, `widgetNumber`, `datasourceNumber` son orderNumbers (integers, 1-based) para que el frontend mapee qué widget renderiza qué dato.
+- No se expone `ch` (interno) — solo `id` (publicCode).
+
+### EC:DASHBOARD:{id}:DATA
+
+**Server → Client** — Datos MQTT filtrados, agrupados por channel. Se envía un mensaje por cada device que reporta.
+
+```json
+{
+  "type": "EC:DASHBOARD:DSH-NKH-NNQ:DATA",
+  "payload": {
+    "deviceId": "DEV-X7K-QWR",
+    "channels": {
+      "CHN-F74-CEL": {
+        "ts": 1772071967,
+        "values": {
+          "3": 22614,
+          "7": 120.374
+        }
+      },
+      "CHN-ABC-DEF": {
+        "ts": 1772071967,
+        "values": {
+          "3": 15203
+        }
+      }
+    }
+  },
+  "timestamp": "2026-02-26T02:12:47.664Z"
+}
+```
+
+**Notas**:
+- `channels` es un objeto donde cada key es el publicCode del canal.
+- `ts` es UTC epoch seconds — el frontend convierte a timezone local.
+- `values` tiene como keys el `variableId` (string), consistente con el endpoint REST `POST .../widgets/:widgetId/data`.
+- Solo aparecen values de variables que el widget pidió Y que tienen `is_realtime=true` Y cuya mqtt_key tiene un valor en el payload MQTT.
+- Si un canal matchea pero ninguna variable tiene valor en ese instante → el canal no aparece (silencioso).
+
+**Frontend mapping**: Para renderizar datos en un widget:
+```javascript
+// subscribedChannels[i] da: { id: "CHN-xxx", variableId: 3, pageNumber: 1, widgetNumber: 1 }
+// DATA payload da: channels["CHN-xxx"].values["3"] = 22614
+
+const channel = subscribedChannels.find(ch => 
+  ch.pageNumber === activePage && ch.widgetNumber === widgetId
+);
+const value = data.channels[channel.id]?.values[String(channel.variableId)];
+```
+
+### EC:DASHBOARD:{id}:UNSUBSCRIBE
+
+**Client → Server**
+
+```json
+{
+  "type": "EC:DASHBOARD:DSH-NKH-NNQ:UNSUBSCRIBE",
+  "requestId": "req-002"
+}
+```
+
+### EC:DASHBOARD:{id}:UNSUBSCRIBED
+
+**Server → Client**
+
+```json
+{
+  "type": "EC:DASHBOARD:DSH-NKH-NNQ:UNSUBSCRIBED",
+  "payload": { "dashboardId": "DSH-NKH-NNQ" },
+  "timestamp": "2026-02-26T02:12:50.123Z",
+  "requestId": "req-002"
+}
+```
+
+### EC:DASHBOARD:{id}:IDLE_TIMEOUT
+
+**Server → Client** — Suscripción auto-removida porque no llegaron datos MQTT durante el período configurado.
+
+```json
+{
+  "type": "EC:DASHBOARD:DSH-NKH-NNQ:IDLE_TIMEOUT",
+  "payload": {
+    "dashboardId": "DSH-NKH-NNQ",
+    "idleSeconds": 300,
+    "message": "Subscription auto-removed: no data received for 300s"
+  },
+  "timestamp": "2026-02-26T02:17:47.664Z"
+}
+```
+
+### EC:DASHBOARD:ERROR
+
+**Server → Client** — Error en operación.
+
+```json
+{
+  "type": "EC:DASHBOARD:ERROR",
+  "payload": {
+    "code": "NO_ASSETS",
+    "message": "No active devices/channels with realtime variables found for this dashboard.",
+    "fatal": false
+  },
+  "timestamp": "2026-02-26T02:12:47.664Z",
+  "requestId": "req-001"
+}
+```
+
+**Códigos de error**:
+| code | fatal | Descripción |
+|------|-------|-------------|
+| AUTH_REQUIRED | true | No se envió EC:SYSTEM:AUTH antes |
+| INVALID_MESSAGE | false | Falta dashboardId en el message type |
+| NO_ASSETS | false | Dashboard sin devices/channels con variables realtime |
+| SUBSCRIPTION_LIMIT | false | Máximo de suscripciones simultáneas alcanzado |
+
+### Arquitectura interna
+
+**Archivo**: `src/modules/realtime/handlers/dashboardHandler.js`
+
+**Funciones principales**:
+- `resolveDashboardAssets(dashboardPublicCode, organizationId)`: Query SQL que resuelve dashboard → pages → widgets → dataSources → channels → devices, con JOIN a `variables` filtrado por `is_realtime=true`. Retorna `{ devices, channels }` donde cada channel incluye `mqttKey`, `variableId`, `pageNumber`, `widgetNumber`, `datasourceNumber`.
+- `processMqttForDashboards(mqttData)`: Procesa mensajes MQTT. Solo extrae `rtdata`. Para cada suscripción activa, filtra por device → canal (uid hex) → variable (mqtt_key). Construye payload agrupado por channel y lo envía por WS.
+- `handleSubscribe/handleUnsubscribe`: Handlers WS para suscripción/desuscripción.
+- `sweepIdleDashboardSubscriptions()`: Timer periódico que limpia suscripciones sin datos.
+
+**Helpers**:
+- `intToHex(num)`: Convierte número de canal a formato hex de 2 bytes (`5` → `00:05`).
+- `extractChannelFromUid(uid)`: Extrae número de canal desde uid MQTT (`EC:...:00:05` → `5`).

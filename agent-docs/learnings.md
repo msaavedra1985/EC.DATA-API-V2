@@ -493,6 +493,27 @@ await queryInterface.addColumn('users', 'avatarUrl', { type: Sequelize.STRING })
 - **Archivos**: `src/modules/telemetry/repositories/metadataRepository.js`, `src/modules/dashboards/services.js`
 - **Regla**: Canales IoT → `channel_variables`. Canales eléctricos → fallback a tabla `variables` global por `measurement_type_id`.
 
+### mqtt_key necesario para mapeo MQTT ↔ variable
+- **Fecha**: 2026-02-26
+- **Síntoma**: El WS dashboard enviaba datos usando `column_name.toUpperCase()` como key para buscar en el payload MQTT, pero `fp.toUpperCase() = FP` mientras en MQTT llega como `PF`.
+- **Causa**: Los nombres de columna en Cassandra (`column_name`) no siempre coinciden con las keys del payload MQTT (`rtdata[].PF`). El mapeo no es una simple transformación de case.
+- **Solución**:
+  - Agregar campo `mqtt_key VARCHAR(50)` nullable a tabla `variables`
+  - Popular explícitamente para cada variable eléctrica con `is_realtime=true` (P, PF, V, I, S, U, D, Q, F)
+  - Dejar NULL para variables no-realtime y para IoT (pendiente definir sus payloads)
+  - Migración: `20260226100000-add-mqtt-key-to-variables.cjs`
+- **Archivos afectados**: `src/db/migrations/20260226100000-add-mqtt-key-to-variables.cjs`, `src/modules/telemetry/models/Variable.js`, `src/modules/realtime/handlers/dashboardHandler.js`
+
+### WS Dashboard: triple filtrado por is_realtime, canal y variable
+- **Fecha**: 2026-02-26
+- **Contexto**: El handler MQTT anterior reenviaba datos sin filtrar adecuadamente — pasaba payloads completos o usaba `series_config.variables` (que no existía en la configuración actual de data sources).
+- **Cambios**:
+  1. `resolveDashboardAssets` ahora hace JOIN a `variables` con guard `is_realtime=true`, trayendo `mqtt_key` y `variable_id` por cada data source
+  2. `processMqttForDashboards` solo procesa `rtdata`, filtra por uid hex (canal), y extrae solo la `mqtt_key` solicitada
+  3. Formato de salida agrupado por channel: `{ channels: { "CHN-xxx": { ts, values: { "3": value } } } }`
+  4. Las keys de `values` son `variableId` (string) — consistente con endpoint REST
+- **Archivos afectados**: `src/modules/realtime/handlers/dashboardHandler.js`
+
 ---
 
 ## Deployment

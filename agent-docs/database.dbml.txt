@@ -1,4 +1,4 @@
-// Database Schema - Generated on 2026-02-23T21:18:58.680Z
+// Database Schema - Generated on 2026-02-26T02:40:36.959Z
 // Project: EC.DATA API - Enterprise REST API
 // Use this file at https://dbdiagram.io to visualize the schema
 
@@ -223,15 +223,17 @@ Table dashboard_groups {
 
 Table dashboard_pages {
   id uuid [pk, not null] // UUID v7 - clave primaria time-ordered
-  dashboard_id uuid [not null] // FK a dashboards - dashboard padre
-  name varchar(200) [not null] // Nombre de la pestaña (ej: Energía, Clima)
+  dashboard_id uuid [unique, not null] // FK a dashboards - dashboard padre
+  name varchar(200) // Nombre de la pestaña (ej: Energía, Clima)
   order_index integer [not null] // Orden de la pestaña dentro del dashboard
   created_at timestamptz [not null]
   updated_at timestamptz [not null]
   deleted_at timestamptz
+  order_number integer [unique, not null] // Order number for pages within a dashboard (set by app logic)
 
   Indexes {
     (dashboard_id) [name: 'dashboard_pages_dashboard_id_idx']
+    (dashboard_id, order_number) [name: 'dashboard_pages_dashboard_order_number_uk', unique]
     (dashboard_id, order_index) [name: 'dashboard_pages_order_idx']
   }
 }
@@ -256,6 +258,8 @@ Table dashboards {
   is_home boolean [not null, default: false] // Si este dashboard es el home del usuario en la organización
   settings jsonb [not null] // Configuración extensible del dashboard (forceK, backgroundImage, etc.)
   template_id uuid // Referencia a template usado para crear el dashboard (sin FK por ahora)
+  page_count integer [not null] // Cached count of dashboard pages
+  widget_count integer [not null] // Cached count of widgets across all pages
 
   Indexes {
     (is_active) [name: 'dashboards_is_active_idx']
@@ -1002,6 +1006,7 @@ Table variables {
   is_active boolean [not null, default: true] // Indica si la variable está activa
   created_at timestamptz [not null]
   updated_at timestamptz [not null]
+  mqtt_key varchar(50) // Key exacta como llega en el payload MQTT (ej: PF, E, P). NULL si no aplica para realtime
 
   Indexes {
     (code) [name: 'variables_code_key', unique]
@@ -1017,7 +1022,7 @@ Table variables {
 
 Table widget_data_sources {
   id uuid [pk, not null] // UUID v7 - clave primaria time-ordered
-  widget_id uuid [not null] // FK a widgets - widget que consume este recurso
+  widget_id uuid [unique, not null] // FK a widgets - widget que consume este recurso
   entity_type varchar(30) [not null] // Tipo de recurso: channel, device, site, resource_hierarchy
   entity_id varchar(100) [not null] // Public code del recurso (CHN-xxx, DEV-xxx, SIT-xxx, RES-xxx)
   label varchar(200) // Etiqueta personalizada para esta fuente de datos en el widget
@@ -1026,16 +1031,18 @@ Table widget_data_sources {
   created_at timestamptz [not null]
   updated_at timestamptz [not null]
   deleted_at timestamptz
+  order_number integer [unique, not null] // Order number for data sources within a widget (set by app logic)
 
   Indexes {
     (entity_type, entity_id) [name: 'widget_data_sources_entity_idx']
     (widget_id) [name: 'widget_data_sources_widget_id_idx']
+    (widget_id, order_number) [name: 'widget_data_sources_widget_order_number_uk', unique]
   }
 }
 
 Table widgets {
   id uuid [pk, not null] // UUID v7 - clave primaria time-ordered
-  dashboard_page_id uuid [not null] // FK a dashboard_pages - página contenedora
+  dashboard_page_id uuid [unique, not null] // FK a dashboard_pages - página contenedora
   type varchar(50) [not null] // Tipo de widget: line_chart, bar_chart, gauge, stat_card, table, map, heatmap, etc.
   title varchar(200) // Título visible del widget
   layout jsonb [not null] // Posición y tamaño en el grid: {x, y, w, h}
@@ -1045,9 +1052,11 @@ Table widgets {
   created_at timestamptz [not null]
   updated_at timestamptz [not null]
   deleted_at timestamptz
+  order_number integer [unique, not null] // Order number for widgets within a page (set by app logic)
 
   Indexes {
     (dashboard_page_id) [name: 'widgets_dashboard_page_id_idx']
+    (dashboard_page_id, order_number) [name: 'widgets_page_order_number_uk', unique]
     (type) [name: 'widgets_type_idx']
   }
 }

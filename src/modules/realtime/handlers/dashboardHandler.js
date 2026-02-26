@@ -1,6 +1,7 @@
 // Handler para mensajes EC:DASHBOARD:*
 // Maneja: SUBSCRIBE, UNSUBSCRIBE a dashboards con datos de telemetría via MQTT
 // Al suscribirse, consulta la DB para resolver automáticamente devices/channels
+// Filtrado triple: 1) is_realtime=true, 2) canal por uid hex, 3) variable por mqtt_key
 import { addSubscription, removeSubscription } from '../services/sessionService.js';
 import { subscribeToDevice, unsubscribeFromDevice, onMessage, removeMessageCallback } from '../mqtt/client.js';
 import sequelize from '../../../db/sql/sequelize.js';
@@ -11,6 +12,8 @@ import logger from '../../../utils/logger.js';
 const dashboardSubscriptions = new Map();
 let idleSweepTimer = null;
 
+// Convierte número de canal (int) a formato hex de 2 bytes como aparece en uid MQTT
+// Ej: canal 5 → "00:05", canal 256 → "01:00"
 const intToHex = (num) => {
     const hex = (num >>> 0).toString(16);
     const hexFill = '0'.repeat(4 - hex.length) + hex;
@@ -18,8 +21,21 @@ const intToHex = (num) => {
     return [hexSplit[0] + hexSplit[1], hexSplit[2] + hexSplit[3]].join(':');
 };
 
+// Extrae el número de canal desde el uid MQTT
+// uid formato: "EC:C3:8A:60:43:CC:00:05" → últimos 2 bytes "00:05" → canal 5
+const extractChannelFromUid = (uid) => {
+    if (!uid || typeof uid !== 'string') return null;
+    const parts = uid.split(':');
+    if (parts.length < 2) return null;
+    const high = parseInt(parts[parts.length - 2], 16);
+    const low = parseInt(parts[parts.length - 1], 16);
+    if (isNaN(high) || isNaN(low)) return null;
+    return (high << 8) | low;
+};
+
 // Consulta la DB para obtener los devices y channels vinculados a un dashboard
-// via: dashboard → pages → widgets → widget_data_sources (entity_type='channel') → channels → devices
+// Solo incluye variables con is_realtime=true y mqtt_key definido
+// via: dashboard → pages → widgets → widget_data_sources → channels → devices → variables
 const resolveDashboardAssets = async (dashboardPublicCode, organizationId) => {
     const rows = await sequelize.query(`
         SELECT DISTINCT
@@ -32,24 +48,40 @@ const resolveDashboardAssets = async (dashboardPublicCode, organizationId) => {
             d.uuid AS device_uuid,
             d.public_code AS device_public_code,
             d.name AS device_name,
+            dp.order_number AS page_number,
+            w.order_number AS widget_number,
+            wds.order_number AS datasource_number,
+            wds.label AS datasource_label,
             wds.series_config,
-            wds.label AS datasource_label
+            v.id AS variable_id,
+            v.mqtt_key,
+            v.column_name AS variable_column_name,
+            v.is_realtime AS variable_is_realtime
         FROM dashboards db
         JOIN dashboard_pages dp ON dp.dashboard_id = db.id AND dp.deleted_at IS NULL
         JOIN widgets w ON w.dashboard_page_id = dp.id AND w.deleted_at IS NULL
         JOIN widget_data_sources wds ON wds.widget_id = w.id AND wds.deleted_at IS NULL
         JOIN channels c ON c.public_code = wds.entity_id AND c.deleted_at IS NULL AND c.is_active = true
         JOIN devices d ON d.id = c.device_id AND d.deleted_at IS NULL AND d.is_active = true
+        LEFT JOIN variables v ON v.id = CASE
+                WHEN wds.series_config->>'variableId' ~ '^\d+$'
+                THEN (wds.series_config->>'variableId')::int
+                ELSE NULL
+            END
+            AND v.is_realtime = true
+            AND v.is_active = true
+            AND v.measurement_type_id = c.measurement_type_id
         WHERE db.public_code = :dashboardPublicCode
           AND db.deleted_at IS NULL
           AND wds.entity_type = 'channel'
           AND db.organization_id = :organizationId
+          AND v.id IS NOT NULL
     `, {
         replacements: { dashboardPublicCode, organizationId },
         type: QueryTypes.SELECT,
     });
 
-    // Agrupar por device → lista de channels
+    // Agrupar por device → lista de channels con metadata de widgets
     const devicesMap = new Map();
     const channelsList = [];
 
@@ -62,6 +94,9 @@ const resolveDashboardAssets = async (dashboardPublicCode, organizationId) => {
             });
         }
 
+        // Resolver mqtt_key: usar campo mqtt_key de la DB, fallback a UPPER(column_name)
+        const mqttKey = row.mqtt_key || (row.variable_column_name ? row.variable_column_name.toUpperCase() : null);
+
         channelsList.push({
             ch: row.channel_number,
             publicCode: row.channel_public_code,
@@ -69,8 +104,12 @@ const resolveDashboardAssets = async (dashboardPublicCode, organizationId) => {
             deviceUuid: row.device_uuid,
             devicePublicCode: row.device_public_code,
             measurementTypeId: row.measurement_type_id,
-            seriesConfig: row.series_config,
+            variableId: row.variable_id,
+            mqttKey,
             label: row.datasource_label,
+            pageNumber: row.page_number,
+            widgetNumber: row.widget_number,
+            datasourceNumber: row.datasource_number,
         });
     }
 
@@ -80,14 +119,10 @@ const resolveDashboardAssets = async (dashboardPublicCode, organizationId) => {
     };
 };
 
+// Procesa mensajes MQTT y los reenvía a los clientes WS suscritos
+// Filtrado estricto: solo rtdata, solo canales del dashboard, solo variables con mqtt_key
 const processMqttForDashboards = (mqttData) => {
     const { deviceUuid, payload } = mqttData;
-
-    logger.debug({
-        deviceUuid,
-        subscriptionCount: dashboardSubscriptions.size,
-        payloadLength: payload?.length,
-    }, 'MQTT→Dashboard: Mensaje recibido para procesamiento');
 
     let parsedPayload;
     try {
@@ -97,83 +132,85 @@ const processMqttForDashboards = (mqttData) => {
         return;
     }
 
+    // Solo procesar rtdata — ignorar todo lo demás del payload
+    const rtdata = parsedPayload.rtdata;
+    if (!rtdata || !Array.isArray(rtdata) || rtdata.length === 0) {
+        return;
+    }
+
     for (const [subKey, subscription] of dashboardSubscriptions) {
         const { ws, dashboardId, devices, channels } = subscription;
 
+        // Limpiar suscripciones con WS cerrado
         if (ws.readyState !== 1) {
             for (const device of devices) {
                 if (device.uuid) unsubscribeFromDevice(device.uuid);
             }
             removeSubscription(subscription.sessionId, 'DASHBOARD', dashboardId);
             dashboardSubscriptions.delete(subKey);
-            logger.debug({ sessionId: subscription.sessionId, dashboardId }, 'Dashboard → Suscripción limpiada (WS cerrado durante procesamiento MQTT)');
+            logger.debug({ sessionId: subscription.sessionId, dashboardId }, 'Dashboard → Suscripción limpiada (WS cerrado)');
             continue;
         }
 
+        // Verificar que el device que envió el MQTT está en esta suscripción
         const matchingDevice = devices.find(d => d.uuid === deviceUuid);
-        if (!matchingDevice) {
-            logger.debug({
-                deviceUuid,
-                dashboardId,
-                registeredDevices: devices.map(d => d.uuid),
-            }, 'MQTT→Dashboard: Device no matchea con suscripción');
-            continue;
-        }
-
-        let dataPoints = [];
-        const rawData = parsedPayload.rtdata || (Array.isArray(parsedPayload) ? parsedPayload : [parsedPayload]);
+        if (!matchingDevice) continue;
 
         // Filtrar channels que pertenecen a este device
         const deviceChannels = channels.filter(ch => ch.deviceUuid === deviceUuid);
+        if (deviceChannels.length === 0) continue;
 
-        for (const dataItem of rawData) {
-            if (!deviceChannels || deviceChannels.length === 0) {
-                dataPoints.push(dataItem);
-                continue;
+        // Construir mapa de ch → [{channel info}] para lookup rápido por canal
+        const channelsByNumber = new Map();
+        for (const ch of deviceChannels) {
+            if (typeof ch.ch !== 'number' || !ch.mqttKey) continue;
+            if (!channelsByNumber.has(ch.ch)) {
+                channelsByNumber.set(ch.ch, []);
             }
+            channelsByNumber.get(ch.ch).push(ch);
+        }
 
-            for (const channel of deviceChannels) {
-                const channelHex = typeof channel.ch === 'number' ? intToHex(channel.ch) : null;
-                const isMatch = channelHex
-                    ? (dataItem.uid?.endsWith(channelHex) || dataItem.canal === channel.ch)
-                    : true;
+        if (channelsByNumber.size === 0) continue;
 
-                if (isMatch) {
-                    const point = {
-                        channelId: channel.publicCode,
-                        channelName: channel.name || channel.label,
-                        deviceId: matchingDevice.publicCode,
+        // Procesar cada item de rtdata
+        const channelsData = {};
+
+        for (const dataItem of rtdata) {
+            // Extraer número de canal del uid
+            const channelNumber = extractChannelFromUid(dataItem.uid) ?? dataItem.canal;
+            if (channelNumber == null) continue;
+
+            // Buscar channels del dashboard que matchean este número de canal
+            const matchingChannels = channelsByNumber.get(channelNumber);
+            if (!matchingChannels) continue;
+
+            // Extraer solo las variables solicitadas por cada channel/datasource
+            for (const channel of matchingChannels) {
+                const mqttValue = dataItem[channel.mqttKey];
+                if (mqttValue === undefined) continue;
+
+                if (!channelsData[channel.publicCode]) {
+                    channelsData[channel.publicCode] = {
                         ts: dataItem.ts,
+                        values: {},
                     };
-
-                    // Extraer variables desde series_config si existe
-                    const variables = channel.seriesConfig?.variables;
-                    if (variables && Array.isArray(variables)) {
-                        for (const variable of variables) {
-                            const key = variable.definition?.toUpperCase() || variable.definition;
-                            if (key && dataItem[key] !== undefined) {
-                                point[variable.name || key] = dataItem[key];
-                            }
-                        }
-                    } else {
-                        Object.assign(point, dataItem);
-                    }
-
-                    dataPoints.push(point);
                 }
+
+                // Key es variableId (consistente con endpoint REST getWidgetData)
+                channelsData[channel.publicCode].values[String(channel.variableId)] = mqttValue;
             }
         }
 
-        if (dataPoints.length === 0) continue;
+        // Si no hay data relevante para este dashboard, no enviar mensaje
+        if (Object.keys(channelsData).length === 0) continue;
 
         subscription.lastDataAt = Date.now();
 
         const outMsg = {
-            type: `EC:DASHBOARD:${dashboardId}:DATA:${matchingDevice.publicCode}`,
+            type: `EC:DASHBOARD:${dashboardId}:DATA`,
             payload: {
                 deviceId: matchingDevice.publicCode,
-                metrics: dataPoints,
-                status: 'online',
+                channels: channelsData,
             },
             timestamp: new Date().toISOString(),
         };
@@ -210,7 +247,7 @@ const handleSubscribe = async (ws, message, parsed, session) => {
         };
     }
 
-    // Resolver devices y channels desde la DB usando el public_code del dashboard
+    // Resolver devices y channels desde la DB (solo variables con is_realtime=true)
     const { devices, channels } = await resolveDashboardAssets(dashboardId, session.organizationId);
 
     if (devices.length === 0) {
@@ -218,7 +255,7 @@ const handleSubscribe = async (ws, message, parsed, session) => {
             type: 'EC:DASHBOARD:ERROR',
             payload: {
                 code: 'NO_ASSETS',
-                message: 'No active devices/channels found for this dashboard. Verify the dashboard has widgets with channel data sources.',
+                message: 'No active devices/channels with realtime variables found for this dashboard.',
                 fatal: false,
             },
             timestamp: new Date().toISOString(),
@@ -276,9 +313,14 @@ const handleSubscribe = async (ws, message, parsed, session) => {
             subscribedDevices: devices.map(d => d.publicCode),
             subscribedChannels: channels.map(c => ({
                 id: c.publicCode,
-                name: c.name || c.label,
-                ch: c.ch,
+                name: c.name,
                 deviceId: c.devicePublicCode,
+                variableId: c.variableId,
+                measurementTypeId: c.measurementTypeId,
+                label: c.label,
+                pageNumber: c.pageNumber,
+                widgetNumber: c.widgetNumber,
+                datasourceNumber: c.datasourceNumber,
             })),
         },
         timestamp: new Date().toISOString(),
