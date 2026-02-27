@@ -554,6 +554,14 @@ await queryInterface.addColumn('users', 'avatarUrl', { type: Sequelize.STRING })
 **Regla general**: Siempre usar doble backslash (`\\d`, `\\w`, `\\s`) en regex PostgreSQL dentro de template strings JS. Esto aplica a cualquier query SQL con regex que se escriba en template literals.
 **Archivos afectados**: `src/modules/realtime/handlers/dashboardHandler.js`
 
+### Criterio de suscripción realtime WS: del widget, no de la variable
+**Fecha**: 2026-02-27
+**Síntoma**: Todos los widgets con variables `is_realtime=true` se suscribían al MQTT, incluso si el usuario no quería comportamiento realtime para ese widget.
+**Causa**: La query `resolveDashboardAssets` filtraba por `variable.is_realtime = true` para decidir qué widgets suscribir. Pero la variable indica una capacidad técnica (puede enviar datos en tiempo real), no la intención del usuario.
+**Solución**: Cambiar el filtro a `widget.data_config->>'dateRange' = 'realtime'` — el usuario decide explícitamente qué widgets son realtime al configurar el widget desde el frontend. Se mantiene el requisito de `variable.mqtt_key IS NOT NULL` (necesario para extraer el dato del payload MQTT).
+**Regla general**: La decisión de si un widget es realtime la toma el usuario (via `dataConfig.dateRange`), no la infraestructura (via `variable.is_realtime`). La variable solo indica si técnicamente puede proveer datos en tiempo real.
+**Archivos afectados**: `src/modules/realtime/handlers/dashboardHandler.js`
+
 ---
 
 ## Deployment

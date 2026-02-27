@@ -1347,7 +1347,7 @@ class DashboardWS {
 
 Los datos MQTT pasan por 3 filtros antes de llegar al frontend:
 
-1. **Guard `is_realtime=true`**: Solo variables marcadas como realtime en la DB participan en WS. Variables acumuladoras (energía, energía reactiva, etc.) se excluyen silenciosamente — no generan error, simplemente no aplican para datos instantáneos.
+1. **Guard `dataConfig.dateRange = 'realtime'`**: Solo widgets cuyo `dataConfig.dateRange` sea `"realtime"` participan en WS. El usuario decide explícitamente qué widgets son realtime desde el frontend. Además, la variable debe tener `mqtt_key IS NOT NULL` (para saber qué campo extraer del payload MQTT).
 
 2. **Filtro por canal (ch/uid)**: Solo se reenvían datos de canales que están configurados como data sources en el dashboard. El uid MQTT (`EC:C3:8A:60:43:CC:00:05`) contiene el número de canal en los últimos 2 bytes hex (`00:05` = canal 5). Se compara contra `channels.ch` de la DB.
 
@@ -1371,7 +1371,7 @@ La tabla `variables` tiene un campo `mqtt_key VARCHAR(50)` que mapea la key exac
 | 16 | ee_reactive_power | q | Q | true |
 | 19 | ee_frequency | f | F | true |
 
-Variables con `is_realtime=false` (energía, energía reactiva, costos, etc.) tienen `mqtt_key=NULL` y no participan en WS.
+Variables con `mqtt_key=NULL` (energía, energía reactiva, costos, etc.) no pueden participar en WS aunque el widget tenga `dateRange: "realtime"`, porque no hay forma de extraer su valor del payload MQTT.
 
 ### EC:DASHBOARD:{id}:SUBSCRIBE
 
@@ -1425,7 +1425,7 @@ Variables con `is_realtime=false` (energía, energía reactiva, costos, etc.) ti
 ```
 
 **Notas**:
-- `subscribedChannels` solo incluye entries con variables `is_realtime=true`. Si un widget pide energía (variable 2, `is_realtime=false`), ese data source no aparece aquí — el frontend sabe que no habrá datos WS para ese widget.
+- `subscribedChannels` solo incluye entries de widgets con `dataConfig.dateRange === "realtime"` y cuya variable tiene `mqtt_key` definido. Si un widget no tiene dateRange "realtime" o pide una variable sin mqtt_key, ese data source no aparece aquí.
 - Un mismo channel puede aparecer múltiples veces si distintos widgets lo usan con diferentes variables.
 - `pageNumber`, `widgetNumber`, `datasourceNumber` son orderNumbers (integers, 1-based) para que el frontend mapee qué widget renderiza qué dato.
 - No se expone `ch` (interno) — solo `id` (publicCode).
@@ -1500,7 +1500,7 @@ Variables con `is_realtime=false` (energía, energía reactiva, costos, etc.) ti
 - `channels` es un objeto donde cada key es el publicCode del canal.
 - `ts` es UTC epoch seconds — el frontend convierte a timezone local.
 - `values` tiene como keys el `variableId` (string), consistente con el endpoint REST `POST .../widgets/:widgetId/data`.
-- Solo aparecen values de variables que el widget pidió Y que tienen `is_realtime=true` Y cuya mqtt_key tiene un valor en el payload MQTT.
+- Solo aparecen values de variables que el widget pidió, cuyo widget tiene `dateRange: "realtime"`, Y cuya mqtt_key tiene un valor en el payload MQTT.
 - Si un canal matchea pero ninguna variable tiene valor en ese instante → el canal no aparece (silencioso).
 
 **Frontend mapping**: Para renderizar datos en un widget:
@@ -1584,7 +1584,7 @@ const value = data.channels[channel.id]?.values[String(channel.variableId)];
 **Archivo**: `src/modules/realtime/handlers/dashboardHandler.js`
 
 **Funciones principales**:
-- `resolveDashboardAssets(dashboardPublicCode, organizationId)`: Query SQL que resuelve dashboard → pages → widgets → dataSources → channels → devices, con JOIN a `variables` filtrado por `is_realtime=true`. Retorna `{ devices, channels }` donde cada channel incluye `mqttKey`, `variableId`, `pageNumber`, `widgetNumber`, `datasourceNumber`.
+- `resolveDashboardAssets(dashboardPublicCode)`: Query SQL que resuelve dashboard → pages → widgets → dataSources → channels → devices, filtrado por `widget.data_config->>'dateRange' = 'realtime'` y `variable.mqtt_key IS NOT NULL`. Retorna `{ devices, channels }` donde cada channel incluye `mqttKey`, `variableId`, `pageNumber`, `widgetNumber`, `datasourceNumber`.
 - `processMqttForDashboards(mqttData)`: Procesa mensajes MQTT. Solo extrae `rtdata`. Para cada suscripción activa, filtra por device → canal (uid hex) → variable (mqtt_key). Construye payload agrupado por channel y lo envía por WS. Guarda último valor en Redis (fire-and-forget).
 - `sendSnapshot(ws, dashboardId, channels)`: Lee últimos valores conocidos de Redis (`ec:rt:last:*`) para todos los channels del dashboard. Si hay valores cacheados, envía mensaje SNAPSHOT al cliente. Se ejecuta asíncronamente después del SUBSCRIBED.
 - `handleSubscribe/handleUnsubscribe`: Handlers WS para suscripción/desuscripción.
@@ -1608,9 +1608,9 @@ Handler para suscripción directa a un device por UUID. Reenvía el payload MQTT
 |---------|-----------------|---------------------------|
 | **Propósito** | Testing / diagnóstico MQTT | Visualización en widgets |
 | **Suscripción por** | UUID del device | publicCode del dashboard |
-| **Payload** | MQTT crudo completo (sin filtrar) | Filtrado por canal + variable + is_realtime |
+| **Payload** | MQTT crudo completo (sin filtrar) | Filtrado por canal + variable + dateRange realtime |
 | **Roles requeridos** | admin, superadmin, system-admin | Cualquier usuario autenticado |
-| **Tipo de dato** | Todo lo que llega por MQTT | Solo variables con `is_realtime=true` y `mqtt_key` |
+| **Tipo de dato** | Todo lo que llega por MQTT | Solo widgets con `dateRange: "realtime"` y variables con `mqtt_key` |
 | **SNAPSHOT** | No | Sí (últimos valores de Redis al suscribirse) |
 | **Campo `source`** | `"debug"` | `"dashboard"` (o ausente) |
 | **Disponibilidad** | Todos los entornos | Todos los entornos |

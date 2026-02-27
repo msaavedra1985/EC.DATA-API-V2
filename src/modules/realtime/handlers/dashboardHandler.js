@@ -1,7 +1,7 @@
 // Handler para mensajes EC:DASHBOARD:*
 // Maneja: SUBSCRIBE, UNSUBSCRIBE a dashboards con datos de telemetría via MQTT
 // Al suscribirse, consulta la DB para resolver automáticamente devices/channels
-// Filtrado triple: 1) is_realtime=true, 2) canal por uid hex, 3) variable por mqtt_key
+// Filtrado triple: 1) dateRange=realtime + mqtt_key, 2) canal por uid hex, 3) variable por mqtt_key
 import { addSubscription, removeSubscription } from '../services/sessionService.js';
 import { subscribeToDevice, unsubscribeFromDevice, onMessage, removeMessageCallback } from '../mqtt/client.js';
 import sequelize from '../../../db/sql/sequelize.js';
@@ -38,7 +38,7 @@ const extractChannelFromUid = (uid) => {
 };
 
 // Consulta la DB para obtener los devices y channels vinculados a un dashboard
-// Solo incluye variables con is_realtime=true y mqtt_key definido
+// Solo incluye widgets con dataConfig.dateRange='realtime' y variables con mqtt_key definido
 // via: dashboard → pages → widgets → widget_data_sources → channels → devices → variables
 const resolveDashboardAssets = async (dashboardPublicCode) => {
     const rows = await sequelize.query(`
@@ -59,8 +59,7 @@ const resolveDashboardAssets = async (dashboardPublicCode) => {
             wds.series_config,
             v.id AS variable_id,
             v.mqtt_key,
-            v.column_name AS variable_column_name,
-            v.is_realtime AS variable_is_realtime
+            v.column_name AS variable_column_name
         FROM dashboards db
         JOIN dashboard_pages dp ON dp.dashboard_id = db.id AND dp.deleted_at IS NULL
         JOIN widgets w ON w.dashboard_page_id = dp.id AND w.deleted_at IS NULL
@@ -72,12 +71,13 @@ const resolveDashboardAssets = async (dashboardPublicCode) => {
                 THEN (wds.series_config->>'variableId')::int
                 ELSE NULL
             END
-            AND v.is_realtime = true
             AND v.is_active = true
+            AND v.mqtt_key IS NOT NULL
             AND v.measurement_type_id = c.measurement_type_id
         WHERE db.public_code = :dashboardPublicCode
           AND db.deleted_at IS NULL
           AND wds.entity_type = 'channel'
+          AND w.data_config->>'dateRange' = 'realtime'
           AND v.id IS NOT NULL
     `, {
         replacements: { dashboardPublicCode },
@@ -313,7 +313,7 @@ const handleSubscribe = async (ws, message, parsed, session) => {
         };
     }
 
-    // Resolver devices y channels desde la DB (solo variables con is_realtime=true)
+    // Resolver devices y channels desde la DB (solo widgets con dateRange=realtime)
     const { devices, channels } = await resolveDashboardAssets(dashboardId);
 
     if (devices.length === 0) {
