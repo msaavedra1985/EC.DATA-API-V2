@@ -245,8 +245,8 @@ export const updateVariable = async (id, data, context = {}) => {
 
     // Verificar duplicado si se está cambiando column_name o measurement_type_id
     if (updateData.columnName || updateData.measurementTypeId) {
-        const measurementTypeId = updateData.measurementTypeId || currentVariable.measurement_type_id;
-        const columnName = updateData.columnName || currentVariable.column_name;
+        const measurementTypeId = updateData.measurementTypeId || currentVariable.measurementTypeId;
+        const columnName = updateData.columnName || currentVariable.columnName;
 
         const duplicateExists = await variablesRepository.existsDuplicate(
             measurementTypeId,
@@ -264,12 +264,10 @@ export const updateVariable = async (id, data, context = {}) => {
     // Actualizar variable
     const updatedVariable = await variablesRepository.update(id, updateData, translations || {});
 
-    // Construir objeto de cambios para audit
     const changes = {};
     for (const [key, value] of Object.entries(updateData)) {
-        const dbKey = key.replace(/([A-Z])/g, '_$1').toLowerCase();
-        if (currentVariable[dbKey] !== value) {
-            changes[key] = { old: currentVariable[dbKey], new: value };
+        if (currentVariable[key] !== value) {
+            changes[key] = { old: currentVariable[key], new: value };
         }
     }
     if (translations) {
@@ -284,7 +282,7 @@ export const updateVariable = async (id, data, context = {}) => {
         performedBy: context.userId || null,
         changes,
         metadata: {
-            columnName: currentVariable.column_name
+            columnName: currentVariable.columnName
         },
         ipAddress: context.ip,
         userAgent: context.userAgent
@@ -321,14 +319,14 @@ export const deleteVariable = async (id, context = {}) => {
         performedBy: context.userId || null,
         changes: {
             old: { 
-                columnName: variable.column_name,
+                columnName: variable.columnName,
                 name: variable.name,
                 isActive: true 
             },
             new: { isActive: false }
         },
         metadata: {
-            columnName: variable.column_name
+            columnName: variable.columnName
         },
         ipAddress: context.ip,
         userAgent: context.userAgent

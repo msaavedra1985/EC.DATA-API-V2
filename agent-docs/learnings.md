@@ -105,6 +105,21 @@
 
 ---
 
+## Telemetría
+
+### Variables endpoint devuelve snake_case en respuesta API
+**Fecha**: 2026-03-02
+**Síntoma**: GET /telemetry/variables devuelve keys como `measurement_type_id`, `column_name`, `chart_type`, etc. en vez de camelCase
+**Causa**: `variablesRepository.js` usa queries raw SQL (`sequelize.query` con `QueryTypes.SELECT`) que devuelven nombres de columna tal cual están en PostgreSQL (snake_case). No tenían aliases `AS "camelCase"`. Además, `variablesService.js` accedía a los resultados raw con keys snake_case (`currentVariable.measurement_type_id`, `variable.column_name`)
+**Solución**: 
+- Agregar aliases camelCase a todas las columnas en las queries SQL de `findAll` y `findById`: `v.measurement_type_id AS "measurementTypeId"`, etc.
+- Actualizar referencias en el service a camelCase: `currentVariable.measurementTypeId`, `currentVariable.columnName`
+- Corregir change-detection en `updateVariable`: eliminar conversión `key.replace(/([A-Z])/g, '_$1').toLowerCase()` y leer directamente `currentVariable[key]`
+**Archivos afectados**: `src/modules/telemetry/repositories/variablesRepository.js`, `src/modules/telemetry/services/variablesService.js`
+**Regla general**: Cuando se usa `sequelize.query` con `QueryTypes.SELECT` (raw SQL), los resultados vienen con nombres de columna de la DB (snake_case). Siempre agregar aliases AS con comillas dobles para camelCase: `v.my_column AS "myColumn"`
+
+---
+
 ## Template para nuevos entries
 
 ### [Título descriptivo del problema]
