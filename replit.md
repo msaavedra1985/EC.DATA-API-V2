@@ -63,6 +63,16 @@ agent-docs/
 7. **camelCase end-to-end**: Todo el código JS usa camelCase (modelos, DTOs, serializers, services, repos, routes). Sequelize `underscored: true` mapea automáticamente a columnas snake_case en la DB. El middleware caseTransform fue eliminado — el frontend envía/recibe camelCase directo.
 8. **Excepciones snake_case**: Nombres de tabla, valores ENUM, i18n keys, raw SQL queries, y acceso a resultados de `raw: true` queries mantienen snake_case (son columnas DB directas).
 
+## Exports (mantener actualizados)
+
+```
+exports/
+├── EC.DATA API.postman_collection.json  # Colección Postman con todos los endpoints + params
+└── database.dbml.txt                    # Schema DB en formato DBML
+```
+
+**Regla**: Al modificar endpoints (agregar, cambiar params, cambiar body) o schema de DB, actualizar los archivos correspondientes en `exports/`. El DBML se regenera con `npm run db:dbml` y debe copiarse a `exports/`. La colección Postman debe actualizarse manualmente.
+
 ## Quick Start
 
 ```bash

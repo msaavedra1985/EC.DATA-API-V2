@@ -1,7 +1,7 @@
 {
   "info": {
-    "name": "EC.DATA API V2",
-    "description": "REST API multi-tenant para plataformas e-commerce / IoT.",
+    "name": "EC.DATA API",
+    "description": "REST API multi-tenant para plataformas e-commerce / IoT.\n\nVariables:\n- baseUrl: URL base de la API\n- token: JWT access token (obtener via Login)\n- refreshToken: JWT refresh token",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -12,6 +12,11 @@
     },
     {
       "key": "token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "refreshToken",
       "value": "",
       "type": "string"
     }
@@ -29,14 +34,10 @@
   "item": [
     {
       "name": "Health",
-      "description": "",
       "item": [
         {
           "name": "Health Check",
           "request": {
-            "auth": {
-              "type": "noauth"
-            },
             "method": "GET",
             "header": [
               {
@@ -46,8 +47,15 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/health",
-              "host": ["{{baseUrl}}"],
-              "path": ["health"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "health"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
             }
           }
         }
@@ -55,14 +63,10 @@
     },
     {
       "name": "Auth",
-      "description": "",
       "item": [
         {
           "name": "Register",
           "request": {
-            "auth": {
-              "type": "noauth"
-            },
             "method": "POST",
             "header": [
               {
@@ -72,21 +76,26 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/auth/register",
-              "host": ["{{baseUrl}}"],
-              "path": ["auth", "register"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"John Doe\",\n  \"email\": \"john@example.com\",\n  \"password\": \"SecurePass123!\"\n}"
+              "raw": "{\n  \"firstName\": \"John\",\n  \"lastName\": \"Doe\",\n  \"email\": \"john@example.com\",\n  \"password\": \"SecurePass123!\",\n  \"organizationId\": null\n}"
             }
           }
         },
         {
           "name": "Login",
           "request": {
-            "auth": {
-              "type": "noauth"
-            },
             "method": "POST",
             "header": [
               {
@@ -96,21 +105,26 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/auth/login",
-              "host": ["{{baseUrl}}"],
-              "path": ["auth", "login"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"admin@ecdata.com\",\n  \"password\": \"Admin123!\",\n  \"turnstileToken\": \"test\"\n}"
+              "raw": "{\n  \"email\": \"admin@ecdata.com\",\n  \"password\": \"Admin123!\",\n  \"rememberMe\": false,\n  \"captchaToken\": \"\"\n}"
             }
           }
         },
         {
           "name": "Refresh Token",
           "request": {
-            "auth": {
-              "type": "noauth"
-            },
             "method": "POST",
             "header": [
               {
@@ -120,8 +134,16 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/auth/refresh",
-              "host": ["{{baseUrl}}"],
-              "path": ["auth", "refresh"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "refresh"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
             },
             "body": {
               "mode": "raw",
@@ -141,8 +163,13 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/auth/change-password",
-              "host": ["{{baseUrl}}"],
-              "path": ["auth", "change-password"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "change-password"
+              ]
             },
             "body": {
               "mode": "raw",
@@ -162,8 +189,13 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/auth/me",
-              "host": ["{{baseUrl}}"],
-              "path": ["auth", "me"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "me"
+              ]
             }
           }
         },
@@ -179,8 +211,13 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/auth/logout",
-              "host": ["{{baseUrl}}"],
-              "path": ["auth", "logout"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "logout"
+              ]
             },
             "body": {
               "mode": "raw",
@@ -200,8 +237,13 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/auth/logout-all",
-              "host": ["{{baseUrl}}"],
-              "path": ["auth", "logout-all"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "logout-all"
+              ]
             },
             "body": {
               "mode": "raw",
@@ -221,8 +263,13 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/auth/sessions",
-              "host": ["{{baseUrl}}"],
-              "path": ["auth", "sessions"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "sessions"
+              ]
             }
           }
         },
@@ -238,8 +285,15 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/auth/sessions/:sessionId/revoke",
-              "host": ["{{baseUrl}}"],
-              "path": ["auth", "sessions", ":sessionId", "revoke"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "sessions",
+                ":sessionId",
+                "revoke"
+              ]
             },
             "body": {
               "mode": "raw",
@@ -259,8 +313,13 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/auth/organizations",
-              "host": ["{{baseUrl}}"],
-              "path": ["auth", "organizations"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "organizations"
+              ]
             }
           }
         },
@@ -276,12 +335,17 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/auth/switch-org",
-              "host": ["{{baseUrl}}"],
-              "path": ["auth", "switch-org"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "switch-org"
+              ]
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"organizationPublicCode\": \"ORG-XXXXX\"\n}"
+              "raw": "{\n  \"organizationId\": \"ORG-XXXXX\"\n}"
             }
           }
         },
@@ -297,12 +361,17 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/auth/impersonate-org",
-              "host": ["{{baseUrl}}"],
-              "path": ["auth", "impersonate-org"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "impersonate-org"
+              ]
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"organizationPublicCode\": \"ORG-XXXXX\"\n}"
+              "raw": "{\n  \"organizationId\": \"ORG-XXXXX\"\n}"
             }
           }
         },
@@ -318,8 +387,13 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/auth/exit-impersonation",
-              "host": ["{{baseUrl}}"],
-              "path": ["auth", "exit-impersonation"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "exit-impersonation"
+              ]
             },
             "body": {
               "mode": "raw",
@@ -339,8 +413,35 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/auth/session-context",
-              "host": ["{{baseUrl}}"],
-              "path": ["auth", "session-context"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "session-context"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Admin Test (verify role)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/admin-test",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "admin-test"
+              ]
             }
           }
         }
@@ -348,7 +449,6 @@
     },
     {
       "name": "Users",
-      "description": "",
       "item": [
         {
           "name": "List Users",
@@ -362,8 +462,56 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/users",
-              "host": ["{{baseUrl}}"],
-              "path": ["users"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Número de página (1-indexed)",
+                  "disabled": true
+                },
+                {
+                  "key": "limit",
+                  "value": "20",
+                  "description": "Resultados por página (1-100, default: 20)",
+                  "disabled": true
+                },
+                {
+                  "key": "offset",
+                  "value": "0",
+                  "description": "Registros a saltar",
+                  "disabled": true
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "description": "Buscar por nombre o email",
+                  "disabled": true
+                },
+                {
+                  "key": "role",
+                  "value": "",
+                  "description": "Filtrar por rol (slug)",
+                  "disabled": true
+                },
+                {
+                  "key": "organizationId",
+                  "value": "",
+                  "description": "Filtrar por organización (public_code)",
+                  "disabled": true
+                },
+                {
+                  "key": "isActive",
+                  "value": "true",
+                  "description": "Filtrar activos/inactivos",
+                  "disabled": true
+                }
+              ]
             }
           }
         },
@@ -379,12 +527,16 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/users",
-              "host": ["{{baseUrl}}"],
-              "path": ["users"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users"
+              ]
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"New User\",\n  \"email\": \"new@example.com\",\n  \"password\": \"SecurePass123!\",\n  \"roleId\": \"org-user\"\n}"
+              "raw": "{\n  \"email\": \"new@example.com\",\n  \"firstName\": \"New\",\n  \"lastName\": \"User\",\n  \"password\": \"SecurePass123!\",\n  \"role\": \"org-user\",\n  \"organizationId\": \"ORG-XXXXX\",\n  \"phone\": null,\n  \"language\": \"es\",\n  \"timezone\": \"America/Lima\",\n  \"avatarUrl\": null,\n  \"organizationMemberships\": []\n}"
             }
           }
         },
@@ -400,8 +552,13 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/users/validate-email",
-              "host": ["{{baseUrl}}"],
-              "path": ["users", "validate-email"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "validate-email"
+              ]
             },
             "body": {
               "mode": "raw",
@@ -421,8 +578,13 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/users/me",
-              "host": ["{{baseUrl}}"],
-              "path": ["users", "me"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "me"
+              ]
             }
           }
         },
@@ -438,12 +600,17 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/users/me",
-              "host": ["{{baseUrl}}"],
-              "path": ["users", "me"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "me"
+              ]
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Updated Name\"\n}"
+              "raw": "{\n  \"firstName\": \"Updated\",\n  \"lastName\": \"Name\",\n  \"phone\": null,\n  \"language\": \"es\",\n  \"timezone\": \"America/Lima\",\n  \"avatarUrl\": null\n}"
             }
           }
         },
@@ -459,8 +626,14 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/users/me/password",
-              "host": ["{{baseUrl}}"],
-              "path": ["users", "me", "password"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "me",
+                "password"
+              ]
             },
             "body": {
               "mode": "raw",
@@ -480,8 +653,13 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/users/:id",
-              "host": ["{{baseUrl}}"],
-              "path": ["users", ":id"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                ":id"
+              ]
             }
           }
         },
@@ -497,12 +675,17 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/users/:id",
-              "host": ["{{baseUrl}}"],
-              "path": ["users", ":id"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                ":id"
+              ]
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Updated Name\",\n  \"roleId\": \"org-user\"\n}"
+              "raw": "{\n  \"firstName\": \"Updated\",\n  \"lastName\": \"Name\",\n  \"role\": \"org-user\",\n  \"isActive\": true,\n  \"phone\": null,\n  \"language\": \"es\",\n  \"timezone\": \"America/Lima\"\n}"
             }
           }
         },
@@ -518,8 +701,13 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/users/:id",
-              "host": ["{{baseUrl}}"],
-              "path": ["users", ":id"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                ":id"
+              ]
             }
           }
         },
@@ -535,8 +723,14 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/users/:id/organizations",
-              "host": ["{{baseUrl}}"],
-              "path": ["users", ":id", "organizations"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                ":id",
+                "organizations"
+              ]
             }
           }
         },
@@ -552,12 +746,18 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/users/:id/organizations",
-              "host": ["{{baseUrl}}"],
-              "path": ["users", ":id", "organizations"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                ":id",
+                "organizations"
+              ]
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"organizationPublicCode\": \"ORG-XXXXX\",\n  \"roleId\": \"org-user\"\n}"
+              "raw": "{\n  \"organizationId\": \"ORG-XXXXX\",\n  \"isPrimary\": false\n}"
             }
           }
         },
@@ -573,8 +773,15 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/users/:id/organizations/:orgId",
-              "host": ["{{baseUrl}}"],
-              "path": ["users", ":id", "organizations", ":orgId"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                ":id",
+                "organizations",
+                ":orgId"
+              ]
             }
           }
         },
@@ -590,8 +797,34 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/users/:id/audit-logs",
-              "host": ["{{baseUrl}}"],
-              "path": ["users", ":id", "audit-logs"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                ":id",
+                "audit-logs"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Número de página (1-indexed)",
+                  "disabled": true
+                },
+                {
+                  "key": "limit",
+                  "value": "20",
+                  "description": "Resultados por página (1-100, default: 20)",
+                  "disabled": true
+                },
+                {
+                  "key": "offset",
+                  "value": "0",
+                  "description": "Registros a saltar",
+                  "disabled": true
+                }
+              ]
             }
           }
         },
@@ -607,8 +840,14 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/users/:id/status",
-              "host": ["{{baseUrl}}"],
-              "path": ["users", ":id", "status"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                ":id",
+                "status"
+              ]
             },
             "body": {
               "mode": "raw",
@@ -620,7 +859,6 @@
     },
     {
       "name": "Roles",
-      "description": "",
       "item": [
         {
           "name": "List Roles",
@@ -634,8 +872,12 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/roles",
-              "host": ["{{baseUrl}}"],
-              "path": ["roles"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "roles"
+              ]
             }
           }
         }
@@ -643,7 +885,6 @@
     },
     {
       "name": "Organizations",
-      "description": "",
       "item": [
         {
           "name": "List Organizations",
@@ -657,8 +898,50 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/organizations",
-              "host": ["{{baseUrl}}"],
-              "path": ["organizations"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "organizations"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Número de página (1-indexed)",
+                  "disabled": true
+                },
+                {
+                  "key": "limit",
+                  "value": "20",
+                  "description": "Resultados por página (1-100, default: 20)",
+                  "disabled": true
+                },
+                {
+                  "key": "offset",
+                  "value": "0",
+                  "description": "Registros a saltar",
+                  "disabled": true
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "description": "Buscar por nombre o slug",
+                  "disabled": true
+                },
+                {
+                  "key": "parent_id",
+                  "value": "",
+                  "description": "Filtrar por padre (public_code)",
+                  "disabled": true
+                },
+                {
+                  "key": "active_only",
+                  "value": "true",
+                  "description": "Solo activas (default: true)",
+                  "disabled": true
+                }
+              ]
             }
           }
         },
@@ -674,8 +957,27 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/organizations/hierarchy",
-              "host": ["{{baseUrl}}"],
-              "path": ["organizations", "hierarchy"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "organizations",
+                "hierarchy"
+              ],
+              "query": [
+                {
+                  "key": "root_id",
+                  "value": "",
+                  "description": "Public code del nodo raíz",
+                  "disabled": true
+                },
+                {
+                  "key": "active_only",
+                  "value": "true",
+                  "description": "Solo activas (default: true)",
+                  "disabled": true
+                }
+              ]
             }
           }
         },
@@ -691,8 +993,21 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/organizations/validate-slug?slug=my-org",
-              "host": ["{{baseUrl}}"],
-              "path": ["organizations", "validate-slug?slug=my-org"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "organizations",
+                "validate-slug"
+              ],
+              "query": [
+                {
+                  "key": "slug",
+                  "value": "my-org",
+                  "description": "Slug a validar",
+                  "disabled": false
+                }
+              ]
             }
           }
         },
@@ -708,8 +1023,13 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/organizations/:id",
-              "host": ["{{baseUrl}}"],
-              "path": ["organizations", ":id"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "organizations",
+                ":id"
+              ]
             }
           }
         },
@@ -725,8 +1045,16 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/organizations/validate",
-              "host": ["{{baseUrl}}"],
-              "path": ["organizations", "validate"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "organizations",
+                "validate"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
             },
             "body": {
               "mode": "raw",
@@ -746,12 +1074,16 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/organizations",
-              "host": ["{{baseUrl}}"],
-              "path": ["organizations"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "organizations"
+              ]
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"New Org\",\n  \"slug\": \"new-org\"\n}"
+              "raw": "{\n  \"name\": \"New Organization\",\n  \"slug\": \"new-organization\",\n  \"description\": \"\",\n  \"parentId\": null,\n  \"isActive\": true,\n  \"logoUrl\": null,\n  \"website\": null,\n  \"countries\": [\n    {\n      \"code\": \"PE\",\n      \"isPrimary\": true\n    }\n  ]\n}"
             }
           }
         },
@@ -767,12 +1099,17 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/organizations/:id",
-              "host": ["{{baseUrl}}"],
-              "path": ["organizations", ":id"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "organizations",
+                ":id"
+              ]
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Updated Org\"\n}"
+              "raw": "{\n  \"name\": \"Updated Org\",\n  \"slug\": \"updated-org\",\n  \"description\": \"\",\n  \"isActive\": true,\n  \"logoUrl\": null,\n  \"website\": null\n}"
             }
           }
         },
@@ -788,8 +1125,14 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/organizations/:id/move",
-              "host": ["{{baseUrl}}"],
-              "path": ["organizations", ":id", "move"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "organizations",
+                ":id",
+                "move"
+              ]
             },
             "body": {
               "mode": "raw",
@@ -809,8 +1152,13 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/organizations/:id",
-              "host": ["{{baseUrl}}"],
-              "path": ["organizations", ":id"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "organizations",
+                ":id"
+              ]
             }
           }
         },
@@ -826,8 +1174,13 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/organizations/batch-delete",
-              "host": ["{{baseUrl}}"],
-              "path": ["organizations", "batch-delete"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "organizations",
+                "batch-delete"
+              ]
             },
             "body": {
               "mode": "raw",
@@ -847,8 +1200,13 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/organizations/upload-url",
-              "host": ["{{baseUrl}}"],
-              "path": ["organizations", "upload-url"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "organizations",
+                "upload-url"
+              ]
             },
             "body": {
               "mode": "raw",
@@ -868,8 +1226,14 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/organizations/:id/children",
-              "host": ["{{baseUrl}}"],
-              "path": ["organizations", ":id", "children"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "organizations",
+                ":id",
+                "children"
+              ]
             }
           }
         },
@@ -885,8 +1249,14 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/organizations/:id/descendants",
-              "host": ["{{baseUrl}}"],
-              "path": ["organizations", ":id", "descendants"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "organizations",
+                ":id",
+                "descendants"
+              ]
             }
           }
         },
@@ -902,8 +1272,14 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/organizations/:id/subtree",
-              "host": ["{{baseUrl}}"],
-              "path": ["organizations", ":id", "subtree"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "organizations",
+                ":id",
+                "subtree"
+              ]
             }
           }
         },
@@ -919,8 +1295,13 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/organizations/delete-preview",
-              "host": ["{{baseUrl}}"],
-              "path": ["organizations", "delete-preview"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "organizations",
+                "delete-preview"
+              ]
             },
             "body": {
               "mode": "raw",
@@ -940,8 +1321,14 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/organizations/:id/stats",
-              "host": ["{{baseUrl}}"],
-              "path": ["organizations", ":id", "stats"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "organizations",
+                ":id",
+                "stats"
+              ]
             }
           }
         },
@@ -957,8 +1344,14 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/organizations/:id/activate",
-              "host": ["{{baseUrl}}"],
-              "path": ["organizations", ":id", "activate"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "organizations",
+                ":id",
+                "activate"
+              ]
             },
             "body": {
               "mode": "raw",
@@ -978,8 +1371,14 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/organizations/:id/deactivate",
-              "host": ["{{baseUrl}}"],
-              "path": ["organizations", ":id", "deactivate"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "organizations",
+                ":id",
+                "deactivate"
+              ]
             },
             "body": {
               "mode": "raw",
@@ -991,7 +1390,6 @@
     },
     {
       "name": "Sites",
-      "description": "",
       "item": [
         {
           "name": "List Sites",
@@ -1005,8 +1403,68 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/sites",
-              "host": ["{{baseUrl}}"],
-              "path": ["sites"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sites"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Número de página (1-indexed)",
+                  "disabled": true
+                },
+                {
+                  "key": "limit",
+                  "value": "20",
+                  "description": "Resultados por página (1-100, default: 20)",
+                  "disabled": true
+                },
+                {
+                  "key": "offset",
+                  "value": "0",
+                  "description": "Registros a saltar",
+                  "disabled": true
+                },
+                {
+                  "key": "organizationId",
+                  "value": "",
+                  "description": "Filtrar por organización (public_code)",
+                  "disabled": true
+                },
+                {
+                  "key": "all",
+                  "value": "false",
+                  "description": "true = mostrar todos los sitios accesibles",
+                  "disabled": true
+                },
+                {
+                  "key": "countryCode",
+                  "value": "",
+                  "description": "ISO 3166-1 alpha-2 (ej: PE, AR)",
+                  "disabled": true
+                },
+                {
+                  "key": "isActive",
+                  "value": "true",
+                  "description": "Filtrar activos/inactivos",
+                  "disabled": true
+                },
+                {
+                  "key": "city",
+                  "value": "",
+                  "description": "Filtrar por ciudad",
+                  "disabled": true
+                },
+                {
+                  "key": "notInHierarchy",
+                  "value": "false",
+                  "description": "true = solo sitios sin jerarquía asignada",
+                  "disabled": true
+                }
+              ]
             }
           }
         },
@@ -1022,8 +1480,13 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/sites/:id",
-              "host": ["{{baseUrl}}"],
-              "path": ["sites", ":id"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sites",
+                ":id"
+              ]
             }
           }
         },
@@ -1039,12 +1502,16 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/sites",
-              "host": ["{{baseUrl}}"],
-              "path": ["sites"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sites"
+              ]
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"New Site\",\n  \"city\": \"Lima\",\n  \"countryCode\": \"PE\"\n}"
+              "raw": "{\n  \"organizationId\": \"ORG-XXXXX\",\n  \"name\": \"New Site\",\n  \"description\": \"\",\n  \"latitude\": -12.046374,\n  \"longitude\": -77.042793,\n  \"address\": \"Av. Example 123\",\n  \"streetNumber\": \"123\",\n  \"city\": \"Lima\",\n  \"stateProvince\": \"Lima\",\n  \"countryCode\": \"PE\",\n  \"postalCode\": \"15001\",\n  \"timezone\": \"America/Lima\",\n  \"isActive\": true,\n  \"metadata\": {}\n}"
             }
           }
         },
@@ -1060,12 +1527,17 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/sites/:id",
-              "host": ["{{baseUrl}}"],
-              "path": ["sites", ":id"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sites",
+                ":id"
+              ]
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Updated Site\"\n}"
+              "raw": "{\n  \"name\": \"Updated Site\",\n  \"description\": \"\",\n  \"city\": \"Cusco\",\n  \"isActive\": true\n}"
             }
           }
         },
@@ -1081,8 +1553,13 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/sites/:id",
-              "host": ["{{baseUrl}}"],
-              "path": ["sites", ":id"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sites",
+                ":id"
+              ]
             }
           }
         }
@@ -1090,7 +1567,6 @@
     },
     {
       "name": "Devices",
-      "description": "",
       "item": [
         {
           "name": "List Devices",
@@ -1104,8 +1580,80 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/devices",
-              "host": ["{{baseUrl}}"],
-              "path": ["devices"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "devices"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Número de página (1-indexed)",
+                  "disabled": true
+                },
+                {
+                  "key": "limit",
+                  "value": "20",
+                  "description": "Resultados por página (1-100, default: 20)",
+                  "disabled": true
+                },
+                {
+                  "key": "offset",
+                  "value": "0",
+                  "description": "Registros a saltar",
+                  "disabled": true
+                },
+                {
+                  "key": "organizationId",
+                  "value": "",
+                  "description": "Filtrar por organización (public_code)",
+                  "disabled": true
+                },
+                {
+                  "key": "all",
+                  "value": "false",
+                  "description": "true = God view (admin only)",
+                  "disabled": true
+                },
+                {
+                  "key": "siteId",
+                  "value": "",
+                  "description": "Filtrar por sitio (public_code)",
+                  "disabled": true
+                },
+                {
+                  "key": "deviceTypeId",
+                  "value": "",
+                  "description": "Filtrar por tipo de dispositivo (integer)",
+                  "disabled": true
+                },
+                {
+                  "key": "status",
+                  "value": "",
+                  "description": "active | inactive | maintenance | decommissioned",
+                  "disabled": true
+                },
+                {
+                  "key": "isActive",
+                  "value": "true",
+                  "description": "Filtrar activos/inactivos",
+                  "disabled": true
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "description": "Buscar por nombre o serial (max 200 chars)",
+                  "disabled": true
+                },
+                {
+                  "key": "includeChannels",
+                  "value": "false",
+                  "description": "true = incluir array de canales",
+                  "disabled": true
+                }
+              ]
             }
           }
         },
@@ -1121,8 +1669,13 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/devices/:id",
-              "host": ["{{baseUrl}}"],
-              "path": ["devices", ":id"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "devices",
+                ":id"
+              ]
             }
           }
         },
@@ -1138,12 +1691,16 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/devices",
-              "host": ["{{baseUrl}}"],
-              "path": ["devices"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "devices"
+              ]
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"New Device\",\n  \"serialNumber\": \"SN-12345\"\n}"
+              "raw": "{\n  \"organizationId\": \"ORG-XXXXX\",\n  \"siteId\": null,\n  \"name\": \"New Device\",\n  \"description\": \"\",\n  \"uuid\": null,\n  \"deviceTypeId\": 1,\n  \"brandId\": null,\n  \"modelId\": null,\n  \"serverId\": null,\n  \"networkId\": null,\n  \"licenseId\": null,\n  \"validityPeriodId\": null,\n  \"serialNumber\": \"SN-12345\",\n  \"firmwareVersion\": null,\n  \"ipAddress\": null,\n  \"macAddress\": null,\n  \"topic\": null,\n  \"locationName\": null,\n  \"physicalLocation\": null,\n  \"electricalLocation\": null,\n  \"latitude\": null,\n  \"longitude\": null,\n  \"city\": null,\n  \"timezone\": \"America/Lima\",\n  \"installationDate\": null,\n  \"metadata\": {},\n  \"isActive\": true\n}"
             }
           }
         },
@@ -1159,12 +1716,17 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/devices/:id",
-              "host": ["{{baseUrl}}"],
-              "path": ["devices", ":id"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "devices",
+                ":id"
+              ]
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Updated Device\"\n}"
+              "raw": "{\n  \"name\": \"Updated Device\",\n  \"description\": \"\",\n  \"status\": \"active\",\n  \"isActive\": true\n}"
             }
           }
         },
@@ -1180,8 +1742,13 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/devices/:id",
-              "host": ["{{baseUrl}}"],
-              "path": ["devices", ":id"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "devices",
+                ":id"
+              ]
             }
           }
         }
@@ -1189,7 +1756,6 @@
     },
     {
       "name": "Device Metadata",
-      "description": "",
       "item": [
         {
           "name": "Get All Metadata",
@@ -1202,9 +1768,22 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/devices/metadata",
-              "host": ["{{baseUrl}}"],
-              "path": ["devices", "metadata"]
+              "raw": "{{baseUrl}}/devices/metadata?lang=es",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "devices",
+                "metadata"
+              ],
+              "query": [
+                {
+                  "key": "lang",
+                  "value": "es",
+                  "description": "Idioma: es | en",
+                  "disabled": false
+                }
+              ]
             }
           }
         },
@@ -1220,8 +1799,14 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/devices/metadata/invalidate-cache",
-              "host": ["{{baseUrl}}"],
-              "path": ["devices", "metadata", "invalidate-cache"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "devices",
+                "metadata",
+                "invalidate-cache"
+              ]
             },
             "body": {
               "mode": "raw",
@@ -1231,7 +1816,6 @@
         },
         {
           "name": "Types",
-          "description": "",
           "item": [
             {
               "name": "List Types",
@@ -1245,8 +1829,13 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/devices/types",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["devices", "types"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "devices",
+                    "types"
+                  ]
                 }
               }
             },
@@ -1262,8 +1851,14 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/devices/types/:id",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["devices", "types", ":id"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "devices",
+                    "types",
+                    ":id"
+                  ]
                 }
               }
             },
@@ -1279,12 +1874,17 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/devices/types",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["devices", "types"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "devices",
+                    "types"
+                  ]
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{}"
+                  "raw": "{\n  \"code\": \"new-code\",\n  \"translations\": {\n    \"es\": {\n      \"name\": \"Nuevo\",\n      \"description\": \"\"\n    },\n    \"en\": {\n      \"name\": \"New\",\n      \"description\": \"\"\n    }\n  }\n}"
                 }
               }
             },
@@ -1300,12 +1900,18 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/devices/types/:id",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["devices", "types", ":id"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "devices",
+                    "types",
+                    ":id"
+                  ]
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{}"
+                  "raw": "{\n  \"code\": \"updated-code\",\n  \"translations\": {\n    \"es\": {\n      \"name\": \"Actualizado\"\n    },\n    \"en\": {\n      \"name\": \"Updated\"\n    }\n  }\n}"
                 }
               }
             },
@@ -1321,8 +1927,14 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/devices/types/:id",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["devices", "types", ":id"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "devices",
+                    "types",
+                    ":id"
+                  ]
                 }
               }
             }
@@ -1330,7 +1942,6 @@
         },
         {
           "name": "Brands",
-          "description": "",
           "item": [
             {
               "name": "List Brands",
@@ -1344,8 +1955,13 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/devices/brands",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["devices", "brands"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "devices",
+                    "brands"
+                  ]
                 }
               }
             },
@@ -1361,8 +1977,14 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/devices/brands/:id",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["devices", "brands", ":id"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "devices",
+                    "brands",
+                    ":id"
+                  ]
                 }
               }
             },
@@ -1378,12 +2000,17 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/devices/brands",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["devices", "brands"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "devices",
+                    "brands"
+                  ]
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{}"
+                  "raw": "{\n  \"code\": \"new-code\",\n  \"translations\": {\n    \"es\": {\n      \"name\": \"Nuevo\",\n      \"description\": \"\"\n    },\n    \"en\": {\n      \"name\": \"New\",\n      \"description\": \"\"\n    }\n  }\n}"
                 }
               }
             },
@@ -1399,12 +2026,18 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/devices/brands/:id",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["devices", "brands", ":id"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "devices",
+                    "brands",
+                    ":id"
+                  ]
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{}"
+                  "raw": "{\n  \"code\": \"updated-code\",\n  \"translations\": {\n    \"es\": {\n      \"name\": \"Actualizado\"\n    },\n    \"en\": {\n      \"name\": \"Updated\"\n    }\n  }\n}"
                 }
               }
             },
@@ -1420,8 +2053,14 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/devices/brands/:id",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["devices", "brands", ":id"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "devices",
+                    "brands",
+                    ":id"
+                  ]
                 }
               }
             }
@@ -1429,7 +2068,6 @@
         },
         {
           "name": "Models",
-          "description": "",
           "item": [
             {
               "name": "List Models",
@@ -1443,8 +2081,13 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/devices/models",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["devices", "models"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "devices",
+                    "models"
+                  ]
                 }
               }
             },
@@ -1460,8 +2103,14 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/devices/models/:id",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["devices", "models", ":id"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "devices",
+                    "models",
+                    ":id"
+                  ]
                 }
               }
             },
@@ -1477,12 +2126,17 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/devices/models",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["devices", "models"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "devices",
+                    "models"
+                  ]
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{}"
+                  "raw": "{\n  \"code\": \"new-code\",\n  \"translations\": {\n    \"es\": {\n      \"name\": \"Nuevo\",\n      \"description\": \"\"\n    },\n    \"en\": {\n      \"name\": \"New\",\n      \"description\": \"\"\n    }\n  }\n}"
                 }
               }
             },
@@ -1498,12 +2152,18 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/devices/models/:id",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["devices", "models", ":id"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "devices",
+                    "models",
+                    ":id"
+                  ]
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{}"
+                  "raw": "{\n  \"code\": \"updated-code\",\n  \"translations\": {\n    \"es\": {\n      \"name\": \"Actualizado\"\n    },\n    \"en\": {\n      \"name\": \"Updated\"\n    }\n  }\n}"
                 }
               }
             },
@@ -1519,8 +2179,14 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/devices/models/:id",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["devices", "models", ":id"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "devices",
+                    "models",
+                    ":id"
+                  ]
                 }
               }
             }
@@ -1528,7 +2194,6 @@
         },
         {
           "name": "Servers",
-          "description": "",
           "item": [
             {
               "name": "List Servers",
@@ -1542,8 +2207,13 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/devices/servers",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["devices", "servers"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "devices",
+                    "servers"
+                  ]
                 }
               }
             },
@@ -1559,8 +2229,14 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/devices/servers/:id",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["devices", "servers", ":id"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "devices",
+                    "servers",
+                    ":id"
+                  ]
                 }
               }
             },
@@ -1576,12 +2252,17 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/devices/servers",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["devices", "servers"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "devices",
+                    "servers"
+                  ]
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{}"
+                  "raw": "{\n  \"code\": \"new-code\",\n  \"translations\": {\n    \"es\": {\n      \"name\": \"Nuevo\",\n      \"description\": \"\"\n    },\n    \"en\": {\n      \"name\": \"New\",\n      \"description\": \"\"\n    }\n  }\n}"
                 }
               }
             },
@@ -1597,12 +2278,18 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/devices/servers/:id",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["devices", "servers", ":id"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "devices",
+                    "servers",
+                    ":id"
+                  ]
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{}"
+                  "raw": "{\n  \"code\": \"updated-code\",\n  \"translations\": {\n    \"es\": {\n      \"name\": \"Actualizado\"\n    },\n    \"en\": {\n      \"name\": \"Updated\"\n    }\n  }\n}"
                 }
               }
             },
@@ -1618,8 +2305,14 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/devices/servers/:id",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["devices", "servers", ":id"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "devices",
+                    "servers",
+                    ":id"
+                  ]
                 }
               }
             }
@@ -1627,7 +2320,6 @@
         },
         {
           "name": "Networks",
-          "description": "",
           "item": [
             {
               "name": "List Networks",
@@ -1641,8 +2333,13 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/devices/networks",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["devices", "networks"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "devices",
+                    "networks"
+                  ]
                 }
               }
             },
@@ -1658,8 +2355,14 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/devices/networks/:id",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["devices", "networks", ":id"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "devices",
+                    "networks",
+                    ":id"
+                  ]
                 }
               }
             },
@@ -1675,12 +2378,17 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/devices/networks",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["devices", "networks"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "devices",
+                    "networks"
+                  ]
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{}"
+                  "raw": "{\n  \"code\": \"new-code\",\n  \"translations\": {\n    \"es\": {\n      \"name\": \"Nuevo\",\n      \"description\": \"\"\n    },\n    \"en\": {\n      \"name\": \"New\",\n      \"description\": \"\"\n    }\n  }\n}"
                 }
               }
             },
@@ -1696,12 +2404,18 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/devices/networks/:id",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["devices", "networks", ":id"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "devices",
+                    "networks",
+                    ":id"
+                  ]
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{}"
+                  "raw": "{\n  \"code\": \"updated-code\",\n  \"translations\": {\n    \"es\": {\n      \"name\": \"Actualizado\"\n    },\n    \"en\": {\n      \"name\": \"Updated\"\n    }\n  }\n}"
                 }
               }
             },
@@ -1717,8 +2431,14 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/devices/networks/:id",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["devices", "networks", ":id"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "devices",
+                    "networks",
+                    ":id"
+                  ]
                 }
               }
             }
@@ -1726,7 +2446,6 @@
         },
         {
           "name": "Licenses",
-          "description": "",
           "item": [
             {
               "name": "List Licenses",
@@ -1740,8 +2459,13 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/devices/licenses",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["devices", "licenses"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "devices",
+                    "licenses"
+                  ]
                 }
               }
             },
@@ -1757,8 +2481,14 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/devices/licenses/:id",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["devices", "licenses", ":id"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "devices",
+                    "licenses",
+                    ":id"
+                  ]
                 }
               }
             },
@@ -1774,12 +2504,17 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/devices/licenses",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["devices", "licenses"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "devices",
+                    "licenses"
+                  ]
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{}"
+                  "raw": "{\n  \"code\": \"new-code\",\n  \"translations\": {\n    \"es\": {\n      \"name\": \"Nuevo\",\n      \"description\": \"\"\n    },\n    \"en\": {\n      \"name\": \"New\",\n      \"description\": \"\"\n    }\n  }\n}"
                 }
               }
             },
@@ -1795,12 +2530,18 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/devices/licenses/:id",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["devices", "licenses", ":id"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "devices",
+                    "licenses",
+                    ":id"
+                  ]
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{}"
+                  "raw": "{\n  \"code\": \"updated-code\",\n  \"translations\": {\n    \"es\": {\n      \"name\": \"Actualizado\"\n    },\n    \"en\": {\n      \"name\": \"Updated\"\n    }\n  }\n}"
                 }
               }
             },
@@ -1816,8 +2557,14 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/devices/licenses/:id",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["devices", "licenses", ":id"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "devices",
+                    "licenses",
+                    ":id"
+                  ]
                 }
               }
             }
@@ -1825,7 +2572,6 @@
         },
         {
           "name": "Validity Periods",
-          "description": "",
           "item": [
             {
               "name": "List Validity Periods",
@@ -1839,8 +2585,13 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/devices/validity-periods",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["devices", "validity-periods"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "devices",
+                    "validity-periods"
+                  ]
                 }
               }
             },
@@ -1856,8 +2607,14 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/devices/validity-periods/:id",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["devices", "validity-periods", ":id"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "devices",
+                    "validity-periods",
+                    ":id"
+                  ]
                 }
               }
             },
@@ -1873,12 +2630,17 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/devices/validity-periods",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["devices", "validity-periods"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "devices",
+                    "validity-periods"
+                  ]
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{}"
+                  "raw": "{\n  \"code\": \"new-code\",\n  \"translations\": {\n    \"es\": {\n      \"name\": \"Nuevo\",\n      \"description\": \"\"\n    },\n    \"en\": {\n      \"name\": \"New\",\n      \"description\": \"\"\n    }\n  }\n}"
                 }
               }
             },
@@ -1894,12 +2656,18 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/devices/validity-periods/:id",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["devices", "validity-periods", ":id"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "devices",
+                    "validity-periods",
+                    ":id"
+                  ]
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{}"
+                  "raw": "{\n  \"code\": \"updated-code\",\n  \"translations\": {\n    \"es\": {\n      \"name\": \"Actualizado\"\n    },\n    \"en\": {\n      \"name\": \"Updated\"\n    }\n  }\n}"
                 }
               }
             },
@@ -1915,8 +2683,14 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/devices/validity-periods/:id",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["devices", "validity-periods", ":id"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "devices",
+                    "validity-periods",
+                    ":id"
+                  ]
                 }
               }
             }
@@ -1926,7 +2700,6 @@
     },
     {
       "name": "Channels",
-      "description": "",
       "item": [
         {
           "name": "List Channels",
@@ -1940,8 +2713,68 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/channels",
-              "host": ["{{baseUrl}}"],
-              "path": ["channels"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "channels"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Número de página (1-indexed)",
+                  "disabled": true
+                },
+                {
+                  "key": "limit",
+                  "value": "20",
+                  "description": "Resultados por página (1-100, default: 20)",
+                  "disabled": true
+                },
+                {
+                  "key": "offset",
+                  "value": "0",
+                  "description": "Registros a saltar",
+                  "disabled": true
+                },
+                {
+                  "key": "deviceId",
+                  "value": "",
+                  "description": "Filtrar por dispositivo (public_code)",
+                  "disabled": true
+                },
+                {
+                  "key": "organizationId",
+                  "value": "",
+                  "description": "Filtrar por organización (public_code)",
+                  "disabled": true
+                },
+                {
+                  "key": "measurementTypeId",
+                  "value": "",
+                  "description": "Filtrar por tipo de medición (integer)",
+                  "disabled": true
+                },
+                {
+                  "key": "status",
+                  "value": "",
+                  "description": "active | inactive | error | disabled",
+                  "disabled": true
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "description": "Buscar por nombre/descripción",
+                  "disabled": true
+                },
+                {
+                  "key": "notInHierarchy",
+                  "value": "false",
+                  "description": "true = sin jerarquía asignada",
+                  "disabled": true
+                }
+              ]
             }
           }
         },
@@ -1957,8 +2790,13 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/channels/:id",
-              "host": ["{{baseUrl}}"],
-              "path": ["channels", ":id"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "channels",
+                ":id"
+              ]
             }
           }
         },
@@ -1974,12 +2812,16 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/channels",
-              "host": ["{{baseUrl}}"],
-              "path": ["channels"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "channels"
+              ]
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"New Channel\",\n  \"devicePublicCode\": \"DEV-XXXXX\"\n}"
+              "raw": "{\n  \"deviceId\": \"DEV-XXXXX\",\n  \"name\": \"New Channel\",\n  \"description\": \"\",\n  \"ch\": 0,\n  \"measurementTypeId\": 1,\n  \"phaseSystem\": null,\n  \"phase\": null,\n  \"process\": true,\n  \"status\": \"active\",\n  \"isActive\": true,\n  \"metadata\": {}\n}"
             }
           }
         },
@@ -1995,12 +2837,17 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/channels/:id",
-              "host": ["{{baseUrl}}"],
-              "path": ["channels", ":id"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "channels",
+                ":id"
+              ]
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Updated Channel\"\n}"
+              "raw": "{\n  \"name\": \"Updated Channel\",\n  \"description\": \"\",\n  \"status\": \"active\",\n  \"isActive\": true\n}"
             }
           }
         },
@@ -2016,8 +2863,13 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/channels/:id",
-              "host": ["{{baseUrl}}"],
-              "path": ["channels", ":id"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "channels",
+                ":id"
+              ]
             }
           }
         }
@@ -2025,7 +2877,6 @@
     },
     {
       "name": "Files",
-      "description": "",
       "item": [
         {
           "name": "Request Upload URL",
@@ -2039,12 +2890,17 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/files/upload-url",
-              "host": ["{{baseUrl}}"],
-              "path": ["files", "upload-url"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "files",
+                "upload-url"
+              ]
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"fileName\": \"document.pdf\",\n  \"contentType\": \"application/pdf\"\n}"
+              "raw": "{\n  \"fileName\": \"document.pdf\",\n  \"fileSize\": 1024000,\n  \"contentType\": \"application/pdf\",\n  \"entityType\": \"device\",\n  \"entityId\": \"DEV-XXXXX\",\n  \"isPublic\": false\n}"
             }
           }
         },
@@ -2060,8 +2916,14 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/files/:id/confirm",
-              "host": ["{{baseUrl}}"],
-              "path": ["files", ":id", "confirm"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "files",
+                ":id",
+                "confirm"
+              ]
             },
             "body": {
               "mode": "raw",
@@ -2081,8 +2943,14 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/files/:id/link",
-              "host": ["{{baseUrl}}"],
-              "path": ["files", ":id", "link"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "files",
+                ":id",
+                "link"
+              ]
             },
             "body": {
               "mode": "raw",
@@ -2102,8 +2970,74 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/files",
-              "host": ["{{baseUrl}}"],
-              "path": ["files"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "files"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Número de página (1-indexed)",
+                  "disabled": true
+                },
+                {
+                  "key": "limit",
+                  "value": "20",
+                  "description": "Resultados por página (1-100, default: 20)",
+                  "disabled": true
+                },
+                {
+                  "key": "offset",
+                  "value": "0",
+                  "description": "Registros a saltar",
+                  "disabled": true
+                },
+                {
+                  "key": "organizationId",
+                  "value": "",
+                  "description": "Filtrar por organización (public_code)",
+                  "disabled": true
+                },
+                {
+                  "key": "category",
+                  "value": "",
+                  "description": "logo | image | document | firmware | backup | export | import | attachment | other",
+                  "disabled": true
+                },
+                {
+                  "key": "status",
+                  "value": "",
+                  "description": "pending | uploaded | linked | deleted",
+                  "disabled": true
+                },
+                {
+                  "key": "ownerType",
+                  "value": "",
+                  "description": "Tipo de entidad (site, device, etc)",
+                  "disabled": true
+                },
+                {
+                  "key": "ownerId",
+                  "value": "",
+                  "description": "Public code de la entidad",
+                  "disabled": true
+                },
+                {
+                  "key": "mimeType",
+                  "value": "",
+                  "description": "Filtrar por MIME type",
+                  "disabled": true
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "description": "Buscar por nombre de archivo",
+                  "disabled": true
+                }
+              ]
             }
           }
         },
@@ -2119,8 +3053,13 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/files/:id",
-              "host": ["{{baseUrl}}"],
-              "path": ["files", ":id"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "files",
+                ":id"
+              ]
             }
           }
         },
@@ -2136,8 +3075,13 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/files/:id",
-              "host": ["{{baseUrl}}"],
-              "path": ["files", ":id"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "files",
+                ":id"
+              ]
             }
           }
         },
@@ -2153,8 +3097,14 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/files/stats/:organizationId",
-              "host": ["{{baseUrl}}"],
-              "path": ["files", "stats", ":organizationId"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "files",
+                "stats",
+                ":organizationId"
+              ]
             }
           }
         }
@@ -2162,7 +3112,6 @@
     },
     {
       "name": "Telemetry",
-      "description": "",
       "item": [
         {
           "name": "Get Channel Data",
@@ -2175,20 +3124,118 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/telemetry/channels/:channelId/data?from=2025-01-01&to=2025-01-31&resolution=1h",
-              "host": ["{{baseUrl}}"],
+              "raw": "{{baseUrl}}/telemetry/channels/:channelId/data?from=2025-01-01T00:00:00Z&to=2025-01-31T23:59:59Z",
+              "host": [
+                "{{baseUrl}}"
+              ],
               "path": [
                 "telemetry",
                 "channels",
                 ":channelId",
-                "data?from=2025-01-01&to=2025-01-31&resolution=1h"
+                "data"
+              ],
+              "query": [
+                {
+                  "key": "from",
+                  "value": "2025-01-01T00:00:00Z",
+                  "description": "Fecha inicio (ISO 8601) - REQUERIDO",
+                  "disabled": false
+                },
+                {
+                  "key": "to",
+                  "value": "2025-01-31T23:59:59Z",
+                  "description": "Fecha fin (ISO 8601) - REQUERIDO",
+                  "disabled": false
+                },
+                {
+                  "key": "resolution",
+                  "value": "1m",
+                  "description": "raw | 1m | 15m | 60m | daily | monthly (default: 1m)",
+                  "disabled": true
+                },
+                {
+                  "key": "tz",
+                  "value": "America/Lima",
+                  "description": "Timezone destino",
+                  "disabled": true
+                },
+                {
+                  "key": "variables",
+                  "value": "",
+                  "description": "IDs de variables separados por coma",
+                  "disabled": true
+                },
+                {
+                  "key": "excludeDays",
+                  "value": "",
+                  "description": "Días a excluir: 0=Dom, 1=Lun...6=Sab",
+                  "disabled": true
+                }
               ]
             }
           }
         },
         {
+          "name": "Get Channel Latest Data",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/telemetry/channels/:channelId/latest",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "telemetry",
+                "channels",
+                ":channelId",
+                "latest"
+              ],
+              "query": [
+                {
+                  "key": "since",
+                  "value": "",
+                  "description": "ISO timestamp - solo datos más nuevos que esta fecha",
+                  "disabled": true
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Batch Get Latest Data",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/telemetry/batch/latest",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "telemetry",
+                "batch",
+                "latest"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"channels\": [\n    \"CHN-XXXXX-1\",\n    \"CHN-XXXXX-2\"\n  ],\n  \"since\": null\n}"
+            }
+          }
+        },
+        {
           "name": "Variables",
-          "description": "",
           "item": [
             {
               "name": "List Variables",
@@ -2202,8 +3249,27 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/telemetry/variables",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["telemetry", "variables"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "telemetry",
+                    "variables"
+                  ],
+                  "query": [
+                    {
+                      "key": "search",
+                      "value": "",
+                      "description": "Buscar por nombre o código",
+                      "disabled": true
+                    },
+                    {
+                      "key": "unit",
+                      "value": "",
+                      "description": "Filtrar por unidad (ej: Wh, °C)",
+                      "disabled": true
+                    }
+                  ]
                 }
               }
             },
@@ -2219,8 +3285,14 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/telemetry/variables/:id",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["telemetry", "variables", ":id"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "telemetry",
+                    "variables",
+                    ":id"
+                  ]
                 }
               }
             },
@@ -2236,12 +3308,17 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/telemetry/variables",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["telemetry", "variables"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "telemetry",
+                    "variables"
+                  ]
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"code\": \"new_var\",\n  \"measurementTypeId\": 1,\n  \"columnName\": \"value\",\n  \"unit\": \"°C\"\n}"
+                  "raw": "{\n  \"code\": \"new_var\",\n  \"name\": \"New Variable\",\n  \"measurementTypeId\": 1,\n  \"columnName\": \"value\",\n  \"unit\": \"°C\",\n  \"description\": \"\"\n}"
                 }
               }
             },
@@ -2257,12 +3334,18 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/telemetry/variables/:id",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["telemetry", "variables", ":id"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "telemetry",
+                    "variables",
+                    ":id"
+                  ]
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"unit\": \"°F\"\n}"
+                  "raw": "{\n  \"name\": \"Updated Variable\",\n  \"unit\": \"°F\"\n}"
                 }
               }
             },
@@ -2278,8 +3361,14 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/telemetry/variables/:id",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["telemetry", "variables", ":id"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "telemetry",
+                    "variables",
+                    ":id"
+                  ]
                 }
               }
             }
@@ -2289,11 +3378,9 @@
     },
     {
       "name": "Resource Hierarchy",
-      "description": "",
       "item": [
         {
           "name": "Nodes",
-          "description": "",
           "item": [
             {
               "name": "List Nodes",
@@ -2307,8 +3394,69 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/resource-hierarchy/nodes",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["resource-hierarchy", "nodes"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "resource-hierarchy",
+                    "nodes"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1",
+                      "description": "Número de página (1-indexed)",
+                      "disabled": true
+                    },
+                    {
+                      "key": "limit",
+                      "value": "50",
+                      "description": "Resultados por página (1-100, default: 50)",
+                      "disabled": true
+                    },
+                    {
+                      "key": "offset",
+                      "value": "0",
+                      "description": "Registros a saltar",
+                      "disabled": true
+                    },
+                    {
+                      "key": "organizationId",
+                      "value": "",
+                      "description": "Filtrar por organización (public_code)",
+                      "disabled": true
+                    },
+                    {
+                      "key": "parentId",
+                      "value": "",
+                      "description": "ID del padre o 'root'",
+                      "disabled": true
+                    },
+                    {
+                      "key": "nodeType",
+                      "value": "",
+                      "description": "folder | site | channel",
+                      "disabled": true
+                    },
+                    {
+                      "key": "search",
+                      "value": "",
+                      "description": "Buscar por nombre",
+                      "disabled": true
+                    },
+                    {
+                      "key": "isActive",
+                      "value": "true",
+                      "description": "Filtrar activos/inactivos",
+                      "disabled": true
+                    },
+                    {
+                      "key": "includeCounts",
+                      "value": "true",
+                      "description": "Incluir conteos de hijos (default: true)",
+                      "disabled": true
+                    }
+                  ]
                 }
               }
             },
@@ -2324,8 +3472,14 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/resource-hierarchy/nodes/:id",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["resource-hierarchy", "nodes", ":id"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "resource-hierarchy",
+                    "nodes",
+                    ":id"
+                  ]
                 }
               }
             },
@@ -2341,12 +3495,17 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/resource-hierarchy/nodes",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["resource-hierarchy", "nodes"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "resource-hierarchy",
+                    "nodes"
+                  ]
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"name\": \"New Node\",\n  \"entityType\": \"device\",\n  \"entityId\": \"DEV-XXXXX\"\n}"
+                  "raw": "{\n  \"organizationId\": \"ORG-XXXXX\",\n  \"parentId\": null,\n  \"nodeType\": \"folder\",\n  \"name\": \"New Folder\",\n  \"description\": \"\",\n  \"referenceId\": null,\n  \"icon\": null,\n  \"displayOrder\": 0,\n  \"metadata\": {}\n}"
                 }
               }
             },
@@ -2362,8 +3521,14 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/resource-hierarchy/nodes/batch",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["resource-hierarchy", "nodes", "batch"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "resource-hierarchy",
+                    "nodes",
+                    "batch"
+                  ]
                 },
                 "body": {
                   "mode": "raw",
@@ -2383,8 +3548,14 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/resource-hierarchy/nodes/batch-create",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["resource-hierarchy", "nodes", "batch-create"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "resource-hierarchy",
+                    "nodes",
+                    "batch-create"
+                  ]
                 },
                 "body": {
                   "mode": "raw",
@@ -2404,12 +3575,18 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/resource-hierarchy/nodes/:id",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["resource-hierarchy", "nodes", ":id"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "resource-hierarchy",
+                    "nodes",
+                    ":id"
+                  ]
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"name\": \"Updated Node\"\n}"
+                  "raw": "{\n  \"name\": \"Updated Node\",\n  \"description\": \"\"\n}"
                 }
               }
             },
@@ -2425,8 +3602,14 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/resource-hierarchy/nodes/:id",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["resource-hierarchy", "nodes", ":id"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "resource-hierarchy",
+                    "nodes",
+                    ":id"
+                  ]
                 }
               }
             },
@@ -2442,8 +3625,15 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/resource-hierarchy/nodes/:id/move",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["resource-hierarchy", "nodes", ":id", "move"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "resource-hierarchy",
+                    "nodes",
+                    ":id",
+                    "move"
+                  ]
                 },
                 "body": {
                   "mode": "raw",
@@ -2463,8 +3653,15 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/resource-hierarchy/nodes/:id/children",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["resource-hierarchy", "nodes", ":id", "children"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "resource-hierarchy",
+                    "nodes",
+                    ":id",
+                    "children"
+                  ]
                 }
               }
             },
@@ -2480,8 +3677,15 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/resource-hierarchy/nodes/:id/descendants",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["resource-hierarchy", "nodes", ":id", "descendants"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "resource-hierarchy",
+                    "nodes",
+                    ":id",
+                    "descendants"
+                  ]
                 }
               }
             },
@@ -2497,8 +3701,15 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/resource-hierarchy/nodes/:id/ancestors",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["resource-hierarchy", "nodes", ":id", "ancestors"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "resource-hierarchy",
+                    "nodes",
+                    ":id",
+                    "ancestors"
+                  ]
                 }
               }
             },
@@ -2514,8 +3725,15 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/resource-hierarchy/nodes/:id/has-category-descendants",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["resource-hierarchy", "nodes", ":id", "has-category-descendants"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "resource-hierarchy",
+                    "nodes",
+                    ":id",
+                    "has-category-descendants"
+                  ]
                 }
               }
             }
@@ -2523,7 +3741,6 @@
         },
         {
           "name": "Tree",
-          "description": "",
           "item": [
             {
               "name": "Get Full Tree",
@@ -2537,8 +3754,13 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/resource-hierarchy/tree",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["resource-hierarchy", "tree"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "resource-hierarchy",
+                    "tree"
+                  ]
                 }
               }
             },
@@ -2554,8 +3776,14 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/resource-hierarchy/tree/filter",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["resource-hierarchy", "tree", "filter"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "resource-hierarchy",
+                    "tree",
+                    "filter"
+                  ]
                 }
               }
             },
@@ -2571,8 +3799,13 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/resource-hierarchy/roots",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["resource-hierarchy", "roots"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "resource-hierarchy",
+                    "roots"
+                  ]
                 }
               }
             }
@@ -2580,7 +3813,6 @@
         },
         {
           "name": "Access Control",
-          "description": "",
           "item": [
             {
               "name": "Grant Access",
@@ -2594,8 +3826,13 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/resource-hierarchy/access",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["resource-hierarchy", "access"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "resource-hierarchy",
+                    "access"
+                  ]
                 },
                 "body": {
                   "mode": "raw",
@@ -2615,8 +3852,13 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/resource-hierarchy/access",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["resource-hierarchy", "access"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "resource-hierarchy",
+                    "access"
+                  ]
                 }
               }
             },
@@ -2631,12 +3873,28 @@
                   }
                 ],
                 "url": {
-                  "raw": "{{baseUrl}}/resource-hierarchy/access/check?userId=USR-XXXXX&nodeId=NODE-XXXXX",
-                  "host": ["{{baseUrl}}"],
+                  "raw": "{{baseUrl}}/resource-hierarchy/access/check?userId=&nodeId=",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
                   "path": [
                     "resource-hierarchy",
                     "access",
-                    "check?userId=USR-XXXXX&nodeId=NODE-XXXXX"
+                    "check"
+                  ],
+                  "query": [
+                    {
+                      "key": "userId",
+                      "value": "",
+                      "description": "Public code del usuario",
+                      "disabled": false
+                    },
+                    {
+                      "key": "nodeId",
+                      "value": "",
+                      "description": "ID del nodo",
+                      "disabled": false
+                    }
                   ]
                 }
               }
@@ -2647,7 +3905,6 @@
     },
     {
       "name": "Asset Categories",
-      "description": "",
       "item": [
         {
           "name": "List Categories (Tree)",
@@ -2661,25 +3918,32 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/asset-categories",
-              "host": ["{{baseUrl}}"],
-              "path": ["asset-categories"]
-            }
-          }
-        },
-        {
-          "name": "List Categories (Flat)",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/asset-categories/flat",
-              "host": ["{{baseUrl}}"],
-              "path": ["asset-categories", "flat"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "asset-categories"
+              ],
+              "query": [
+                {
+                  "key": "scope",
+                  "value": "all",
+                  "description": "organization | user | all (default: all)",
+                  "disabled": true
+                },
+                {
+                  "key": "parentId",
+                  "value": "",
+                  "description": "Filtrar hijos de un padre (integer)",
+                  "disabled": true
+                },
+                {
+                  "key": "rootsOnly",
+                  "value": "false",
+                  "description": "true = solo raíces",
+                  "disabled": true
+                }
+              ]
             }
           }
         },
@@ -2695,13 +3959,41 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/asset-categories/:id",
-              "host": ["{{baseUrl}}"],
-              "path": ["asset-categories", ":id"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "asset-categories",
+                ":id"
+              ]
             }
           }
         },
         {
-          "name": "Create Category",
+          "name": "Get Category Tree",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/asset-categories/:id/tree",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "asset-categories",
+                ":id",
+                "tree"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Organization Category",
           "request": {
             "method": "POST",
             "header": [
@@ -2711,13 +4003,44 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/asset-categories",
-              "host": ["{{baseUrl}}"],
-              "path": ["asset-categories"]
+              "raw": "{{baseUrl}}/asset-categories/organization",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "asset-categories",
+                "organization"
+              ]
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"New Category\"\n}"
+              "raw": "{\n  \"name\": \"New Category\",\n  \"color\": \"#6B7280\",\n  \"parentId\": null\n}"
+            }
+          }
+        },
+        {
+          "name": "Create User Category",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/asset-categories/user",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "asset-categories",
+                "user"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"My Category\",\n  \"color\": \"#6B7280\",\n  \"parentId\": null\n}"
             }
           }
         },
@@ -2733,12 +4056,17 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/asset-categories/:id",
-              "host": ["{{baseUrl}}"],
-              "path": ["asset-categories", ":id"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "asset-categories",
+                ":id"
+              ]
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Updated Category\"\n}"
+              "raw": "{\n  \"name\": \"Updated Category\",\n  \"color\": \"#3B82F6\"\n}"
             }
           }
         },
@@ -2754,8 +4082,13 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/asset-categories/:id",
-              "host": ["{{baseUrl}}"],
-              "path": ["asset-categories", ":id"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "asset-categories",
+                ":id"
+              ]
             }
           }
         }
@@ -2763,11 +4096,9 @@
     },
     {
       "name": "Dashboards",
-      "description": "",
       "item": [
         {
           "name": "Core",
-          "description": "",
           "item": [
             {
               "name": "Get Widget Types",
@@ -2781,8 +4112,13 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/dashboards/widget-types",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["dashboards", "widget-types"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "dashboards",
+                    "widget-types"
+                  ]
                 }
               }
             },
@@ -2798,8 +4134,50 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/dashboards",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["dashboards"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "dashboards"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1",
+                      "description": "Número de página (1-indexed)",
+                      "disabled": true
+                    },
+                    {
+                      "key": "limit",
+                      "value": "20",
+                      "description": "Resultados por página (1-100, default: 20)",
+                      "disabled": true
+                    },
+                    {
+                      "key": "offset",
+                      "value": "0",
+                      "description": "Registros a saltar",
+                      "disabled": true
+                    },
+                    {
+                      "key": "search",
+                      "value": "",
+                      "description": "Buscar por nombre (max 200 chars)",
+                      "disabled": true
+                    },
+                    {
+                      "key": "isPublic",
+                      "value": "",
+                      "description": "true | false",
+                      "disabled": true
+                    },
+                    {
+                      "key": "includeWidgets",
+                      "value": "false",
+                      "description": "true = incluir widgets en respuesta",
+                      "disabled": true
+                    }
+                  ]
                 }
               }
             },
@@ -2815,8 +4193,13 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/dashboards/:id",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["dashboards", ":id"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "dashboards",
+                    ":id"
+                  ]
                 }
               }
             },
@@ -2832,12 +4215,16 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/dashboards",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["dashboards"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "dashboards"
+                  ]
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"name\": \"New Dashboard\",\n  \"description\": \"Dashboard description\"\n}"
+                  "raw": "{\n  \"name\": \"New Dashboard\",\n  \"description\": \"\",\n  \"icon\": null,\n  \"isPublic\": false,\n  \"size\": \"FREE\",\n  \"positioning\": \"AUTO\",\n  \"customWidth\": null,\n  \"customHeight\": null,\n  \"settings\": {\n    \"forceK\": false,\n    \"backgroundImage\": null\n  },\n  \"templateId\": null\n}"
                 }
               }
             },
@@ -2853,12 +4240,17 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/dashboards/:id",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["dashboards", ":id"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "dashboards",
+                    ":id"
+                  ]
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"name\": \"Updated Dashboard\"\n}"
+                  "raw": "{\n  \"name\": \"Updated Dashboard\",\n  \"description\": \"\",\n  \"icon\": null,\n  \"isPublic\": false\n}"
                 }
               }
             },
@@ -2874,8 +4266,14 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/dashboards/:id/home",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["dashboards", ":id", "home"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "dashboards",
+                    ":id",
+                    "home"
+                  ]
                 },
                 "body": {
                   "mode": "raw",
@@ -2895,8 +4293,13 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/dashboards/:id",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["dashboards", ":id"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "dashboards",
+                    ":id"
+                  ]
                 }
               }
             }
@@ -2904,7 +4307,6 @@
         },
         {
           "name": "Pages",
-          "description": "",
           "item": [
             {
               "name": "List Pages",
@@ -2918,8 +4320,14 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/dashboards/:dashboardId/pages",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["dashboards", ":dashboardId", "pages"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "dashboards",
+                    ":dashboardId",
+                    "pages"
+                  ]
                 }
               }
             },
@@ -2935,12 +4343,18 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/dashboards/:dashboardId/pages",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["dashboards", ":dashboardId", "pages"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "dashboards",
+                    ":dashboardId",
+                    "pages"
+                  ]
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"name\": \"New Page\",\n  \"order\": 1\n}"
+                  "raw": "{\n  \"name\": \"New Page\",\n  \"order\": 1,\n  \"icon\": null\n}"
                 }
               }
             },
@@ -2956,12 +4370,19 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/dashboards/:dashboardId/pages/:pageId",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["dashboards", ":dashboardId", "pages", ":pageId"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "dashboards",
+                    ":dashboardId",
+                    "pages",
+                    ":pageId"
+                  ]
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"name\": \"Updated Page\"\n}"
+                  "raw": "{\n  \"name\": \"Updated Page\",\n  \"order\": 1,\n  \"icon\": null\n}"
                 }
               }
             },
@@ -2977,8 +4398,15 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/dashboards/:dashboardId/pages/:pageId",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["dashboards", ":dashboardId", "pages", ":pageId"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "dashboards",
+                    ":dashboardId",
+                    "pages",
+                    ":pageId"
+                  ]
                 }
               }
             }
@@ -2986,7 +4414,6 @@
         },
         {
           "name": "Layouts",
-          "description": "",
           "item": [
             {
               "name": "Update Layouts (Batch)",
@@ -3000,12 +4427,20 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/dashboards/:dashboardId/pages/:pageId/layouts",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["dashboards", ":dashboardId", "pages", ":pageId", "layouts"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "dashboards",
+                    ":dashboardId",
+                    "pages",
+                    ":pageId",
+                    "layouts"
+                  ]
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"layouts\": []\n}"
+                  "raw": "{\n  \"layouts\": [\n    {\n      \"widgetId\": 1,\n      \"x\": 0,\n      \"y\": 0,\n      \"w\": 4,\n      \"h\": 2\n    }\n  ]\n}"
                 }
               }
             }
@@ -3013,7 +4448,6 @@
         },
         {
           "name": "Widgets",
-          "description": "",
           "item": [
             {
               "name": "Create Widget",
@@ -3027,12 +4461,20 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/dashboards/:dashboardId/pages/:pageId/widgets",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["dashboards", ":dashboardId", "pages", ":pageId", "widgets"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "dashboards",
+                    ":dashboardId",
+                    "pages",
+                    ":pageId",
+                    "widgets"
+                  ]
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"type\": \"ENERGY_BY_CHANNEL\",\n  \"name\": \"My Widget\"\n}"
+                  "raw": "{\n  \"type\": \"ENERGY_BY_CHANNEL\",\n  \"title\": \"My Widget\",\n  \"layout\": {\n    \"x\": 0,\n    \"y\": 0,\n    \"w\": 4,\n    \"h\": 2\n  },\n  \"styleConfig\": {},\n  \"dataConfig\": {\n    \"dateRange\": \"today\",\n    \"resolution\": \"1m\"\n  },\n  \"dataSources\": [\n    {\n      \"channelPublicCode\": \"CHN-XXXXX\",\n      \"variableId\": 1,\n      \"label\": null,\n      \"color\": null\n    }\n  ]\n}"
                 }
               }
             },
@@ -3048,12 +4490,21 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/dashboards/:dashboardId/pages/:pageId/widgets/:widgetId",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["dashboards", ":dashboardId", "pages", ":pageId", "widgets", ":widgetId"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "dashboards",
+                    ":dashboardId",
+                    "pages",
+                    ":pageId",
+                    "widgets",
+                    ":widgetId"
+                  ]
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"name\": \"Updated Widget\"\n}"
+                  "raw": "{\n  \"title\": \"Updated Widget\",\n  \"styleConfig\": {},\n  \"dataConfig\": {}\n}"
                 }
               }
             },
@@ -3069,8 +4520,17 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/dashboards/:dashboardId/pages/:pageId/widgets/:widgetId",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["dashboards", ":dashboardId", "pages", ":pageId", "widgets", ":widgetId"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "dashboards",
+                    ":dashboardId",
+                    "pages",
+                    ":pageId",
+                    "widgets",
+                    ":widgetId"
+                  ]
                 }
               }
             },
@@ -3086,7 +4546,9 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/dashboards/:dashboardId/pages/:pageId/widgets/:widgetId/data",
-                  "host": ["{{baseUrl}}"],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
                   "path": [
                     "dashboards",
                     ":dashboardId",
@@ -3099,7 +4561,7 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"dateRange\": \"today\"\n}"
+                  "raw": "{\n  \"dateRange\": \"today\",\n  \"from\": null,\n  \"to\": null,\n  \"resolution\": \"1m\",\n  \"tz\": \"America/Lima\"\n}"
                 }
               }
             }
@@ -3107,7 +4569,6 @@
         },
         {
           "name": "Data Sources",
-          "description": "",
           "item": [
             {
               "name": "Create Data Source",
@@ -3121,12 +4582,19 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/dashboards/widgets/:widgetId/data-sources",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["dashboards", "widgets", ":widgetId", "data-sources"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "dashboards",
+                    "widgets",
+                    ":widgetId",
+                    "data-sources"
+                  ]
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"channelPublicCode\": \"CHN-XXXXX\",\n  \"variableId\": 1\n}"
+                  "raw": "{\n  \"channelPublicCode\": \"CHN-XXXXX\",\n  \"variableId\": 1,\n  \"label\": null,\n  \"color\": null,\n  \"displayOrder\": 0\n}"
                 }
               }
             },
@@ -3142,12 +4610,20 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/dashboards/widgets/:widgetId/data-sources/:dataSourceId",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["dashboards", "widgets", ":widgetId", "data-sources", ":dataSourceId"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "dashboards",
+                    "widgets",
+                    ":widgetId",
+                    "data-sources",
+                    ":dataSourceId"
+                  ]
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{}"
+                  "raw": "{\n  \"label\": \"Updated Label\",\n  \"color\": \"#3B82F6\",\n  \"displayOrder\": 1\n}"
                 }
               }
             },
@@ -3163,8 +4639,16 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/dashboards/widgets/:widgetId/data-sources/:dataSourceId",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["dashboards", "widgets", ":widgetId", "data-sources", ":dataSourceId"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "dashboards",
+                    "widgets",
+                    ":widgetId",
+                    "data-sources",
+                    ":dataSourceId"
+                  ]
                 }
               }
             }
@@ -3172,7 +4656,6 @@
         },
         {
           "name": "Collaborators",
-          "description": "",
           "item": [
             {
               "name": "List Collaborators",
@@ -3186,8 +4669,14 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/dashboards/:id/collaborators",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["dashboards", ":id", "collaborators"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "dashboards",
+                    ":id",
+                    "collaborators"
+                  ]
                 }
               }
             },
@@ -3203,8 +4692,14 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/dashboards/:id/collaborators",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["dashboards", ":id", "collaborators"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "dashboards",
+                    ":id",
+                    "collaborators"
+                  ]
                 },
                 "body": {
                   "mode": "raw",
@@ -3224,8 +4719,15 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/dashboards/:id/collaborators/:collaboratorId",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["dashboards", ":id", "collaborators", ":collaboratorId"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "dashboards",
+                    ":id",
+                    "collaborators",
+                    ":collaboratorId"
+                  ]
                 },
                 "body": {
                   "mode": "raw",
@@ -3245,8 +4747,15 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/dashboards/:id/collaborators/:collaboratorId",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["dashboards", ":id", "collaborators", ":collaboratorId"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "dashboards",
+                    ":id",
+                    "collaborators",
+                    ":collaboratorId"
+                  ]
                 }
               }
             }
@@ -3256,11 +4765,9 @@
     },
     {
       "name": "Dashboard Groups",
-      "description": "",
       "item": [
         {
           "name": "Core",
-          "description": "",
           "item": [
             {
               "name": "List Groups",
@@ -3274,8 +4781,38 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/dashboard-groups",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["dashboard-groups"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "dashboard-groups"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1",
+                      "description": "Número de página (1-indexed)",
+                      "disabled": true
+                    },
+                    {
+                      "key": "limit",
+                      "value": "20",
+                      "description": "Resultados por página (1-100, default: 20)",
+                      "disabled": true
+                    },
+                    {
+                      "key": "offset",
+                      "value": "0",
+                      "description": "Registros a saltar",
+                      "disabled": true
+                    },
+                    {
+                      "key": "search",
+                      "value": "",
+                      "description": "Buscar por nombre",
+                      "disabled": true
+                    }
+                  ]
                 }
               }
             },
@@ -3291,8 +4828,13 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/dashboard-groups/:id",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["dashboard-groups", ":id"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "dashboard-groups",
+                    ":id"
+                  ]
                 }
               }
             },
@@ -3308,12 +4850,16 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/dashboard-groups",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["dashboard-groups"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "dashboard-groups"
+                  ]
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"name\": \"New Group\"\n}"
+                  "raw": "{\n  \"name\": \"New Group\",\n  \"description\": \"\",\n  \"icon\": null\n}"
                 }
               }
             },
@@ -3329,12 +4875,17 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/dashboard-groups/:id",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["dashboard-groups", ":id"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "dashboard-groups",
+                    ":id"
+                  ]
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"name\": \"Updated Group\"\n}"
+                  "raw": "{\n  \"name\": \"Updated Group\",\n  \"description\": \"\"\n}"
                 }
               }
             },
@@ -3350,8 +4901,13 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/dashboard-groups/:id",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["dashboard-groups", ":id"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "dashboard-groups",
+                    ":id"
+                  ]
                 }
               }
             }
@@ -3359,7 +4915,6 @@
         },
         {
           "name": "Items",
-          "description": "",
           "item": [
             {
               "name": "Add Dashboard to Group",
@@ -3373,12 +4928,18 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/dashboard-groups/:groupId/dashboards",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["dashboard-groups", ":groupId", "dashboards"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "dashboard-groups",
+                    ":groupId",
+                    "dashboards"
+                  ]
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"dashboardPublicCode\": \"DSH-XXXXX\"\n}"
+                  "raw": "{\n  \"dashboardPublicCode\": \"DSH-XXXXX\",\n  \"displayOrder\": 0\n}"
                 }
               }
             },
@@ -3394,8 +4955,15 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/dashboard-groups/:groupId/dashboards/:dashboardId",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["dashboard-groups", ":groupId", "dashboards", ":dashboardId"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "dashboard-groups",
+                    ":groupId",
+                    "dashboards",
+                    ":dashboardId"
+                  ]
                 }
               }
             }
@@ -3403,7 +4971,6 @@
         },
         {
           "name": "Collaborators",
-          "description": "",
           "item": [
             {
               "name": "List Group Collaborators",
@@ -3417,8 +4984,14 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/dashboard-groups/:id/collaborators",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["dashboard-groups", ":id", "collaborators"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "dashboard-groups",
+                    ":id",
+                    "collaborators"
+                  ]
                 }
               }
             },
@@ -3434,8 +5007,14 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/dashboard-groups/:id/collaborators",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["dashboard-groups", ":id", "collaborators"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "dashboard-groups",
+                    ":id",
+                    "collaborators"
+                  ]
                 },
                 "body": {
                   "mode": "raw",
@@ -3455,8 +5034,15 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/dashboard-groups/:id/collaborators/:collaboratorId",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["dashboard-groups", ":id", "collaborators", ":collaboratorId"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "dashboard-groups",
+                    ":id",
+                    "collaborators",
+                    ":collaboratorId"
+                  ]
                 },
                 "body": {
                   "mode": "raw",
@@ -3476,8 +5062,15 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/dashboard-groups/:id/collaborators/:collaboratorId",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["dashboard-groups", ":id", "collaborators", ":collaboratorId"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "dashboard-groups",
+                    ":id",
+                    "collaborators",
+                    ":collaboratorId"
+                  ]
                 }
               }
             }
@@ -3487,7 +5080,6 @@
     },
     {
       "name": "Realtime",
-      "description": "",
       "item": [
         {
           "name": "Get WebSocket Token",
@@ -3501,8 +5093,13 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/realtime/token",
-              "host": ["{{baseUrl}}"],
-              "path": ["realtime", "token"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "realtime",
+                "token"
+              ]
             },
             "body": {
               "mode": "raw",
@@ -3522,8 +5119,13 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/realtime/status",
-              "host": ["{{baseUrl}}"],
-              "path": ["realtime", "status"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "realtime",
+                "status"
+              ]
             }
           }
         }
@@ -3531,7 +5133,6 @@
     },
     {
       "name": "Countries",
-      "description": "",
       "item": [
         {
           "name": "List Countries",
@@ -3545,8 +5146,12 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/countries",
-              "host": ["{{baseUrl}}"],
-              "path": ["countries"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "countries"
+              ]
             }
           }
         }
@@ -3554,14 +5159,10 @@
     },
     {
       "name": "Locations",
-      "description": "",
       "item": [
         {
           "name": "List All Locations",
           "request": {
-            "auth": {
-              "type": "noauth"
-            },
             "method": "GET",
             "header": [
               {
@@ -3571,17 +5172,21 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/locations",
-              "host": ["{{baseUrl}}"],
-              "path": ["locations"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "locations"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
             }
           }
         },
         {
           "name": "Get States by Country",
           "request": {
-            "auth": {
-              "type": "noauth"
-            },
             "method": "GET",
             "header": [
               {
@@ -3591,17 +5196,24 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/locations/countries/:countryCode/states",
-              "host": ["{{baseUrl}}"],
-              "path": ["locations", "countries", ":countryCode", "states"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "locations",
+                "countries",
+                ":countryCode",
+                "states"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
             }
           }
         },
         {
           "name": "Get Cities by State",
           "request": {
-            "auth": {
-              "type": "noauth"
-            },
             "method": "GET",
             "header": [
               {
@@ -3611,8 +5223,18 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/locations/states/:stateCode/cities",
-              "host": ["{{baseUrl}}"],
-              "path": ["locations", "states", ":stateCode", "cities"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "locations",
+                "states",
+                ":stateCode",
+                "cities"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
             }
           }
         }
@@ -3620,14 +5242,10 @@
     },
     {
       "name": "Error Logs",
-      "description": "",
       "item": [
         {
           "name": "Create Error Log",
           "request": {
-            "auth": {
-              "type": "noauth"
-            },
             "method": "POST",
             "header": [
               {
@@ -3637,12 +5255,19 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/error-logs",
-              "host": ["{{baseUrl}}"],
-              "path": ["error-logs"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "error-logs"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"source\": \"frontend\",\n  \"level\": \"error\",\n  \"message\": \"Something went wrong\",\n  \"metadata\": {}\n}"
+              "raw": "{\n  \"message\": \"Something went wrong\",\n  \"level\": \"error\",\n  \"stack\": null,\n  \"context\": {},\n  \"url\": \"/dashboard\",\n  \"userId\": null\n}"
             }
           }
         }
@@ -3650,14 +5275,10 @@
     },
     {
       "name": "Seed (Dev Only)",
-      "description": "",
       "item": [
         {
           "name": "Generate Test Data",
           "request": {
-            "auth": {
-              "type": "noauth"
-            },
             "method": "POST",
             "header": [
               {
@@ -3667,8 +5288,16 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/seed/test-data",
-              "host": ["{{baseUrl}}"],
-              "path": ["seed", "test-data"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "seed",
+                "test-data"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
             },
             "body": {
               "mode": "raw",
