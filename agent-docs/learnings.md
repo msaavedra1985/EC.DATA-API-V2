@@ -562,6 +562,14 @@ await queryInterface.addColumn('users', 'avatarUrl', { type: Sequelize.STRING })
 **Regla general**: La decisión de si un widget es realtime la toma el usuario (via `dataConfig.dateRange`), no la infraestructura (via `variable.is_realtime`). La variable solo indica si técnicamente puede proveer datos en tiempo real.
 **Archivos afectados**: `src/modules/realtime/handlers/dashboardHandler.js`
 
+### Migración device-metadata DTOs de snake_case a camelCase
+**Fecha**: 2026-03-02
+**Síntoma**: El endpoint `GET /api/v1/devices/metadata` devolvía campos en snake_case (`logo_url`, `is_active`, `display_order`, `device_types`, `measurement_types`, etc.) en vez de camelCase como el resto de la API.
+**Causa**: Las funciones `toDTO`, `toDTOWithTranslations`, `toMeasurementTypeDTO` y `toVariableDTO` en `services.js` usaban los keys de Sequelize directamente (que con `underscored: true` devuelve camelCase vía `model.toJSON()`), pero los keys de salida del DTO estaban hardcodeados en snake_case. Las keys del objeto `getAllMetadata` (`device_types`, `validity_periods`, `measurement_types`) también estaban en snake_case.
+**Solución**: Convertir todas las keys de las 4 funciones DTO y del objeto de respuesta a camelCase. Invalidar el caché Redis (`device_metadata:all:*`) para que la versión vieja no se sirva.
+**Regla general**: Los otros módulos (channels, dashboards, devices, files, sites) ya usan camelCase en sus serializers. Solo `device-metadata` tenía este problema porque las DTOs se escribieron manualmente con keys snake_case en vez de usar el naming que Sequelize ya devuelve como camelCase.
+**Archivos afectados**: `src/modules/device-metadata/services.js`
+
 ---
 
 ## Deployment

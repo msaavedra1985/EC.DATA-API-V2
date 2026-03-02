@@ -22,18 +22,18 @@ const toDTO = (model) => {
         name: translation.name || json.code,
         description: translation.description || null,
         ...(json.icon && { icon: json.icon }),
-        ...(json.logo_url && { logo_url: json.logo_url }),
-        ...(json.website_url && { website_url: json.website_url }),
-        ...(json.server_type && { server_type: json.server_type }),
+        ...(json.logoUrl && { logoUrl: json.logoUrl }),
+        ...(json.websiteUrl && { websiteUrl: json.websiteUrl }),
+        ...(json.serverType && { serverType: json.serverType }),
         ...(json.host && { host: json.host }),
         ...(json.port && { port: json.port }),
-        ...(json.use_ssl !== undefined && { use_ssl: json.use_ssl }),
+        ...(json.useSsl !== undefined && { useSsl: json.useSsl }),
         ...(json.color && { color: json.color }),
         ...(json.months !== undefined && { months: json.months }),
         ...(json.specs && { specs: json.specs }),
-        ...(json.brand && { brand_id: json.brand.id, brand_code: json.brand.code }),
-        is_active: json.is_active,
-        display_order: json.display_order
+        ...(json.brand && { brandId: json.brand.id, brandCode: json.brand.code }),
+        isActive: json.isActive,
+        displayOrder: json.displayOrder
     };
 };
 
@@ -57,19 +57,19 @@ const toDTOWithTranslations = (model) => {
         id: json.id,
         code: json.code,
         ...(json.icon && { icon: json.icon }),
-        ...(json.logo_url && { logo_url: json.logo_url }),
-        ...(json.website_url && { website_url: json.website_url }),
-        ...(json.server_type && { server_type: json.server_type }),
+        ...(json.logoUrl && { logoUrl: json.logoUrl }),
+        ...(json.websiteUrl && { websiteUrl: json.websiteUrl }),
+        ...(json.serverType && { serverType: json.serverType }),
         ...(json.host && { host: json.host }),
         ...(json.port && { port: json.port }),
-        ...(json.use_ssl !== undefined && { use_ssl: json.use_ssl }),
+        ...(json.useSsl !== undefined && { useSsl: json.useSsl }),
         ...(json.color && { color: json.color }),
         ...(json.months !== undefined && { months: json.months }),
         ...(json.specs && { specs: json.specs }),
-        ...(json.brand && { brand_id: json.brand.id, brand_code: json.brand.code }),
-        ...(json.device_brand_id && { device_brand_id: json.device_brand_id }),
-        is_active: json.is_active,
-        display_order: json.display_order,
+        ...(json.brand && { brandId: json.brand.id, brandCode: json.brand.code }),
+        ...(json.deviceBrandId && { deviceBrandId: json.deviceBrandId }),
+        isActive: json.isActive,
+        displayOrder: json.displayOrder,
         translations
     };
 };
@@ -84,9 +84,9 @@ const toMeasurementTypeDTO = (model) => {
     return {
         id: json.id,
         code: json.code,
-        table_prefix: json.table_prefix,
+        tablePrefix: json.tablePrefix,
         name: translation.name || json.code || `Type ${json.id}`,
-        is_active: json.is_active
+        isActive: json.isActive
     };
 };
 
@@ -97,23 +97,23 @@ const toVariableDTO = (model) => {
     return {
         id: json.id,
         code: json.code || null,
-        measurement_type_id: json.measurement_type_id,
-        column_name: json.column_name,
-        name: translation.name || json.column_name,
+        measurementTypeId: json.measurementTypeId,
+        columnName: json.columnName,
+        name: translation.name || json.columnName,
         description: translation.description || null,
         unit: json.unit || null,
-        chart_type: json.chart_type || null,
-        axis_name: json.axis_name || null,
-        axis_id: json.axis_id || null,
-        axis_min: json.axis_min != null ? Number(json.axis_min) : null,
-        axis_function: json.axis_function || null,
-        aggregation_type: json.aggregation_type || null,
-        display_order: json.display_order,
-        show_in_billing: json.show_in_billing,
-        show_in_analysis: json.show_in_analysis,
-        is_realtime: json.is_realtime,
-        is_default: json.is_default,
-        is_active: json.is_active
+        chartType: json.chartType || null,
+        axisName: json.axisName || null,
+        axisId: json.axisId || null,
+        axisMin: json.axisMin != null ? Number(json.axisMin) : null,
+        axisFunction: json.axisFunction || null,
+        aggregationType: json.aggregationType || null,
+        displayOrder: json.displayOrder,
+        showInBilling: json.showInBilling,
+        showInAnalysis: json.showInAnalysis,
+        isRealtime: json.isRealtime,
+        isDefault: json.isDefault,
+        isActive: json.isActive
     };
 };
 
@@ -141,14 +141,14 @@ export const getAllMetadata = async (lang = 'es') => {
     ]);
 
     const metadata = {
-        device_types: types.map(toDTO),
+        deviceTypes: types.map(toDTO),
         brands: brands.map(toDTO),
         models: models.map(toDTO),
         servers: servers.map(toDTO),
         networks: networks.map(toDTO),
         licenses: licenses.map(toDTO),
-        validity_periods: validityPeriods.map(toDTO),
-        measurement_types: measurementTypes.map(toMeasurementTypeDTO),
+        validityPeriods: validityPeriods.map(toDTO),
+        measurementTypes: measurementTypes.map(toMeasurementTypeDTO),
         variables: variables.map(toVariableDTO)
     };
 
