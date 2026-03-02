@@ -16,21 +16,64 @@ import Channel from '../channels/models/Channel.js';
 import sequelize from '../../db/sql/sequelize.js';
 import logger from '../../utils/logger.js';
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+const SYSTEM_MAP = {
+    'trifásico': 3,
+    'trifasico': 3,
+    'monofásico': 1,
+    'monofasico': 1,
+    'n/a': 0
+};
+
+const parsePhaseSystem = (value) => {
+    if (value == null || value === '') return 0;
+    if (typeof value === 'number') return value;
+    const normalized = String(value).toLowerCase().trim();
+    return SYSTEM_MAP[normalized] ?? 0;
+};
+
+const buildChannelMetadata = (channelInput) => {
+    const valKeys = ['val1', 'val2', 'val3', 'val4', 'val5', 'val6', 'val7', 'val8'];
+    const vals = {};
+    let hasVals = false;
+    for (const key of valKeys) {
+        if (channelInput[key] != null) {
+            vals[key] = channelInput[key];
+            hasVals = true;
+        }
+    }
+    if (!hasVals && !channelInput.metadata) return undefined;
+    return { ...(channelInput.metadata || {}), ...vals };
+};
+
 /**
- * Crear un nuevo device
- * @param {Object} deviceData - Datos del device
+ * Crear un nuevo device (con canales opcionales, atómico)
+ * @param {Object} deviceData - Datos del device (puede incluir channels[])
  * @param {string} userId - ID del usuario que crea el device
  * @param {string} ipAddress - IP del usuario
  * @param {string} userAgent - User agent del usuario
- * @returns {Promise<Object>} - Device creado
+ * @param {Object} orgContext - Contexto de organización del middleware enforceActiveOrganization
+ * @returns {Promise<Object>} - Device creado con canales
  */
-export const createDevice = async (deviceData, userId, ipAddress, userAgent) => {
-    console.log('[DEBUG-DEVICE-SVC] Inicio createDevice, orgId:', deviceData.organizationId, 'name:', deviceData.name);
+export const createDevice = async (deviceData, userId, ipAddress, userAgent, orgContext) => {
+    const { channels: channelsInput, ...deviceFields } = deviceData;
     
-    // Convertir organizationId de publicCode a UUID si es necesario
-    let organizationUuid = deviceData.organizationId;
-    if (!deviceData.organizationId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
-        const org = await organizationRepository.findOrganizationByPublicCodeInternal(deviceData.organizationId);
+    // Resolver organizationId: del body o del contexto JWT
+    const orgFromBody = deviceFields.organizationId;
+    const orgIdentifier = orgFromBody || orgContext?.publicCode || orgContext?.id;
+    if (!orgIdentifier) {
+        const error = new Error('organizationId es requerido (enviar en body o tener organización activa)');
+        error.status = 400;
+        error.code = 'ORGANIZATION_REQUIRED';
+        throw error;
+    }
+    
+    let organizationUuid;
+    if (UUID_REGEX.test(orgIdentifier)) {
+        organizationUuid = orgIdentifier;
+    } else {
+        const org = await organizationRepository.findOrganizationByPublicCodeInternal(orgIdentifier);
         if (!org) {
             const error = new Error('Organización no encontrada');
             error.status = 404;
@@ -38,75 +81,147 @@ export const createDevice = async (deviceData, userId, ipAddress, userAgent) => 
             throw error;
         }
         organizationUuid = org.id;
-        console.log('[DEBUG-DEVICE-SVC] Org resuelta, uuid:', organizationUuid);
     }
     
-    // Si se proporciona siteId, validar que existe y pertenece a la misma organización
-    let siteUuid = deviceData.siteId;
-    if (deviceData.siteId) {
-        if (!deviceData.siteId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
-            const site = await siteRepository.findSiteByPublicCodeInternal(deviceData.siteId);
-            if (!site) {
-                const error = new Error('Site no encontrado');
-                error.status = 404;
-                error.code = 'SITE_NOT_FOUND';
-                throw error;
+    // Validar autorización: si el body especifica una org diferente a la del contexto JWT,
+    // verificar que el usuario tiene acceso a esa organización
+    if (orgFromBody && orgContext) {
+        const contextOrgUuid = orgContext.id;
+        if (contextOrgUuid && organizationUuid !== contextOrgUuid) {
+            if (!orgContext.canAccessAll) {
+                const allowedIds = orgContext.allowedIds || [];
+                if (!allowedIds.includes(organizationUuid)) {
+                    const error = new Error('No tiene permisos para crear dispositivos en esta organización');
+                    error.status = 403;
+                    error.code = 'ORGANIZATION_ACCESS_DENIED';
+                    throw error;
+                }
             }
-            // Validar que el site pertenece a la misma organización
-            if (site.organizationId !== organizationUuid) {
-                const error = new Error('El site no pertenece a la organización especificada');
-                error.status = 400;
-                error.code = 'SITE_ORGANIZATION_MISMATCH';
-                throw error;
-            }
-            siteUuid = site.id;
         }
     }
     
-    // Generar identificadores usando el helper centralizado
-    const uuid = uuidv7();
-    const humanId = await generateHumanId(Device, null, null);
-    const publicCode = generatePublicCode('DEV');
+    // Resolver siteId si se proporcionó
+    let siteUuid = deviceFields.siteId || null;
+    if (siteUuid && !UUID_REGEX.test(siteUuid)) {
+        const site = await siteRepository.findSiteByPublicCodeInternal(siteUuid);
+        if (!site) {
+            const error = new Error('Site no encontrado');
+            error.status = 404;
+            error.code = 'SITE_NOT_FOUND';
+            throw error;
+        }
+        if (site.organizationId !== organizationUuid) {
+            const error = new Error('El site no pertenece a la organización especificada');
+            error.status = 400;
+            error.code = 'SITE_ORGANIZATION_MISMATCH';
+            throw error;
+        }
+        siteUuid = site.id;
+    }
     
-    const identifiers = {
-        id: uuid,
-        humanId: humanId,
-        publicCode: publicCode
-    };
-    
-    console.log('[DEBUG-DEVICE-SVC] Antes de crear en DB, uuid:', uuid, 'publicCode:', publicCode);
-    // Crear device
-    const device = await deviceRepository.createDevice({
-        ...deviceData,
-        organizationId: organizationUuid,
-        siteId: siteUuid || null,
-        ...identifiers
-    });
-    
-    console.log('[DEBUG-DEVICE-SVC] Device creado en DB, id:', device?.id, 'publicCode:', device?.publicCode);
-    
-    // Audit log
-    await logAuditAction({
-        entityType: 'device',
-        entityId: device.id,
-        action: 'create',
-        performedBy: userId,
-        changes: { new: device },
-        metadata: {
+    const result = await sequelize.transaction(async (t) => {
+        // --- Crear device ---
+        const deviceUuid = uuidv7();
+        const deviceHumanId = await generateHumanId(Device, null, null);
+        const devicePublicCode = generatePublicCode('DEV');
+        
+        const device = await deviceRepository.createDevice({
+            ...deviceFields,
             organizationId: organizationUuid,
-            siteId: siteUuid || null,
-            deviceTypeId: deviceData.deviceTypeId
-        },
-        ipAddress: ipAddress,
-        userAgent: userAgent
+            siteId: siteUuid,
+            id: deviceUuid,
+            humanId: deviceHumanId,
+            publicCode: devicePublicCode
+        }, { transaction: t });
+        
+        await logAuditAction({
+            entityType: 'device',
+            entityId: device.id,
+            action: 'create',
+            performedBy: userId,
+            changes: { new: device },
+            metadata: {
+                organizationId: organizationUuid,
+                siteId: siteUuid,
+                deviceTypeId: deviceFields.deviceTypeId
+            },
+            ipAddress,
+            userAgent
+        });
+        
+        // --- Crear canales inline ---
+        let createdChannels = [];
+        if (channelsInput && channelsInput.length > 0) {
+            for (const chInput of channelsInput) {
+                const chUuid = uuidv7();
+                const chHumanId = await generateHumanId(Channel, null, null);
+                const chPublicCode = generatePublicCode('CHN');
+                
+                const channelData = {
+                    id: chUuid,
+                    humanId: chHumanId,
+                    publicCode: chPublicCode,
+                    deviceId: deviceUuid,
+                    organizationId: organizationUuid,
+                    name: chInput.name,
+                    description: chInput.description || null,
+                    ch: chInput.channelIndex ?? null,
+                    measurementTypeId: chInput.measurementTypeId || null,
+                    phaseSystem: parsePhaseSystem(chInput.system),
+                    phase: chInput.phase || null,
+                    process: chInput.process ?? true,
+                    status: chInput.status || 'active',
+                    isActive: chInput.isActive ?? true,
+                    metadata: buildChannelMetadata(chInput) || {}
+                };
+                
+                const channel = await Channel.create(channelData, { transaction: t });
+                
+                createdChannels.push({
+                    id: chPublicCode,
+                    name: channel.name,
+                    description: channel.description,
+                    ch: channel.ch,
+                    measurementTypeId: channel.measurementTypeId,
+                    phaseSystem: channel.phaseSystem,
+                    phase: channel.phase,
+                    status: channel.status,
+                    metadata: channel.metadata || {}
+                });
+                
+                await logAuditAction({
+                    entityType: 'channel',
+                    entityId: chPublicCode,
+                    action: 'create',
+                    performedBy: userId,
+                    changes: { new: channelData },
+                    metadata: {
+                        organizationId: organizationUuid,
+                        deviceId: device.id,
+                        createdVia: 'device-inline'
+                    },
+                    ipAddress,
+                    userAgent
+                });
+            }
+        }
+        
+        if (createdChannels.length > 0) {
+            device.channels = createdChannels;
+        }
+        
+        return device;
     });
     
-    // Invalidar cache
+    // Invalidar caches fuera de la transacción
     await invalidateDeviceCache();
+    if (channelsInput && channelsInput.length > 0) {
+        await invalidateChannelCache();
+    }
     
-    logger.info({ deviceId: device.id, userId }, 'Device created successfully');
+    logger.info({ deviceId: result.id, channelsCreated: channelsInput?.length || 0, userId }, 'Device created successfully');
     
-    return device;
+    return result;
 };
 
 /**

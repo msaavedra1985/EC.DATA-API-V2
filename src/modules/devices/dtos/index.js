@@ -28,10 +28,10 @@ export const createDeviceSchema = z.object({
             .optional()
             .nullable(),
         organizationId: z
-            .string({
-                required_error: 'organizationId es requerido'
-            })
-            .min(1, 'organizationId no puede estar vacío'),
+            .string()
+            .min(1, 'organizationId no puede estar vacío')
+            .optional()
+            .nullable(),
         siteId: z
             .string()
             .min(1, 'siteId no puede estar vacío')
@@ -204,7 +204,68 @@ export const createDeviceSchema = z.object({
         isActive: z
             .boolean()
             .optional()
-            .default(true)
+            .default(true),
+
+        // --- Canales (creación inline) ---
+        channels: z
+            .array(
+                z.object({
+                    name: z
+                        .string({ required_error: 'channel.name es requerido' })
+                        .min(1, 'channel.name no puede estar vacío')
+                        .max(200, 'channel.name no puede exceder 200 caracteres'),
+                    description: z
+                        .string()
+                        .max(5000, 'channel.description no puede exceder 5000 caracteres')
+                        .optional()
+                        .nullable(),
+                    channelIndex: z
+                        .number({ invalid_type_error: 'channel.channelIndex debe ser un número' })
+                        .int('channel.channelIndex debe ser un entero')
+                        .optional()
+                        .nullable(),
+                    measurementTypeId: z
+                        .number({ invalid_type_error: 'channel.measurementTypeId debe ser un número' })
+                        .int('channel.measurementTypeId debe ser un entero')
+                        .positive('channel.measurementTypeId debe ser positivo')
+                        .optional()
+                        .nullable(),
+                    system: z
+                        .string()
+                        .optional()
+                        .nullable(),
+                    phase: z
+                        .number({ invalid_type_error: 'channel.phase debe ser un número' })
+                        .int('channel.phase debe ser un entero')
+                        .optional()
+                        .nullable(),
+                    process: z
+                        .boolean()
+                        .optional()
+                        .default(true),
+                    status: z
+                        .enum(['active', 'inactive', 'error', 'disabled'])
+                        .optional()
+                        .default('active'),
+                    isActive: z
+                        .boolean()
+                        .optional()
+                        .default(true),
+                    metadata: z
+                        .record(z.any())
+                        .optional(),
+                    val1: z.string().optional().nullable(),
+                    val2: z.string().optional().nullable(),
+                    val3: z.string().optional().nullable(),
+                    val4: z.string().optional().nullable(),
+                    val5: z.string().optional().nullable(),
+                    val6: z.string().optional().nullable(),
+                    val7: z.string().optional().nullable(),
+                    val8: z.string().optional().nullable()
+                })
+            )
+            .max(50, 'No se pueden crear más de 50 canales por request')
+            .optional()
     })
 });
 

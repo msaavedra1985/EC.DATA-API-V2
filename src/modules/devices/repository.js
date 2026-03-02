@@ -132,11 +132,10 @@ const deviceIncludes = [
  * @param {Object} deviceData - Datos del device
  * @returns {Promise<Object>} - Device creado con DTO público
  */
-export const createDevice = async (deviceData) => {
-    const device = await Device.create(deviceData);
+export const createDevice = async (deviceData, options = {}) => {
+    const device = await Device.create(deviceData, options);
     
-    // Recargar con relaciones
-    await device.reload({ include: deviceIncludes });
+    await device.reload({ include: deviceIncludes, transaction: options.transaction });
     
     return toPublicDeviceDto(device);
 };

@@ -1,6 +1,6 @@
 # Devices Endpoints
 
-> **Última actualización**: 2026-01-21
+> **Última actualización**: 2026-03-02
 > 
 > **IMPORTANTE**: Este archivo DEBE actualizarse cuando se modifique cualquier endpoint de dispositivos.
 
@@ -128,51 +128,119 @@
 
 ## POST /api/v1/devices
 
-**Propósito**: Registrar nuevo dispositivo
+**Propósito**: Registrar nuevo dispositivo (con canales opcionales, creación atómica)
 
-**Autenticación**: Bearer JWT (requiere rol admin)
+**Autenticación**: Bearer JWT (requiere rol `system-admin` o `org-admin`)
+
+**Middleware**: `enforceActiveOrganization` resuelve la org activa del JWT
 
 **Body**:
 ```json
 {
-  "name": "Sensor Humedad Cocina",
-  "type": "humidity_sensor",
-  "serial_number": "SN-67890",
-  "site_public_code": "SIT-XXXXX-X",
-  "channel_public_codes": ["CHN-XXXXX-X"],
-  "metadata": {
-    "manufacturer": "SensorCorp",
-    "model": "HM-200"
-  }
+  "name": "Equipo prueba Atria",
+  "organizationId": "ORG-XXXXX-X",
+  "siteId": "SIT-XXXXX-X",
+  "deviceTypeId": 1,
+  "brandId": 4,
+  "modelId": 17,
+  "serialNumber": "SN-12345",
+  "channels": [
+    {
+      "name": "Canal 1 Energia",
+      "description": "Medición eléctrica trifásica",
+      "channelIndex": 1,
+      "measurementTypeId": 1,
+      "system": "Trifásico",
+      "phase": 1
+    },
+    {
+      "name": "Canal 1 IOT",
+      "channelIndex": 1,
+      "measurementTypeId": 3,
+      "val1": "Analog In",
+      "val2": "Pulso"
+    }
+  ]
 }
 ```
 
-**Campos**:
+**Campos del device**:
 | Campo | Tipo | Requerido | Descripción |
 |-------|------|-----------|-------------|
-| name | string | Sí | Nombre del dispositivo |
-| type | string | Sí | Tipo de dispositivo |
-| serial_number | string | No | Número de serie |
-| site_public_code | string | No | Sitio donde está instalado |
-| channel_public_codes | array | No | Canales de comunicación |
+| name | string | Sí | Nombre del dispositivo (max 200) |
+| organizationId | string | No | Public code de la organización. Si no se envía, usa la org activa del JWT |
+| siteId | string | No | Public code del sitio |
+| deviceTypeId | integer | No | FK catálogo tipo de dispositivo |
+| brandId | integer | No | FK catálogo marca |
+| modelId | integer | No | FK catálogo modelo |
+| serialNumber | string | No | Número de serie |
+| uuid | string | No | UUID externo (si se quiere asignar uno específico) |
+| firmwareVersion | string | No | Versión de firmware |
+| ipAddress | string | No | Dirección IP |
+| macAddress | string | No | Dirección MAC |
+| topic | string | No | Topic MQTT |
 | metadata | object | No | Datos adicionales |
+| isActive | boolean | No | Default: true |
+| channels | array | No | Canales a crear junto con el dispositivo (max 50) |
+
+**Campos de cada channel** (dentro de `channels[]`):
+| Campo | Tipo | Requerido | Descripción |
+|-------|------|-----------|-------------|
+| name | string | Sí | Nombre del canal (max 200) |
+| description | string | No | Descripción (max 5000) |
+| channelIndex | integer | No | Índice físico del canal (→ `ch` en DB) |
+| measurementTypeId | integer | No | FK tipo de medición |
+| system | string | No | "Trifásico" → 3, "Monofásico" → 1, null → 0 (→ `phaseSystem`) |
+| phase | integer | No | Número de fase (1, 2, 3) |
+| process | boolean | No | Default: true |
+| status | enum | No | active, inactive, error, disabled. Default: active |
+| isActive | boolean | No | Default: true |
+| metadata | object | No | Datos adicionales |
+| val1..val8 | string | No | Valores auxiliares, se guardan en `metadata` |
 
 **Respuesta exitosa** (201):
 ```json
 {
   "ok": true,
   "data": {
-    "public_code": "DEV-YYYYY-Y",
-    "name": "Sensor Humedad Cocina",
-    "api_key": "dk_xxxxxxxxxxxxxxxx"
+    "id": "DEV-YYYYY-Y",
+    "name": "Equipo prueba Atria",
+    "organization": {
+      "id": "ORG-XXXXX-X",
+      "slug": "hotel-libertador",
+      "name": "Hotel Libertador"
+    },
+    "channels": [
+      {
+        "id": "CHN-AAAAA-A",
+        "name": "Canal 1 Energia",
+        "ch": 1,
+        "measurementTypeId": 1,
+        "phaseSystem": 3,
+        "status": "active"
+      },
+      {
+        "id": "CHN-BBBBB-B",
+        "name": "Canal 1 IOT",
+        "ch": 1,
+        "measurementTypeId": 3,
+        "phaseSystem": 0,
+        "status": "active",
+        "metadata": { "val1": "Analog In", "val2": "Pulso" }
+      }
+    ]
   }
 }
 ```
 
 **Notas**:
-- Audit log: CREATE
-- Genera `api_key` para autenticación M2M del dispositivo
-- El `api_key` solo se muestra una vez en la creación
+- `organizationId` es opcional: si no se envía, usa la organización activa del JWT del usuario
+- Solo `system-admin` y `org-admin` necesitarían enviar `organizationId` explícito para crear en otra org
+- Los canales se crean atómicamente con el device (transacción SQL). Si falla un canal, no se crea nada
+- `system` acepta texto ("Trifásico", "Monofásico", "N/A") y se convierte a `phaseSystem` (3, 1, 0)
+- `val1..val8` se mueven automáticamente a `metadata` del canal
+- Audit log: CREATE para device + CREATE para cada canal (con `createdVia: "device-inline"`)
+- Invalida cache de devices y channels
 
 ---
 

@@ -160,23 +160,14 @@ const deviceLogger = logger.child({ component: 'devices' });
  *       404:
  *         description: Organización o site no encontrado
  */
-router.post('/', authenticate, requireRole(['system-admin', 'org-admin']), validate(createDeviceSchema), async (req, res, next) => {
+router.post('/', authenticate, requireRole(['system-admin', 'org-admin']), enforceActiveOrganization, validate(createDeviceSchema), async (req, res, next) => {
     try {
         const userId = req.user.userId;
         const ipAddress = req.ip || req.connection.remoteAddress;
         const userAgent = req.headers['user-agent'];
+        const orgContext = req.organizationContext;
         
-        // DEBUG TEMPORAL — rastrear creación de dispositivo
-        console.log('[DEBUG-DEVICE-CREATE] === POST /devices RECIBIDO ===');
-        console.log('[DEBUG-DEVICE-CREATE] userId:', userId);
-        console.log('[DEBUG-DEVICE-CREATE] body keys:', Object.keys(req.body));
-        console.log('[DEBUG-DEVICE-CREATE] body:', JSON.stringify(req.body, null, 2));
-        
-        const device = await deviceServices.createDevice(req.body, userId, ipAddress, userAgent);
-        
-        console.log('[DEBUG-DEVICE-CREATE] === DISPOSITIVO CREADO OK ===');
-        console.log('[DEBUG-DEVICE-CREATE] device.id:', device?.id);
-        console.log('[DEBUG-DEVICE-CREATE] device.name:', device?.name);
+        const device = await deviceServices.createDevice(req.body, userId, ipAddress, userAgent, orgContext);
         
         res.status(201).json({
             ok: true,
@@ -187,11 +178,6 @@ router.post('/', authenticate, requireRole(['system-admin', 'org-admin']), valid
             }
         });
     } catch (error) {
-        console.error('[DEBUG-DEVICE-CREATE] === ERROR EN CREACIÓN ===');
-        console.error('[DEBUG-DEVICE-CREATE] error.message:', error.message);
-        console.error('[DEBUG-DEVICE-CREATE] error.code:', error.code);
-        console.error('[DEBUG-DEVICE-CREATE] error.status:', error.status);
-        console.error('[DEBUG-DEVICE-CREATE] stack:', error.stack);
         next(error);
     }
 });
