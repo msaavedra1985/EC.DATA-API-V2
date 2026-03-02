@@ -25,6 +25,8 @@ import logger from '../../utils/logger.js';
  * @returns {Promise<Object>} - Device creado
  */
 export const createDevice = async (deviceData, userId, ipAddress, userAgent) => {
+    console.log('[DEBUG-DEVICE-SVC] Inicio createDevice, orgId:', deviceData.organizationId, 'name:', deviceData.name);
+    
     // Convertir organizationId de publicCode a UUID si es necesario
     let organizationUuid = deviceData.organizationId;
     if (!deviceData.organizationId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
@@ -36,6 +38,7 @@ export const createDevice = async (deviceData, userId, ipAddress, userAgent) => 
             throw error;
         }
         organizationUuid = org.id;
+        console.log('[DEBUG-DEVICE-SVC] Org resuelta, uuid:', organizationUuid);
     }
     
     // Si se proporciona siteId, validar que existe y pertenece a la misma organización
@@ -71,6 +74,7 @@ export const createDevice = async (deviceData, userId, ipAddress, userAgent) => 
         publicCode: publicCode
     };
     
+    console.log('[DEBUG-DEVICE-SVC] Antes de crear en DB, uuid:', uuid, 'publicCode:', publicCode);
     // Crear device
     const device = await deviceRepository.createDevice({
         ...deviceData,
@@ -78,6 +82,8 @@ export const createDevice = async (deviceData, userId, ipAddress, userAgent) => 
         siteId: siteUuid || null,
         ...identifiers
     });
+    
+    console.log('[DEBUG-DEVICE-SVC] Device creado en DB, id:', device?.id, 'publicCode:', device?.publicCode);
     
     // Audit log
     await logAuditAction({
