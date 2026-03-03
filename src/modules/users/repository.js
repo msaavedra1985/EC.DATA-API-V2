@@ -278,8 +278,8 @@ export const listUsers = async (limit = 50, offset = 0, filters = {}) => {
  * @param {Object} userData - Datos del usuario
  * @returns {Promise<Object>} - Usuario creado (DTO)
  */
-export const createUser = async (userData) => {
-    const user = await User.create(userData);
+export const createUser = async (userData, options = {}) => {
+    const user = await User.create(userData, options);
     
     // Cargar relaciones
     await user.reload({
@@ -298,13 +298,15 @@ export const createUser = async (userData) => {
                     }
                 ]
             }
-        ]
+        ],
+        ...(options.transaction && { transaction: options.transaction })
     });
     
     const dto = toPublicUserDto(user);
     
-    // Cachear usuario creado
-    await cacheUser(user.publicCode, dto);
+    if (!options.transaction) {
+        await cacheUser(user.publicCode, dto);
+    }
     
     return dto;
 };

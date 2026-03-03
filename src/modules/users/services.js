@@ -9,6 +9,7 @@ import { generateUuidV7, generateHumanId, generatePublicCode } from '../../utils
 import Role from '../auth/models/Role.js';
 import Organization from '../organizations/models/Organization.js';
 import auditLog from '../../helpers/auditLog.js';
+import sequelize from '../../db/sql/sequelize.js';
 import pino from 'pino';
 
 const userLogger = pino({ name: 'users-service' });
@@ -150,89 +151,94 @@ export const createUser = async (userData, actor, metadata = {}) => {
     const userId = generateUuidV7();
     const publicCode = generatePublicCode('USR');
     
-    // Generar humanId (siguiente número en la organización)
-    const User = (await import('../auth/models/User.js')).default;
-    const humanId = await generateHumanId(User, 'organizationId', organizationId);
-    
-    // Hashear password
+    // Hashear password (fuera de la transacción, es CPU-bound)
     const passwordHash = await bcrypt.hash(userData.password, 10);
     
-    // Crear usuario
-    const newUser = await userRepository.createUser({
-        id: userId,
-        humanId,
-        publicCode,
-        email,
-        passwordHash,
-        firstName: userData.firstName,
-        lastName: userData.lastName,
-        roleId: role.id,
-        organizationId,
-        isActive: true,
-        // Campos opcionales de perfil
-        phone: userData.phone || null,
-        language: userData.language || 'es',
-        timezone: userData.timezone || 'America/Argentina/Buenos_Aires',
-        avatarUrl: userData.avatarUrl || null
-    });
-    
-    // Agregar usuario a organizaciones adicionales si se proporcionan
-    if (userData.organizationMemberships && userData.organizationMemberships.length > 0) {
-        const UserOrganization = (await import('../auth/models/UserOrganization.js')).default;
+    const newUser = await sequelize.transaction(async (t) => {
+        // Generar humanId dentro de la transacción para ver inserts previos
+        const User = (await import('../auth/models/User.js')).default;
+        const humanId = await generateHumanId(User, 'organizationId', organizationId, { transaction: t });
         
-        for (const membership of userData.organizationMemberships) {
-            // Buscar organización por publicCode
-            const org = await Organization.findOne({
-                where: { publicCode: membership.organizationId }
-            });
+        // Crear usuario
+        const createdUser = await userRepository.createUser({
+            id: userId,
+            humanId,
+            publicCode,
+            email,
+            passwordHash,
+            firstName: userData.firstName,
+            lastName: userData.lastName,
+            roleId: role.id,
+            organizationId,
+            isActive: true,
+            phone: userData.phone || null,
+            language: userData.language || 'es',
+            timezone: userData.timezone || 'America/Argentina/Buenos_Aires',
+            avatarUrl: userData.avatarUrl || null
+        }, { transaction: t });
+        
+        // Agregar usuario a organizaciones adicionales si se proporcionan
+        if (userData.organizationMemberships && userData.organizationMemberships.length > 0) {
+            const UserOrganization = (await import('../auth/models/UserOrganization.js')).default;
             
-            if (!org) {
-                userLogger.warn({ organizationId: membership.organizationId }, 'Organization not found for membership');
-                continue; // Saltar esta organización si no existe
-            }
-            
-            // Verificar si ya existe la relación (puede ser la org primaria)
-            const existingRelation = await UserOrganization.findOne({
-                where: {
-                    userId,
-                    organizationId: org.id
+            for (const membership of userData.organizationMemberships) {
+                const org = await Organization.findOne({
+                    where: { publicCode: membership.organizationId },
+                    transaction: t
+                });
+                
+                if (!org) {
+                    const error = new Error(`Organización no encontrada para membership: ${membership.organizationId}`);
+                    error.status = 404;
+                    error.code = 'ORGANIZATION_NOT_FOUND';
+                    throw error;
                 }
-            });
-            
-            if (existingRelation) {
-                // Si ya existe y se marca como primaria, actualizar
-                if (membership.isPrimary && !existingRelation.isPrimary) {
-                    // Desmarcar todas las otras como primaria
+                
+                const existingRelation = await UserOrganization.findOne({
+                    where: {
+                        userId,
+                        organizationId: org.id
+                    },
+                    transaction: t
+                });
+                
+                if (existingRelation) {
+                    if (membership.isPrimary && !existingRelation.isPrimary) {
+                        await UserOrganization.update(
+                            { isPrimary: false },
+                            { where: { userId }, transaction: t }
+                        );
+                        
+                        existingRelation.isPrimary = true;
+                        await existingRelation.save({ transaction: t });
+                    }
+                    continue;
+                }
+                
+                if (membership.isPrimary) {
                     await UserOrganization.update(
                         { isPrimary: false },
-                        { where: { userId } }
+                        { where: { userId }, transaction: t }
                     );
-                    
-                    existingRelation.isPrimary = true;
-                    await existingRelation.save();
                 }
-                continue;
+                
+                await UserOrganization.create({
+                    userId,
+                    organizationId: org.id,
+                    isPrimary: membership.isPrimary || false,
+                    joinedAt: new Date()
+                }, { transaction: t });
             }
-            
-            // Si se marca como primaria, desmarcar todas las otras
-            if (membership.isPrimary) {
-                await UserOrganization.update(
-                    { isPrimary: false },
-                    { where: { userId } }
-                );
-            }
-            
-            // Crear relación UserOrganization
-            await UserOrganization.create({
-                userId,
-                organizationId: org.id,
-                isPrimary: membership.isPrimary || false,
-                joinedAt: new Date()
-            });
         }
-    }
+        
+        return createdUser;
+    });
     
-    // Auditar creación
+    // Cachear usuario después del commit exitoso
+    const { cacheUser } = await import('./cache.js');
+    await cacheUser(newUser.publicCode, newUser).catch(() => {});
+    
+    // Auditar creación (fuera de la transacción, best-effort)
     await auditLog.log({
         entityType: 'user',
         entityId: userId,
