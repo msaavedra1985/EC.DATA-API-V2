@@ -86,6 +86,12 @@ export const loginSchema = z.object({
         captchaToken: z
             .string()
             .optional()
+            .nullable(),
+        organizationId: z
+            .string()
+            .max(255, 'organizationId demasiado largo')
+            .trim()
+            .optional()
             .nullable()
     }).refine(
         // Al menos uno de identifier o email debe estar presente

@@ -225,7 +225,6 @@ export const login = async (identifier, password, sessionData = {}) => {
 
     // Generar tokens JWT y guardar refresh token en BD
     // Pasar rememberMe a generateTokens para usar duración extendida si es necesario
-    const tokens = await generateTokens(user, sessionData);
     
     // Guardar session_context en Redis con TTL alineado al refresh token
     const primaryOrg = await organizationService.getPrimaryOrganization(user.id);
@@ -233,7 +232,45 @@ export const login = async (identifier, password, sessionData = {}) => {
     const sessionTTL = sessionData.rememberMe ? SESSION_TTL_EXTENDED : SESSION_TTL_NORMAL;
     
     const primaryOrgId = primaryOrg ? primaryOrg.organizationId : null;
-    const activeOrgId = sessionData.activeOrgId || primaryOrgId;
+    
+    // Resolver activeOrgId: si el frontend envió requestedOrgId, validar acceso
+    let activeOrgId = primaryOrgId;
+    if (sessionData.requestedOrgId) {
+        const requestedOrgId = sessionData.requestedOrgId;
+        
+        try {
+            // Verificar que la org existe y está activa
+            const Organization = (await import('../organizations/models/Organization.js')).default;
+            const requestedOrg = await Organization.findByPk(requestedOrgId, {
+                attributes: ['id', 'isActive']
+            });
+            
+            if (!requestedOrg) {
+                authLogger.warn({ userId: user.id, requestedOrgId }, 'Login: requestedOrgId no encontrada, usando primaryOrg como fallback');
+            } else if (!requestedOrg.isActive) {
+                authLogger.warn({ userId: user.id, requestedOrgId }, 'Login: requestedOrgId inactiva, usando primaryOrg como fallback');
+            } else {
+                // Verificar acceso del usuario a la org (membresía directa o por jerarquía)
+                const roleName = user.role ? user.role.name : null;
+                const hasAccess = await organizationService.canAccessOrganization(user.id, requestedOrgId, roleName);
+                
+                if (hasAccess) {
+                    activeOrgId = requestedOrgId;
+                } else {
+                    authLogger.warn({ userId: user.id, requestedOrgId }, 'Login: usuario no tiene acceso a requestedOrgId, usando primaryOrg como fallback');
+                }
+            }
+        } catch (orgCheckError) {
+            authLogger.error({ userId: user.id, requestedOrgId, error: orgCheckError.message }, 'Login: error validando requestedOrgId, usando primaryOrg como fallback');
+        }
+    } else if (sessionData.activeOrgId) {
+        // Compatibilidad: activeOrgId directo (usado internamente por refresh/switch)
+        activeOrgId = sessionData.activeOrgId;
+    }
+    
+    // Pasar activeOrgId resuelto a sessionData para generateTokens
+    sessionData.activeOrgId = activeOrgId;
+    const tokens = await generateTokens(user, sessionData);
     
     // Resolver info pública de la org primaria
     let primaryOrgInfo = null;

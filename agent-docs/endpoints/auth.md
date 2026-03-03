@@ -82,20 +82,31 @@
 **Body**:
 ```json
 {
-  "email": "user@example.com",
+  "identifier": "user@example.com",
   "password": "SecurePass123!",
-  "remember_me": false,
-  "captcha_token": "cf-turnstile-token (opcional)"
+  "rememberMe": false,
+  "captchaToken": "cf-turnstile-token (opcional)",
+  "organizationId": "ORG-abc123-1 (opcional)"
 }
 ```
 
 **Campos**:
 | Campo | Tipo | Requerido | Descripción |
 |-------|------|-----------|-------------|
-| email | string | Sí | Email, username o public_code |
+| identifier | string | Sí* | Email, username o public_code |
+| email | string | Sí* | Email (campo legacy, usar `identifier` preferiblemente) |
 | password | string | Sí | Contraseña |
-| remember_me | boolean | No | Si `true`: sesión 90 días. Si `false`: 14 días |
-| captcha_token | string | Condicional | Requerido después de intentos fallidos |
+| rememberMe | boolean | No | Si `true`: sesión 90 días. Si `false`: 14 días |
+| captchaToken | string | Condicional | Requerido después de intentos fallidos |
+| organizationId | string | No | Public code o UUID de la org donde iniciar sesión. Si no se envía, se usa la org primaria del usuario |
+
+*Al menos uno de `identifier` o `email` debe estar presente.
+
+**Comportamiento de `organizationId`**:
+- Si se envía y el usuario tiene acceso a esa org → inicia sesión en esa org (activeOrgId)
+- Si se envía pero la org no existe, está inactiva, o el usuario no tiene acceso → login exitoso pero con org primaria como fallback (no bloquea el login)
+- Si no se envía → comportamiento normal (org primaria como activeOrgId)
+- System admin puede usar cualquier org activa
 
 **Respuesta exitosa** (200):
 ```json
@@ -103,15 +114,16 @@
   "ok": true,
   "data": {
     "user": {
-      "public_code": "USR-XXXXX-X",
+      "publicCode": "USR-XXXXX-X",
       "email": "user@example.com",
-      "first_name": "Juan",
+      "firstName": "Juan",
       "role": "user"
     },
-    "access_token": "eyJhbG...",
-    "refresh_token": "eyJhbG...",
-    "expires_in": "15m",
-    "token_type": "Bearer"
+    "accessToken": "eyJhbG...",
+    "refreshToken": "eyJhbG...",
+    "expiresIn": "15m",
+    "tokenType": "Bearer",
+    "sessionContext": { ... }
   }
 }
 ```
@@ -127,6 +139,7 @@
 **Notas**:
 - Guarda `session_context` en Redis con TTL alineado al refresh_token
 - Registra IP y user-agent para auditoría
+- `organizationId` se valida con graceful fallback: nunca bloquea el login
 
 ---
 

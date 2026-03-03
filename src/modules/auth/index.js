@@ -21,6 +21,7 @@ import * as sessionContextCache from './sessionContextCache.js';
 import * as organizationService from '../organizations/services.js';
 import * as organizationRepository from '../organizations/repository.js';
 import { logAuditAction, extractAuditInfo } from '../../helpers/auditLog.js';
+import { authLogger } from '../../utils/logger.js';
 
 const router = express.Router();
 
@@ -167,6 +168,11 @@ router.post('/register', validate(registerSchema), async (req, res, next) => {
  *                 default: false
  *                 example: true
  *                 description: Si es true, la sesión dura 90 días (refresh token) con 30 días de idle timeout. Si es false (por defecto), la sesión dura 14 días con 7 días de idle timeout
+ *               organizationId:
+ *                 type: string
+ *                 nullable: true
+ *                 example: ORG-abc123-1
+ *                 description: Public code (o UUID) de la organización donde el usuario quiere iniciar sesión. Útil para re-login cuando la sesión expiró y el frontend recuerda la org activa. Si no se envía o es inválido, se usa la organización primaria del usuario como fallback
  *     responses:
  *       200:
  *         description: Login exitoso
@@ -212,17 +218,37 @@ router.post('/register', validate(registerSchema), async (req, res, next) => {
  */
 router.post('/login', loginRateLimitMiddleware, validate(loginSchema), async (req, res, next) => {
     try {
-        const { identifier: rawIdentifier, email, password, rememberMe, captchaToken } = req.body;
+        const { identifier: rawIdentifier, email, password, rememberMe, captchaToken, organizationId } = req.body;
         // Compatibilidad: usar identifier si existe, sino usar email (campo legacy)
         const identifier = rawIdentifier || email;
         const ip = req.ip || req.connection.remoteAddress;
+
+        // Resolver organizationId (public_code) a UUID si fue enviado
+        // Envuelto en try/catch: si falla la resolución, el login continúa normalmente
+        let resolvedOrgId = null;
+        if (organizationId) {
+            try {
+                const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(organizationId);
+                if (isUuid) {
+                    resolvedOrgId = organizationId;
+                } else {
+                    const org = await organizationRepository.findOrganizationByPublicCodeInternal(organizationId);
+                    if (org) {
+                        resolvedOrgId = org.id;
+                    }
+                }
+            } catch (orgResolveError) {
+                authLogger.warn({ organizationId, error: orgResolveError.message }, 'Login: error resolviendo organizationId, se ignorará');
+            }
+        }
 
         // Extraer datos de sesión para auditoría y validación
         const sessionData = {
             userAgent: req.headers['user-agent'],
             ipAddress: ip,
             rememberMe: rememberMe || false,
-            captchaToken: captchaToken || null
+            captchaToken: captchaToken || null,
+            requestedOrgId: resolvedOrgId
         };
 
         try {

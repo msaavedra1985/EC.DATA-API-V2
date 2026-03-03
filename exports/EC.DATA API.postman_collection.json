@@ -104,7 +104,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"admin@ecdata.com\",\n  \"password\": \"Admin123!\",\n  \"rememberMe\": false,\n  \"captchaToken\": \"\"\n}"
+              "raw": "{\n  \"email\": \"admin@ecdata.com\",\n  \"password\": \"Admin123!\",\n  \"rememberMe\": false,\n  \"captchaToken\": \"\",\n  \"organizationId\": null\n}"
             }
           }
         },
