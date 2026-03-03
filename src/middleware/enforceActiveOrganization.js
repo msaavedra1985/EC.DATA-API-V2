@@ -7,6 +7,7 @@ import { canAccessOrganization, getOrganizationScope } from '../modules/organiza
 import * as orgRepository from '../modules/organizations/repository.js';
 import { getCache, setCache, deleteCache } from '../db/redis/client.js';
 import { errorResponse } from '../utils/response.js';
+import { getSessionContext } from '../modules/auth/sessionContextCache.js';
 import logger from '../utils/logger.js';
 
 const orgLogger = logger.child({ component: 'enforceActiveOrganization' });
@@ -398,9 +399,43 @@ export const enforceActiveOrganization = async (req, res, next) => {
         const activeOrgId = user.activeOrgId;
 
         if (!activeOrgId) {
-            // CASO ESPECIAL: system-admin sin org activa (panel admin global)
-            // En este caso, tiene acceso a todo sin filtro
             if (user.role === 'system-admin') {
+                // Fallback defensivo: consultar Redis session context por si hay org activa
+                // (ej: JWT stale después de impersonate-org o refresh que no preservó activeOrgId)
+                try {
+                    const sessionCtx = await getSessionContext(user.userId);
+                    if (sessionCtx?.activeOrgId) {
+                        const resolvedFromRedis = await resolveOrganizationId(sessionCtx.activeOrgId);
+                        if (resolvedFromRedis && !resolvedFromRedis.isDeleted && resolvedFromRedis.isActive) {
+                            req.organizationContext = {
+                                id: resolvedFromRedis.uuid,
+                                publicCode: resolvedFromRedis.publicCode,
+                                source: 'session_context',
+                                tokenType: 'session',
+                                scopes: [],
+                                clientId: null,
+                                showAll: false,
+                                allowedIds: [resolvedFromRedis.uuid],
+                                enforced: true,
+                                canAccessAll: false,
+                                impersonating: true
+                            };
+
+                            orgLogger.debug({
+                                userId: user.userId,
+                                role: user.role,
+                                activeOrgId: resolvedFromRedis.uuid,
+                                source: 'session_context'
+                            }, 'System admin org resolved from Redis session context (JWT had no activeOrgId)');
+
+                            return next();
+                        }
+                    }
+                } catch (redisErr) {
+                    orgLogger.warn({ userId: user.userId, err: redisErr }, 'Failed to check Redis session context for system-admin fallback');
+                }
+
+                // Sin org en Redis: modo admin global
                 req.organizationContext = {
                     id: null,
                     publicCode: null,
@@ -412,7 +447,6 @@ export const enforceActiveOrganization = async (req, res, next) => {
                     allowedIds: [],
                     enforced: false,
                     canAccessAll: true,
-                    // Indica que system-admin está en modo admin global (sin impersonar)
                     impersonating: false
                 };
 

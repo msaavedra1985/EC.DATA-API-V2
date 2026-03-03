@@ -42,6 +42,16 @@
 
 **Archivos afectados**: `src/modules/auth/services.js`, `src/modules/auth/index.js`
 
+### refreshAccessToken pierde activeOrgId (impersonación se pierde al hacer refresh)
+**Fecha**: 2026-03-03
+**Síntoma**: System-admin impersona una org, ocurre un token refresh, y el nuevo access token tiene `activeOrgId: null` e `impersonating: false`. Endpoints como POST /devices fallan con `ORGANIZATION_REQUIRED`.
+**Causa**: `refreshAccessToken` construía `refreshSessionData` sin incluir `decoded.activeOrgId` del refresh token. `generateTokens` no recibía la org activa y caía al fallback `primaryOrg.organizationId`, que para system-admin es `null`.
+**Solución**: 
+- Pasar `activeOrgId: decoded.activeOrgId` en el `refreshSessionData` para que `generateTokens` lo preserve
+- Fallback defensivo en middleware `enforceActiveOrganization`: cuando system-admin tiene JWT con `activeOrgId: null`, consulta Redis session context por si hay org activa (cubre JWT stale por cualquier razón)
+
+**Archivos afectados**: `src/modules/auth/services.js`, `src/middleware/enforceActiveOrganization.js`
+
 ---
 
 ## Organizaciones

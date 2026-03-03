@@ -467,7 +467,8 @@ export const refreshAccessToken = async (refreshToken, sessionData = {}) => {
         const isExtendedSession = Boolean(storedToken.rememberMe);
         const refreshSessionData = {
             ...sessionData,
-            rememberMe: isExtendedSession
+            rememberMe: isExtendedSession,
+            activeOrgId: decoded.activeOrgId
         };
         
         const tokens = await generateTokens(user, refreshSessionData);
@@ -480,7 +481,9 @@ export const refreshAccessToken = async (refreshToken, sessionData = {}) => {
         const sessionTTL = isExtendedSession ? SESSION_TTL_EXTENDED : SESSION_TTL_NORMAL;
         
         const refreshPrimaryOrgId = decoded.primaryOrgId || (primaryOrg ? primaryOrg.organizationId : null);
-        const refreshActiveOrgId = decoded.activeOrgId || refreshPrimaryOrgId;
+        const refreshActiveOrgId = decoded.activeOrgId !== undefined && decoded.activeOrgId !== null
+            ? decoded.activeOrgId
+            : refreshPrimaryOrgId;
         
         // Resolver info pública de la org primaria
         let refreshPrimaryOrgInfo = null;
