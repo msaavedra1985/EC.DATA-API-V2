@@ -336,6 +336,28 @@ Paso 5 - Actualizar código:
 
 **Archivos afectados**: `src/modules/auth/sessionContextCache.js`
 
+### Doble JSON en TODOS los módulos de cache
+**Fecha**: 2026-03-03
+**Síntoma**: Cache de devices (y potencialmente sites, channels, dashboards) nunca servía resultados con Redis real. Con in-memory funcionaba por coincidencia.
+**Causa**: Mismo patrón que `sessionContextCache`: `JSON.stringify(data)` manual + `setCache` (que ya serializa) + `getCache` (que auto-parsea) + `JSON.parse(cached)` manual = doble serialización/deserialización que falla con Redis.
+**Módulos afectados** (mismo bug):
+- `src/modules/devices/cache.js` ← **corregido**
+- `src/modules/sites/cache.js` ← pendiente
+- `src/modules/channels/cache.js` ← pendiente
+- `src/modules/dashboards/cache.js` ← pendiente
+- `src/modules/organizations/services.js` (org tree cache) ← pendiente
+- `src/modules/realtime/services/sessionService.js` ← pendiente
+- `src/modules/realtime/services/tokenService.js` ← pendiente
+**Regla**: NUNCA hacer `JSON.stringify` manual antes de `setCache`. NUNCA hacer `JSON.parse` manual después de `getCache`. Ambas funciones ya manejan serialización internamente. En el getter, usar `typeof cached === 'object' ? cached : JSON.parse(cached)` para compatibilidad.
+
+### `?all=true` bypaseaba impersonación de system-admin
+**Fecha**: 2026-03-03
+**Síntoma**: System-admin impersonando org Atria veía TODOS los devices en vez de solo los de Atria.
+**Causa**: El middleware `enforceActiveOrganization` procesaba `?all=true` (Caso 1) ANTES de verificar si el system-admin estaba impersonando (Caso 3). Para system-admin con `canAccessAll: true`, seteaba `showAll: true` sin verificar impersonación.
+**Solución**: En Caso 1, si el system-admin tiene una org impersonada (Redis o JWT), ignorar `?all=true` y filtrar por la org impersonada.
+**Archivos afectados**: `src/middleware/enforceActiveOrganization.js`
+**Regla**: La impersonación SIEMPRE tiene prioridad sobre `?all=true`. Un system-admin que quiere ver todo debe salir de la impersonación primero.
+
 ### Prefijo global de entorno para keys Redis
 **Fecha**: 2026-03-03
 **Síntoma**: Keys de Redis no tenían identificación de entorno, dificultando debugging y separación dev/prod.

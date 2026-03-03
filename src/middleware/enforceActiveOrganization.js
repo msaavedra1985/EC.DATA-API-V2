@@ -254,7 +254,6 @@ export const enforceActiveOrganization = async (req, res, next) => {
 
         // --- Caso 1: Usuario solicita ver TODOS los registros (all=true) ---
         if (requestAll) {
-            // Solo admins pueden usar all=true
             if (!ADMIN_ROLES.includes(user.role)) {
                 orgLogger.warn({
                     userId: user.userId,
@@ -269,10 +268,78 @@ export const enforceActiveOrganization = async (req, res, next) => {
                 });
             }
 
-            // Obtener el scope organizacional del usuario
+            // Para system-admin: verificar si hay impersonación activa antes de dar acceso global
+            // Si está impersonando, ?all=true se limita a la org impersonada (no bypasea la impersonación)
+            // Precedencia: Redis (fuente de verdad) > JWT (fallback si Redis no disponible)
+            if (user.role === 'system-admin') {
+                let impersonatedOrgId = null;
+                let redisHasContext = false;
+                
+                try {
+                    const sessionCtx = await getSessionContext(user.userId);
+                    if (sessionCtx) {
+                        redisHasContext = true;
+                        if (sessionCtx.activeOrgId) {
+                            impersonatedOrgId = sessionCtx.activeOrgId;
+                        }
+                        // Si Redis tiene contexto con activeOrgId: null → modo global explícito, no impersonando
+                    }
+                } catch (redisErr) {
+                    orgLogger.warn({ userId: user.userId, err: redisErr }, 'Redis no disponible al verificar impersonación en all=true');
+                }
+                
+                // JWT como fallback solo si Redis no tenía contexto (caído o sin data)
+                // Si Redis SÍ tiene contexto con activeOrgId: null, eso es modo global explícito → no usar JWT
+                if (!redisHasContext && user.activeOrgId) {
+                    impersonatedOrgId = user.activeOrgId;
+                }
+                
+                if (impersonatedOrgId) {
+                    const resolved = await resolveOrganizationId(impersonatedOrgId);
+                    if (!resolved) {
+                        orgLogger.warn({
+                            userId: user.userId,
+                            impersonatedOrgId,
+                            path: req.path
+                        }, 'Impersonated org not resolvable, denying all=true');
+
+                        return errorResponse(res, {
+                            message: 'auth.organization.not_found',
+                            status: 404,
+                            code: 'ACTIVE_ORGANIZATION_NOT_FOUND'
+                        });
+                    }
+
+                    if (isOrgInactive(resolved, res, { userId: user.userId, role: user.role, path: req.path })) return;
+
+                    req.organizationContext = {
+                        id: resolved.uuid,
+                        publicCode: resolved.publicCode,
+                        source: redisHasContext ? 'session_context' : 'jwt',
+                        tokenType: 'session',
+                        scopes: [],
+                        clientId: null,
+                        showAll: false,
+                        allowedIds: [resolved.uuid],
+                        enforced: true,
+                        canAccessAll: false,
+                        impersonating: true
+                    };
+
+                    orgLogger.debug({
+                        userId: user.userId,
+                        role: user.role,
+                        impersonatedOrgId: resolved.publicCode,
+                        allParamIgnored: true,
+                        source: redisHasContext ? 'session_context' : 'jwt'
+                    }, 'System admin impersonando: ?all=true ignorado, filtrando por org impersonada');
+
+                    return next();
+                }
+            }
+
             const scope = await getOrganizationScope(user.userId, user.role);
 
-            // Para system-admin con canAccessAll=true: acceso total sin filtro
             if (scope.canAccessAll) {
                 req.organizationContext = {
                     id: null,
@@ -292,12 +359,11 @@ export const enforceActiveOrganization = async (req, res, next) => {
                     role: user.role,
                     showAll: true,
                     canAccessAll: true
-                }, 'System admin requested all records without restrictions');
+                }, 'System admin requested all records without restrictions (no impersonation active)');
 
                 return next();
             }
 
-            // Para org-admin u otros con scope limitado: materializar IDs permitidos
             const allowedOrgIds = scope.organizationIds || [];
 
             if (allowedOrgIds.length === 0) {
@@ -417,8 +483,16 @@ export const enforceActiveOrganization = async (req, res, next) => {
                 orgLogger.warn({ userId: user.userId, err: redisErr }, 'Redis session context no disponible, usando JWT como fallback');
             }
             
-            // Determinar activeOrgId efectivo: Redis > JWT > null
-            const effectiveOrgId = redisSource ? redisOrgId : (user.activeOrgId || null);
+            const effectiveOrgId = redisSource ? redisOrgId : (user.activeOrgId ?? null);
+
+            orgLogger.debug({
+                userId: user.userId,
+                redisSource,
+                redisOrgId,
+                jwtActiveOrgId: user.activeOrgId ?? null,
+                effectiveOrgId,
+                queryParams: { all: req.query.all, organization_id: req.query.organization_id }
+            }, 'System admin org resolution trace');
             
             if (!effectiveOrgId) {
                 req.organizationContext = {

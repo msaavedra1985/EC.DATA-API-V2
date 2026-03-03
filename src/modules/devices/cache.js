@@ -16,7 +16,7 @@ const DEVICE_LIST_CACHE_TTL = 600; // 10 minutos
 export const cacheDeviceList = async (cacheKey, data) => {
     try {
         const fullKey = `${DEVICE_LIST_CACHE_PREFIX}${cacheKey}`;
-        await setCache(fullKey, JSON.stringify(data), DEVICE_LIST_CACHE_TTL);
+        await setCache(fullKey, data, DEVICE_LIST_CACHE_TTL);
         logger.debug({ cacheKey: fullKey }, 'Device list cached');
     } catch (error) {
         logger.error({ err: error, cacheKey }, 'Error caching device list');
@@ -34,8 +34,7 @@ export const getCachedDeviceList = async (cacheKey) => {
         const cached = await getCache(fullKey);
         
         if (cached) {
-            const parsed = JSON.parse(cached);
-            // Validar estructura nueva (items) - si tiene estructura legacy (devices), invalidar
+            const parsed = typeof cached === 'object' ? cached : JSON.parse(cached);
             if (!parsed.items && parsed.devices) {
                 logger.debug({ cacheKey: fullKey }, 'Device list cache has legacy structure, invalidating');
                 await deleteCache(fullKey);
