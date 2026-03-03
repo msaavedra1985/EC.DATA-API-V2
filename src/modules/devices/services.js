@@ -86,7 +86,10 @@ export const createDevice = async (deviceData, userId, ipAddress, userAgent, org
     const orgFromBody = deviceFields.organizationId;
     const orgIdentifier = orgFromBody || orgContext?.publicCode || orgContext?.id;
     if (!orgIdentifier) {
-        const error = new Error('organizationId es requerido (enviar en body o tener organización activa)');
+        const msg = orgContext?.canAccessAll
+            ? 'System admin en modo global debe especificar organizationId en el body'
+            : 'organizationId es requerido (enviar en body o tener organización activa)';
+        const error = new Error(msg);
         error.status = 400;
         error.code = 'ORGANIZATION_REQUIRED';
         throw error;

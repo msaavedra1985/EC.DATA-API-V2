@@ -37,7 +37,9 @@ const resolveOrganizationId = async (orgId) => {
         const cached = await getCache(cacheKey);
         if (cached) {
             const parsed = typeof cached === 'string' ? JSON.parse(cached) : cached;
-            if (parsed && parsed.uuid) return parsed;
+            if (parsed && parsed.uuid && parsed.publicCode && typeof parsed.isActive === 'boolean') {
+                return parsed;
+            }
         }
     } catch {
         // Si cache falla, continuar con DB
@@ -56,18 +58,18 @@ const resolveOrganizationId = async (orgId) => {
     
     const result = { 
         uuid: org.id, 
-        publicCode: org.public_code,
-        isActive: org.is_active !== false,
-        isDeleted: !!org.deleted_at
+        publicCode: org.publicCode,
+        isActive: org.isActive !== false,
+        isDeleted: !!org.deletedAt
     };
     
-    // Guardar en cache (por UUID y por public_code para ambas vías de lookup)
+    // Guardar en cache (por UUID y por publicCode para ambas vías de lookup)
     try {
         const serialized = JSON.stringify(result);
         await setCache(cacheKey, serialized, ORG_RESOLVE_TTL);
-        // Cache bidireccional: si buscaron por public_code, cachear también por UUID y viceversa
+        // Cache bidireccional: si buscaron por publicCode, cachear también por UUID y viceversa
         const altKey = isUuid 
-            ? `${ORG_RESOLVE_CACHE_PREFIX}${org.public_code}`
+            ? `${ORG_RESOLVE_CACHE_PREFIX}${org.publicCode}`
             : `${ORG_RESOLVE_CACHE_PREFIX}${org.id}`;
         await setCache(altKey, serialized, ORG_RESOLVE_TTL);
     } catch {

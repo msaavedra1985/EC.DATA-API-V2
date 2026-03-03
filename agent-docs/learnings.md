@@ -587,6 +587,16 @@ await queryInterface.addColumn('users', 'avatarUrl', { type: Sequelize.STRING })
 
 ---
 
+### Gotcha: resolveOrganizationId usaba snake_case en propiedades Sequelize
+**Fecha**: 2026-03-03
+**Síntoma**: `POST /devices` sin `organizationId` en el body tiraba `ORGANIZATION_REQUIRED` aun cuando el usuario impersonaba una organización. El `orgContext.publicCode` era `undefined`.
+**Causa**: En `src/middleware/enforceActiveOrganization.js`, la función `resolveOrganizationId` accedía a las propiedades del modelo Organization como `org.public_code`, `org.is_active`, `org.deleted_at` (snake_case). Con Sequelize `underscored: true`, las propiedades en la instancia JS son camelCase (`org.publicCode`, `org.isActive`, `org.deletedAt`). El acceso snake_case devuelve `undefined`.
+**Solución**: Cambiar a `org.publicCode`, `org.isActive`, `org.deletedAt`. Limpiar cache Redis (`ec:org_resolve:*`) para que se regenere con valores correctos.
+**Regla general**: SIEMPRE acceder propiedades de modelos Sequelize con `underscored: true` usando camelCase. El snake_case solo aplica a nombres de columna en la DB, no a las propiedades JS del modelo.
+**Archivos afectados**: `src/middleware/enforceActiveOrganization.js`
+
+---
+
 ## Deployment
 
 (Agregar problemas de deployment aquí)
