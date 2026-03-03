@@ -358,6 +358,17 @@ Paso 5 - Actualizar código:
 **Archivos afectados**: `src/middleware/enforceActiveOrganization.js`
 **Regla**: La impersonación SIEMPRE tiene prioridad sobre `?all=true`. Un system-admin que quiere ver todo debe salir de la impersonación primero.
 
+### Endpoints CUD no forzaban org de impersonación
+**Fecha**: 2026-03-03
+**Síntoma**: System-admin impersonando Atria creó un device, pero el device apareció en Sirenis en la base de datos.
+**Causa**: `createDevice` priorizaba `organizationId` del request body sobre `orgContext.id` del middleware. Si el frontend enviaba un organizationId stale (de la org del usuario, no la impersonada), y el session context se había perdido (por restart/Redis flush → modo global con `canAccessAll: true`), la validación no bloqueaba la org incorrecta.
+**Solución**:
+- En `createDevice`: si `orgContext.impersonating === true`, forzar `orgContext.id` como organizationId ignorando el body
+- En `createSite`: agregar `enforceActiveOrganization` al middleware de la ruta POST + misma lógica de impersonación
+- `createChannel` no afectado: hereda org del device padre (no acepta organizationId del body)
+**Regla**: En endpoints de creación (CUD), cuando hay impersonación activa, la org del `orgContext` es la fuente de verdad. El body se ignora si difiere → warning en logs.
+**Archivos afectados**: `src/modules/devices/services.js`, `src/modules/sites/services.js`, `src/modules/sites/routes.js`
+
 ### Prefijo global de entorno para keys Redis
 **Fecha**: 2026-03-03
 **Síntoma**: Keys de Redis no tenían identificación de entorno, dificultando debugging y separación dev/prod.

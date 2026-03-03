@@ -17,9 +17,35 @@ import logger from '../../utils/logger.js';
  * @param {string} userId - ID del usuario que crea el site
  * @param {string} ipAddress - IP del usuario
  * @param {string} userAgent - User agent del usuario
+ * @param {Object} [orgContext] - Contexto de organización del middleware enforceActiveOrganization
  * @returns {Promise<Object>} - Site creado
  */
-export const createSite = async (siteData, userId, ipAddress, userAgent) => {
+export const createSite = async (siteData, userId, ipAddress, userAgent, orgContext) => {
+    // Impersonación tiene prioridad absoluta: la org del contexto es la fuente de verdad
+    if (orgContext?.impersonating && orgContext.id) {
+        const orgFromBody = siteData.organizationId;
+        if (orgFromBody && orgFromBody !== orgContext.publicCode && orgFromBody !== orgContext.id) {
+            logger.warn({
+                bodyOrgId: orgFromBody,
+                contextOrgId: orgContext.publicCode,
+                userId
+            }, 'Site creation: body organizationId difiere del contexto de impersonación, usando org del contexto');
+        }
+        siteData.organizationId = orgContext.id;
+    } else if (!siteData.organizationId && orgContext?.id) {
+        siteData.organizationId = orgContext.id;
+    }
+
+    if (!siteData.organizationId) {
+        const msg = orgContext?.canAccessAll
+            ? 'System admin en modo global debe especificar organizationId en el body'
+            : 'organizationId es requerido (enviar en body o tener organización activa)';
+        const error = new Error(msg);
+        error.status = 400;
+        error.code = 'ORGANIZATION_REQUIRED';
+        throw error;
+    }
+
     // Convertir organizationId de publicCode a UUID si es necesario
     let organizationUuid = siteData.organizationId;
     if (!siteData.organizationId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
@@ -31,6 +57,23 @@ export const createSite = async (siteData, userId, ipAddress, userAgent) => {
             throw error;
         }
         organizationUuid = org.id;
+    }
+
+    // Validar autorización: si el body especifica una org diferente a la del contexto,
+    // verificar que el usuario tiene acceso a esa organización
+    if (orgContext) {
+        const contextOrgUuid = orgContext.id;
+        if (contextOrgUuid && organizationUuid !== contextOrgUuid) {
+            if (!orgContext.canAccessAll) {
+                const allowedIds = orgContext.allowedIds || [];
+                if (!allowedIds.includes(organizationUuid)) {
+                    const error = new Error('No tiene permisos para crear sites en esta organización');
+                    error.status = 403;
+                    error.code = 'ORGANIZATION_ACCESS_DENIED';
+                    throw error;
+                }
+            }
+        }
     }
     
     // Validar que el countryCode existe

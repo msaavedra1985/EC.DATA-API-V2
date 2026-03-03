@@ -202,13 +202,14 @@ const siteLogger = logger.child({ component: 'sites' });
  *       404:
  *         description: Organización o país no encontrado
  */
-router.post('/', authenticate, requireRole(['system-admin', 'org-admin']), validate(createSiteSchema), async (req, res, next) => {
+router.post('/', authenticate, requireRole(['system-admin', 'org-admin']), enforceActiveOrganization, validate(createSiteSchema), async (req, res, next) => {
     try {
         const userId = req.user.userId;
         const ipAddress = req.ip || req.connection.remoteAddress;
         const userAgent = req.headers['user-agent'];
+        const orgContext = req.organizationContext;
         
-        const site = await siteServices.createSite(req.body, userId, ipAddress, userAgent);
+        const site = await siteServices.createSite(req.body, userId, ipAddress, userAgent, orgContext);
         
         res.status(201).json({
             ok: true,

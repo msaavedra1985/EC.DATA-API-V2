@@ -82,6 +82,20 @@ const buildChannelMetadata = (channelInput) => {
 export const createDevice = async (deviceData, userId, ipAddress, userAgent, orgContext) => {
     const { channels: channelsInput, ...deviceFields } = deviceData;
     
+    // Impersonación tiene prioridad absoluta: la org del contexto es la fuente de verdad
+    // El frontend puede enviar un organizationId stale; durante impersonación se ignora
+    if (orgContext?.impersonating && orgContext.id) {
+        const orgFromBody = deviceFields.organizationId;
+        if (orgFromBody && orgFromBody !== orgContext.publicCode && orgFromBody !== orgContext.id) {
+            logger.warn({
+                bodyOrgId: orgFromBody,
+                contextOrgId: orgContext.publicCode,
+                userId
+            }, 'Device creation: body organizationId difiere del contexto de impersonación, usando org del contexto');
+        }
+        deviceFields.organizationId = orgContext.id;
+    }
+    
     // Resolver organizationId: del body o del contexto JWT
     const orgFromBody = deviceFields.organizationId;
     const orgIdentifier = orgFromBody || orgContext?.publicCode || orgContext?.id;
