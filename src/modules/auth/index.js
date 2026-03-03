@@ -231,46 +231,9 @@ router.post('/login', loginRateLimitMiddleware, validate(loginSchema), async (re
             // Login exitoso: resetear contadores de rate limiting
             await resetLoginCounters(ip, identifier);
 
-            // Obtener organización primaria del usuario con su información completa
-            const primaryOrg = await organizationService.getPrimaryOrganization(result.user.id);
-            const activeOrgId = primaryOrg ? primaryOrg.organizationId : null;
-            const primaryOrgId = activeOrgId;
-            const canAccessAllOrgs = result.user.role && result.user.role.name === 'system-admin';
-            
-            // Obtener información de la organización primaria (publicCode, nombre, logo)
-            let primaryOrgInfo = null;
-            if (primaryOrgId) {
-                const orgDetails = await organizationRepository.findOrganizationByIdInternal(primaryOrgId);
-                if (orgDetails) {
-                    primaryOrgInfo = {
-                        publicCode: orgDetails.publicCode,
-                        name: orgDetails.name,
-                        logoUrl: orgDetails.logoUrl
-                    };
-                }
-            }
-
-            // Crear session_context y cachearlo en Redis
-            // Incluye publicCodes para que el frontend no necesite resolverlos
-            const sessionContext = {
-                activeOrgId,
-                activeOrgPublicCode: primaryOrgInfo?.publicCode || null,
-                activeOrgName: primaryOrgInfo?.name || null,
-                activeOrgLogoUrl: primaryOrgInfo?.logoUrl || null,
-                primaryOrgId,
-                primaryOrgPublicCode: primaryOrgInfo?.publicCode || null,
-                primaryOrgName: primaryOrgInfo?.name || null,
-                primaryOrgLogoUrl: primaryOrgInfo?.logoUrl || null,
-                canAccessAllOrgs,
-                role: result.user.role?.name || null,
-                email: result.user.email,
-                firstName: result.user.firstName,
-                lastName: result.user.lastName,
-                userId: result.user.id,
-                userPublicCode: result.user.publicCode || null
-            };
-
-            await sessionContextCache.setSessionContext(result.user.id, sessionContext);
+            // Session context ya fue cacheado en services.js login()
+            // Leer el contexto para incluirlo en la respuesta
+            const sessionContext = await sessionContextCache.getSessionContext(result.user.id);
 
             // Filtrar user a solo campos relevantes para el frontend
             // NO exponemos: id, roleId, humanId, organizationId, createdAt, updatedAt, etc.
@@ -535,17 +498,14 @@ router.get('/me', authenticate, async (req, res, next) => {
         let sessionContext = await sessionContextCache.getSessionContext(userId);
         
         // Si session_context es null (cache expirado), reconstruirlo desde DB + JWT
-        // Esto garantiza que el frontend siempre reciba session_context
+        // Para system-admin con JWT stale (activeOrgId: null), NO cachear la reconstrucción
+        // ya que el próximo refresh/impersonate corregirá Redis con el valor correcto
         if (!sessionContext) {
             const primaryOrg = await organizationService.getPrimaryOrganization(userId);
             const primaryOrgId = primaryOrg ? primaryOrg.organizationId : null;
             const canAccessAllOrgs = user.role?.name === 'system-admin';
+            const activeOrgId = req.user.activeOrgId ?? primaryOrgId;
             
-            // CRÍTICO: Usar activeOrgId del JWT, NO asumir que siempre es la org primaria
-            // Cuando el system-admin está impersonando, activeOrgId del JWT es la org impersonada
-            const activeOrgId = req.user.activeOrgId !== undefined ? req.user.activeOrgId : primaryOrgId;
-            
-            // Obtener info de la org primaria
             let primaryOrgInfo = null;
             if (primaryOrgId) {
                 const primaryOrgDetails = await organizationRepository.findOrganizationByIdInternal(primaryOrgId);
@@ -558,7 +518,6 @@ router.get('/me', authenticate, async (req, res, next) => {
                 }
             }
             
-            // Obtener info de la org activa (puede ser diferente a la primaria si está impersonando)
             let activeOrgInfo = null;
             if (activeOrgId && activeOrgId !== primaryOrgId) {
                 const activeOrgDetails = await organizationRepository.findOrganizationByIdInternal(activeOrgId);
@@ -573,7 +532,6 @@ router.get('/me', authenticate, async (req, res, next) => {
                 activeOrgInfo = primaryOrgInfo;
             }
             
-            // Reconstruir y cachear session_context
             sessionContext = {
                 activeOrgId,
                 activeOrgPublicCode: activeOrgInfo?.publicCode || null,
@@ -592,7 +550,12 @@ router.get('/me', authenticate, async (req, res, next) => {
                 userPublicCode: user.publicCode || null
             };
             
-            await sessionContextCache.setSessionContext(userId, sessionContext);
+            // Solo cachear si NO es system-admin con JWT potencialmente stale
+            // System-admin sin activeOrgId en JWT podría estar impersonando (JWT stale por race condition)
+            const isSystemAdminWithStaleJwt = canAccessAllOrgs && !req.user.activeOrgId;
+            if (!isSystemAdminWithStaleJwt) {
+                await sessionContextCache.setSessionContext(userId, sessionContext);
+            }
         }
 
         // Filtrar user a solo campos relevantes para el frontend

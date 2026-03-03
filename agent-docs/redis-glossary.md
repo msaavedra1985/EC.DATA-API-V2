@@ -8,12 +8,17 @@
 
 | Convención | Ejemplo |
 |---|---|
-| Prefijo global de plataforma | `ec:` |
+| Prefijo global automático | `{ENV}:EC:` — aplicado por `addPrefix()` en `redis/client.js` |
+| Entornos | `DEV:EC:` (development), `PROD:EC:` (production), `TEST:EC:` (test) |
 | Separador de niveles | `:` |
 | Módulo como segundo nivel | `ec:user:`, `ec:rh:`, `ec:tm:` |
 | Versionado de estructura | `ec:v2:org:list:`, `ec:v1:dashboards:list:` |
 | Hashes de filtros | MD5 parcial al final de la key |
 | IDs públicos sobre UUIDs | Usar `publicCode` cuando sea posible |
+
+> **IMPORTANTE**: Todas las funciones del cliente Redis (`getCache`, `setCache`, `deleteCache`, `incrWithTTL`, `scanAndDelete`) aplican automáticamente el prefijo `{ENV}:EC:`. Los módulos NO necesitan agregar este prefijo manualmente — solo definen su key lógica (ej: `ec:user:USR-123`).
+> En Redis, la key real sería `DEV:EC:ec:user:USR-123` en desarrollo.
+> **Export**: `REDIS_KEY_PREFIX` exportado desde `src/db/redis/client.js` para referencia.
 
 ---
 
@@ -52,13 +57,16 @@
 ### `ec:session_context:{userId}`
 - **TTL**: 1209600s (14 días) normal / 7776000s (90 días) con remember_me
 - **Tipo**: String (JSON serializado)
-- **Descripción**: Contexto de sesión completo que el frontend necesita sin decodificar JWT. Incluye organización activa, primaria, rol, nombre, email.
+- **Descripción**: Contexto de sesión completo que el frontend necesita sin decodificar JWT. Incluye organización activa, primaria, rol, nombre, email. **Para system-admin, es la FUENTE DE VERDAD del `activeOrgId`** (el JWT puede ser stale por race conditions del frontend).
 - **Archivo fuente**: `src/modules/auth/sessionContextCache.js`
 - **Ejemplo de valor**:
   ```json
   "{\"activeOrgId\":\"uuid-123\",\"activeOrgPublicCode\":\"ORG-ABC\",\"activeOrgName\":\"Mi Empresa\",\"primaryOrgId\":\"uuid-123\",\"canAccessAllOrgs\":false,\"role\":\"org-admin\",\"email\":\"admin@example.com\",\"firstName\":\"Juan\",\"lastName\":\"García\",\"userPublicCode\":\"USR-12345-A\"}"
   ```
-- **Invalidación**: `deleteSessionContext(userId)` — al logout o invalidar sesión. `updateActiveOrg()` actualiza solo `activeOrgId`.
+- **Escrituras**: Login (`services.js`), refresh (`services.js` — preserva Redis si JWT tiene null), switch-org, impersonate-org, exit-impersonation.
+- **Lecturas**: Middleware `enforceActiveOrganization` (fuente primaria para system-admin), GET /me, GET /session-context, impersonate-org (merge).
+- **Invalidación**: `deleteSessionContext(userId)` — al logout, logout-all, cambio de contraseña. `updateActiveOrg()` actualiza solo `activeOrgId`.
+- **Regla GET /me**: Si cache expiró y el usuario es system-admin con JWT sin `activeOrgId`, la reconstrucción NO se cachea (evita sobreescribir con datos stale).
 
 ---
 

@@ -462,30 +462,46 @@ export const refreshAccessToken = async (refreshToken, sessionData = {}) => {
 
         await refreshTokenRepository.revokeToken(refreshToken, 'rotated');
 
-        // Preservar rememberMe del token original para mantener la duración de sesión correcta
-        // Usar Boolean() explícitamente para garantizar tipo booleano
         const isExtendedSession = Boolean(storedToken.rememberMe);
+        
+        const { getSessionContext, setSessionContext, SESSION_TTL_NORMAL, SESSION_TTL_EXTENDED } = await import('./sessionContextCache.js');
+        const sessionTTL = isExtendedSession ? SESSION_TTL_EXTENDED : SESSION_TTL_NORMAL;
+        
+        // CRÍTICO: Para system-admin, Redis es FUENTE DE VERDAD del activeOrgId
+        // El JWT puede ser stale por race conditions del frontend (múltiples refresh tokens válidos)
+        // Para otros roles, usar activeOrgId del JWT (no hay race condition)
+        const existingContext = await getSessionContext(userId);
+        const isSystemAdmin = decoded.canAccessAllOrgs || decoded.role === 'system-admin';
+        
+        let effectiveActiveOrgId;
+        if (isSystemAdmin && existingContext) {
+            // System-admin: Redis siempre gana (incluyendo null explícito = modo global)
+            effectiveActiveOrgId = existingContext.activeOrgId ?? null;
+            if (effectiveActiveOrgId !== decoded.activeOrgId) {
+                authLogger.debug({ userId, redisActiveOrgId: effectiveActiveOrgId, jwtActiveOrgId: decoded.activeOrgId }, 'Refresh: usando activeOrgId de Redis (diferente al JWT)');
+            }
+        } else if (decoded.activeOrgId !== undefined && decoded.activeOrgId !== null) {
+            effectiveActiveOrgId = decoded.activeOrgId;
+        } else if (existingContext?.activeOrgId) {
+            effectiveActiveOrgId = existingContext.activeOrgId;
+        } else {
+            effectiveActiveOrgId = null;
+        }
+        
         const refreshSessionData = {
             ...sessionData,
             rememberMe: isExtendedSession,
-            activeOrgId: decoded.activeOrgId
+            activeOrgId: effectiveActiveOrgId
         };
         
         const tokens = await generateTokens(user, refreshSessionData);
         
-        // Regenerar session_context en Redis durante el refresh
-        // Esto soluciona el problema de que el session_context expiraba antes que el refresh_token
-        // Usar TTL correcto basado en rememberMe del token original
         const primaryOrg = await organizationService.getPrimaryOrganization(userId);
-        const { setSessionContext, SESSION_TTL_NORMAL, SESSION_TTL_EXTENDED } = await import('./sessionContextCache.js');
-        const sessionTTL = isExtendedSession ? SESSION_TTL_EXTENDED : SESSION_TTL_NORMAL;
+        const refreshPrimaryOrgId = decoded.primaryOrgId ?? (primaryOrg ? primaryOrg.organizationId : null);
+        // effectiveActiveOrgId ya es el valor correcto (incluyendo null explícito para modo global)
+        // Solo caer a primaryOrgId si effectiveActiveOrgId es undefined
+        const refreshActiveOrgId = effectiveActiveOrgId ?? refreshPrimaryOrgId;
         
-        const refreshPrimaryOrgId = decoded.primaryOrgId || (primaryOrg ? primaryOrg.organizationId : null);
-        const refreshActiveOrgId = decoded.activeOrgId !== undefined && decoded.activeOrgId !== null
-            ? decoded.activeOrgId
-            : refreshPrimaryOrgId;
-        
-        // Resolver info pública de la org primaria
         let refreshPrimaryOrgInfo = null;
         if (refreshPrimaryOrgId) {
             const Organization = (await import('../organizations/models/Organization.js')).default;
@@ -497,7 +513,6 @@ export const refreshAccessToken = async (refreshToken, sessionData = {}) => {
             }
         }
         
-        // Resolver info pública de la org activa
         let refreshActiveOrgInfo = refreshPrimaryOrgInfo;
         if (refreshActiveOrgId && refreshActiveOrgId !== refreshPrimaryOrgId) {
             const Organization = (await import('../organizations/models/Organization.js')).default;
@@ -592,6 +607,10 @@ export const changePassword = async (userId, currentPassword, newPassword) => {
     
     // Invalidar sesión (incrementar sessionVersion y limpiar caché)
     await authCache.invalidateUserSession(userId);
+    
+    // Eliminar session context de Redis
+    const { deleteSessionContext } = await import('./sessionContextCache.js');
+    await deleteSessionContext(userId);
 
     return updated;
 };
@@ -733,6 +752,10 @@ export const logout = async (refreshToken) => {
     // Invalidar sesión del usuario (incrementa sessionVersion y limpia caché)
     await authCache.invalidateUserSession(tokenData.userId);
     
+    // Eliminar session context de Redis para evitar data stale
+    const { deleteSessionContext } = await import('./sessionContextCache.js');
+    await deleteSessionContext(tokenData.userId);
+    
     return true;
 };
 
@@ -744,6 +767,10 @@ export const logout = async (refreshToken) => {
 export const logoutAll = async (userId) => {
     const revokedCount = await refreshTokenRepository.revokeAllUserTokens(userId, 'logout_all');
     await authCache.invalidateUserSession(userId);
+    
+    const { deleteSessionContext } = await import('./sessionContextCache.js');
+    await deleteSessionContext(userId);
+    
     return revokedCount;
 };
 

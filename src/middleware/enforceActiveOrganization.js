@@ -395,51 +395,36 @@ export const enforceActiveOrganization = async (req, res, next) => {
             return next();
         }
 
-        // --- Caso 3: Usuario no especifica filtro - usar organización activa del JWT ---
-        const activeOrgId = user.activeOrgId;
-
-        if (!activeOrgId) {
-            if (user.role === 'system-admin') {
-                // Fallback defensivo: consultar Redis session context por si hay org activa
-                // (ej: JWT stale después de impersonate-org o refresh que no preservó activeOrgId)
-                try {
-                    const sessionCtx = await getSessionContext(user.userId);
-                    if (sessionCtx?.activeOrgId) {
-                        const resolvedFromRedis = await resolveOrganizationId(sessionCtx.activeOrgId);
-                        if (resolvedFromRedis && !resolvedFromRedis.isDeleted && resolvedFromRedis.isActive) {
-                            req.organizationContext = {
-                                id: resolvedFromRedis.uuid,
-                                publicCode: resolvedFromRedis.publicCode,
-                                source: 'session_context',
-                                tokenType: 'session',
-                                scopes: [],
-                                clientId: null,
-                                showAll: false,
-                                allowedIds: [resolvedFromRedis.uuid],
-                                enforced: true,
-                                canAccessAll: false,
-                                impersonating: true
-                            };
-
-                            orgLogger.debug({
-                                userId: user.userId,
-                                role: user.role,
-                                activeOrgId: resolvedFromRedis.uuid,
-                                source: 'session_context'
-                            }, 'System admin org resolved from Redis session context (JWT had no activeOrgId)');
-
-                            return next();
-                        }
-                    }
-                } catch (redisErr) {
-                    orgLogger.warn({ userId: user.userId, err: redisErr }, 'Failed to check Redis session context for system-admin fallback');
+        // --- Caso 3: Usuario no especifica filtro - usar organización activa ---
+        // Para system-admin: Redis es FUENTE DE VERDAD (JWT puede ser stale por race conditions del frontend)
+        // Para otros roles: usar activeOrgId del JWT directamente
+        
+        if (user.role === 'system-admin') {
+            let redisOrgId = null;
+            let redisSource = false;
+            
+            try {
+                const sessionCtx = await getSessionContext(user.userId);
+                if (sessionCtx?.activeOrgId) {
+                    redisOrgId = sessionCtx.activeOrgId;
+                    redisSource = true;
+                } else if (sessionCtx && !sessionCtx.activeOrgId) {
+                    // Redis existe pero activeOrgId es null → modo global explícito
+                    redisSource = true;
+                    redisOrgId = null;
                 }
-
-                // Sin org en Redis: modo admin global
+            } catch (redisErr) {
+                orgLogger.warn({ userId: user.userId, err: redisErr }, 'Redis session context no disponible, usando JWT como fallback');
+            }
+            
+            // Determinar activeOrgId efectivo: Redis > JWT > null
+            const effectiveOrgId = redisSource ? redisOrgId : (user.activeOrgId || null);
+            
+            if (!effectiveOrgId) {
                 req.organizationContext = {
                     id: null,
                     publicCode: null,
-                    source: 'jwt',
+                    source: redisSource ? 'session_context' : 'jwt',
                     tokenType: 'session',
                     scopes: [],
                     clientId: null,
@@ -454,13 +439,51 @@ export const enforceActiveOrganization = async (req, res, next) => {
                     userId: user.userId,
                     role: user.role,
                     showAll: true,
-                    canAccessAll: true
-                }, 'System admin in global admin mode (no active organization)');
+                    source: redisSource ? 'session_context' : 'jwt'
+                }, 'System admin en modo global (sin org activa)');
 
                 return next();
             }
             
-            // Otros roles DEBEN tener una org activa
+            const resolved = await resolveOrganizationId(effectiveOrgId);
+            if (!resolved) {
+                return errorResponse(res, {
+                    message: 'auth.organization.not_found',
+                    status: 404,
+                    code: 'ACTIVE_ORGANIZATION_NOT_FOUND'
+                });
+            }
+            
+            if (isOrgInactive(resolved, res, { userId: user.userId, role: user.role, path: req.path })) return;
+
+            req.organizationContext = {
+                id: resolved.uuid,
+                publicCode: resolved.publicCode,
+                source: redisSource ? 'session_context' : 'jwt',
+                tokenType: 'session',
+                scopes: [],
+                clientId: null,
+                showAll: false,
+                allowedIds: [resolved.uuid],
+                enforced: true,
+                canAccessAll: false,
+                impersonating: true
+            };
+
+            orgLogger.debug({
+                userId: user.userId,
+                activeOrgId: resolved.uuid,
+                source: redisSource ? 'session_context' : 'jwt',
+                impersonating: true
+            }, 'System admin org resuelta desde ' + (redisSource ? 'Redis' : 'JWT'));
+
+            return next();
+        }
+        
+        // --- Otros roles: usar activeOrgId del JWT ---
+        const activeOrgId = user.activeOrgId;
+
+        if (!activeOrgId) {
             orgLogger.warn({
                 userId: user.userId,
                 role: user.role,
@@ -485,10 +508,6 @@ export const enforceActiveOrganization = async (req, res, next) => {
         }
 
         if (isOrgInactive(resolved, res, { userId: user.userId, role: user.role, path: req.path })) return;
-        
-        // Determinar si system-admin está impersonando (activeOrgId != primaryOrgId)
-        const isImpersonating = user.role === 'system-admin' && 
-                                user.impersonating === true;
 
         req.organizationContext = {
             id: resolved.uuid,
@@ -500,16 +519,13 @@ export const enforceActiveOrganization = async (req, res, next) => {
             showAll: false,
             allowedIds: [resolved.uuid],
             enforced: true,
-            canAccessAll: false,
-            // Para system-admin, indicar si está impersonando otra org
-            ...(user.role === 'system-admin' && { impersonating: isImpersonating })
+            canAccessAll: false
         };
 
         orgLogger.debug({
             userId: user.userId,
             activeOrgId: resolved.uuid,
-            source: 'jwt',
-            ...(isImpersonating && { impersonating: true })
+            source: 'jwt'
         }, 'Organization context established from JWT activeOrgId');
 
         next();

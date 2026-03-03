@@ -31,9 +31,10 @@ const DEFAULT_TTL = SESSION_TTL_NORMAL;
 export const setSessionContext = async (userId, context, ttl = DEFAULT_TTL) => {
     try {
         const key = `${CACHE_PREFIX}${userId}`;
-        const value = JSON.stringify(context);
         
-        await setCache(key, value, ttl);
+        // Pasar el objeto directo a setCache (no JSON.stringify manual)
+        // setCache serializa automáticamente objetos
+        await setCache(key, context, ttl);
         
         logger.debug(`Session context cached for user ${userId} with TTL ${ttl}s`, { component: 'session-context-cache' });
         return true;
@@ -59,6 +60,8 @@ export const getSessionContext = async (userId) => {
             return null;
         }
         
+        // getCache auto-parsea JSON → value puede ser objeto o string
+        if (typeof value === 'object') return value;
         return JSON.parse(value);
     } catch (error) {
         logger.error(`Failed to get session context for user ${userId}:`, error);

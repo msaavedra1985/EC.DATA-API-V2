@@ -42,15 +42,25 @@
 
 **Archivos afectados**: `src/modules/auth/services.js`, `src/modules/auth/index.js`
 
-### refreshAccessToken pierde activeOrgId (impersonación se pierde al hacer refresh)
+### refreshAccessToken pierde activeOrgId — race condition del frontend
 **Fecha**: 2026-03-03
-**Síntoma**: System-admin impersona una org, ocurre un token refresh, y el nuevo access token tiene `activeOrgId: null` e `impersonating: false`. Endpoints como POST /devices fallan con `ORGANIZATION_REQUIRED`.
-**Causa**: `refreshAccessToken` construía `refreshSessionData` sin incluir `decoded.activeOrgId` del refresh token. `generateTokens` no recibía la org activa y caía al fallback `primaryOrg.organizationId`, que para system-admin es `null`.
-**Solución**: 
-- Pasar `activeOrgId: decoded.activeOrgId` en el `refreshSessionData` para que `generateTokens` lo preserve
-- Fallback defensivo en middleware `enforceActiveOrganization`: cuando system-admin tiene JWT con `activeOrgId: null`, consulta Redis session context por si hay org activa (cubre JWT stale por cualquier razón)
+**Síntoma**: System-admin impersona una org, ocurre un token refresh, y el nuevo access token tiene `activeOrgId: null` e `impersonating: false`. Redis session context se sobreescribe con `activeOrgId: null`.
+**Causa raíz completa**: `switchOrganization` (impersonate-org) NO revoca los refresh tokens anteriores del login. El frontend puede tener dos refresh tokens válidos (login y impersonación). Si el auto-refresh usa el del login (`activeOrgId: null`), la impersonación desaparece y Redis se sobreescribe.
+**Problemas resueltos** (auditoría completa del ciclo de vida de `ec:session_context`):
+1. **Refresh sobreescribía Redis con JWT stale**: `refreshAccessToken` usaba `decoded.activeOrgId` del refresh token directamente. Si el token era del login (null), destruía la impersonación en Redis.
+2. **Middleware solo usaba JWT**: `enforceActiveOrganization` para system-admin leía `activeOrgId` del JWT, que podía estar stale.
+3. **Logout no borraba session context**: `logout`, `logoutAll`, `changePassword` no limpiaban `ec:session_context:{userId}` de Redis.
+4. **Doble escritura en login**: `services.js` Y `index.js` escribían session context al loguearse (redundante).
+5. **GET /me reconstruía con JWT stale**: Al expirar el cache, `/me` reconstruía desde JWT claims (potencialmente stale para system-admin).
+**Solución**:
+- T001: `refreshAccessToken` consulta Redis ANTES de determinar `activeOrgId`. Si JWT tiene null pero Redis tiene org activa, Redis gana.
+- T002: Middleware usa Redis como fuente primaria para system-admin (no solo fallback). JWT es fallback si Redis falla.
+- T003: `logout`, `logoutAll`, `changePassword` ahora llaman `deleteSessionContext(userId)`.
+- T004: Login solo escribe session context en `services.js`. `index.js` lo lee con `getSessionContext`.
+- T005: GET /me no cachea la reconstrucción si es system-admin con JWT stale.
+**Regla**: Para system-admin, Redis `ec:session_context:{userId}` es la FUENTE DE VERDAD para `activeOrgId`. El JWT puede ser stale por race conditions del frontend.
 
-**Archivos afectados**: `src/modules/auth/services.js`, `src/middleware/enforceActiveOrganization.js`
+**Archivos afectados**: `src/modules/auth/services.js`, `src/modules/auth/index.js`, `src/middleware/enforceActiveOrganization.js`
 
 ---
 
@@ -315,7 +325,28 @@ Paso 5 - Actualizar código:
 
 ## Redis
 
-(Agregar problemas de Redis aquí)
+### Double JSON serialization en sessionContextCache
+**Fecha**: 2026-03-03
+**Síntoma**: `getSessionContext()` retornaba `null` sistemáticamente cuando Redis estaba conectado, pero funcionaba con el fallback en memoria.
+**Causa**: `setSessionContext` hacía `JSON.stringify(context)` y luego pasaba ese string a `setCache`, que no lo re-serializaba (ya era string). Pero `getCache` auto-parsea JSON con `JSON.parse`, devolviendo un objeto. Luego `getSessionContext` intentaba `JSON.parse(object)`, que lanza `SyntaxError` y caía al catch retornando `null`.
+**Solución**: 
+- `setSessionContext`: pasar el objeto directo a `setCache` (sin `JSON.stringify` manual)
+- `getSessionContext`: verificar `typeof value === 'object'` antes de hacer `JSON.parse`
+**Regla general**: Nunca hacer `JSON.stringify` manual antes de pasar a `setCache` — `setCache` ya serializa objetos automáticamente. Y en el getter, manejar ambos tipos (objeto y string) porque `getCache` auto-parsea.
+
+**Archivos afectados**: `src/modules/auth/sessionContextCache.js`
+
+### Prefijo global de entorno para keys Redis
+**Fecha**: 2026-03-03
+**Síntoma**: Keys de Redis no tenían identificación de entorno, dificultando debugging y separación dev/prod.
+**Solución**: 
+- `addPrefix()` en `src/db/redis/client.js` agrega automáticamente `{ENV}:EC:` a TODAS las keys
+- `DEV:EC:` en development, `PROD:EC:` en production, `TEST:EC:` en test
+- Se aplica en `getCache`, `setCache`, `deleteCache`, `getAndDeleteCache`, `incrWithTTL`, `scanAndDelete`
+- Las funciones `getCacheWithPrefix`/`setCacheWithPrefix`/`deleteCacheWithPrefix` son ahora aliases (el prefijo ya se aplica globalmente)
+- `REDIS_KEY_PREFIX` exportado para referencia
+
+**Archivos afectados**: `src/db/redis/client.js`
 
 ---
 

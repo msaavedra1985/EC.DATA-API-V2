@@ -4,6 +4,12 @@ import { createClient } from 'redis';
 import { config } from '../../config/env.js';
 import { dbLogger } from '../../utils/logger.js';
 
+// Prefijo global basado en entorno: DEV:EC: | PROD:EC: | TEST:EC:
+const ENV_TAG = config.env === 'production' ? 'PROD' : config.env === 'test' ? 'TEST' : 'DEV';
+export const REDIS_KEY_PREFIX = `${ENV_TAG}:EC:`;
+
+const addPrefix = (key) => key.startsWith(REDIS_KEY_PREFIX) ? key : `${REDIS_KEY_PREFIX}${key}`;
+
 let redisClient = null;
 let isRedisAvailable = false;
 let reconnectTimer = null;
@@ -212,13 +218,14 @@ const cleanExpiredMemoryCache = () => {
 };
 
 export const getCache = async key => {
+    const prefixedKey = addPrefix(key);
     if (!isRedisAvailable) {
         cleanExpiredMemoryCache();
-        return inMemoryCache.get(key) || null;
+        return inMemoryCache.get(prefixedKey) || null;
     }
 
     try {
-        const value = await redisClient.get(key);
+        const value = await redisClient.get(prefixedKey);
         if (!value) return null;
 
         try {
@@ -234,45 +241,47 @@ export const getCache = async key => {
 };
 
 export const setCache = async (key, value, ttl = null) => {
+    const prefixedKey = addPrefix(key);
     const serializedValue = typeof value === 'object' ? JSON.stringify(value) : String(value);
 
     if (!isRedisAvailable) {
-        inMemoryCache.set(key, value);
+        inMemoryCache.set(prefixedKey, value);
         if (ttl) {
-            inMemoryTTLs.set(key, Date.now() + (ttl * 1000));
+            inMemoryTTLs.set(prefixedKey, Date.now() + (ttl * 1000));
         } else {
-            inMemoryTTLs.delete(key);
+            inMemoryTTLs.delete(prefixedKey);
         }
         return true;
     }
 
     try {
         if (ttl) {
-            await redisClient.setEx(key, ttl, serializedValue);
+            await redisClient.setEx(prefixedKey, ttl, serializedValue);
         } else {
-            await redisClient.set(key, serializedValue);
+            await redisClient.set(prefixedKey, serializedValue);
         }
         return true;
     } catch (error) {
         dbLogger.error(error, 'Redis SET error');
         activateFallback(`SET error: ${error.message}`);
-        inMemoryCache.set(key, value);
+        inMemoryCache.set(prefixedKey, value);
         if (ttl) {
-            inMemoryTTLs.set(key, Date.now() + (ttl * 1000));
+            inMemoryTTLs.set(prefixedKey, Date.now() + (ttl * 1000));
         }
         return true;
     }
 };
 
 export const deleteCache = async key => {
+    const prefixedKey = addPrefix(key);
     if (!isRedisAvailable) {
-        inMemoryCache.delete(key);
-        inMemoryTTLs.delete(key);
+        inMemoryCache.delete(prefixedKey);
+        inMemoryTTLs.delete(prefixedKey);
         return true;
     }
 
     try {
-        await redisClient.del(key);
+        await redisClient.del(prefixedKey);
         return true;
     } catch (error) {
         dbLogger.error(error, 'Redis DEL error');
@@ -282,19 +291,19 @@ export const deleteCache = async key => {
 };
 
 export const getAndDeleteCache = async key => {
+    const prefixedKey = addPrefix(key);
     if (!isRedisAvailable) {
         cleanExpiredMemoryCache();
-        const value = inMemoryCache.get(key) || null;
-        inMemoryCache.delete(key);
-        inMemoryTTLs.delete(key);
+        const value = inMemoryCache.get(prefixedKey) || null;
+        inMemoryCache.delete(prefixedKey);
+        inMemoryTTLs.delete(prefixedKey);
         return value;
     }
 
     try {
-        // Usar GET + DEL como alternativa a GETDEL (no disponible en Redis < 6.2)
-        const value = await redisClient.get(key);
+        const value = await redisClient.get(prefixedKey);
         if (!value) return null;
-        await redisClient.del(key);
+        await redisClient.del(prefixedKey);
         try {
             return JSON.parse(value);
         } catch {
@@ -315,31 +324,32 @@ export const getAndDeleteCache = async key => {
  * @returns {Promise<number>} Nuevo valor del contador
  */
 export const incrWithTTL = async (key, ttl) => {
+    const prefixedKey = addPrefix(key);
     if (!isRedisAvailable) {
         cleanExpiredMemoryCache();
-        const current = inMemoryCache.get(key) || 0;
+        const current = inMemoryCache.get(prefixedKey) || 0;
         const newVal = current + 1;
-        inMemoryCache.set(key, newVal);
-        if (!inMemoryTTLs.has(key)) {
-            inMemoryTTLs.set(key, Date.now() + (ttl * 1000));
+        inMemoryCache.set(prefixedKey, newVal);
+        if (!inMemoryTTLs.has(prefixedKey)) {
+            inMemoryTTLs.set(prefixedKey, Date.now() + (ttl * 1000));
         }
         return newVal;
     }
 
     try {
-        const newCount = await redisClient.incr(key);
+        const newCount = await redisClient.incr(prefixedKey);
         if (newCount === 1) {
-            await redisClient.expire(key, ttl);
+            await redisClient.expire(prefixedKey, ttl);
         }
         return newCount;
     } catch (error) {
         dbLogger.error(error, 'Redis INCR error');
         activateFallback(`INCR error: ${error.message}`);
-        const current = inMemoryCache.get(key) || 0;
+        const current = inMemoryCache.get(prefixedKey) || 0;
         const newVal = current + 1;
-        inMemoryCache.set(key, newVal);
-        if (!inMemoryTTLs.has(key)) {
-            inMemoryTTLs.set(key, Date.now() + (ttl * 1000));
+        inMemoryCache.set(prefixedKey, newVal);
+        if (!inMemoryTTLs.has(prefixedKey)) {
+            inMemoryTTLs.set(prefixedKey, Date.now() + (ttl * 1000));
         }
         return newVal;
     }
@@ -347,27 +357,18 @@ export const incrWithTTL = async (key, ttl) => {
 
 export const isConnected = () => isRedisAvailable;
 
-const ensurePrefix = (key) => {
-    return key.startsWith('ec:') ? key : `ec:${key}`;
-};
-
-export const getCacheWithPrefix = async (key) => {
-    return getCache(ensurePrefix(key));
-};
-
-export const setCacheWithPrefix = async (key, value, ttl = null) => {
-    return setCache(ensurePrefix(key), value, ttl);
-};
-
-export const deleteCacheWithPrefix = async (key) => {
-    return deleteCache(ensurePrefix(key));
-};
+// Las funciones withPrefix ya no son necesarias (addPrefix se aplica globalmente)
+// Se mantienen como aliases para compatibilidad
+export const getCacheWithPrefix = getCache;
+export const setCacheWithPrefix = setCache;
+export const deleteCacheWithPrefix = deleteCache;
 
 export const scanAndDelete = async (pattern) => {
+    const prefixedPattern = addPrefix(pattern);
     if (!isRedisAvailable) {
         cleanExpiredMemoryCache();
         let count = 0;
-        const regex = new RegExp('^' + pattern.replace(/\*/g, '.*') + '$');
+        const regex = new RegExp('^' + prefixedPattern.replace(/\*/g, '.*') + '$');
 
         for (const key of inMemoryCache.keys()) {
             if (regex.test(key)) {
@@ -377,7 +378,7 @@ export const scanAndDelete = async (pattern) => {
             }
         }
 
-        dbLogger.debug({ pattern, count }, 'In-memory cache pattern deletion');
+        dbLogger.debug({ pattern: prefixedPattern, count }, 'In-memory cache pattern deletion');
         return count;
     }
 
@@ -388,7 +389,7 @@ export const scanAndDelete = async (pattern) => {
 
         do {
             const result = await redisClient.scan(cursor, {
-                MATCH: pattern,
+                MATCH: prefixedPattern,
                 COUNT: 100
             });
 
@@ -408,7 +409,7 @@ export const scanAndDelete = async (pattern) => {
         dbLogger.debug({ pattern, deletedCount }, 'Redis pattern deletion completed');
         return deletedCount;
     } catch (error) {
-        dbLogger.error({ err: error, pattern }, 'Redis SCAN+DEL error');
+        dbLogger.error({ err: error, pattern: prefixedPattern }, 'Redis SCAN+DEL error');
         activateFallback(`SCAN+DEL error: ${error.message}`);
         return 0;
     }
