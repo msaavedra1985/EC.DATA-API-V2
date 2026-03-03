@@ -196,7 +196,7 @@
 | status | enum | No | active, inactive, error, disabled. Default: active |
 | isActive | boolean | No | Default: true |
 | metadata | object | No | Datos adicionales |
-| val1..val8 | string | No | Valores auxiliares, se guardan en `metadata` |
+| val1..val8 | string/number | No | Solo para IOT (measurementTypeId=3): IDs de variables de la tabla `variables`. Cada valX crea un registro en `channel_variables` |
 
 **Respuesta exitosa** (201):
 ```json
@@ -213,7 +213,7 @@
     "channels": [
       {
         "id": "CHN-AAAAA-A",
-        "name": "Canal 1 Energia",
+        "name": "Canal 1 electrico",
         "ch": 1,
         "measurementTypeId": 1,
         "phaseSystem": 3,
@@ -226,7 +226,12 @@
         "measurementTypeId": 3,
         "phaseSystem": 0,
         "status": "active",
-        "metadata": { "val1": "Analog In", "val2": "Pulso" }
+        "variables": [
+          { "variableId": 22, "displayOrder": 1 },
+          { "variableId": 50, "displayOrder": 2 },
+          { "variableId": 75, "displayOrder": 3 },
+          { "variableId": 28, "displayOrder": 4 }
+        ]
       }
     ]
   }
@@ -238,8 +243,9 @@
 - Solo `system-admin` y `org-admin` necesitarían enviar `organizationId` explícito para crear en otra org
 - Los canales se crean atómicamente con el device (transacción SQL). Si falla un canal, no se crea nada
 - `system` acepta texto ("Trifásico", "Monofásico", "N/A") y se convierte a `phaseSystem` (3, 1, 0)
-- `val1..val8` se mueven automáticamente a `metadata` del canal
-- Audit log: CREATE para device + CREATE para cada canal (con `createdVia: "device-inline"`)
+- **val1..val8 para IOT**: son IDs de variables (tabla `variables`, `measurement_type_id=3`). Se crean registros en `channel_variables` vinculando canal → variable. Se valida que existan y pertenezcan al tipo IOT
+- **Canales eléctricos**: NO se crean `channel_variables`. Se asume que pueden leer todas las variables eléctricas
+- Audit log: CREATE para device + CREATE para cada canal (con `createdVia: "device-inline"` y `variablesAssigned`)
 - Invalida cache de devices y channels
 
 ---

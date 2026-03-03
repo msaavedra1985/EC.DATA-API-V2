@@ -13,6 +13,8 @@ import { logAuditAction } from '../../helpers/auditLog.js';
 import { generateHumanId, generatePublicCode } from '../../utils/identifiers.js';
 import Device from './models/Device.js';
 import Channel from '../channels/models/Channel.js';
+import ChannelVariable from '../telemetry/models/ChannelVariable.js';
+import Variable from '../telemetry/models/Variable.js';
 import sequelize from '../../db/sql/sequelize.js';
 import logger from '../../utils/logger.js';
 
@@ -33,18 +35,39 @@ const parsePhaseSystem = (value) => {
     return SYSTEM_MAP[normalized] ?? 0;
 };
 
-const buildChannelMetadata = (channelInput) => {
-    const valKeys = ['val1', 'val2', 'val3', 'val4', 'val5', 'val6', 'val7', 'val8'];
-    const vals = {};
-    let hasVals = false;
-    for (const key of valKeys) {
-        if (channelInput[key] != null) {
-            vals[key] = channelInput[key];
-            hasVals = true;
+const VAL_KEYS = ['val1', 'val2', 'val3', 'val4', 'val5', 'val6', 'val7', 'val8'];
+const IOT_MEASUREMENT_TYPE_ID = 3;
+
+const extractVariableIds = (channelInput) => {
+    const variables = [];
+    const seenIds = new Set();
+    for (let i = 0; i < VAL_KEYS.length; i++) {
+        const val = channelInput[VAL_KEYS[i]];
+        if (val == null || val === '') continue;
+        
+        const num = Number(val);
+        if (!Number.isInteger(num) || num <= 0) {
+            const error = new Error(`${VAL_KEYS[i]} debe ser un ID de variable entero positivo, recibido: "${val}"`);
+            error.status = 400;
+            error.code = 'INVALID_VARIABLE_ID';
+            throw error;
         }
+        
+        if (seenIds.has(num)) {
+            const error = new Error(`Variable ID ${num} está duplicado en los campos val1..val8`);
+            error.status = 400;
+            error.code = 'DUPLICATE_VARIABLE_ID';
+            throw error;
+        }
+        seenIds.add(num);
+        variables.push({ variableId: num, displayOrder: i + 1 });
     }
-    if (!hasVals && !channelInput.metadata) return undefined;
-    return { ...(channelInput.metadata || {}), ...vals };
+    return variables;
+};
+
+const buildChannelMetadata = (channelInput) => {
+    if (!channelInput.metadata) return undefined;
+    return { ...channelInput.metadata };
 };
 
 /**
@@ -177,7 +200,44 @@ export const createDevice = async (deviceData, userId, ipAddress, userAgent, org
                 
                 const channel = await Channel.create(channelData, { transaction: t });
                 
-                createdChannels.push({
+                // --- Crear channel_variables para canales IOT ---
+                let assignedVariables = [];
+                if (chInput.measurementTypeId === IOT_MEASUREMENT_TYPE_ID) {
+                    const varEntries = extractVariableIds(chInput);
+                    
+                    if (varEntries.length > 0) {
+                        const varIds = varEntries.map(v => v.variableId);
+                        const existingVars = await Variable.findAll({
+                            where: { id: varIds, measurementTypeId: IOT_MEASUREMENT_TYPE_ID },
+                            attributes: ['id'],
+                            transaction: t
+                        });
+                        const validIds = new Set(existingVars.map(v => v.id));
+                        
+                        for (const entry of varEntries) {
+                            if (!validIds.has(entry.variableId)) {
+                                const error = new Error(`Variable ID ${entry.variableId} no existe o no pertenece al tipo IOT`);
+                                error.status = 400;
+                                error.code = 'INVALID_VARIABLE_ID';
+                                throw error;
+                            }
+                            
+                            await ChannelVariable.create({
+                                channelId: chUuid,
+                                variableId: entry.variableId,
+                                displayOrder: entry.displayOrder,
+                                isActive: true
+                            }, { transaction: t });
+                            
+                            assignedVariables.push({
+                                variableId: entry.variableId,
+                                displayOrder: entry.displayOrder
+                            });
+                        }
+                    }
+                }
+                
+                const channelResult = {
                     id: chPublicCode,
                     name: channel.name,
                     description: channel.description,
@@ -187,7 +247,13 @@ export const createDevice = async (deviceData, userId, ipAddress, userAgent, org
                     phase: channel.phase,
                     status: channel.status,
                     metadata: channel.metadata || {}
-                });
+                };
+                
+                if (assignedVariables.length > 0) {
+                    channelResult.variables = assignedVariables;
+                }
+                
+                createdChannels.push(channelResult);
                 
                 await logAuditAction({
                     entityType: 'channel',
@@ -198,7 +264,8 @@ export const createDevice = async (deviceData, userId, ipAddress, userAgent, org
                     metadata: {
                         organizationId: organizationUuid,
                         deviceId: device.id,
-                        createdVia: 'device-inline'
+                        createdVia: 'device-inline',
+                        variablesAssigned: assignedVariables.length
                     },
                     ipAddress,
                     userAgent

@@ -254,14 +254,14 @@ export const createDeviceSchema = z.object({
                     metadata: z
                         .record(z.any())
                         .optional(),
-                    val1: z.string().optional().nullable(),
-                    val2: z.string().optional().nullable(),
-                    val3: z.string().optional().nullable(),
-                    val4: z.string().optional().nullable(),
-                    val5: z.string().optional().nullable(),
-                    val6: z.string().optional().nullable(),
-                    val7: z.string().optional().nullable(),
-                    val8: z.string().optional().nullable()
+                    val1: z.union([z.string(), z.number()]).optional().nullable(),
+                    val2: z.union([z.string(), z.number()]).optional().nullable(),
+                    val3: z.union([z.string(), z.number()]).optional().nullable(),
+                    val4: z.union([z.string(), z.number()]).optional().nullable(),
+                    val5: z.union([z.string(), z.number()]).optional().nullable(),
+                    val6: z.union([z.string(), z.number()]).optional().nullable(),
+                    val7: z.union([z.string(), z.number()]).optional().nullable(),
+                    val8: z.union([z.string(), z.number()]).optional().nullable()
                 })
             )
             .max(50, 'No se pueden crear más de 50 canales por request')
