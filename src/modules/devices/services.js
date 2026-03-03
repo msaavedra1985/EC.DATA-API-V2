@@ -148,7 +148,7 @@ export const createDevice = async (deviceData, userId, ipAddress, userAgent, org
     const result = await sequelize.transaction(async (t) => {
         // --- Crear device ---
         const deviceUuid = uuidv7();
-        const deviceHumanId = await generateHumanId(Device, null, null);
+        const deviceHumanId = await generateHumanId(Device, null, null, { transaction: t });
         const devicePublicCode = generatePublicCode('DEV');
         
         const device = await deviceRepository.createDevice({
@@ -180,7 +180,7 @@ export const createDevice = async (deviceData, userId, ipAddress, userAgent, org
         if (channelsInput && channelsInput.length > 0) {
             for (const chInput of channelsInput) {
                 const chUuid = uuidv7();
-                const chHumanId = await generateHumanId(Channel, null, null);
+                const chHumanId = await generateHumanId(Channel, null, null, { transaction: t });
                 const chPublicCode = generatePublicCode('CHN');
                 
                 const channelData = {

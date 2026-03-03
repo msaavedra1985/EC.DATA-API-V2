@@ -11,23 +11,21 @@ export const generateUuidV7 = () => {
     return uuidv7();
 };
 
-export const generateHumanId = async (model, scopeField, scopeValue) => {
-    if (!scopeField || scopeValue === null || scopeValue === undefined) {
-        const maxRecord = await model.findOne({
-            attributes: [[model.sequelize.fn('MAX', model.sequelize.col('human_id')), 'max_id']],
-            raw: true
-        });
-        
-        const maxId = maxRecord?.max_id || 0;
-        return maxId + 1;
-    }
-
-    const maxRecord = await model.findOne({
-        where: { [scopeField]: scopeValue },
+export const generateHumanId = async (model, scopeField, scopeValue, options = {}) => {
+    const findOptions = {
         attributes: [[model.sequelize.fn('MAX', model.sequelize.col('human_id')), 'max_id']],
         raw: true
-    });
+    };
 
+    if (options.transaction) {
+        findOptions.transaction = options.transaction;
+    }
+
+    if (scopeField && scopeValue !== null && scopeValue !== undefined) {
+        findOptions.where = { [scopeField]: scopeValue };
+    }
+
+    const maxRecord = await model.findOne(findOptions);
     const maxId = maxRecord?.max_id || 0;
     return maxId + 1;
 };
