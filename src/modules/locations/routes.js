@@ -33,7 +33,7 @@ router.get('/', (req, res) => {
  *       - in: path
  *         name: countryCode
  *         required: true
- *         description: Código ISO alpha-2 del país (ej: MX, AR, US)
+ *         description: "Código ISO alpha-2 del país (ej: MX, AR, US)"
  *         schema:
  *           type: string
  *           example: "MX"
@@ -135,7 +135,7 @@ router.get('/countries/:countryCode/states', async (req, res) => {
  *       - in: path
  *         name: stateCode
  *         required: true
- *         description: Código completo del estado (ej: MX-AGU, AR-B)
+ *         description: "Código completo del estado (ej: MX-AGU, AR-B)"
  *         schema:
  *           type: string
  *           example: "MX-AGU"
