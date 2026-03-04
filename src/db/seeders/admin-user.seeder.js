@@ -33,6 +33,7 @@ export const seedAdminUser = async () => {
                 humanId,
                 firstName: 'System',
                 lastName: 'Administrator',
+                username: 'sysadmin',
                 email,
                 passwordHash,
                 roleId: adminRole.id,
