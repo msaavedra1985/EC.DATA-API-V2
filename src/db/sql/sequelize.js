@@ -22,6 +22,16 @@ const sequelizeConfig = {
         idle: 10000,
     },
 
+    // SSL requerido por Azure PostgreSQL (activar con PGSSLMODE=require)
+    ...(config.database.ssl && {
+        dialectOptions: {
+            ssl: {
+                require: true,
+                rejectUnauthorized: false,
+            },
+        },
+    }),
+
     // Configuración global de modelos
     define: {
         // underscored: mapea automáticamente camelCase (JS) → snake_case (DB)
