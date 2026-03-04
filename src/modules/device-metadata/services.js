@@ -7,7 +7,7 @@ import * as repository from './repository.js';
 import { getCache, setCache, deleteCache } from '../../db/redis/client.js';
 
 const CACHE_TTL = 3600; // 1 hora
-const CACHE_PREFIX = 'device_metadata:';
+const CACHE_PREFIX = 'ec:device_metadata:';
 
 /**
  * Transformar modelo a DTO plano

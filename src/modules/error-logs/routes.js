@@ -202,7 +202,7 @@ router.post('/', async (req, res) => {
                     audience: config.jwtAudience
                 });
                 userId = decoded.sub;
-                organizationId = decoded.activeOrgId;
+                organizationId = decoded.activeOrgCode;
             } catch (error) {
                 // JWT inválido o expirado - continuar sin userId
                 errorLogger.debug('Invalid or expired JWT in error-logs endpoint');

@@ -202,7 +202,7 @@ router.post('/', authenticate, requireRole(['system-admin', 'org-admin']), async
         const validatedData = validateCreateUser(req.body);
         
         if (req.user.role === 'org-admin') {
-            validatedData.organizationId = req.organization?.publicCode || req.user.activeOrgId;
+            validatedData.organizationId = req.organization?.publicCode || req.user.activeOrgCode;
         }
         
         const actor = { userId: req.user.userId, role: req.user.role };

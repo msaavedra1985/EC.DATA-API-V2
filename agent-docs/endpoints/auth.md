@@ -1,6 +1,6 @@
 # Auth Endpoints
 
-> **Última actualización**: 2026-02-18
+> **Última actualización**: 2026-03-04
 > 
 > **IMPORTANTE**: Este archivo DEBE actualizarse cuando se modifique cualquier endpoint de autenticación.
 
@@ -286,7 +286,7 @@
 - **Lento**: ~50-200ms (consulta DB + reconstruye cache)
 - Usar solo como fallback cuando `/session-context` retorna 404
 - Reconstruye session_context en Redis si el cache expiró
-- Cuando reconstruye, usa `activeOrgId` del JWT para determinar la org activa correcta (no asume org primaria)
+- Cuando reconstruye, usa `activeOrgCode` del JWT para determinar la org activa correcta (no asume org primaria)
 - `primaryOrgPublicCode` siempre se resuelve desde DB, incluso durante impersonación
 
 ---
@@ -302,13 +302,18 @@
 {
   "ok": true,
   "data": {
-    "activeOrgId": "uuid",
-    "primaryOrgId": "uuid",
+    "activeOrgPublicCode": "ORG-XXXXX-X",
+    "activeOrgName": "Hotel Lima",
+    "activeOrgLogoUrl": "https://...",
+    "primaryOrgPublicCode": "ORG-YYYYY-Y",
+    "primaryOrgName": "Mi Org Primaria",
+    "primaryOrgLogoUrl": null,
     "canAccessAllOrgs": false,
     "role": "user",
     "email": "user@example.com",
     "firstName": "Juan",
-    "lastName": "Pérez"
+    "lastName": "Pérez",
+    "userPublicCode": "USR-XXXXX-X"
   }
 }
 ```
@@ -381,7 +386,6 @@
     "refresh_token": "eyJhbG...",
     "expires_in": "15m",
     "token_type": "Bearer",
-    "active_organization_id": "uuid",
     "session_context": {
       "activeOrgPublicCode": "ORG-XXXXX-X",
       "activeOrgName": "Hotel Lima",
@@ -407,8 +411,8 @@
 | 404 | ORGANIZATION_NOT_FOUND | Organización no existe |
 
 **Notas**:
-- Acepta `organization_id` como public_code (ORG-xxx) o UUID
-- Genera nuevos tokens JWT con `activeOrgId` actualizado
+- Acepta `organization_id` como public_code (ORG-xxx)
+- Genera nuevos tokens JWT con `activeOrgCode` actualizado
 - Actualiza session_context completo en Redis con info pública de la org
 - Si el cache de Redis estaba expirado, lo reconstruye completamente
 
@@ -436,7 +440,6 @@
     "refresh_token": "eyJhbG...",
     "expires_in": "15m",
     "token_type": "Bearer",
-    "active_organization_id": "uuid",
     "session_context": {
       "activeOrgPublicCode": "ORG-XXXXX-X",
       "activeOrgName": "Hotel Lima",
@@ -511,7 +514,7 @@
 ```
 
 **Notas**:
-- Vuelve al estado de God View (`activeOrgId: null`, `canAccessAllOrgs: true`)
+- Vuelve al estado de God View (`activeOrgCode: null`, `canAccessAllOrgs: true`)
 - session_context se reconstruye completo con `primaryOrgPublicCode` poblado
 - `activeOrgPublicCode` queda null (sin org activa = modo admin global)
 
@@ -540,6 +543,46 @@
 - En impersonate-org: `activeOrgPublicCode` = org impersonada, `primaryOrgPublicCode` = org primaria del admin
 - En exit-impersonation: `activeOrgPublicCode` = null (God View)
 - El frontend usa `primaryOrgPublicCode` para detectar si el admin está volviendo a su org primaria
+
+---
+
+## JWT Payload — Estructura de Claims
+
+> **Actualizado 2026-03-04**: El JWT ya **NO** contiene UUIDs. Todos los identificadores son public codes.
+
+### Access Token (claims)
+
+| Claim | Tipo | Descripción |
+|-------|------|-------------|
+| `sub` | string | `publicCode` del usuario (ej: `USR-MY4-JMY`). **Nunca UUID.** |
+| `activeOrgCode` | string\|null | `publicCode` de la org activa (ej: `ORG-UNR-VPD`). Null para system-admin en God View. |
+| `primaryOrgCode` | string\|null | `publicCode` de la org primaria del usuario. |
+| `role` | string | Nombre del rol (`system-admin`, `org-admin`, `user`). |
+| `canAccessAllOrgs` | boolean | `true` solo para system-admin. |
+| `sessionVersion` | number | Versión de sesión para revocación. Se compara contra Redis `ec:session_version:{userId}`. |
+| `impersonating` | boolean | Solo en tokens de system-admin. `true` cuando opera como otra org. |
+| `iss` | string | Issuer del sistema (config `jwtIssuer`). |
+| `aud` | string | Audience del sistema (config `jwtAudience`). |
+| `iat` | number | Issued at (timestamp). |
+| `exp` | number | Expiración (15 minutos por defecto). |
+
+### Refresh Token (claims)
+- `sub`: publicCode del usuario
+- `jti`: ID único del token (para revocación en DB)
+- `iss`, `aud`, `iat`, `exp` estándar
+
+### Resolución interna (en `verifyToken`)
+1. JWT verificado → `decoded.sub` = publicCode del usuario
+2. Lookup `ec:auth:pub:{publicCode}` en Redis → `userId` (UUID)
+3. Si no hay cache → `authRepository.findUserByPublicCode(publicCode)` + cachear
+4. UUID resuelto → continuar con flujo normal (session version, user cache, etc.)
+5. `activeOrgCode` y `primaryOrgCode` se propagan en `req.user` tal cual (strings de publicCode)
+
+### Implicaciones para middlewares
+- `req.user.userId` → UUID interno (para queries DB)
+- `req.user.activeOrgCode` → publicCode de la org (para resolución por `enforceActiveOrganization`)
+- `req.user.primaryOrgCode` → publicCode de la org primaria
+- **Nunca** acceder a `req.user.activeOrgId` o `req.user.id` — esos campos ya no existen
 
 ---
 

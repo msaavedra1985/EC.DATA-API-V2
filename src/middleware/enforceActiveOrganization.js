@@ -199,7 +199,7 @@ export const enforceActiveOrganization = async (req, res, next) => {
         // ============ CASO: JWT de API Key (clientes externos) ============
         if (isApiKey) {
             // Los API keys están fijos a una organización, no pueden cambiar
-            const apiOrgId = user.organizationId || user.activeOrgId;
+            const apiOrgId = user.organizationId || user.activeOrgCode;
             
             if (!apiOrgId) {
                 orgLogger.warn({
@@ -281,16 +281,16 @@ export const enforceActiveOrganization = async (req, res, next) => {
                         redisHasContext = true;
                         if (sessionCtx.activeOrgId) {
                             impersonatedOrgId = sessionCtx.activeOrgId;
-                        } else if (!sessionCtx.activeOrgId && user.activeOrgId && user.impersonating) {
+                        } else if (!sessionCtx.activeOrgId && user.activeOrgCode && user.impersonating) {
                             // Redis tiene null pero el JWT tiene activeOrgId + impersonating:true
                             // Redis fue reseteado externamente (login concurrente sin organizationId)
                             // El JWT tiene la intención más específica → usarlo
                             orgLogger.warn({
                                 userId: user.userId,
-                                jwtActiveOrgId: user.activeOrgId,
+                                jwtActiveOrgId: user.activeOrgCode,
                                 path: req.path
                             }, 'all=true: Redis activeOrgId null pero JWT tiene impersonating:true — usando JWT (Redis reseteado externamente)');
-                            impersonatedOrgId = user.activeOrgId;
+                            impersonatedOrgId = user.activeOrgCode;
                         }
                         // Si Redis tiene null y JWT no tiene impersonating → modo global explícito
                     }
@@ -300,8 +300,8 @@ export const enforceActiveOrganization = async (req, res, next) => {
                 
                 // JWT como fallback solo si Redis no tenía contexto (caído o sin data)
                 // Si Redis SÍ tiene contexto con activeOrgId: null (y JWT no tiene impersonating), modo global explícito
-                if (!redisHasContext && user.activeOrgId) {
-                    impersonatedOrgId = user.activeOrgId;
+                if (!redisHasContext && user.activeOrgCode) {
+                    impersonatedOrgId = user.activeOrgCode;
                 }
                 
                 if (impersonatedOrgId) {
@@ -485,14 +485,14 @@ export const enforceActiveOrganization = async (req, res, next) => {
                     redisOrgId = sessionCtx.activeOrgId;
                     redisSource = true;
                 } else if (sessionCtx && !sessionCtx.activeOrgId) {
-                    if (user.activeOrgId && user.impersonating) {
+                    if (user.activeOrgCode && user.impersonating) {
                         // Redis tiene null pero el JWT tiene activeOrgId + impersonating:true
                         // Redis fue reseteado externamente (login concurrente sin organizationId)
                         // El JWT tiene la intención más específica → dejamos redisSource=false
-                        // para que effectiveOrgId use user.activeOrgId (del JWT)
+                        // para que effectiveOrgId use user.activeOrgCode (del JWT)
                         orgLogger.warn({
                             userId: user.userId,
-                            jwtActiveOrgId: user.activeOrgId
+                            jwtActiveOrgId: user.activeOrgCode
                         }, 'Redis activeOrgId null pero JWT tiene impersonating:true — usando JWT (Redis reseteado externamente)');
                     } else {
                         // Redis null y JWT no tiene impersonating → modo global explícito
@@ -504,13 +504,13 @@ export const enforceActiveOrganization = async (req, res, next) => {
                 orgLogger.warn({ userId: user.userId, err: redisErr }, 'Redis session context no disponible, usando JWT como fallback');
             }
             
-            const effectiveOrgId = redisSource ? redisOrgId : (user.activeOrgId ?? null);
+            const effectiveOrgId = redisSource ? redisOrgId : (user.activeOrgCode ?? null);
 
             orgLogger.debug({
                 userId: user.userId,
                 redisSource,
                 redisOrgId,
-                jwtActiveOrgId: user.activeOrgId ?? null,
+                jwtActiveOrgId: user.activeOrgCode ?? null,
                 effectiveOrgId,
                 queryParams: { all: req.query.all, organization_id: req.query.organization_id }
             }, 'System admin org resolution trace');
@@ -576,7 +576,7 @@ export const enforceActiveOrganization = async (req, res, next) => {
         }
         
         // --- Otros roles: usar activeOrgId del JWT ---
-        const activeOrgId = user.activeOrgId;
+        const activeOrgId = user.activeOrgCode;
 
         if (!activeOrgId) {
             orgLogger.warn({

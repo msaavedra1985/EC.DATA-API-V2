@@ -100,9 +100,9 @@ const getRedisKey = (req, identifier) => {
  * @returns {string} Identificador (user ID o IP)
  */
 const getIdentifier = (req) => {
-    // Si está autenticado, usar user ID
-    if (req.user && req.user.id) {
-        return `user:${req.user.id}`;
+    // Si está autenticado, usar userId (UUID interno)
+    if (req.user && req.user.userId) {
+        return `user:${req.user.userId}`;
     }
     
     // Si no, usar IP address
@@ -166,7 +166,7 @@ export const rateLimitMiddleware = (options = {}) => {
                     count: newCount,
                     limit: max,
                     mode: observeOnly ? 'observe' : 'active',
-                    user: req.user ? { id: req.user.id, email: req.user.email } : null
+                    user: req.user ? { id: req.user.userId, email: req.user.email } : null
                 });
                 
                 // Si está en modo activo, bloquear el request

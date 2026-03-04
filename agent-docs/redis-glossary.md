@@ -24,6 +24,15 @@
 
 ## Auth
 
+### `ec:auth:pub:{publicCode}`
+- **TTL**: 900s (15 min)
+- **Tipo**: String (UUID crudo)
+- **Descripción**: Lookup publicCode → userId (UUID). Permite a `verifyToken` resolver el `sub` del JWT (que ahora es un publicCode) a UUID interno sin query a DB. Key auxiliar creada junto con `ec:user:{userId}` al cachear un usuario.
+- **Archivo fuente**: `src/modules/auth/cache.js`
+- **Ejemplo de key**: `ec:auth:pub:USR-MY4-JMY`
+- **Ejemplo de valor**: `"a1b2c3d4-e5f6-7890-abcd-ef1234567890"`
+- **Invalidación**: `deleteUserCache(userId)` — se borra junto con `ec:user:{userId}` al invalidar sesión.
+
 ### `ec:user:{userId}`
 - **TTL**: 900s (15 min)
 - **Tipo**: String (JSON serializado)
@@ -33,7 +42,7 @@
   ```json
   "{\"id\":\"a1b2c3d4-...\",\"email\":\"admin@example.com\",\"firstName\":\"Juan\",\"lastName\":\"García\",\"role\":\"org-admin\"}"
   ```
-- **Invalidación**: `deleteUserCache(userId)` — al actualizar perfil, cambiar contraseña, o invalidar sesión.
+- **Invalidación**: `deleteUserCache(userId)` — al actualizar perfil, cambiar contraseña, o invalidar sesión. También elimina `ec:auth:pub:{publicCode}` del mismo usuario.
 
 ### `ec:session_version:{userId}`
 - **TTL**: Sin TTL (persistente)
@@ -352,13 +361,13 @@
 
 ## Device Metadata
 
-### `device_metadata:all:{lang}`
+### `ec:device_metadata:all:{lang}`
 - **TTL**: 3600s (1 hora)
 - **Tipo**: String (JSON)
 - **Descripción**: Cache completo de todo el metadata de dispositivos (types, brands, models, servers, networks, licenses, validity periods, measurement types, variables).
 - **Archivo fuente**: `src/modules/device-metadata/services.js`
-- **Ejemplo de key**: `device_metadata:all:es`
-- **Invalidación**: `invalidateCache(lang)` — al crear, actualizar o eliminar cualquier catálogo de metadata. Sin argumento elimina `device_metadata:all:es` y `device_metadata:all:en`.
+- **Ejemplo de key**: `ec:device_metadata:all:es` → en Redis real: `DEV:EC:ec:device_metadata:all:es`
+- **Invalidación**: `invalidateCache(lang)` — al crear, actualizar o eliminar cualquier catálogo de metadata. Sin argumento elimina `ec:device_metadata:all:es` y `ec:device_metadata:all:en`.
 
 ---
 
@@ -410,38 +419,40 @@
 
 ## Login Rate Limiting
 
+> **AVISO**: Las keys de Login Rate Limiting usan su **propio cliente Redis** (creado con `createClient` directamente en `loginRateLimit.js`), independiente del cliente global. Por eso **NO llevan el prefijo `DEV:EC:`** automático — sus keys existen en la raíz del namespace Redis. Esta es la única excepción documentada al prefijado global.
+
 ### `login_fail_ip:{ip}`
 - **TTL**: 900s (15 min)
 - **Tipo**: String (entero vía INCR)
-- **Descripción**: Contador de intentos de login fallidos por IP. Al alcanzar 20, se bloquea la IP.
+- **Descripción**: Contador de intentos de login fallidos por IP. Al alcanzar 20, se bloquea la IP. **Key sin prefijo `DEV:EC:`** — cliente propio.
 - **Archivo fuente**: `src/middleware/loginRateLimit.js`
-- **Ejemplo de key**: `login_fail_ip:192.168.1.100`
+- **Ejemplo de key**: `login_fail_ip:192.168.1.100` (literal, sin prefijo global)
 - **Ejemplo de valor**: `"3"`
 - **Invalidación**: `resetLoginCounters(ip, identifier)` — tras login exitoso.
 
 ### `login_fail_id:{email}`
 - **TTL**: 300s (5 min)
 - **Tipo**: String (entero vía INCR)
-- **Descripción**: Contador de intentos de login fallidos por email/username (normalizado a lowercase). Al alcanzar 5, se bloquea el identifier.
+- **Descripción**: Contador de intentos de login fallidos por email/username (normalizado a lowercase). Al alcanzar 5, se bloquea el identifier. **Key sin prefijo `DEV:EC:`** — cliente propio.
 - **Archivo fuente**: `src/middleware/loginRateLimit.js`
-- **Ejemplo de key**: `login_fail_id:admin@example.com`
+- **Ejemplo de key**: `login_fail_id:admin@example.com` (literal, sin prefijo global)
 - **Ejemplo de valor**: `"2"`
 - **Invalidación**: `resetLoginCounters(ip, identifier)` — tras login exitoso.
 
 ### `login_block_ip:{ip}`
 - **TTL**: 1800s (30 min)
 - **Tipo**: String (`"1"`)
-- **Descripción**: Flag de bloqueo por IP. Mientras exista, todos los intentos de login desde esta IP son rechazados (429).
+- **Descripción**: Flag de bloqueo por IP. Mientras exista, todos los intentos de login desde esta IP son rechazados (429). **Key sin prefijo `DEV:EC:`** — cliente propio.
 - **Archivo fuente**: `src/middleware/loginRateLimit.js`
-- **Ejemplo de key**: `login_block_ip:192.168.1.100`
+- **Ejemplo de key**: `login_block_ip:192.168.1.100` (literal, sin prefijo global)
 - **Invalidación**: Expira automáticamente por TTL.
 
 ### `login_block_id:{email}`
 - **TTL**: 900s (15 min)
 - **Tipo**: String (`"1"`)
-- **Descripción**: Flag de bloqueo por email/username. Mientras exista, todos los intentos de login con este identifier son rechazados (429).
+- **Descripción**: Flag de bloqueo por email/username. Mientras exista, todos los intentos de login con este identifier son rechazados (429). **Key sin prefijo `DEV:EC:`** — cliente propio.
 - **Archivo fuente**: `src/middleware/loginRateLimit.js`
-- **Ejemplo de key**: `login_block_id:admin@example.com`
+- **Ejemplo de key**: `login_block_id:admin@example.com` (literal, sin prefijo global)
 - **Invalidación**: Expira automáticamente por TTL.
 
 ---

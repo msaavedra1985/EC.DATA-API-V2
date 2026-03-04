@@ -63,7 +63,7 @@ export const getPrimaryOrganization = async (userId) => {
         include: [{
             model: Organization,
             as: 'organization',
-            attributes: ['id', 'slug', 'name', 'logoUrl', 'parentId', 'isActive']
+            attributes: ['id', 'publicCode', 'slug', 'name', 'logoUrl', 'parentId', 'isActive']
         }]
     });
 
@@ -73,6 +73,7 @@ export const getPrimaryOrganization = async (userId) => {
 
     return {
         organizationId: userOrg.organization.id,
+        publicCode: userOrg.organization.publicCode,
         slug: userOrg.organization.slug,
         name: userOrg.organization.name,
         logoUrl: userOrg.organization.logoUrl,

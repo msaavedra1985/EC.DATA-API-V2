@@ -530,7 +530,15 @@ router.get('/me', authenticate, async (req, res, next) => {
             const primaryOrg = await organizationService.getPrimaryOrganization(userId);
             const primaryOrgId = primaryOrg ? primaryOrg.organizationId : null;
             const canAccessAllOrgs = user.role?.name === 'system-admin';
-            const activeOrgId = req.user.activeOrgId ?? primaryOrgId;
+            // Resolver publicCode del JWT → UUID para uso interno (los repos de org necesitan UUID)
+            const activeOrgCode = req.user.activeOrgCode;
+            let activeOrgId = primaryOrgId;
+            if (activeOrgCode) {
+                const resolvedActiveOrg = await organizationRepository.findOrganizationByPublicCodeInternal(activeOrgCode);
+                if (resolvedActiveOrg) {
+                    activeOrgId = resolvedActiveOrg.id;
+                }
+            }
             
             let primaryOrgInfo = null;
             if (primaryOrgId) {
@@ -578,7 +586,7 @@ router.get('/me', authenticate, async (req, res, next) => {
             
             // Solo cachear si NO es system-admin con JWT potencialmente stale
             // System-admin sin activeOrgId en JWT podría estar impersonando (JWT stale por race condition)
-            const isSystemAdminWithStaleJwt = canAccessAllOrgs && !req.user.activeOrgId;
+            const isSystemAdminWithStaleJwt = canAccessAllOrgs && !req.user.activeOrgCode;
             if (!isSystemAdminWithStaleJwt) {
                 await sessionContextCache.setSessionContext(userId, sessionContext);
             }
@@ -601,7 +609,7 @@ router.get('/me', authenticate, async (req, res, next) => {
         const isSystemAdmin = req.user.role === 'system-admin';
         const impersonationInfo = isSystemAdmin ? {
             impersonating: req.user.impersonating || false,
-            impersonatedOrg: req.user.impersonating && req.user.activeOrgId 
+            impersonatedOrg: req.user.impersonating && req.user.activeOrgCode 
                 ? { publicCode: sessionContext.activeOrgPublicCode || null }
                 : null
         } : {};
@@ -1162,7 +1170,7 @@ router.post('/switch-org', authenticate, validate(switchOrgSchema), async (req, 
             action: 'organization_switched',
             performedBy: req.user.userId,
             metadata: {
-                previous_org_id: req.user.activeOrgId || null,
+                previous_org_code: req.user.activeOrgCode || null,
                 new_org_public_code: org.publicCode,
                 new_org_name: org.name
             },
@@ -1431,7 +1439,7 @@ router.post('/exit-impersonation', authenticate, async (req, res, next) => {
             action: 'impersonate_ended',
             performedBy: userId,
             metadata: { 
-                previous_org_id: req.user.activeOrgId || null
+                previous_org_code: req.user.activeOrgCode || null
             },
             ...extractAuditInfo(req)
         });
@@ -1542,7 +1550,7 @@ router.get('/session-context', authenticate, async (req, res, next) => {
         const isSystemAdmin = req.user.role === 'system-admin';
         const impersonationInfo = isSystemAdmin ? {
             impersonating: req.user.impersonating || false,
-            impersonatedOrg: req.user.impersonating && req.user.activeOrgId 
+            impersonatedOrg: req.user.impersonating && req.user.activeOrgCode 
                 ? { publicCode: sessionContext?.activeOrgPublicCode || null }
                 : null
         } : {};

@@ -2,6 +2,7 @@
 // Lógica de negocio para Devices
 
 import { v7 as uuidv7 } from 'uuid';
+import { createHash } from 'crypto';
 import { Op } from 'sequelize';
 import * as deviceRepository from './repository.js';
 import * as organizationRepository from '../organizations/repository.js';
@@ -379,13 +380,14 @@ export const listDevices = async (filters) => {
         siteUuid = site.id;
     }
     
-    // Generar cache key basada en filtros
-    const cacheKey = JSON.stringify({
+    // Generar cache key basada en filtros (MD5 corto para evitar keys largas con JSON crudo)
+    const cacheParamsStr = JSON.stringify({
         ...filters,
         organizationId: organizationUuid,
         organizationIds: organizationUuids,
         siteId: siteUuid
     });
+    const cacheKey = createHash('md5').update(cacheParamsStr).digest('hex').substring(0, 16);
     
     // Intentar obtener del cache
     const cached = await getCachedDeviceList(cacheKey);

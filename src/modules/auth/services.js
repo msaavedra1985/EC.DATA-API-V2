@@ -339,21 +339,38 @@ export const verifyToken = async (token) => {
             throw error;
         }
 
-        const userId = decoded.sub;
+        // decoded.sub = publicCode del usuario (nunca UUID)
+        const userPublicCode = decoded.sub;
 
-        let user = await authCache.getUserFromCache(userId);
+        // Resolver publicCode → userId (UUID) usando caché auxiliar para evitar DB en cada request
+        let userId = await authCache.getUserIdByPublicCode(userPublicCode);
+        let user;
 
-        if (!user) {
-            user = await authRepository.findUserById(userId);
-
+        if (userId) {
+            // UUID en caché: buscar usuario por UUID
+            user = await authCache.getUserFromCache(userId);
+            if (!user) {
+                user = await authRepository.findUserById(userId);
+                if (!user) {
+                    const error = new Error('auth.profile.not_found');
+                    error.status = 401;
+                    error.code = 'USER_NOT_FOUND';
+                    throw error;
+                }
+                await authCache.setUserCache(userId, user);
+            }
+        } else {
+            // Cache miss: buscar en DB por publicCode
+            user = await authRepository.findUserByPublicCode(userPublicCode);
             if (!user) {
                 const error = new Error('auth.profile.not_found');
                 error.status = 401;
                 error.code = 'USER_NOT_FOUND';
                 throw error;
             }
-
+            userId = user.id;
             await authCache.setUserCache(userId, user);
+            await authCache.setUserIdByPublicCode(userPublicCode, userId);
         }
 
         if (!user.isActive) {
@@ -370,10 +387,10 @@ export const verifyToken = async (token) => {
             error.code = 'SESSION_REVOKED';
             throw error;
         }
-        
-        // Validar que solo system-admin puede tener activeOrgId null
+
+        // Validar que solo system-admin puede tener activeOrgCode null
         const isSystemAdmin = decoded.role === 'system-admin';
-        if (decoded.activeOrgId === null && !isSystemAdmin) {
+        if (!decoded.activeOrgCode && !isSystemAdmin) {
             const error = new Error('auth.token.org_required');
             error.status = 403;
             error.code = 'ORGANIZATION_REQUIRED';
@@ -382,14 +399,14 @@ export const verifyToken = async (token) => {
 
         return {
             userId: user.id,
+            userPublicCode: user.publicCode,
             email: user.email,
-            role: decoded.role, // Rol del JWT (string: nombre del rol)
-            activeOrgId: decoded.activeOrgId,
-            primaryOrgId: decoded.primaryOrgId,
+            role: decoded.role,
+            activeOrgCode: decoded.activeOrgCode || null,
+            primaryOrgCode: decoded.primaryOrgCode || null,
             canAccessAllOrgs: decoded.canAccessAllOrgs || false,
             firstName: user.firstName,
             lastName: user.lastName,
-            // impersonating solo para system-admin (indica si está actuando como otra org)
             ...(isSystemAdmin && { impersonating: decoded.impersonating || false })
         };
     } catch (error) {
@@ -436,8 +453,6 @@ export const refreshAccessToken = async (refreshToken, sessionData = {}) => {
             throw error;
         }
 
-        const userId = decoded.sub;
-
         const storedToken = await refreshTokenRepository.findByTokenHash(refreshToken, true);
 
         if (!storedToken) {
@@ -446,6 +461,9 @@ export const refreshAccessToken = async (refreshToken, sessionData = {}) => {
             error.code = 'INVALID_REFRESH_TOKEN';
             throw error;
         }
+
+        // userId viene del stored token (fuente autoritativa — UUID en DB, no del JWT sub que es publicCode)
+        const userId = storedToken.userId;
 
         if (storedToken.isRevoked) {
             await refreshTokenRepository.revokeAllUserTokens(userId, 'suspicious_activity');
@@ -503,34 +521,46 @@ export const refreshAccessToken = async (refreshToken, sessionData = {}) => {
         
         const { getSessionContext, setSessionContext, SESSION_TTL_NORMAL, SESSION_TTL_EXTENDED } = await import('./sessionContextCache.js');
         const sessionTTL = isExtendedSession ? SESSION_TTL_EXTENDED : SESSION_TTL_NORMAL;
+
+        // Resolver decoded.activeOrgCode (publicCode) → UUID para comparaciones internas con Redis
+        // El JWT ya no lleva UUIDs — decoded.sub y decoded.activeOrgCode son publicCodes
+        let decodedActiveOrgId = null;
+        if (decoded.activeOrgCode) {
+            const Organization = (await import('../organizations/models/Organization.js')).default;
+            const orgByCode = await Organization.findOne({
+                where: { publicCode: decoded.activeOrgCode },
+                attributes: ['id']
+            });
+            decodedActiveOrgId = orgByCode ? orgByCode.id : null;
+        }
         
         // CRÍTICO: Para system-admin, Redis es FUENTE DE VERDAD del activeOrgId
         // El JWT puede ser stale por race conditions del frontend (múltiples refresh tokens válidos)
-        // Para otros roles, usar activeOrgId del JWT (no hay race condition)
+        // Para otros roles, usar activeOrgCode del JWT (resuelto a UUID) como fallback
         const existingContext = await getSessionContext(userId);
         const isSystemAdmin = decoded.canAccessAllOrgs || decoded.role === 'system-admin';
         
         let effectiveActiveOrgId;
         if (isSystemAdmin && existingContext) {
-            if (!existingContext.activeOrgId && decoded.activeOrgId && decoded.impersonating) {
-                // Redis tiene null pero el JWT tiene activeOrgId + impersonating:true
+            if (!existingContext.activeOrgId && decoded.activeOrgCode && decoded.impersonating) {
+                // Redis tiene null pero el JWT tiene activeOrgCode + impersonating:true
                 // Redis fue reseteado externamente (ej: login concurrente sin organizationId)
-                // El JWT tiene la intención más reciente → usarlo y dejar que Redis se sincronice
-                effectiveActiveOrgId = decoded.activeOrgId;
+                // El JWT tiene la intención más reciente → usarlo (resuelto a UUID) y dejar que Redis se sincronice
+                effectiveActiveOrgId = decodedActiveOrgId;
                 authLogger.warn({
                     userId,
                     redisActiveOrgId: null,
-                    jwtActiveOrgId: decoded.activeOrgId
+                    jwtActiveOrgCode: decoded.activeOrgCode
                 }, 'Refresh: Redis activeOrgId null pero JWT tiene impersonating:true — usando JWT, Redis se sincronizará');
             } else {
                 // Redis gana en todos los demás casos (fuente de verdad)
                 effectiveActiveOrgId = existingContext.activeOrgId ?? null;
-                if (effectiveActiveOrgId !== decoded.activeOrgId) {
-                    authLogger.debug({ userId, redisActiveOrgId: effectiveActiveOrgId, jwtActiveOrgId: decoded.activeOrgId }, 'Refresh: usando activeOrgId de Redis (diferente al JWT)');
+                if (effectiveActiveOrgId !== decodedActiveOrgId) {
+                    authLogger.debug({ userId, redisActiveOrgId: effectiveActiveOrgId, jwtActiveOrgCode: decoded.activeOrgCode }, 'Refresh: usando activeOrgId de Redis (diferente al JWT)');
                 }
             }
-        } else if (decoded.activeOrgId !== undefined && decoded.activeOrgId !== null) {
-            effectiveActiveOrgId = decoded.activeOrgId;
+        } else if (decoded.activeOrgCode !== undefined && decoded.activeOrgCode !== null) {
+            effectiveActiveOrgId = decodedActiveOrgId;
         } else if (existingContext?.activeOrgId) {
             effectiveActiveOrgId = existingContext.activeOrgId;
         } else {
@@ -546,7 +576,18 @@ export const refreshAccessToken = async (refreshToken, sessionData = {}) => {
         const tokens = await generateTokens(user, refreshSessionData);
         
         const primaryOrg = await organizationService.getPrimaryOrganization(userId);
-        const refreshPrimaryOrgId = decoded.primaryOrgId ?? (primaryOrg ? primaryOrg.organizationId : null);
+        // Resolver decoded.primaryOrgCode → UUID para uso interno en setSessionContext
+        let refreshPrimaryOrgId = null;
+        if (decoded.primaryOrgCode) {
+            const Organization = (await import('../organizations/models/Organization.js')).default;
+            const primByCode = await Organization.findOne({
+                where: { publicCode: decoded.primaryOrgCode },
+                attributes: ['id']
+            });
+            refreshPrimaryOrgId = primByCode ? primByCode.id : (primaryOrg ? primaryOrg.organizationId : null);
+        } else {
+            refreshPrimaryOrgId = primaryOrg ? primaryOrg.organizationId : null;
+        }
         // effectiveActiveOrgId ya es el valor correcto (incluyendo null explícito para modo global)
         // Solo caer a primaryOrgId si effectiveActiveOrgId es undefined
         const refreshActiveOrgId = effectiveActiveOrgId ?? refreshPrimaryOrgId;
@@ -692,34 +733,47 @@ const generateTokens = async (user, sessionData = {}) => {
     const isSystemAdmin = user.role && user.role.name === 'system-admin';
     const canAccessAllOrgs = isSystemAdmin;
     
-    // activeOrgId: 
+    // activeOrgId (UUID interno):
     // - Si es system-admin y no se especifica org, puede ser null (panel admin global)
     // - Para otros roles, siempre usa la org primaria como fallback
     let activeOrgId;
     if (sessionData.activeOrgId !== undefined) {
-        // Se especificó explícitamente (puede ser null para system-admin)
         activeOrgId = sessionData.activeOrgId;
     } else {
-        // Usar org primaria por defecto
         activeOrgId = primaryOrg ? primaryOrg.organizationId : null;
     }
     
     const primaryOrgId = primaryOrg ? primaryOrg.organizationId : null;
     
-    // impersonating: solo para system-admin, indica si está actuando como otra org
-    // Es true cuando system-admin tiene activeOrgId pero no es su org primaria
+    // impersonating: comparar UUIDs internamente (fuente: sessionData y primaryOrg)
     const impersonating = isSystemAdmin && activeOrgId !== null && activeOrgId !== primaryOrgId;
+
+    // Resolver UUIDs → publicCodes para el JWT — nunca exponer UUIDs en tokens
+    const primaryOrgCode = primaryOrg ? primaryOrg.publicCode : null;
+
+    let activeOrgCode = null;
+    if (activeOrgId) {
+        const isUuidFormat = /^[0-9a-f]{8}-[0-9a-f]{4}/i.test(String(activeOrgId));
+        if (isUuidFormat) {
+            // Es UUID → resolver a publicCode via DB
+            const Organization = (await import('../organizations/models/Organization.js')).default;
+            const orgDetails = await Organization.findByPk(activeOrgId, { attributes: ['publicCode'] });
+            activeOrgCode = orgDetails ? orgDetails.publicCode : null;
+        } else {
+            // Ya es publicCode (viene de sessionData en formato código)
+            activeOrgCode = activeOrgId;
+        }
+    }
 
     const basePayload = {
         iss: JWT_ISSUER,
         aud: JWT_AUDIENCE,
-        sub: user.id,
-        activeOrgId,
-        primaryOrgId,
+        sub: user.publicCode,
+        activeOrgCode,
+        primaryOrgCode,
         canAccessAllOrgs,
         sessionVersion,
         role: user.role ? user.role.name : null,
-        // impersonating solo se incluye para system-admin
         ...(isSystemAdmin && { impersonating })
     };
 

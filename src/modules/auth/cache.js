@@ -82,3 +82,28 @@ export const invalidateUserSession = async (userId) => {
         return false;
     }
 };
+
+// Caché auxiliar: publicCode de usuario → userId (UUID)
+// Permite resolver decoded.sub (publicCode) → UUID en verifyToken sin ir a DB
+const USER_PUB_CACHE_PREFIX = 'ec:auth:pub:';
+const USER_PUB_CACHE_TTL = 900;
+
+export const getUserIdByPublicCode = async (publicCode) => {
+    try {
+        const cached = await getCache(`${USER_PUB_CACHE_PREFIX}${publicCode}`);
+        return cached || null;
+    } catch (error) {
+        dbLogger.error({ error, publicCode }, 'Error al obtener userId por publicCode');
+        return null;
+    }
+};
+
+export const setUserIdByPublicCode = async (publicCode, userId) => {
+    try {
+        await setCache(`${USER_PUB_CACHE_PREFIX}${publicCode}`, userId, USER_PUB_CACHE_TTL);
+        return true;
+    } catch (error) {
+        dbLogger.error({ error, publicCode, userId }, 'Error al guardar userId por publicCode');
+        return false;
+    }
+};

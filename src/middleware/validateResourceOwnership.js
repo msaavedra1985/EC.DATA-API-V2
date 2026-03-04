@@ -141,7 +141,7 @@ export const validateResourceOwnership = (options) => {
                     resourceId,
                     resourceName,
                     resourceOrgId,
-                    userActiveOrgId: user.activeOrgId
+                    userActiveOrgCode: user.activeOrgCode
                 }, 'User attempted to access resource from unauthorized organization');
 
                 return errorResponse(res, {
