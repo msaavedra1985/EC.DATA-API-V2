@@ -763,6 +763,20 @@ const humanId    = await generateHumanId(Device, 'orgId', orgId); // con scope
 
 ---
 
+### Gotcha: `column "X" does not exist` durante db:setup — DB no vacía
+**Fecha**: 2026-03-04
+**Síntoma**: `npm run db:setup` falla con `column "country_code" does not exist` u otro error de columna inexistente inmediatamente después de iniciar.
+**Causa**: La base de datos tiene tablas de un intento previo fallido (o de un arranque de la API con `sequelize.sync()` en modo development). Las tablas existen pero con esquema incompleto. `db:setup` usa `sync({ alter: false })` que no modifica tablas existentes, por lo que intenta operar sobre esquemas incompletos y falla con errores crípticos.
+**Solución**: Limpiar toda la DB (tablas + ENUMs) y repetir `db:setup`:
+```sql
+DO $$ DECLARE r RECORD; BEGIN FOR r IN (SELECT tablename FROM pg_tables WHERE schemaname = 'public') LOOP EXECUTE 'DROP TABLE IF EXISTS ' || quote_ident(r.tablename) || ' CASCADE'; END LOOP; END $$;
+DO $$ DECLARE r RECORD; BEGIN FOR r IN (SELECT t.typname FROM pg_type t JOIN pg_namespace n ON t.typnamespace = n.oid WHERE t.typtype = 'e' AND n.nspname = 'public') LOOP EXECUTE 'DROP TYPE IF EXISTS ' || quote_ident(r.typname) || ' CASCADE'; END LOOP; END $$;
+```
+**Nota**: A partir de este fix, `setup-fresh-db.js` detecta la situación y muestra este SQL automáticamente en lugar del error críptico.
+**Archivos afectados**: `src/db/scripts/setup-fresh-db.js`
+
+---
+
 ### Bug: Redis desincronizado del JWT — system-admin ve dispositivos de todas las orgs al impersonar
 **Fecha**: 2026-03-04
 **Síntoma**: System-admin impersonando una org (JWT: `activeOrgId: bestech_uuid, impersonating: true`) ve dispositivos de TODAS las organizaciones en vez de solo los de la org impersonada.

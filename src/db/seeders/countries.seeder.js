@@ -602,21 +602,21 @@ export const seedCountries = async () => {
         for (const countryData of countriesData) {
             // Crear el país
             const country = await Country.create({
-                iso_alpha2: countryData.iso_alpha2,
-                iso_alpha3: countryData.iso_alpha3,
-                iso_numeric: countryData.iso_numeric,
-                phone_code: countryData.phone_code,
-                is_active: true
+                isoAlpha2: countryData.iso_alpha2,
+                isoAlpha3: countryData.iso_alpha3,
+                isoNumeric: countryData.iso_numeric,
+                phoneCode: countryData.phone_code,
+                isActive: true
             });
             countriesCreated++;
 
             // Crear traducciones para cada idioma
             for (const [lang, translation] of Object.entries(countryData.translations)) {
                 await CountryTranslation.create({
-                    country_id: country.id,
+                    countryCode: country.isoAlpha2,
                     lang: lang,
                     name: translation.name,
-                    official_name: translation.official_name
+                    officialName: translation.official_name
                 });
                 translationsCreated++;
             }

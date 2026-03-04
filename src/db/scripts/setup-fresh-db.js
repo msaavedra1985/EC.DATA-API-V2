@@ -10,7 +10,7 @@
  *   1. Importa todos los modelos Sequelize para registrarlos
  *   2. Llama sequelize.sync({ alter: false }) → crea todas las tablas desde los modelos
  *   3. Crea la tabla SequelizeMeta (registro interno de sequelize-cli)
- *   4. Inserta las 41 migraciones históricas como "ya ejecutadas"
+ *   4. Inserta las 42 migraciones históricas como "ya ejecutadas"
  *      → Esto evita que db:migrate las intente correr sobre tablas recién creadas
  *
  * Uso:
@@ -82,6 +82,7 @@ const HISTORICAL_MIGRATIONS = [
     '20260224120000-make-dashboard-page-name-nullable.cjs',
     '20260226100000-add-mqtt-key-to-variables.cjs',
     '20260226180000-fix-dashboard-order-number-constraints.cjs',
+    '20260304000001-add-unique-indexes-to-device-translations.cjs',
 ];
 
 async function setupFreshDatabase() {
@@ -89,6 +90,26 @@ async function setupFreshDatabase() {
         console.log('🔌 Conectando a la base de datos...');
         await sequelize.authenticate();
         console.log('✅ Conexión exitosa');
+
+        console.log('\n🔍 Verificando que la base de datos esté vacía...');
+        const [[{ count }]] = await sequelize.query(
+            `SELECT COUNT(*) as count FROM pg_tables WHERE schemaname = 'public'`,
+            { type: 'SELECT' }
+        );
+        if (parseInt(count, 10) > 0) {
+            console.error('\n❌ ERROR: La base de datos NO está vacía.');
+            console.error(`   Se encontraron ${count} tabla(s) en el schema public.`);
+            console.error('\n   db:setup es exclusivamente para bases de datos completamente vacías.');
+            console.error('   Si hay tablas de un intento previo fallido, ejecuta este SQL para limpiarlas:\n');
+            console.error('   -- Eliminar todas las tablas:');
+            console.error(`   DO $$ DECLARE r RECORD; BEGIN FOR r IN (SELECT tablename FROM pg_tables WHERE schemaname = 'public') LOOP EXECUTE 'DROP TABLE IF EXISTS ' || quote_ident(r.tablename) || ' CASCADE'; END LOOP; END $$;`);
+            console.error('\n   -- Eliminar todos los ENUMs:');
+            console.error(`   DO $$ DECLARE r RECORD; BEGIN FOR r IN (SELECT t.typname FROM pg_type t JOIN pg_namespace n ON t.typnamespace = n.oid WHERE t.typtype = 'e' AND n.nspname = 'public') LOOP EXECUTE 'DROP TYPE IF EXISTS ' || quote_ident(r.typname) || ' CASCADE'; END LOOP; END $$;`);
+            console.error('\n   Luego vuelve a correr: npm run db:setup\n');
+            await sequelize.close().catch(() => {});
+            process.exit(1);
+        }
+        console.log('✅ Base de datos vacía, procediendo con el setup');
 
         console.log('\n📐 Creando tablas desde modelos Sequelize...');
         await sequelize.sync({ alter: false });

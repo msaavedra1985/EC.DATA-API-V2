@@ -37,7 +37,10 @@ const DeviceNetworkTranslation = sequelize.define('DeviceNetworkTranslation', {
     tableName: 'device_network_translations',
     timestamps: false,
     underscored: true,
-    paranoid: false
+    paranoid: false,
+    indexes: [
+        { unique: true, fields: ['device_network_id', 'lang'], name: 'device_network_translations_network_lang_idx' }
+    ]
 });
 
 DeviceNetwork.hasMany(DeviceNetworkTranslation, {

@@ -37,7 +37,10 @@ const DeviceBrandTranslation = sequelize.define('DeviceBrandTranslation', {
     tableName: 'device_brand_translations',
     timestamps: false,
     underscored: true,
-    paranoid: false
+    paranoid: false,
+    indexes: [
+        { unique: true, fields: ['device_brand_id', 'lang'], name: 'device_brand_translations_brand_lang_idx' }
+    ]
 });
 
 DeviceBrand.hasMany(DeviceBrandTranslation, {

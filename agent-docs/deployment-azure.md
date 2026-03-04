@@ -178,6 +178,39 @@ cambiando temporalmente a `development`, pero no es recomendable.
 
 ---
 
+### 8. `column "X" does not exist` durante db:setup
+**Síntoma**: `db:setup` falla con `column "country_code" does not exist` u otro error similar de columna inexistente
+**Causa**: La base de datos **no está completamente vacía** — tiene tablas de un intento previo (fallido o de un arranque anterior de la API con `sequelize.sync()`). Las tablas existen pero con esquema incompleto (les faltan columnas que las migraciones posteriores habrían agregado). `db:setup` es **exclusivamente para DBs completamente vacías**.
+**Solución**: Limpiar todas las tablas y ENUMs, luego repetir `db:setup`:
+
+```sql
+-- Eliminar todas las tablas:
+DO $$ DECLARE r RECORD;
+BEGIN
+    FOR r IN (SELECT tablename FROM pg_tables WHERE schemaname = 'public') LOOP
+        EXECUTE 'DROP TABLE IF EXISTS ' || quote_ident(r.tablename) || ' CASCADE';
+    END LOOP;
+END $$;
+
+-- Eliminar todos los ENUMs:
+DO $$ DECLARE r RECORD;
+BEGIN
+    FOR r IN (
+        SELECT t.typname FROM pg_type t
+        JOIN pg_namespace n ON t.typnamespace = n.oid
+        WHERE t.typtype = 'e' AND n.nspname = 'public'
+    ) LOOP
+        EXECUTE 'DROP TYPE IF EXISTS ' || quote_ident(r.typname) || ' CASCADE';
+    END LOOP;
+END $$;
+```
+
+Luego: `npm run db:setup`
+
+**Nota**: A partir del fix de 2026-03-04, `setup-fresh-db.js` detecta esta situación automáticamente y muestra este SQL de limpieza en lugar del error críptico de Sequelize.
+
+---
+
 ## Mejores Prácticas
 
 Lo que hacen los equipos profesionales para deployments seguros y repetibles:

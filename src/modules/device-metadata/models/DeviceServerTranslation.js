@@ -37,7 +37,10 @@ const DeviceServerTranslation = sequelize.define('DeviceServerTranslation', {
     tableName: 'device_server_translations',
     timestamps: false,
     underscored: true,
-    paranoid: false
+    paranoid: false,
+    indexes: [
+        { unique: true, fields: ['device_server_id', 'lang'], name: 'device_server_translations_server_lang_idx' }
+    ]
 });
 
 DeviceServer.hasMany(DeviceServerTranslation, {
