@@ -1,93 +1,88 @@
-# EC.DATA API - Enterprise REST API
+# EC.DATA API
 
-## Overview
-**EC.DATA** is a technology company specializing in enterprise data solutions and scalable backend infrastructure. This repository contains our flagship REST API, built with Node.js and Express using modern ESM syntax and a feature-based architecture.
+REST API Node.js/Express multi-tenant para plataformas e-commerce. Integra con frontends Next.js via BFF pattern.
 
-The EC.DATA API is designed to support multi-tenant e-commerce platforms with robust observability, security, and scalability. It integrates seamlessly with Next.js frontends via a BFF (Backend for Frontend) pattern, providing services for both public-facing customer interfaces and administrative dashboards.
+## Directivas de Consulta
 
-Our mission at EC.DATA is to deliver highly reliable, secure, and scalable backend solutions capable of handling complex business operations across multiple tenants, with the flexibility to expand into diverse market sectors and use cases.
+| Situación | Archivo a consultar |
+|-----------|---------------------|
+| **ANTES de escribir código** | `agent-docs/rules.md` |
+| **ANTES de debuggear** | `agent-docs/learnings.md` |
+| **Al crear módulos/archivos** | `agent-docs/conventions.md` |
+| **Al diseñar features** | `agent-docs/architecture.md` |
+| **Al agregar dependencias** | `agent-docs/tech-stack.md` |
+| **Al encontrar términos desconocidos** | `agent-docs/glosario.md` |
+| **Para entender qué existe** | `agent-docs/modules.md` |
+| **Al implementar nuevas features** | `agent-docs/nodejs-best-practices.md` |
+| **Al modificar/consultar endpoints** | `agent-docs/endpoints/{modulo}.md` |
+| **Al trabajar con la base de datos** | `agent-docs/database.dbml.txt` |
+| **Al agregar keys Redis** | `agent-docs/redis-glossary.md` |
+| **Para ver tareas pendientes** | `agent-docs/backlog.md` |
+| **Al migrar datos de plataforma legacy** | `agent-docs/migration-guide.md` |
 
-## User Preferences
+## Índice de Documentación
 
-Preferred communication style: Simple, everyday language.
+```
+agent-docs/
+├── rules.md              # Reglas OBLIGATORIAS (security, audit, code style)
+├── conventions.md        # Patrones del proyecto (estructura, imports, migrations)
+├── architecture.md       # Arquitectura (capas, flujos, servicios)
+├── tech-stack.md         # Dependencias y versiones
+├── modules.md            # Módulos implementados y endpoints
+├── glosario.md           # Términos de dominio (public_code, session_context, etc.)
+├── learnings.md          # Errores resueltos y gotchas
+├── backlog.md            # Tareas pendientes por módulo
+├── migration-guide.md    # Guía de migración legacy SQL Server → PostgreSQL
+├── nodejs-best-practices.md  # Mejores prácticas Node.js API
+├── database.dbml.txt     # Schema de DB en formato DBML (actualizar con npm run db:dbml)
+├── redis-glossary.md     # Inventario completo de keys Redis (obligatorio actualizar al agregar keys)
+└── endpoints/            # Documentación detallada de endpoints
+    ├── _template.md      # Template para nuevos módulos
+    ├── auth.md           # Autenticación (login, refresh, session)
+    ├── users.md          # CRUD usuarios
+    ├── organizations.md  # CRUD organizaciones
+    ├── sites.md          # CRUD sitios
+    ├── devices.md        # CRUD dispositivos
+    ├── channels.md       # CRUD canales
+    ├── files.md          # Upload/download archivos
+    ├── telemetry.md      # Series temporales
+    ├── resource-hierarchy.md  # Árbol de recursos
+    ├── error-logs.md     # Logging de errores (público)
+    ├── asset-categories.md  # Tags jerárquicos para canales
+    └── dashboards.md     # Dashboards multi-página, widgets (con dataSources inline), grupos, colaboradores
+```
 
-**Code Standards:**
-- All code must be written in English with Spanish comments
-- Use arrow functions exclusively (no traditional function declarations)
-- ESM modules only (`"type": "module"`)
-- Single quotes for strings (enforced by ESLint)
-- Comment extensively - every function, middleware, helper, model, and endpoint should have explanatory comments in Spanish
+## Reglas Críticas (Resumen)
 
-**Development Approach:**
-- Build incrementally in stages, prioritizing quality over speed
-- Focus on one feature at a time
-- Ensure proper testing coverage for new features
-- Follow the established directory structure and layer separation
+1. **NUNCA exponer UUIDs** en respuestas API → usar `public_code` exclusivamente
+2. **SIEMPRE audit logging** en operaciones CUD → usar helper `auditLog`
+3. **Máximo 1000 líneas** por archivo → dividir si se excede
+4. **Comentarios en español**, código en inglés
+5. **"What works, don't touch"** → análisis de impacto antes de modificar código funcional
+6. **Actualizar docs de endpoints** al modificarlos → `agent-docs/endpoints/{modulo}.md`
+7. **camelCase end-to-end**: Todo el código JS usa camelCase (modelos, DTOs, serializers, services, repos, routes). Sequelize `underscored: true` mapea automáticamente a columnas snake_case en la DB. El middleware caseTransform fue eliminado — el frontend envía/recibe camelCase directo.
+8. **Excepciones snake_case**: Nombres de tabla, valores ENUM, i18n keys, raw SQL queries, y acceso a resultados de `raw: true` queries mantienen snake_case (son columnas DB directas).
 
-**Performance Standards:**
-- **Worker Threads:** Always use worker threads for I/O-intensive operations (logging, file processing, etc.) to avoid blocking the event loop
-- **Non-blocking Operations:** Prefer asynchronous patterns over synchronous operations
-- **Logging:** Pino must run in a separate worker thread using `pino.transport()` with `worker: { autoEnd: true }`
+## Exports (mantener actualizados)
 
-**Documentation Standards (MANDATORY):**
-- **Swagger/OpenAPI**: Every new endpoint MUST include formal `@swagger` JSDoc annotations before being considered complete
-- **Database Schema**: After ANY database schema change, MUST run `npm run db:dbml` to update `database.dbml.txt` for visualization
-- **JSDoc Format**: Use OpenAPI 3.0 specification format in comments (schemas, responses, security, examples)
-- **Schema Sync**: The `database.dbml.txt` file must always reflect the current production schema state
+```
+exports/
+├── EC.DATA API.postman_collection.json  # Colección Postman con todos los endpoints + params
+└── database.dbml.txt                    # Schema DB en formato DBML
+```
 
-**Communication:**
-- Explain architectural decisions and tradeoffs clearly
-- Propose the simplest, most practical solutions for connecting with the Next.js frontend
-- Offer mock data options when building endpoints before databases are populated
+**Regla**: Al modificar endpoints (agregar, cambiar params, cambiar body) o schema de DB, actualizar los archivos correspondientes en `exports/`. El DBML se regenera con `npm run db:dbml` y debe copiarse a `exports/`. La colección Postman debe actualizarse manualmente.
 
-## System Architecture
+## Quick Start
 
-### Technology Stack
-- **Core:** Express.js 4.x, Node.js 20+ (ESM modules), API versioning (`/api/v1`).
-- **Data:** Sequelize ORM (mandatory) for PostgreSQL, Redis for caching/sessions. Snake_case in SQL, camelCase in JSON.
-- **Security:** JWT (Bearer tokens, scopes), Zod for validation, Helmet, bcrypt for hashing, dynamic CORS origins.
-- **Observability:** Pino (structured JSON logging), Prometheus metrics (`/metrics`), database audit logging, request/response logging.
-- **Documentation:** Swagger/OpenAPI (`/docs`) via swagger-jsdoc and swagger-ui-express.
+```bash
+npm run dev              # Desarrollo con watch
+npm run db:migrate       # Ejecutar migraciones
+npm run db:dbml          # Generar visualización schema
+```
 
-### Architectural Patterns
-- **Layered Architecture:** Strict separation into Routes, Services, Repositories, and Database layers. No layer skipping.
-- **Feature-Based Organization:** Code structured by domain (auth, tenants) with `index.js`, `dtos/`, `models/`, `services.js`, `repository.js` per feature.
-- **Response Envelope Pattern:** Consistent `{ ok: true/false, data/error, meta }` structure for all API responses.
-- **Configuration Management:** Centralized `src/config/env.js` for environment variables with validation, type coercion, and defaults.
+## Preferencias de Comunicación
 
-### Performance & Scalability
-- **Caching:** Redis-based caching with configurable TTLs, ETag generation for 304 responses.
-- **Compression:** Brotli/gzip compression middleware.
-- **Rate Limiting:** "Observe mode" with `X-RateLimit-*` headers, configurable.
-- **Pagination:** Mandatory offset-based pagination (`limit`, `offset`) for list endpoints.
-
-### Internationalization
-- **Multi-language Design:** Support for multiple languages using separate translation tables and selection based on user language.
-
-### Extensibility & Robustness
-- **WebSocket Preparation:** HTTP server initialization isolated for easy Socket.io integration.
-- **Graceful Shutdown:** Proper cleanup on SIGINT/SIGTERM for Redis, Sequelize, and in-flight requests.
-- **Identifier System:** UUID v7, human_id (scoped incremental ID), and public_code (opaque, Hashids + Luhn checksum) for entities.
-- **Authentication:** Comprehensive JWT-based system with access/refresh tokens, token rotation, theft detection, and role-based access control (RBAC). Refresh tokens are database-persisted and SHA-256 hashed. JWT includes standard claims (`iss`, `aud`, `sub`, `iat`, `exp`, `jti`, `activeOrgId`, `primaryOrgId`, `canAccessAllOrgs`, `sessionVersion`, `tokenType`).
-- **RBAC:** Flexible, database-driven RBAC with 7 predefined roles (`system-admin`, `org-admin`, `org-manager`, `user`, `viewer`, `guest`, `demo`). Implemented with `User.belongsTo(Role)`, `User.prototype.hasRole()`, `authenticate` and `requireRole` middleware. Role data is cached in Redis and included in JWT.
-- **Multi-Tenant Organizations:** Hierarchical organization system with many-to-many user-organization relationships. Users can belong to multiple organizations with one marked as primary. Supports organizational scope with role-based access inheritance (system-admin: all orgs, org-admin: org + descendants, org-manager: org + direct children, user/viewer/guest/demo: direct orgs only). EC.DATA is the root organization.
-- **Organization Scope Service:** Redis-cached organizational scope calculation (TTL: 15min) with hierarchical access control. Includes endpoints: `GET /auth/organizations` (list available orgs), `POST /auth/switch-org` (change active org with new JWT generation).
-- **Logout System:** Endpoints for `/logout` and `/logout-all` to invalidate sessions by incrementing `sessionVersion` and clearing user cache. Supports revoking specific refresh tokens.
-- **"Remember Me" Feature:** Extends session duration for login with `remember_me` flag, dynamically adjusting token expiration and idle timeouts.
-- **Session Context Caching:** **CRITICAL RULE: Frontend NEVER decodes JWT.** All session context (activeOrgId, primaryOrgId, role, canAccessAllOrgs, user info) is cached in Redis with 15-min TTL and returned via API responses (`/auth/login`, `/auth/me`, `/auth/switch-org`, `/auth/session-context`). This eliminates frontend JWT decoding, improves performance, and maintains security. The `session_context` object is the single source of truth for frontend state.
-
-## External Dependencies
-
-### Core Services
-- **PostgreSQL Database:** Managed via Sequelize ORM, automatic migrations, connection pooling.
-- **Redis Cache:** For CORS origins, session storage, application caching.
-- **Frontend Integration:** Next.js BFF consumes API, CORS configured for development and production.
-
-### NPM Dependencies
-- **Production:** `express`, `sequelize`, `pg`, `redis`, `jsonwebtoken`, `bcrypt`, `zod`, `cors`, `helmet`, `compression`, `pino` (and related), `prom-client`, `swagger-jsdoc`, `swagger-ui-express`, `dotenv`.
-- **Development:** `eslint`, `vitest`, `supertest`, `nodemon`.
-
-### Monitoring & Observability
-- **Metrics (Prometheus):** HTTP request duration, counts, active connections, custom metrics.
-- **Logging:** Structured JSON logs via Pino (service: `ecdata-api`), request/response logging, database audit trail.
-- **Health Checks:** Basic endpoint at `/api/v1/health` for service status.
+- Lenguaje simple y cotidiano
+- Explicar decisiones arquitectónicas claramente
+- Proponer soluciones prácticas para integración con Next.js

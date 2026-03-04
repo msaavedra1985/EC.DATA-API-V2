@@ -42,7 +42,7 @@ const pinoConfig = {
                 host: req.headers.host
             },
             remoteAddress: req.ip || req.connection?.remoteAddress,
-            user: req.user ? { id: req.user.id, email: req.user.email } : undefined
+            user: req.user ? { id: req.user.userId, email: req.user.email } : undefined
         }),
 
         // Serializar responses de Express

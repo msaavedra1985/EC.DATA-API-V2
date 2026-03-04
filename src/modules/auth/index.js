@@ -5,6 +5,7 @@ import express from 'express';
 import * as authServices from './services.js';
 import { validate } from '../../middleware/validate.js';
 import { authenticate, requireRole } from '../../middleware/auth.js';
+import { loginRateLimitMiddleware, resetLoginCounters, recordFailedLogin } from '../../middleware/loginRateLimit.js';
 import { 
     registerSchema, 
     loginSchema, 
@@ -18,6 +19,9 @@ import { successResponse, errorResponse } from '../../utils/response.js';
 import * as authRepository from './repository.js';
 import * as sessionContextCache from './sessionContextCache.js';
 import * as organizationService from '../organizations/services.js';
+import * as organizationRepository from '../organizations/repository.js';
+import { logAuditAction, extractAuditInfo } from '../../helpers/auditLog.js';
+import { authLogger } from '../../utils/logger.js';
 
 const router = express.Router();
 
@@ -38,8 +42,8 @@ const router = express.Router();
  *             required:
  *               - email
  *               - password
- *               - first_name
- *               - last_name
+ *               - firstName
+ *               - lastName
  *             properties:
  *               email:
  *                 type: string
@@ -50,15 +54,15 @@ const router = express.Router();
  *                 minLength: 8
  *                 description: Debe contener al menos una mayúscula, una minúscula y un número
  *                 example: SecurePass123!
- *               first_name:
+ *               firstName:
  *                 type: string
  *                 minLength: 2
  *                 example: Juan
- *               last_name:
+ *               lastName:
  *                 type: string
  *                 minLength: 2
  *                 example: Pérez
- *               organization_id:
+ *               organizationId:
  *                 type: string
  *                 format: uuid
  *                 nullable: true
@@ -79,14 +83,14 @@ const router = express.Router();
  *                   properties:
  *                     user:
  *                       $ref: '#/components/schemas/User'
- *                     access_token:
+ *                     accessToken:
  *                       type: string
- *                     refresh_token:
+ *                     refreshToken:
  *                       type: string
- *                     expires_in:
+ *                     expiresIn:
  *                       type: string
  *                       example: 15m
- *                     token_type:
+ *                     tokenType:
  *                       type: string
  *                       example: Bearer
  *                 meta:
@@ -110,7 +114,7 @@ const router = express.Router();
  */
 router.post('/register', validate(registerSchema), async (req, res, next) => {
     try {
-        const { email, password, first_name, last_name, organization_id } = req.body;
+        const { email, password, firstName, lastName, organizationId } = req.body;
 
         // Extraer datos de sesión para auditoría
         const sessionData = {
@@ -121,9 +125,9 @@ router.post('/register', validate(registerSchema), async (req, res, next) => {
         const result = await authServices.register({
             email,
             password,
-            first_name,
-            last_name,
-            organization_id
+            firstName,
+            lastName,
+            organizationId
         }, sessionData);
 
         return successResponse(res, { ...result, message: 'auth.register.success' }, 201);
@@ -137,7 +141,7 @@ router.post('/register', validate(registerSchema), async (req, res, next) => {
  * /auth/login:
  *   post:
  *     summary: Iniciar sesión
- *     description: Autentica un usuario y devuelve tokens JWT (access + refresh). Opcionalmente acepta 'remember_me' para extender la duración de la sesión de 14 días (normal) a 90 días (extendida)
+ *     description: Autentica un usuario y devuelve tokens JWT (access + refresh). Opcionalmente acepta 'rememberMe' para extender la duración de la sesión de 14 días (normal) a 90 días (extendida)
  *     tags: [Auth]
  *     security: []
  *     requestBody:
@@ -159,11 +163,16 @@ router.post('/register', validate(registerSchema), async (req, res, next) => {
  *                 type: string
  *                 example: SecurePass123!
  *                 description: Contraseña del usuario
- *               remember_me:
+ *               rememberMe:
  *                 type: boolean
  *                 default: false
  *                 example: true
  *                 description: Si es true, la sesión dura 90 días (refresh token) con 30 días de idle timeout. Si es false (por defecto), la sesión dura 14 días con 7 días de idle timeout
+ *               organizationId:
+ *                 type: string
+ *                 nullable: true
+ *                 example: ORG-abc123-1
+ *                 description: Public code (o UUID) de la organización donde el usuario quiere iniciar sesión. Útil para re-login cuando la sesión expiró y el frontend recuerda la org activa. Si no se envía o es inválido, se usa la organización primaria del usuario como fallback
  *     responses:
  *       200:
  *         description: Login exitoso
@@ -180,17 +189,17 @@ router.post('/register', validate(registerSchema), async (req, res, next) => {
  *                   properties:
  *                     user:
  *                       $ref: '#/components/schemas/User'
- *                     access_token:
+ *                     accessToken:
  *                       type: string
  *                       description: Token JWT de acceso (válido por 15 minutos)
- *                     refresh_token:
+ *                     refreshToken:
  *                       type: string
- *                       description: Token JWT de refresco (válido por 14 o 90 días según remember_me)
- *                     expires_in:
+ *                       description: Token JWT de refresco (válido por 14 o 90 días según rememberMe)
+ *                     expiresIn:
  *                       type: string
  *                       example: 15m
  *                       description: Duración del access token
- *                     token_type:
+ *                     tokenType:
  *                       type: string
  *                       example: Bearer
  *                       description: Tipo de token para usar en el header Authorization
@@ -207,51 +216,88 @@ router.post('/register', validate(registerSchema), async (req, res, next) => {
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.post('/login', validate(loginSchema), async (req, res, next) => {
+router.post('/login', loginRateLimitMiddleware, validate(loginSchema), async (req, res, next) => {
     try {
-        const { email, password, remember_me } = req.body;
+        const { identifier: rawIdentifier, email, password, rememberMe, captchaToken, organizationId } = req.body;
+        // Compatibilidad: usar identifier si existe, sino usar email (campo legacy)
+        const identifier = rawIdentifier || email;
+        const ip = req.ip || req.connection.remoteAddress;
 
-        // Extraer datos de sesión para auditoría
+        // Resolver organizationId (public_code) a UUID si fue enviado
+        // Envuelto en try/catch: si falla la resolución, el login continúa normalmente
+        let resolvedOrgId = null;
+        if (organizationId) {
+            try {
+                const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(organizationId);
+                if (isUuid) {
+                    resolvedOrgId = organizationId;
+                } else {
+                    const org = await organizationRepository.findOrganizationByPublicCodeInternal(organizationId);
+                    if (org) {
+                        resolvedOrgId = org.id;
+                    }
+                }
+            } catch (orgResolveError) {
+                authLogger.warn({ organizationId, error: orgResolveError.message }, 'Login: error resolviendo organizationId, se ignorará');
+            }
+        }
+
+        // Extraer datos de sesión para auditoría y validación
         const sessionData = {
             userAgent: req.headers['user-agent'],
-            ipAddress: req.ip || req.connection.remoteAddress,
-            rememberMe: remember_me || false
+            ipAddress: ip,
+            rememberMe: rememberMe || false,
+            captchaToken: captchaToken || null,
+            requestedOrgId: resolvedOrgId
         };
 
-        const result = await authServices.login(email, password, sessionData);
+        try {
+            const result = await authServices.login(identifier, password, sessionData);
 
-        // Obtener organización primaria del usuario
-        const primaryOrg = await organizationService.getPrimaryOrganization(result.user.id);
-        const activeOrgId = primaryOrg ? primaryOrg.organization_id : null;
-        const primaryOrgId = activeOrgId;
-        const canAccessAllOrgs = result.user.role && result.user.role.name === 'system-admin';
+            // Login exitoso: resetear contadores de rate limiting
+            await resetLoginCounters(ip, identifier);
 
-        // Crear session_context y cachearlo en Redis
-        const sessionContext = {
-            activeOrgId,
-            primaryOrgId,
-            canAccessAllOrgs,
-            role: result.user.role?.name || null,
-            email: result.user.email,
-            firstName: result.user.first_name,
-            lastName: result.user.last_name,
-            userId: result.user.id
-        };
+            // Session context ya fue cacheado en services.js login()
+            // Leer el contexto para incluirlo en la respuesta
+            const sessionContext = await sessionContextCache.getSessionContext(result.user.id);
 
-        await sessionContextCache.setSessionContext(result.user.id, sessionContext);
+            // Filtrar user a solo campos relevantes para el frontend
+            // NO exponemos: id, roleId, humanId, organizationId, createdAt, updatedAt, etc.
+            const userResponse = {
+                publicCode: result.user.publicCode,
+                email: result.user.email,
+                firstName: result.user.firstName,
+                lastName: result.user.lastName,
+                avatarUrl: result.user.avatarUrl || null,
+                language: result.user.language || 'es',
+                timezone: result.user.timezone || 'America/Lima',
+                role: result.user.role?.name || null,
+                permissions: result.user.role?.permissions || []
+            };
+            
+            const responseData = {
+                ...result,
+                user: userResponse,
+                sessionContext: sessionContextCache.sanitizeSessionContext(sessionContext),
+                message: 'auth.login.success'
+            };
 
-        // Simplificar role en la respuesta - solo enviar el nombre
-        const responseData = {
-            ...result,
-            user: {
-                ...result.user,
-                role: result.user.role?.name || null
-            },
-            session_context: sessionContext,
-            message: 'auth.login.success'
-        };
-
-        return successResponse(res, responseData);
+            return successResponse(res, responseData);
+        } catch (loginError) {
+            // Login fallido: registrar intento fallido para rate limiting
+            // Registrar para errores de credenciales, captcha, y cuenta inactiva
+            // No registrar para errores de sistema (5xx)
+            const failureCodes = [
+                'INVALID_CREDENTIALS', 
+                'CAPTCHA_REQUIRED', 
+                'CAPTCHA_INVALID',
+                'USER_INACTIVE'
+            ];
+            if (failureCodes.includes(loginError.code)) {
+                await recordFailedLogin(ip, identifier || '_validation_failed_');
+            }
+            throw loginError;
+        }
     } catch (error) {
         next(error);
     }
@@ -272,9 +318,9 @@ router.post('/login', validate(loginSchema), async (req, res, next) => {
  *           schema:
  *             type: object
  *             required:
- *               - refresh_token
+ *               - refreshToken
  *             properties:
- *               refresh_token:
+ *               refreshToken:
  *                 type: string
  *                 description: Refresh token JWT obtenido en login o refresh anterior
  *     responses:
@@ -291,16 +337,16 @@ router.post('/login', validate(loginSchema), async (req, res, next) => {
  *                 data:
  *                   type: object
  *                   properties:
- *                     access_token:
+ *                     accessToken:
  *                       type: string
  *                       description: Nuevo access token (15 min validez)
- *                     refresh_token:
+ *                     refreshToken:
  *                       type: string
  *                       description: Nuevo refresh token (14 días validez)
- *                     expires_in:
+ *                     expiresIn:
  *                       type: string
  *                       example: 15m
- *                     token_type:
+ *                     tokenType:
  *                       type: string
  *                       example: Bearer
  *       400:
@@ -333,7 +379,7 @@ router.post('/login', validate(loginSchema), async (req, res, next) => {
  */
 router.post('/refresh', validate(refreshTokenSchema), async (req, res, next) => {
     try {
-        const { refresh_token } = req.body;
+        const { refreshToken } = req.body;
 
         // Extraer datos de sesión para auditoría
         const sessionData = {
@@ -341,7 +387,7 @@ router.post('/refresh', validate(refreshTokenSchema), async (req, res, next) => 
             ipAddress: req.ip || req.connection.remoteAddress
         };
 
-        const tokens = await authServices.refreshAccessToken(refresh_token, sessionData);
+        const tokens = await authServices.refreshAccessToken(refreshToken, sessionData);
 
         return successResponse(res, { ...tokens, message: 'auth.refresh.success' });
     } catch (error) {
@@ -365,13 +411,13 @@ router.post('/refresh', validate(refreshTokenSchema), async (req, res, next) => 
  *           schema:
  *             type: object
  *             required:
- *               - current_password
- *               - new_password
+ *               - currentPassword
+ *               - newPassword
  *             properties:
- *               current_password:
+ *               currentPassword:
  *                 type: string
  *                 description: Contraseña actual del usuario
- *               new_password:
+ *               newPassword:
  *                 type: string
  *                 minLength: 8
  *                 description: Nueva contraseña (debe contener mayúscula, minúscula y número)
@@ -409,9 +455,9 @@ router.post('/refresh', validate(refreshTokenSchema), async (req, res, next) => 
 router.post('/change-password', authenticate, validate(changePasswordSchema), async (req, res, next) => {
     try {
         const userId = req.user.userId;
-        const { current_password, new_password } = req.body;
+        const { currentPassword, newPassword } = req.body;
 
-        await authServices.changePassword(userId, current_password, new_password);
+        await authServices.changePassword(userId, currentPassword, newPassword);
 
         return successResponse(res, {
             message: 'auth.password.changed'
@@ -475,17 +521,103 @@ router.get('/me', authenticate, async (req, res, next) => {
         }
 
         // Obtener session_context desde Redis
-        const sessionContext = await sessionContextCache.getSessionContext(userId);
+        let sessionContext = await sessionContextCache.getSessionContext(userId);
+        
+        // Si session_context es null (cache expirado), reconstruirlo desde DB + JWT
+        // Para system-admin con JWT stale (activeOrgId: null), NO cachear la reconstrucción
+        // ya que el próximo refresh/impersonate corregirá Redis con el valor correcto
+        if (!sessionContext) {
+            const primaryOrg = await organizationService.getPrimaryOrganization(userId);
+            const primaryOrgId = primaryOrg ? primaryOrg.organizationId : null;
+            const canAccessAllOrgs = user.role?.name === 'system-admin';
+            // Resolver publicCode del JWT → UUID para uso interno (los repos de org necesitan UUID)
+            const activeOrgCode = req.user.activeOrgCode;
+            let activeOrgId = primaryOrgId;
+            if (activeOrgCode) {
+                const resolvedActiveOrg = await organizationRepository.findOrganizationByPublicCodeInternal(activeOrgCode);
+                if (resolvedActiveOrg) {
+                    activeOrgId = resolvedActiveOrg.id;
+                }
+            }
+            
+            let primaryOrgInfo = null;
+            if (primaryOrgId) {
+                const primaryOrgDetails = await organizationRepository.findOrganizationByIdInternal(primaryOrgId);
+                if (primaryOrgDetails) {
+                    primaryOrgInfo = {
+                        publicCode: primaryOrgDetails.publicCode,
+                        name: primaryOrgDetails.name,
+                        logoUrl: primaryOrgDetails.logoUrl
+                    };
+                }
+            }
+            
+            let activeOrgInfo = null;
+            if (activeOrgId && activeOrgId !== primaryOrgId) {
+                const activeOrgDetails = await organizationRepository.findOrganizationByIdInternal(activeOrgId);
+                if (activeOrgDetails) {
+                    activeOrgInfo = {
+                        publicCode: activeOrgDetails.publicCode,
+                        name: activeOrgDetails.name,
+                        logoUrl: activeOrgDetails.logoUrl
+                    };
+                }
+            } else if (activeOrgId && activeOrgId === primaryOrgId) {
+                activeOrgInfo = primaryOrgInfo;
+            }
+            
+            sessionContext = {
+                activeOrgId,
+                activeOrgPublicCode: activeOrgInfo?.publicCode || null,
+                activeOrgName: activeOrgInfo?.name || null,
+                activeOrgLogoUrl: activeOrgInfo?.logoUrl || null,
+                primaryOrgId,
+                primaryOrgPublicCode: primaryOrgInfo?.publicCode || null,
+                primaryOrgName: primaryOrgInfo?.name || null,
+                primaryOrgLogoUrl: primaryOrgInfo?.logoUrl || null,
+                canAccessAllOrgs,
+                role: user.role?.name || null,
+                email: user.email,
+                firstName: user.firstName,
+                lastName: user.lastName,
+                userId: user.id,
+                userPublicCode: user.publicCode || null
+            };
+            
+            // Solo cachear si NO es system-admin con JWT potencialmente stale
+            // System-admin sin activeOrgId en JWT podría estar impersonando (JWT stale por race condition)
+            const isSystemAdminWithStaleJwt = canAccessAllOrgs && !req.user.activeOrgCode;
+            if (!isSystemAdminWithStaleJwt) {
+                await sessionContextCache.setSessionContext(userId, sessionContext);
+            }
+        }
 
-        // Simplificar role en la respuesta - solo enviar el nombre
+        // Filtrar user a solo campos relevantes para el frontend
         const userResponse = {
-            ...user,
-            role: user.role?.name || null
+            publicCode: user.publicCode,
+            email: user.email,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            avatarUrl: user.avatarUrl || null,
+            language: user.language || 'es',
+            timezone: user.timezone || 'America/Lima',
+            role: user.role?.name || null,
+            permissions: user.role?.permissions || []
         };
+        
+        // Agregar información de impersonación para system-admin
+        const isSystemAdmin = req.user.role === 'system-admin';
+        const impersonationInfo = isSystemAdmin ? {
+            impersonating: req.user.impersonating || false,
+            impersonatedOrg: req.user.impersonating && req.user.activeOrgCode 
+                ? { publicCode: sessionContext.activeOrgPublicCode || null }
+                : null
+        } : {};
 
         return successResponse(res, { 
             user: userResponse, 
-            session_context: sessionContext,
+            sessionContext: sessionContextCache.sanitizeSessionContext(sessionContext),
+            ...impersonationInfo,
             message: 'auth.profile.retrieved' 
         });
     } catch (error) {
@@ -502,8 +634,8 @@ router.get('/me', authenticate, async (req, res, next) => {
  *       Cierra la sesión del usuario autenticado. Requiere el access token en el header Authorization.
  *       
  *       **Comportamiento:**
- *       - Si se envía `refresh_token` en el body: Solo cierra esa sesión específica
- *       - Si NO se envía `refresh_token`: Cierra TODAS las sesiones del usuario
+ *       - Si se envía `refreshToken` en el body: Solo cierra esa sesión específica
+ *       - Si NO se envía `refreshToken`: Cierra TODAS las sesiones del usuario
  *       
  *       **Efectos:**
  *       - Revoca refresh token(s) de la base de datos
@@ -521,7 +653,7 @@ router.get('/me', authenticate, async (req, res, next) => {
  *           schema:
  *             type: object
  *             properties:
- *               refresh_token:
+ *               refreshToken:
  *                 type: string
  *                 description: Refresh token específico a revocar (opcional). Si no se envía, se revocan todos.
  *                 example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
@@ -542,9 +674,9 @@ router.get('/me', authenticate, async (req, res, next) => {
  *                     message:
  *                       type: string
  *                       example: Sesión cerrada exitosamente
- *                     sessions_closed:
+ *                     sessionsClosed:
  *                       type: integer
- *                       description: Número de sesiones cerradas (solo si no se envió refresh_token)
+ *                       description: Número de sesiones cerradas (solo si no se envió refreshToken)
  *       401:
  *         description: No autenticado, token inválido o refresh token no encontrado
  *         content:
@@ -561,23 +693,23 @@ router.get('/me', authenticate, async (req, res, next) => {
 router.post('/logout', authenticate, async (req, res, next) => {
     try {
         const userId = req.user.userId;
-        const { refresh_token } = req.body;
+        const { refreshToken } = req.body;
 
-        // Si se proporciona refresh_token, hacer logout de esa sesión específica
-        if (refresh_token) {
-            await authServices.logout(refresh_token);
+        // Si se proporciona refreshToken, hacer logout de esa sesión específica
+        if (refreshToken) {
+            await authServices.logout(refreshToken);
             
             return successResponse(res, {
                 message: 'auth.logout.success'
             });
         }
 
-        // Si NO se proporciona refresh_token, hacer logout de TODAS las sesiones
+        // Si NO se proporciona refreshToken, hacer logout de TODAS las sesiones
         const sessionsRevoked = await authServices.logoutAll(userId);
 
         return successResponse(res, {
             message: 'auth.logout.all_success',
-            sessions_closed: sessionsRevoked
+            sessionsClosed: sessionsRevoked
         });
     } catch (error) {
         next(error);
@@ -610,7 +742,7 @@ router.post('/logout', authenticate, async (req, res, next) => {
  *                     message:
  *                       type: string
  *                       example: Todas las sesiones han sido cerradas
- *                     sessions_closed:
+ *                     sessionsClosed:
  *                       type: integer
  *                       description: Número de sesiones que fueron revocadas
  *                       example: 3
@@ -629,7 +761,7 @@ router.post('/logout-all', authenticate, async (req, res, next) => {
 
         return successResponse(res, {
             message: 'auth.logout.all_success',
-            sessions_closed: sessionsRevoked
+            sessionsClosed: sessionsRevoked
         });
     } catch (error) {
         next(error);
@@ -641,7 +773,7 @@ router.post('/logout-all', authenticate, async (req, res, next) => {
  * /auth/sessions:
  *   get:
  *     summary: Listar sesiones activas
- *     description: Devuelve todas las sesiones activas del usuario autenticado con metadata (created_at, last_used_at, user_agent, IP)
+ *     description: Devuelve todas las sesiones activas del usuario autenticado con metadata (createdAt, lastUsedAt, userAgent, IP)
  *     tags: [Auth]
  *     security:
  *       - BearerAuth: []
@@ -776,7 +908,7 @@ router.post('/sessions/:sessionId/revoke', authenticate, validate(revokeSessionS
  *                     message:
  *                       type: string
  *                       example: Acceso autorizado - Eres un administrador
- *                     user_role:
+ *                     userRole:
  *                       type: string
  *                       example: system-admin
  *       401:
@@ -788,8 +920,8 @@ router.get('/admin-test', authenticate, requireRole(['system-admin', 'org-admin'
     try {
         return successResponse(res, {
             message: 'Acceso autorizado - Eres un administrador',
-            user_role: req.user.role.name,
-            user_id: req.user.userId
+            userRole: req.user.role,
+            userId: req.user.userId
         });
     } catch (error) {
         next(error);
@@ -829,25 +961,23 @@ router.get('/admin-test', authenticate, requireRole(['system-admin', 'org-admin'
  *                       items:
  *                         type: object
  *                         properties:
- *                           organization_id:
+ *                           publicCode:
  *                             type: string
- *                             format: uuid
  *                           slug:
  *                             type: string
  *                           name:
  *                             type: string
- *                           logo_url:
+ *                           logoUrl:
  *                             type: string
  *                             nullable: true
- *                           is_primary:
+ *                           isPrimary:
  *                             type: boolean
- *                           is_active:
+ *                           isActive:
  *                             type: boolean
- *                           parent_id:
+ *                           parentPublicCode:
  *                             type: string
- *                             format: uuid
  *                             nullable: true
- *                           joined_at:
+ *                           joinedAt:
  *                             type: string
  *                             format: date-time
  *                     totalAccessible:
@@ -894,12 +1024,11 @@ router.get('/organizations', authenticate, async (req, res, next) => {
  *           schema:
  *             type: object
  *             required:
- *               - organization_id
+ *               - organizationId
  *             properties:
- *               organization_id:
+ *               organizationId:
  *                 type: string
- *                 format: uuid
- *                 description: UUID de la organización a la que se desea cambiar
+ *                 description: UUID o publicCode de la organización a la que se desea cambiar
  *                 example: 01234567-89ab-cdef-0123-456789abcdef
  *     responses:
  *       200:
@@ -915,19 +1044,19 @@ router.get('/organizations', authenticate, async (req, res, next) => {
  *                 data:
  *                   type: object
  *                   properties:
- *                     access_token:
+ *                     accessToken:
  *                       type: string
  *                       description: Nuevo access token JWT con activeOrgId actualizado
- *                     refresh_token:
+ *                     refreshToken:
  *                       type: string
  *                       description: Nuevo refresh token JWT
- *                     expires_in:
+ *                     expiresIn:
  *                       type: string
  *                       example: 15m
- *                     token_type:
+ *                     tokenType:
  *                       type: string
  *                       example: Bearer
- *                     active_organization_id:
+ *                     activeOrganizationId:
  *                       type: string
  *                       format: uuid
  *                       description: UUID de la nueva organización activa
@@ -959,7 +1088,26 @@ router.get('/organizations', authenticate, async (req, res, next) => {
 router.post('/switch-org', authenticate, validate(switchOrgSchema), async (req, res, next) => {
     try {
         const userId = req.user.userId;
-        const { organization_id } = req.body;
+        const { organizationId } = req.body;
+        
+        // Obtener información completa de la organización
+        let org;
+        if (!organizationId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+            // Es publicCode
+            org = await organizationRepository.findOrganizationByPublicCodeInternal(organizationId);
+        } else {
+            // Es UUID
+            org = await organizationRepository.findOrganizationByIdInternal(organizationId);
+        }
+        
+        if (!org) {
+            const error = new Error('Organización no encontrada');
+            error.status = 404;
+            error.code = 'ORGANIZATION_NOT_FOUND';
+            throw error;
+        }
+        
+        const organizationUuid = org.id;
         
         // Extraer datos de sesión para auditoría
         const sessionData = {
@@ -967,14 +1115,341 @@ router.post('/switch-org', authenticate, validate(switchOrgSchema), async (req, 
             ipAddress: req.ip || req.connection.remoteAddress
         };
         
-        const result = await authServices.switchOrganization(userId, organization_id, sessionData);
+        const result = await authServices.switchOrganization(userId, organizationUuid, sessionData);
         
-        // Actualizar session_context en Redis con la nueva activeOrgId
-        const updatedContext = await sessionContextCache.updateActiveOrg(userId, organization_id);
+        // Actualizar session_context en Redis con la nueva activeOrgId e info de la org
+        // Si updateActiveOrg falla (cache expirado), reconstruir contexto completo
+        let updatedContext = await sessionContextCache.updateActiveOrg(userId, organizationUuid, {
+            publicCode: org.publicCode,
+            name: org.name,
+            logoUrl: org.logoUrl
+        });
+        
+        if (!updatedContext) {
+            const user = await authRepository.findUserById(userId);
+            const primaryOrg = await organizationService.getPrimaryOrganization(userId);
+            const primaryOrgId = primaryOrg ? primaryOrg.organizationId : null;
+            
+            let primaryOrgInfo = null;
+            if (primaryOrgId) {
+                const primaryOrgDetails = await organizationRepository.findOrganizationByIdInternal(primaryOrgId);
+                if (primaryOrgDetails) {
+                    primaryOrgInfo = {
+                        publicCode: primaryOrgDetails.publicCode,
+                        name: primaryOrgDetails.name,
+                        logoUrl: primaryOrgDetails.logoUrl
+                    };
+                }
+            }
+            
+            updatedContext = {
+                activeOrgId: organizationUuid,
+                activeOrgPublicCode: org.publicCode,
+                activeOrgName: org.name,
+                activeOrgLogoUrl: org.logoUrl || null,
+                primaryOrgId,
+                primaryOrgPublicCode: primaryOrgInfo?.publicCode || null,
+                primaryOrgName: primaryOrgInfo?.name || null,
+                primaryOrgLogoUrl: primaryOrgInfo?.logoUrl || null,
+                canAccessAllOrgs: user?.role?.name === 'system-admin',
+                role: user?.role?.name || null,
+                email: user?.email || null,
+                firstName: user?.firstName || null,
+                lastName: user?.lastName || null,
+                userId,
+                userPublicCode: user?.publicCode || null
+            };
+            
+            await sessionContextCache.setSessionContext(userId, updatedContext);
+        }
+        
+        // Audit log para switch de organización
+        logAuditAction({
+            entityType: 'auth',
+            entityId: req.user.userId,
+            action: 'organization_switched',
+            performedBy: req.user.userId,
+            metadata: {
+                previous_org_code: req.user.activeOrgCode || null,
+                new_org_public_code: org.publicCode,
+                new_org_name: org.name
+            },
+            ...extractAuditInfo(req)
+        });
         
         return successResponse(res, {
             ...result,
-            session_context: updatedContext
+            sessionContext: sessionContextCache.sanitizeSessionContext(updatedContext)
+        });
+    } catch (error) {
+        next(error);
+    }
+});
+
+/**
+ * @swagger
+ * /auth/impersonate-org:
+ *   post:
+ *     summary: Impersonar una organización (solo system-admin)
+ *     description: |
+ *       Permite a un system-admin "entrar" a una organización específica para ver/gestionar
+ *       sus recursos como si fuera parte de ella. El JWT resultante tendrá `impersonating: true`.
+ *       
+ *       **Diferencia con switch-org:**
+ *       - switch-org: Cambia entre orgs a las que el usuario pertenece
+ *       - impersonate-org: Permite a system-admin acceder a CUALQUIER org
+ *       
+ *       El frontend debe mostrar un indicador visual cuando `impersonating: true`.
+ *     tags: [Auth]
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - organizationId
+ *             properties:
+ *               organizationId:
+ *                 type: string
+ *                 description: Public code de la organización a impersonar (ej. ORG-XXXXX)
+ *                 example: ORG-ABC123-4
+ *     responses:
+ *       200:
+ *         description: Impersonación exitosa, nuevos tokens emitidos
+ *       403:
+ *         description: Solo system-admin puede usar este endpoint
+ *       404:
+ *         description: Organización no encontrada
+ */
+router.post('/impersonate-org', authenticate, async (req, res, next) => {
+    try {
+        const userId = req.user.userId;
+        const userRole = req.user.role;
+        
+        // Solo system-admin puede impersonar
+        if (userRole !== 'system-admin') {
+            return errorResponse(res, {
+                message: 'auth.permission.denied',
+                status: 403,
+                code: 'SYSTEM_ADMIN_REQUIRED'
+            });
+        }
+        
+        const { organizationId } = req.body;
+        
+        if (!organizationId) {
+            return errorResponse(res, {
+                message: 'organizationId is required',
+                status: 400,
+                code: 'MISSING_ORGANIZATION_ID'
+            });
+        }
+        
+        // Obtener información completa de la organización a impersonar
+        let org;
+        const isUuid = organizationId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
+        
+        if (isUuid) {
+            org = await organizationRepository.findOrganizationByIdInternal(organizationId);
+        } else {
+            org = await organizationRepository.findOrganizationByPublicCodeInternal(organizationId);
+        }
+        
+        if (!org) {
+            return errorResponse(res, {
+                message: 'Organización no encontrada',
+                status: 404,
+                code: 'ORGANIZATION_NOT_FOUND'
+            });
+        }
+        
+        const organizationUuid = org.id;
+        const orgPublicCode = org.publicCode;
+        
+        // Extraer datos de sesión
+        const sessionData = {
+            userAgent: req.headers['user-agent'],
+            ipAddress: req.ip || req.connection.remoteAddress,
+            activeOrgId: organizationUuid // Setear la org a impersonar
+        };
+        
+        // Generar nuevos tokens con la org activa (impersonating se calculará automáticamente)
+        const result = await authServices.switchOrganization(userId, organizationUuid, sessionData);
+        
+        // Reconstruir session_context completo en Redis (no depender de updateActiveOrg que falla si cache expirado)
+        const existingContext = await sessionContextCache.getSessionContext(userId);
+        const user = await authRepository.findUserById(userId);
+        const primaryOrg = await organizationService.getPrimaryOrganization(userId);
+        const primaryOrgId = primaryOrg ? primaryOrg.organizationId : null;
+        
+        // Obtener info de la org primaria
+        let primaryOrgInfo = null;
+        if (primaryOrgId) {
+            const primaryOrgDetails = await organizationRepository.findOrganizationByIdInternal(primaryOrgId);
+            if (primaryOrgDetails) {
+                primaryOrgInfo = {
+                    publicCode: primaryOrgDetails.publicCode,
+                    name: primaryOrgDetails.name,
+                    logoUrl: primaryOrgDetails.logoUrl
+                };
+            }
+        }
+        
+        const updatedContext = {
+            ...(existingContext || {}),
+            activeOrgId: organizationUuid,
+            activeOrgPublicCode: org.publicCode,
+            activeOrgName: org.name,
+            activeOrgLogoUrl: org.logoUrl || null,
+            primaryOrgId,
+            primaryOrgPublicCode: primaryOrgInfo?.publicCode || null,
+            primaryOrgName: primaryOrgInfo?.name || null,
+            primaryOrgLogoUrl: primaryOrgInfo?.logoUrl || null,
+            canAccessAllOrgs: true,
+            role: user?.role?.name || 'system-admin',
+            email: user?.email || existingContext?.email || null,
+            firstName: user?.firstName || existingContext?.firstName || null,
+            lastName: user?.lastName || existingContext?.lastName || null,
+            userId,
+            userPublicCode: user?.publicCode || existingContext?.userPublicCode || null
+        };
+        
+        await sessionContextCache.setSessionContext(userId, updatedContext);
+        
+        // Audit log para inicio de impersonación
+        logAuditAction({
+            entityType: 'auth',
+            entityId: userId,
+            action: 'impersonate_started',
+            performedBy: userId,
+            metadata: { 
+                impersonated_org_public_code: orgPublicCode,
+                impersonated_org_name: org.name
+            },
+            ...extractAuditInfo(req),
+            impersonatedOrgId: organizationUuid
+        });
+        
+        return successResponse(res, {
+            ...result,
+            sessionContext: sessionContextCache.sanitizeSessionContext(updatedContext),
+            impersonating: true,
+            impersonatedOrg: { publicCode: orgPublicCode },
+            message: 'Impersonation started successfully'
+        });
+    } catch (error) {
+        next(error);
+    }
+});
+
+/**
+ * @swagger
+ * /auth/exit-impersonation:
+ *   post:
+ *     summary: Salir del modo impersonación (solo system-admin)
+ *     description: |
+ *       Permite a un system-admin salir del modo impersonación y volver al panel admin global.
+ *       El JWT resultante tendrá `activeOrgId: null` e `impersonating: false`.
+ *     tags: [Auth]
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Salida de impersonación exitosa, nuevos tokens emitidos
+ *       403:
+ *         description: Solo system-admin puede usar este endpoint
+ */
+router.post('/exit-impersonation', authenticate, async (req, res, next) => {
+    try {
+        const userId = req.user.userId;
+        const userRole = req.user.role;
+        
+        // Solo system-admin puede usar este endpoint
+        if (userRole !== 'system-admin') {
+            return errorResponse(res, {
+                message: 'auth.permission.denied',
+                status: 403,
+                code: 'SYSTEM_ADMIN_REQUIRED'
+            });
+        }
+        
+        // Extraer datos de sesión con activeOrgId explícitamente null
+        const sessionData = {
+            userAgent: req.headers['user-agent'],
+            ipAddress: req.ip || req.connection.remoteAddress,
+            activeOrgId: null // Volver a modo admin global
+        };
+        
+        // Obtener usuario para generar tokens
+        const user = await authRepository.findUserById(userId);
+        if (!user) {
+            return errorResponse(res, {
+                message: 'Usuario no encontrado',
+                status: 404,
+                code: 'USER_NOT_FOUND'
+            });
+        }
+        
+        // Generar nuevos tokens sin org activa
+        const tokens = await authServices.generateTokensForUser(user, sessionData);
+        
+        // Reconstruir session_context completo para modo admin global (sin org activa)
+        const primaryOrg = await organizationService.getPrimaryOrganization(userId);
+        const primaryOrgId = primaryOrg ? primaryOrg.organizationId : null;
+        
+        let primaryOrgInfo = null;
+        if (primaryOrgId) {
+            const primaryOrgDetails = await organizationRepository.findOrganizationByIdInternal(primaryOrgId);
+            if (primaryOrgDetails) {
+                primaryOrgInfo = {
+                    publicCode: primaryOrgDetails.publicCode,
+                    name: primaryOrgDetails.name,
+                    logoUrl: primaryOrgDetails.logoUrl
+                };
+            }
+        }
+        
+        const updatedContext = {
+            activeOrgId: null,
+            activeOrgPublicCode: null,
+            activeOrgName: null,
+            activeOrgLogoUrl: null,
+            primaryOrgId,
+            primaryOrgPublicCode: primaryOrgInfo?.publicCode || null,
+            primaryOrgName: primaryOrgInfo?.name || null,
+            primaryOrgLogoUrl: primaryOrgInfo?.logoUrl || null,
+            canAccessAllOrgs: true,
+            role: user.role?.name || 'system-admin',
+            email: user.email,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            userId,
+            userPublicCode: user.publicCode || null
+        };
+        
+        await sessionContextCache.setSessionContext(userId, updatedContext);
+        
+        // Audit log para fin de impersonación
+        logAuditAction({
+            entityType: 'auth',
+            entityId: userId,
+            action: 'impersonate_ended',
+            performedBy: userId,
+            metadata: { 
+                previous_org_code: req.user.activeOrgCode || null
+            },
+            ...extractAuditInfo(req)
+        });
+        
+        return successResponse(res, {
+            ...tokens,
+            sessionContext: sessionContextCache.sanitizeSessionContext(updatedContext),
+            impersonating: false,
+            impersonatedOrg: null,
+            message: 'Exited impersonation mode successfully'
         });
     } catch (error) {
         next(error);
@@ -1013,7 +1488,7 @@ router.post('/switch-org', authenticate, validate(switchOrgSchema), async (req, 
  *                 data:
  *                   type: object
  *                   properties:
- *                     session_context:
+ *                     sessionContext:
  *                       type: object
  *                       properties:
  *                         activeOrgId:
@@ -1071,8 +1546,18 @@ router.get('/session-context', authenticate, async (req, res, next) => {
             });
         }
         
+        // Agregar información de impersonación para system-admin
+        const isSystemAdmin = req.user.role === 'system-admin';
+        const impersonationInfo = isSystemAdmin ? {
+            impersonating: req.user.impersonating || false,
+            impersonatedOrg: req.user.impersonating && req.user.activeOrgCode 
+                ? { publicCode: sessionContext?.activeOrgPublicCode || null }
+                : null
+        } : {};
+        
         return successResponse(res, { 
-            session_context: sessionContext,
+            sessionContext: sessionContextCache.sanitizeSessionContext(sessionContext),
+            ...impersonationInfo,
             message: 'Session context retrieved successfully'
         });
     } catch (error) {

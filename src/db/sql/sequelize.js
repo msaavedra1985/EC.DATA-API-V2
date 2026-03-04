@@ -24,16 +24,14 @@ const sequelizeConfig = {
 
     // Configuración global de modelos
     define: {
-        // Nombres de columnas snake_case y nombres de tabla sin pluralizar
+        // underscored: mapea automáticamente camelCase (JS) → snake_case (DB)
+        // Ej: propiedad publicCode → columna public_code
         underscored: true,
         freezeTableName: true,
 
-        // Timestamps y soft deletes listos
+        // Timestamps y soft deletes (underscored maneja el mapeo automáticamente)
         timestamps: true,
         paranoid: true,
-        createdAt: 'created_at',
-        updatedAt: 'updated_at',
-        deletedAt: 'deleted_at',
     },
 };
 
@@ -59,18 +57,32 @@ const sequelize = config.database.url
  * @returns {Promise<void>}
  */
 export const initializeDatabase = async () => {
-    try {
-        await sequelize.authenticate();
-        dbLogger.info('✅ PostgreSQL connected successfully');
+    const maxRetries = 5;
+    const baseDelay = 3000;
 
-        // En desarrollo, sincronizar esquema (en producción usar migraciones Umzug)
-        if (config.env === 'development') {
-            await sequelize.sync({ alter: false }); // alter: false para mantener datos
-            dbLogger.info('✅ Database schema synchronized');
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+            await sequelize.authenticate();
+            dbLogger.info('✅ PostgreSQL connected successfully');
+
+            if (config.env === 'development') {
+                await sequelize.sync({ alter: false });
+                dbLogger.info('✅ Database schema synchronized');
+            }
+            return;
+        } catch (error) {
+            const isRetryable = error.name === 'SequelizeConnectionError' ||
+                error.original?.code === 'XX000';
+
+            if (attempt < maxRetries && isRetryable) {
+                const delay = baseDelay * attempt;
+                dbLogger.warn(`⏳ Database connection attempt ${attempt}/${maxRetries} failed, retrying in ${delay / 1000}s...`);
+                await new Promise(resolve => setTimeout(resolve, delay));
+            } else {
+                dbLogger.error(error, '❌ Unable to connect to database');
+                throw error;
+            }
         }
-    } catch (error) {
-        dbLogger.error(error, '❌ Unable to connect to database');
-        throw error;
     }
 };
 

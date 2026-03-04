@@ -214,6 +214,10 @@ const swaggerOptions = {
                 description: 'Authentication and authorization',
             },
             {
+                name: 'Organizations',
+                description: 'Organization management (multi-tenancy, hierarchical structure)',
+            },
+            {
                 name: 'Tenants',
                 description: 'Tenant management (multi-tenancy)',
             },
@@ -228,7 +232,11 @@ const swaggerOptions = {
         ],
     },
     // Buscar anotaciones JSDoc en todos los módulos
-    apis: ['./src/modules/*/index.js', './src/modules/*/dtos/*.js'],
+    apis: [
+        './src/modules/*/index.js', 
+        './src/modules/*/routes.js',
+        './src/modules/*/dtos/*.js'
+    ],
 };
 
 // Generar especificación OpenAPI desde anotaciones JSDoc

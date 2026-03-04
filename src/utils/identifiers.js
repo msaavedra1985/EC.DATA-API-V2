@@ -1,202 +1,88 @@
 import { v7 as uuidv7 } from 'uuid';
-import Hashids from 'hashids';
-import { config } from '../config/env.js';
+import { customAlphabet } from 'nanoid';
 
-/**
- * Salt para Hashids - debe estar en variable de entorno
- * En producción usar KMS para rotación de salt
- */
-const HASHIDS_SALT = process.env.HASHIDS_SALT || 'dev-salt-change-in-production';
-const HASHIDS_MIN_LENGTH = 5;
+// Alfabeto seguro: sin 0/O, 1/I, 8/B (confusión visual y telefónica)
+const SAFE_ALPHABET = '2345679ACDEFGHJKLMNPQRSTUVWXYZ';
+const BLOCK_SIZE = 3;
 
-/**
- * Instancia de Hashids para encoding/decoding
- */
-const hashids = new Hashids(HASHIDS_SALT, HASHIDS_MIN_LENGTH);
+const generateBlock = customAlphabet(SAFE_ALPHABET, BLOCK_SIZE);
 
-/**
- * Genera un UUID v7 (time-ordered UUID)
- * UUID v7 incluye timestamp en los primeros bits, lo que permite ordenamiento natural
- * 
- * @returns {string} - UUID v7 en formato string
- */
 export const generateUuidV7 = () => {
     return uuidv7();
 };
 
-/**
- * Genera el siguiente human_id para una entidad con scope
- * 
- * @param {Object} model - Modelo de Sequelize
- * @param {string} scopeField - Campo de scope (ej: 'organization_id')
- * @param {string|null} scopeValue - Valor del scope (ej: UUID de organization)
- * @returns {Promise<number>} - Siguiente human_id
- */
-export const generateHumanId = async (model, scopeField, scopeValue) => {
-    // Si no hay scope (ej: Organizations), buscar el máximo global
-    if (!scopeField || scopeValue === null || scopeValue === undefined) {
-        const maxRecord = await model.findOne({
-            attributes: [[model.sequelize.fn('MAX', model.sequelize.col('human_id')), 'max_id']],
-            raw: true
-        });
-        
-        const maxId = maxRecord?.max_id || 0;
-        return maxId + 1;
-    }
-
-    // Con scope (ej: Users scoped por organization_id)
-    const maxRecord = await model.findOne({
-        where: { [scopeField]: scopeValue },
+export const generateHumanId = async (model, scopeField, scopeValue, options = {}) => {
+    const findOptions = {
         attributes: [[model.sequelize.fn('MAX', model.sequelize.col('human_id')), 'max_id']],
         raw: true
-    });
+    };
 
+    if (options.transaction) {
+        findOptions.transaction = options.transaction;
+    }
+
+    if (scopeField && scopeValue !== null && scopeValue !== undefined) {
+        findOptions.where = { [scopeField]: scopeValue };
+    }
+
+    const maxRecord = await model.findOne(findOptions);
     const maxId = maxRecord?.max_id || 0;
     return maxId + 1;
 };
 
 /**
- * Calcula dígito verificador usando algoritmo de Luhn
- * Usado para detectar errores de tipeo en public_code
+ * Genera public_code estilo "boleto de avión"
+ * Formato: PREFIX-XXX-XXX (ej: DEV-4X9-R2T, CHN-K7M-3DP)
+ * Alfabeto seguro de 29 caracteres, 6 chars = ~594M combinaciones por prefijo
  * 
- * @param {string} input - String numérico
- * @returns {number} - Dígito verificador (0-9)
+ * @param {string} prefix - Prefijo de entidad (ej: 'CHN', 'DEV', 'ORG')
+ * @returns {string} - public_code (ej: 'DEV-4X9-R2T')
  */
-export const calculateLuhnChecksum = (input) => {
-    // Convertir a array de dígitos
-    const digits = input.toString().split('').map(Number);
-    
-    let sum = 0;
-    let isEven = false;
+export const generatePublicCode = (prefix) => {
+    const block1 = generateBlock();
+    const block2 = generateBlock();
+    return `${prefix.toUpperCase()}-${block1}-${block2}`;
+};
 
-    // Procesar de derecha a izquierda
-    for (let i = digits.length - 1; i >= 0; i--) {
-        let digit = digits[i];
-
-        if (isEven) {
-            digit *= 2;
-            if (digit > 9) {
-                digit -= 9;
-            }
+/**
+ * Genera public_code con verificación de unicidad en DB
+ * Reintenta hasta maxAttempts veces si hay colisión
+ * 
+ * @param {string} prefix - Prefijo de entidad
+ * @param {Object} model - Modelo Sequelize para verificar unicidad
+ * @param {string} field - Nombre del campo en el modelo (default: 'publicCode')
+ * @param {number} maxAttempts - Intentos máximos (default: 5)
+ * @returns {Promise<string>} - public_code único
+ */
+export const generatePublicCodeWithRetry = async (prefix, model, field = 'publicCode', maxAttempts = 5) => {
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+        const code = generatePublicCode(prefix);
+        const existing = await model.findOne({
+            where: { [field]: code },
+            attributes: ['id'],
+            raw: true,
+            paranoid: false
+        });
+        if (!existing) {
+            return code;
         }
-
-        sum += digit;
-        isEven = !isEven;
     }
-
-    // Calcular dígito que hace que sum % 10 === 0
-    return (10 - (sum % 10)) % 10;
+    throw new Error(`No se pudo generar un public_code único para ${prefix} después de ${maxAttempts} intentos`);
 };
 
 /**
- * Valida dígito verificador Luhn
+ * Valida formato de public_code (nuevo formato boleto de avión)
  * 
- * @param {string} input - String numérico con checksum al final
- * @returns {boolean} - true si checksum es válido
- */
-export const validateLuhnChecksum = (input) => {
-    if (!input || input.length < 2) {
-        return false;
-    }
-
-    const digits = input.toString().split('').map(Number);
-    const providedChecksum = digits[digits.length - 1];
-    const dataWithoutChecksum = input.slice(0, -1);
-    
-    const calculatedChecksum = calculateLuhnChecksum(dataWithoutChecksum);
-    
-    return providedChecksum === calculatedChecksum;
-};
-
-/**
- * Genera public_code opaco para una entidad usando UUID v7
- * Formato: PREFIX-ENCODED-CHECKSUM
- * Ejemplo: EC-7K9D2-X o ORG-A5B3C-7
- * 
- * IMPORTANTE: Ahora usa UUID v7 en lugar de human_id para garantizar unicidad global
- * El UUID v7 se convierte a número usando los últimos 48 bits (12 caracteres hex)
- * 
- * @param {string} prefix - Prefijo (ej: 'EC' para users, 'ORG' para organizations)
- * @param {string} uuidV7 - UUID v7 completo (garantiza unicidad global)
- * @returns {string} - public_code opaco
- */
-export const generatePublicCode = (prefix, uuidV7) => {
-    // Remover guiones del UUID y tomar últimos 12 caracteres hexadecimales (48 bits)
-    const uuidHex = uuidV7.replace(/-/g, '');
-    const last12Chars = uuidHex.slice(-12);
-    
-    // Convertir hex a número decimal (dividir en 2 partes para evitar overflow de Number)
-    const part1 = parseInt(last12Chars.slice(0, 6), 16);
-    const part2 = parseInt(last12Chars.slice(6, 12), 16);
-    
-    // Encode ambas partes usando Hashids
-    const encoded = hashids.encode(part1, part2);
-    
-    // Calcular checksum sobre la combinación de ambas partes
-    const checksumInput = part1.toString() + part2.toString();
-    const checksum = calculateLuhnChecksum(checksumInput);
-    
-    // Formato: PREFIX-ENCODED-CHECKSUM
-    return `${prefix}-${encoded}-${checksum}`;
-};
-
-/**
- * Decodifica public_code generado con UUID v7
- * NOTA: Esta función valida el formato y checksum, pero NO devuelve el UUID original
- * (el UUID no es reversible desde el public_code por diseño de seguridad)
- * 
- * @param {string} publicCode - public_code (ej: 'EC-7K9D2-X')
- * @param {string} expectedPrefix - Prefijo esperado (opcional, para validación)
- * @returns {Object} - { prefix, isValid, error? }
- */
-export const decodePublicCode = (publicCode, expectedPrefix = null) => {
-    try {
-        // Dividir en partes: PREFIX-ENCODED-CHECKSUM
-        const parts = publicCode.split('-');
-        
-        if (parts.length !== 3) {
-            return { prefix: null, isValid: false, error: 'Formato inválido' };
-        }
-
-        const [prefix, encoded, checksumStr] = parts;
-
-        // Validar prefijo si se proporciona
-        if (expectedPrefix && prefix !== expectedPrefix) {
-            return { prefix, isValid: false, error: 'Prefijo inválido' };
-        }
-
-        // Decodificar usando Hashids (debería devolver 2 partes)
-        const decoded = hashids.decode(encoded);
-        
-        if (decoded.length !== 2) {
-            return { prefix, isValid: false, error: 'Código inválido' };
-        }
-
-        const [part1, part2] = decoded.map(Number);
-
-        // Validar checksum
-        const checksumInput = part1.toString() + part2.toString();
-        const calculatedChecksum = calculateLuhnChecksum(checksumInput);
-        const providedChecksum = parseInt(checksumStr, 10);
-
-        if (calculatedChecksum !== providedChecksum) {
-            return { prefix, isValid: false, error: 'Checksum inválido' };
-        }
-
-        return { prefix, isValid: true };
-    } catch (error) {
-        return { prefix: null, isValid: false, error: error.message };
-    }
-};
-
-/**
- * Valida formato de public_code
- * 
- * @param {string} publicCode - public_code a validar
+ * @param {string} publicCode - public_code a validar (ej: 'DEV-4X9-R2T')
  * @param {string} expectedPrefix - Prefijo esperado (opcional)
- * @returns {boolean} - true si es válido
+ * @returns {boolean} - true si tiene formato válido
  */
 export const isValidPublicCode = (publicCode, expectedPrefix = null) => {
-    const result = decodePublicCode(publicCode, expectedPrefix);
-    return result.isValid;
+    if (!publicCode || typeof publicCode !== 'string') return false;
+    const regex = /^[A-Z]{2,4}-[2345679ACDEFGHJKLMNPQRSTUVWXYZ]{3}-[2345679ACDEFGHJKLMNPQRSTUVWXYZ]{3}$/;
+    if (!regex.test(publicCode)) return false;
+    if (expectedPrefix) {
+        return publicCode.startsWith(`${expectedPrefix}-`);
+    }
+    return true;
 };

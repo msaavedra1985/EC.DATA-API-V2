@@ -35,13 +35,13 @@ export const createRefreshToken = async ({ userId, token, expiresAt, userAgent =
 
         const refreshToken = await RefreshToken.create({
             id,
-            user_id: userId,
-            token_hash: tokenHash,
-            expires_at: expiresAt,
-            last_used_at: new Date(),
-            user_agent: userAgent,
-            ip_address: ipAddress,
-            remember_me: rememberMe
+            userId,
+            tokenHash,
+            expiresAt,
+            lastUsedAt: new Date(),
+            userAgent,
+            ipAddress,
+            rememberMe
         });
 
         return refreshToken.toJSON();
@@ -62,7 +62,7 @@ export const findByTokenHash = async (token, includeDeleted = false) => {
         const tokenHash = hashToken(token);
         
         const refreshToken = await RefreshToken.findOne({
-            where: { token_hash: tokenHash },
+            where: { tokenHash },
             paranoid: !includeDeleted // paranoid: false permite buscar tokens soft-deleted
         });
 
@@ -86,14 +86,14 @@ export const revokeToken = async (token, reason = 'logout') => {
         // Primero actualizar el motivo de revocación
         await RefreshToken.update(
             {
-                is_revoked: true,
-                revoked_at: new Date(),
-                revoked_reason: reason
+                isRevoked: true,
+                revokedAt: new Date(),
+                revokedReason: reason
             },
             {
                 where: {
-                    token_hash: tokenHash,
-                    is_revoked: false
+                    tokenHash,
+                    isRevoked: false
                 }
             }
         );
@@ -101,7 +101,7 @@ export const revokeToken = async (token, reason = 'logout') => {
         // Luego hacer soft delete (paranoid: true) para liberar el constraint unique
         const affectedRows = await RefreshToken.destroy({
             where: {
-                token_hash: tokenHash
+                tokenHash
             }
         });
 
@@ -123,14 +123,14 @@ export const revokeAllUserTokens = async (userId, reason = 'logout_all') => {
         // Primero actualizar el motivo de revocación
         await RefreshToken.update(
             {
-                is_revoked: true,
-                revoked_at: new Date(),
-                revoked_reason: reason
+                isRevoked: true,
+                revokedAt: new Date(),
+                revokedReason: reason
             },
             {
                 where: {
-                    user_id: userId,
-                    is_revoked: false
+                    userId,
+                    isRevoked: false
                 }
             }
         );
@@ -138,7 +138,7 @@ export const revokeAllUserTokens = async (userId, reason = 'logout_all') => {
         // Luego hacer soft delete (paranoid: true) para liberar el constraint unique
         const affectedRows = await RefreshToken.destroy({
             where: {
-                user_id: userId
+                userId
             }
         });
 
@@ -150,7 +150,7 @@ export const revokeAllUserTokens = async (userId, reason = 'logout_all') => {
 };
 
 /**
- * Actualizar last_used_at de un token
+ * Actualizar lastUsedAt de un token
  * @param {string} token - Token en texto plano
  * @returns {Promise<boolean>} - true si se actualizó
  */
@@ -159,18 +159,18 @@ export const updateLastUsed = async (token) => {
         const tokenHash = hashToken(token);
         
         const [affectedRows] = await RefreshToken.update(
-            { last_used_at: new Date() },
+            { lastUsedAt: new Date() },
             {
                 where: {
-                    token_hash: tokenHash,
-                    is_revoked: false
+                    tokenHash,
+                    isRevoked: false
                 }
             }
         );
 
         return affectedRows > 0;
     } catch (error) {
-        authLogger.error(error, 'Error updating last_used_at');
+        authLogger.error(error, 'Error updating lastUsedAt');
         throw error;
     }
 };
@@ -181,13 +181,13 @@ export const updateLastUsed = async (token) => {
  * @returns {boolean} - true si está en idle timeout
  */
 export const isIdleTimeout = (refreshToken) => {
-    // Usar idle timeout extendido si el token se creó con remember_me
-    const idleDays = refreshToken.remember_me 
+    // Usar idle timeout extendido si el token se creó con rememberMe
+    const idleDays = refreshToken.rememberMe 
         ? config.jwt.refreshIdleDaysLong  // 30 días
         : config.jwt.refreshIdleDays;     // 7 días
     
     const idleMs = idleDays * 24 * 60 * 60 * 1000;
-    const lastUsed = new Date(refreshToken.last_used_at);
+    const lastUsed = new Date(refreshToken.lastUsedAt);
     const now = new Date();
     
     return (now - lastUsed) > idleMs;
@@ -196,13 +196,13 @@ export const isIdleTimeout = (refreshToken) => {
 /**
  * Limpiar tokens expirados o en idle timeout
  * Se ejecuta periódicamente para mantener la BD limpia
- * Respeta el idle timeout dinámico según remember_me (7 días vs 30 días)
+ * Respeta el idle timeout dinámico según rememberMe (7 días vs 30 días)
  * @returns {Promise<number>} - Número de tokens eliminados
  */
 export const cleanupExpiredTokens = async () => {
     try {
         const normalIdleDays = config.jwt.refreshIdleDays;      // 7 días para sesiones normales
-        const extendedIdleDays = config.jwt.refreshIdleDaysLong; // 30 días para remember_me
+        const extendedIdleDays = config.jwt.refreshIdleDaysLong; // 30 días para rememberMe
         
         const normalIdleCutoff = new Date();
         normalIdleCutoff.setDate(normalIdleCutoff.getDate() - normalIdleDays);
@@ -215,28 +215,28 @@ export const cleanupExpiredTokens = async () => {
                 [Op.or]: [
                     // Tokens expirados (por fecha absoluta)
                     {
-                        expires_at: {
+                        expiresAt: {
                             [Op.lt]: new Date()
                         }
                     },
-                    // Tokens normales (remember_me = false) en idle timeout después de 7 días
+                    // Tokens normales (rememberMe = false) en idle timeout después de 7 días
                     {
-                        remember_me: false,
-                        last_used_at: {
+                        rememberMe: false,
+                        lastUsedAt: {
                             [Op.lt]: normalIdleCutoff
                         }
                     },
-                    // Tokens extendidos (remember_me = true) en idle timeout después de 30 días
+                    // Tokens extendidos (rememberMe = true) en idle timeout después de 30 días
                     {
-                        remember_me: true,
-                        last_used_at: {
+                        rememberMe: true,
+                        lastUsedAt: {
                             [Op.lt]: extendedIdleCutoff
                         }
                     },
                     // Tokens revocados hace más de 30 días (mantener historial limitado)
                     {
-                        is_revoked: true,
-                        revoked_at: {
+                        isRevoked: true,
+                        revokedAt: {
                             [Op.lt]: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
                         }
                     }
@@ -260,14 +260,14 @@ export const getUserActiveSessions = async (userId) => {
     try {
         const sessions = await RefreshToken.findAll({
             where: {
-                user_id: userId,
-                is_revoked: false,
-                expires_at: {
+                userId,
+                isRevoked: false,
+                expiresAt: {
                     [Op.gt]: new Date()
                 }
             },
-            attributes: ['id', 'created_at', 'last_used_at', 'expires_at', 'user_agent', 'ip_address'],
-            order: [['last_used_at', 'DESC']]
+            attributes: ['id', 'createdAt', 'lastUsedAt', 'expiresAt', 'userAgent', 'ipAddress'],
+            order: [['lastUsedAt', 'DESC']]
         });
 
         return sessions.map(s => s.toJSON());
@@ -288,15 +288,15 @@ export const revokeSessionById = async (sessionId, userId, reason = 'logout') =>
     try {
         const [affectedRows] = await RefreshToken.update(
             {
-                is_revoked: true,
-                revoked_at: new Date(),
-                revoked_reason: reason
+                isRevoked: true,
+                revokedAt: new Date(),
+                revokedReason: reason
             },
             {
                 where: {
                     id: sessionId,
-                    user_id: userId,
-                    is_revoked: false
+                    userId,
+                    isRevoked: false
                 }
             }
         );

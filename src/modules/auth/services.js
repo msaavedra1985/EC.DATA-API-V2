@@ -5,9 +5,11 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import { config } from '../../config/env.js';
+import { authLogger } from '../../utils/logger.js';
 import * as authRepository from './repository.js';
 import * as refreshTokenRepository from './refreshTokenRepository.js';
 import * as authCache from './cache.js';
+import * as rolesCache from './rolesCache.js';
 import * as organizationService from '../organizations/services.js';
 import Role from './models/Role.js';
 
@@ -23,19 +25,43 @@ const JWT_ISSUER = config.jwt.issuer;
 const JWT_AUDIENCE = config.jwt.audience;
 
 /**
+ * Obtiene un rol por nombre usando cache de Redis (TTL: 30 min)
+ * @param {string} roleName - Nombre del rol (ej: 'user', 'system-admin')
+ * @returns {Promise<Object|null>} Role object o null
+ */
+const getRoleByName = async (roleName) => {
+    // Intentar obtener desde cache
+    const cached = await rolesCache.getCachedRole(roleName);
+    if (cached) {
+        return cached;
+    }
+    
+    // Si no está en cache, buscar en BD
+    const role = await Role.findOne({ where: { name: roleName } });
+    
+    if (role) {
+        // Guardar en cache para futuras consultas
+        await rolesCache.cacheRole(role);
+        return role;
+    }
+    
+    return null;
+};
+
+/**
  * Registrar un nuevo usuario
  * @param {Object} userData - Datos del usuario
  * @param {string} userData.email - Email
  * @param {string} userData.password - Password en texto plano (será hasheado)
- * @param {string} userData.first_name - Nombre
- * @param {string} userData.last_name - Apellido
- * @param {string} [userData.organization_id] - ID de la organización
- * @param {string} [userData.role_id] - ID del rol (si no se provee, usa 'user' por defecto)
+ * @param {string} userData.firstName - Nombre
+ * @param {string} userData.lastName - Apellido
+ * @param {string} [userData.organizationId] - ID de la organización
+ * @param {string} [userData.roleId] - ID del rol (si no se provee, usa 'user' por defecto)
  * @param {Object} [sessionData] - Datos de la sesión (userAgent, ipAddress)
  * @returns {Promise<Object>} - Usuario creado y token JWT
  */
 export const register = async (userData, sessionData = {}) => {
-    const { email, password, first_name, last_name, organization_id, role_id } = userData;
+    const { email, password, firstName, lastName, organizationId, roleId } = userData;
 
     // Verificar si el email ya existe
     const existingUser = await authRepository.findUserByEmail(email);
@@ -46,10 +72,10 @@ export const register = async (userData, sessionData = {}) => {
         throw error;
     }
 
-    // Si no se provee role_id, buscar el rol 'user' por defecto
-    let finalRoleId = role_id;
+    // Si no se provee roleId, buscar el rol 'user' por defecto (usa cache)
+    let finalRoleId = roleId;
     if (!finalRoleId) {
-        const defaultRole = await Role.findOne({ where: { name: 'user' } });
+        const defaultRole = await getRoleByName('user');
         if (!defaultRole) {
             const error = new Error('auth.register.default_role_not_found');
             error.status = 500;
@@ -60,16 +86,16 @@ export const register = async (userData, sessionData = {}) => {
     }
 
     // Hashear password con bcrypt
-    const password_hash = await bcrypt.hash(password, SALT_ROUNDS);
+    const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
 
     // Crear usuario en la base de datos
     const newUser = await authRepository.createUser({
         email,
-        password_hash,
-        first_name,
-        last_name,
-        organization_id,
-        role_id: finalRoleId
+        passwordHash,
+        firstName,
+        lastName,
+        organizationId,
+        roleId: finalRoleId
     });
 
     // Generar tokens JWT y guardar refresh token en BD
@@ -82,16 +108,89 @@ export const register = async (userData, sessionData = {}) => {
 };
 
 /**
- * Login de usuario
- * @param {string} email - Email del usuario
+ * Verificar token de Cloudflare Turnstile (Captcha)
+ * Solo se ejecuta si TURNSTILE_SECRET_KEY está configurado
+ * 
+ * @param {string} captchaToken - Token del captcha enviado por el cliente
+ * @param {string} remoteIp - IP del cliente
+ * @returns {Promise<boolean>} - true si válido, lanza error si inválido
+ */
+export const verifyTurnstileToken = async (captchaToken, remoteIp) => {
+    const { config } = await import('../../config/env.js');
+    
+    // Si no hay secret key configurada O el captcha está deshabilitado, no es obligatorio
+    if (!config.turnstile.secretKey || !config.turnstile.enabled) {
+        return true;
+    }
+
+    // Si hay secret key pero no hay token, rechazar
+    if (!captchaToken) {
+        const error = new Error('auth.login.captcha_required');
+        error.status = 400;
+        error.code = 'CAPTCHA_REQUIRED';
+        throw error;
+    }
+
+    try {
+        const response = await fetch(config.turnstile.verifyUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams({
+                secret: config.turnstile.secretKey,
+                response: captchaToken,
+                remoteip: remoteIp || ''
+            })
+        });
+
+        const result = await response.json();
+
+        if (!result.success) {
+            authLogger.warn({
+                errorCodes: result['error-codes'],
+                remoteIp
+            }, 'Turnstile verification failed');
+
+            const error = new Error('auth.login.captcha_invalid');
+            error.status = 400;
+            error.code = 'CAPTCHA_INVALID';
+            throw error;
+        }
+
+        return true;
+    } catch (error) {
+        // Si ya es nuestro error, re-lanzarlo
+        if (error.code === 'CAPTCHA_INVALID' || error.code === 'CAPTCHA_REQUIRED') {
+            throw error;
+        }
+
+        // SEGURIDAD FAIL-CLOSED: Error de red/otro - rechazar login
+        // Previene bypass intencional bloqueando acceso a Cloudflare
+        authLogger.error(error, 'Turnstile API error - rejecting login (fail-closed)');
+        
+        const captchaError = new Error('auth.login.captcha_service_unavailable');
+        captchaError.status = 503;
+        captchaError.code = 'CAPTCHA_SERVICE_UNAVAILABLE';
+        throw captchaError;
+    }
+};
+
+/**
+ * Login de usuario (híbrido: email o username)
+ * @param {string} identifier - Email o username del usuario
  * @param {string} password - Password en texto plano
- * @param {Object} [sessionData] - Datos de la sesión (userAgent, ipAddress, rememberMe)
+ * @param {Object} [sessionData] - Datos de la sesión (userAgent, ipAddress, rememberMe, captchaToken)
  * @param {boolean} [sessionData.rememberMe=false] - Si true, genera tokens con duración extendida
+ * @param {string} [sessionData.captchaToken] - Token de Cloudflare Turnstile para validación
  * @returns {Promise<Object>} - Usuario y token JWT
  */
-export const login = async (email, password, sessionData = {}) => {
-    // Buscar usuario con password incluido (para verificación)
-    const user = await authRepository.findUserByEmail(email, true);
+export const login = async (identifier, password, sessionData = {}) => {
+    // Validar captcha ANTES de verificar credenciales (si está configurado)
+    await verifyTurnstileToken(sessionData.captchaToken, sessionData.ipAddress);
+
+    // Buscar usuario por email O username con password incluido (para verificación)
+    const user = await authRepository.findUserByIdentifier(identifier, true);
 
     if (!user) {
         const error = new Error('auth.login.invalid_credentials');
@@ -101,7 +200,7 @@ export const login = async (email, password, sessionData = {}) => {
     }
 
     // Verificar que el usuario esté activo
-    if (!user.is_active) {
+    if (!user.isActive) {
         const error = new Error('auth.login.account_disabled');
         error.status = 403; // Forbidden
         error.code = 'USER_INACTIVE';
@@ -109,7 +208,7 @@ export const login = async (email, password, sessionData = {}) => {
     }
 
     // Verificar password con bcrypt
-    const isPasswordValid = await bcrypt.compare(password, user.password_hash);
+    const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
 
     if (!isPasswordValid) {
         const error = new Error('auth.login.invalid_credentials');
@@ -121,26 +220,99 @@ export const login = async (email, password, sessionData = {}) => {
     // Actualizar último login
     await authRepository.updateLastLogin(user.id);
 
-    // Eliminar password_hash antes de devolver
-    delete user.password_hash;
+    // Eliminar passwordHash antes de devolver
+    delete user.passwordHash;
 
     // Generar tokens JWT y guardar refresh token en BD
     // Pasar rememberMe a generateTokens para usar duración extendida si es necesario
+    
+    // Guardar session_context en Redis con TTL alineado al refresh token
+    const primaryOrg = await organizationService.getPrimaryOrganization(user.id);
+    const { setSessionContext, SESSION_TTL_NORMAL, SESSION_TTL_EXTENDED } = await import('./sessionContextCache.js');
+    const sessionTTL = sessionData.rememberMe ? SESSION_TTL_EXTENDED : SESSION_TTL_NORMAL;
+    
+    const primaryOrgId = primaryOrg ? primaryOrg.organizationId : null;
+    
+    // Resolver activeOrgId: si el frontend envió requestedOrgId, validar acceso
+    let activeOrgId = primaryOrgId;
+    if (sessionData.requestedOrgId) {
+        const requestedOrgId = sessionData.requestedOrgId;
+        
+        try {
+            // Verificar que la org existe y está activa
+            const Organization = (await import('../organizations/models/Organization.js')).default;
+            const requestedOrg = await Organization.findByPk(requestedOrgId, {
+                attributes: ['id', 'isActive']
+            });
+            
+            if (!requestedOrg) {
+                authLogger.warn({ userId: user.id, requestedOrgId }, 'Login: requestedOrgId no encontrada, usando primaryOrg como fallback');
+            } else if (!requestedOrg.isActive) {
+                authLogger.warn({ userId: user.id, requestedOrgId }, 'Login: requestedOrgId inactiva, usando primaryOrg como fallback');
+            } else {
+                // Verificar acceso del usuario a la org (membresía directa o por jerarquía)
+                const roleName = user.role ? user.role.name : null;
+                const hasAccess = await organizationService.canAccessOrganization(user.id, requestedOrgId, roleName);
+                
+                if (hasAccess) {
+                    activeOrgId = requestedOrgId;
+                } else {
+                    authLogger.warn({ userId: user.id, requestedOrgId }, 'Login: usuario no tiene acceso a requestedOrgId, usando primaryOrg como fallback');
+                }
+            }
+        } catch (orgCheckError) {
+            authLogger.error({ userId: user.id, requestedOrgId, error: orgCheckError.message }, 'Login: error validando requestedOrgId, usando primaryOrg como fallback');
+        }
+    } else if (sessionData.activeOrgId) {
+        // Compatibilidad: activeOrgId directo (usado internamente por refresh/switch)
+        activeOrgId = sessionData.activeOrgId;
+    }
+    
+    // Pasar activeOrgId resuelto a sessionData para generateTokens
+    sessionData.activeOrgId = activeOrgId;
     const tokens = await generateTokens(user, sessionData);
     
-    // Guardar session_context en Redis
-    const primaryOrg = await organizationService.getPrimaryOrganization(user.id);
-    const { setSessionContext } = await import('./sessionContextCache.js');
+    // Resolver info pública de la org primaria
+    let primaryOrgInfo = null;
+    if (primaryOrgId) {
+        const Organization = (await import('../organizations/models/Organization.js')).default;
+        const orgDetails = await Organization.findByPk(primaryOrgId, {
+            attributes: ['publicCode', 'name', 'logoUrl']
+        });
+        if (orgDetails) {
+            primaryOrgInfo = { publicCode: orgDetails.publicCode, name: orgDetails.name, logoUrl: orgDetails.logoUrl };
+        }
+    }
+    
+    // Resolver info pública de la org activa (si es diferente a la primaria)
+    let activeOrgInfo = primaryOrgInfo;
+    if (activeOrgId && activeOrgId !== primaryOrgId) {
+        const Organization = (await import('../organizations/models/Organization.js')).default;
+        const orgDetails = await Organization.findByPk(activeOrgId, {
+            attributes: ['publicCode', 'name', 'logoUrl']
+        });
+        if (orgDetails) {
+            activeOrgInfo = { publicCode: orgDetails.publicCode, name: orgDetails.name, logoUrl: orgDetails.logoUrl };
+        }
+    }
+    
     await setSessionContext(user.id, {
-        activeOrgId: sessionData.activeOrgId || (primaryOrg ? primaryOrg.organization_id : null),
-        primaryOrgId: primaryOrg ? primaryOrg.organization_id : null,
+        activeOrgId,
+        activeOrgPublicCode: activeOrgInfo?.publicCode || null,
+        activeOrgName: activeOrgInfo?.name || null,
+        activeOrgLogoUrl: activeOrgInfo?.logoUrl || null,
+        primaryOrgId,
+        primaryOrgPublicCode: primaryOrgInfo?.publicCode || null,
+        primaryOrgName: primaryOrgInfo?.name || null,
+        primaryOrgLogoUrl: primaryOrgInfo?.logoUrl || null,
         canAccessAllOrgs: user.role && user.role.name === 'system-admin',
         role: user.role ? user.role.name : null,
         email: user.email,
-        firstName: user.first_name,
-        lastName: user.last_name,
-        userId: user.id
-    });
+        firstName: user.firstName,
+        lastName: user.lastName,
+        userId: user.id,
+        userPublicCode: user.publicCode || null
+    }, sessionTTL);
 
     return {
         user,
@@ -167,24 +339,41 @@ export const verifyToken = async (token) => {
             throw error;
         }
 
-        const userId = decoded.sub;
+        // decoded.sub = publicCode del usuario (nunca UUID)
+        const userPublicCode = decoded.sub;
 
-        let user = await authCache.getUserFromCache(userId);
+        // Resolver publicCode → userId (UUID) usando caché auxiliar para evitar DB en cada request
+        let userId = await authCache.getUserIdByPublicCode(userPublicCode);
+        let user;
 
-        if (!user) {
-            user = await authRepository.findUserById(userId);
-
+        if (userId) {
+            // UUID en caché: buscar usuario por UUID
+            user = await authCache.getUserFromCache(userId);
+            if (!user) {
+                user = await authRepository.findUserById(userId);
+                if (!user) {
+                    const error = new Error('auth.profile.not_found');
+                    error.status = 401;
+                    error.code = 'USER_NOT_FOUND';
+                    throw error;
+                }
+                await authCache.setUserCache(userId, user);
+            }
+        } else {
+            // Cache miss: buscar en DB por publicCode
+            user = await authRepository.findUserByPublicCode(userPublicCode);
             if (!user) {
                 const error = new Error('auth.profile.not_found');
                 error.status = 401;
                 error.code = 'USER_NOT_FOUND';
                 throw error;
             }
-
+            userId = user.id;
             await authCache.setUserCache(userId, user);
+            await authCache.setUserIdByPublicCode(userPublicCode, userId);
         }
 
-        if (!user.is_active) {
+        if (!user.isActive) {
             const error = new Error('auth.login.account_disabled');
             error.status = 403;
             error.code = 'USER_INACTIVE';
@@ -199,15 +388,26 @@ export const verifyToken = async (token) => {
             throw error;
         }
 
+        // Validar que solo system-admin puede tener activeOrgCode null
+        const isSystemAdmin = decoded.role === 'system-admin';
+        if (!decoded.activeOrgCode && !isSystemAdmin) {
+            const error = new Error('auth.token.org_required');
+            error.status = 403;
+            error.code = 'ORGANIZATION_REQUIRED';
+            throw error;
+        }
+
         return {
             userId: user.id,
+            userPublicCode: user.publicCode,
             email: user.email,
-            role: decoded.role, // Rol del JWT (string: nombre del rol)
-            activeOrgId: decoded.activeOrgId,
-            primaryOrgId: decoded.primaryOrgId,
+            role: decoded.role,
+            activeOrgCode: decoded.activeOrgCode || null,
+            primaryOrgCode: decoded.primaryOrgCode || null,
             canAccessAllOrgs: decoded.canAccessAllOrgs || false,
-            first_name: user.first_name,
-            last_name: user.last_name
+            firstName: user.firstName,
+            lastName: user.lastName,
+            ...(isSystemAdmin && { impersonating: decoded.impersonating || false })
         };
     } catch (error) {
         if (error.name === 'JsonWebTokenError') {
@@ -253,8 +453,6 @@ export const refreshAccessToken = async (refreshToken, sessionData = {}) => {
             throw error;
         }
 
-        const userId = decoded.sub;
-
         const storedToken = await refreshTokenRepository.findByTokenHash(refreshToken, true);
 
         if (!storedToken) {
@@ -264,7 +462,10 @@ export const refreshAccessToken = async (refreshToken, sessionData = {}) => {
             throw error;
         }
 
-        if (storedToken.is_revoked) {
+        // userId viene del stored token (fuente autoritativa — UUID en DB, no del JWT sub que es publicCode)
+        const userId = storedToken.userId;
+
+        if (storedToken.isRevoked) {
             await refreshTokenRepository.revokeAllUserTokens(userId, 'suspicious_activity');
             await authCache.invalidateUserSession(userId);
             
@@ -274,7 +475,7 @@ export const refreshAccessToken = async (refreshToken, sessionData = {}) => {
             throw error;
         }
 
-        if (new Date(storedToken.expires_at) < new Date()) {
+        if (new Date(storedToken.expiresAt) < new Date()) {
             await refreshTokenRepository.revokeToken(refreshToken, 'expired');
             const error = new Error('auth.refresh.token_expired');
             error.status = 401;
@@ -307,7 +508,7 @@ export const refreshAccessToken = async (refreshToken, sessionData = {}) => {
             throw error;
         }
 
-        if (!user.is_active) {
+        if (!user.isActive) {
             const error = new Error('auth.login.account_disabled');
             error.status = 403;
             error.code = 'USER_INACTIVE';
@@ -316,7 +517,120 @@ export const refreshAccessToken = async (refreshToken, sessionData = {}) => {
 
         await refreshTokenRepository.revokeToken(refreshToken, 'rotated');
 
-        const tokens = await generateTokens(user, sessionData);
+        const isExtendedSession = Boolean(storedToken.rememberMe);
+        
+        const { getSessionContext, setSessionContext, SESSION_TTL_NORMAL, SESSION_TTL_EXTENDED } = await import('./sessionContextCache.js');
+        const sessionTTL = isExtendedSession ? SESSION_TTL_EXTENDED : SESSION_TTL_NORMAL;
+
+        // Resolver decoded.activeOrgCode (publicCode) → UUID para comparaciones internas con Redis
+        // El JWT ya no lleva UUIDs — decoded.sub y decoded.activeOrgCode son publicCodes
+        let decodedActiveOrgId = null;
+        if (decoded.activeOrgCode) {
+            const Organization = (await import('../organizations/models/Organization.js')).default;
+            const orgByCode = await Organization.findOne({
+                where: { publicCode: decoded.activeOrgCode },
+                attributes: ['id']
+            });
+            decodedActiveOrgId = orgByCode ? orgByCode.id : null;
+        }
+        
+        // CRÍTICO: Para system-admin, Redis es FUENTE DE VERDAD del activeOrgId
+        // El JWT puede ser stale por race conditions del frontend (múltiples refresh tokens válidos)
+        // Para otros roles, usar activeOrgCode del JWT (resuelto a UUID) como fallback
+        const existingContext = await getSessionContext(userId);
+        const isSystemAdmin = decoded.canAccessAllOrgs || decoded.role === 'system-admin';
+        
+        let effectiveActiveOrgId;
+        if (isSystemAdmin && existingContext) {
+            if (!existingContext.activeOrgId && decoded.activeOrgCode && decoded.impersonating) {
+                // Redis tiene null pero el JWT tiene activeOrgCode + impersonating:true
+                // Redis fue reseteado externamente (ej: login concurrente sin organizationId)
+                // El JWT tiene la intención más reciente → usarlo (resuelto a UUID) y dejar que Redis se sincronice
+                effectiveActiveOrgId = decodedActiveOrgId;
+                authLogger.warn({
+                    userId,
+                    redisActiveOrgId: null,
+                    jwtActiveOrgCode: decoded.activeOrgCode
+                }, 'Refresh: Redis activeOrgId null pero JWT tiene impersonating:true — usando JWT, Redis se sincronizará');
+            } else {
+                // Redis gana en todos los demás casos (fuente de verdad)
+                effectiveActiveOrgId = existingContext.activeOrgId ?? null;
+                if (effectiveActiveOrgId !== decodedActiveOrgId) {
+                    authLogger.debug({ userId, redisActiveOrgId: effectiveActiveOrgId, jwtActiveOrgCode: decoded.activeOrgCode }, 'Refresh: usando activeOrgId de Redis (diferente al JWT)');
+                }
+            }
+        } else if (decoded.activeOrgCode !== undefined && decoded.activeOrgCode !== null) {
+            effectiveActiveOrgId = decodedActiveOrgId;
+        } else if (existingContext?.activeOrgId) {
+            effectiveActiveOrgId = existingContext.activeOrgId;
+        } else {
+            effectiveActiveOrgId = null;
+        }
+        
+        const refreshSessionData = {
+            ...sessionData,
+            rememberMe: isExtendedSession,
+            activeOrgId: effectiveActiveOrgId
+        };
+        
+        const tokens = await generateTokens(user, refreshSessionData);
+        
+        const primaryOrg = await organizationService.getPrimaryOrganization(userId);
+        // Resolver decoded.primaryOrgCode → UUID para uso interno en setSessionContext
+        let refreshPrimaryOrgId = null;
+        if (decoded.primaryOrgCode) {
+            const Organization = (await import('../organizations/models/Organization.js')).default;
+            const primByCode = await Organization.findOne({
+                where: { publicCode: decoded.primaryOrgCode },
+                attributes: ['id']
+            });
+            refreshPrimaryOrgId = primByCode ? primByCode.id : (primaryOrg ? primaryOrg.organizationId : null);
+        } else {
+            refreshPrimaryOrgId = primaryOrg ? primaryOrg.organizationId : null;
+        }
+        // effectiveActiveOrgId ya es el valor correcto (incluyendo null explícito para modo global)
+        // Solo caer a primaryOrgId si effectiveActiveOrgId es undefined
+        const refreshActiveOrgId = effectiveActiveOrgId ?? refreshPrimaryOrgId;
+        
+        let refreshPrimaryOrgInfo = null;
+        if (refreshPrimaryOrgId) {
+            const Organization = (await import('../organizations/models/Organization.js')).default;
+            const orgDetails = await Organization.findByPk(refreshPrimaryOrgId, {
+                attributes: ['publicCode', 'name', 'logoUrl']
+            });
+            if (orgDetails) {
+                refreshPrimaryOrgInfo = { publicCode: orgDetails.publicCode, name: orgDetails.name, logoUrl: orgDetails.logoUrl };
+            }
+        }
+        
+        let refreshActiveOrgInfo = refreshPrimaryOrgInfo;
+        if (refreshActiveOrgId && refreshActiveOrgId !== refreshPrimaryOrgId) {
+            const Organization = (await import('../organizations/models/Organization.js')).default;
+            const orgDetails = await Organization.findByPk(refreshActiveOrgId, {
+                attributes: ['publicCode', 'name', 'logoUrl']
+            });
+            if (orgDetails) {
+                refreshActiveOrgInfo = { publicCode: orgDetails.publicCode, name: orgDetails.name, logoUrl: orgDetails.logoUrl };
+            }
+        }
+        
+        await setSessionContext(userId, {
+            activeOrgId: refreshActiveOrgId,
+            activeOrgPublicCode: refreshActiveOrgInfo?.publicCode || null,
+            activeOrgName: refreshActiveOrgInfo?.name || null,
+            activeOrgLogoUrl: refreshActiveOrgInfo?.logoUrl || null,
+            primaryOrgId: refreshPrimaryOrgId,
+            primaryOrgPublicCode: refreshPrimaryOrgInfo?.publicCode || null,
+            primaryOrgName: refreshPrimaryOrgInfo?.name || null,
+            primaryOrgLogoUrl: refreshPrimaryOrgInfo?.logoUrl || null,
+            canAccessAllOrgs: decoded.canAccessAllOrgs || false,
+            role: decoded.role || (user.role ? user.role.name : null),
+            email: user.email,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            userId: userId,
+            userPublicCode: user.publicCode || null
+        }, sessionTTL);
 
         return tokens;
     } catch (error) {
@@ -358,11 +672,11 @@ export const changePassword = async (userId, currentPassword, newPassword) => {
         throw error;
     }
 
-    // Obtener el password_hash actual (necesitamos hacer query directa)
+    // Obtener el passwordHash actual (necesitamos hacer query directa)
     const userWithPassword = await authRepository.findUserByEmail(user.email, true);
 
     // Verificar password actual
-    const isPasswordValid = await bcrypt.compare(currentPassword, userWithPassword.password_hash);
+    const isPasswordValid = await bcrypt.compare(currentPassword, userWithPassword.passwordHash);
 
     if (!isPasswordValid) {
         const error = new Error('auth.password.current_incorrect');
@@ -383,6 +697,10 @@ export const changePassword = async (userId, currentPassword, newPassword) => {
     
     // Invalidar sesión (incrementar sessionVersion y limpiar caché)
     await authCache.invalidateUserSession(userId);
+    
+    // Eliminar session context de Redis
+    const { deleteSessionContext } = await import('./sessionContextCache.js');
+    await deleteSessionContext(userId);
 
     return updated;
 };
@@ -397,13 +715,13 @@ export const changePassword = async (userId, currentPassword, newPassword) => {
  * @param {string} [sessionData.ipAddress] - IP del cliente
  * @param {boolean} [sessionData.rememberMe=false] - Si true, genera tokens con duración extendida (90 días)
  * @param {string} [sessionData.activeOrgId] - ID de la organización activa (si se está haciendo switch)
- * @returns {Promise<Object>} - { access_token, refresh_token, expires_in }
+ * @returns {Promise<Object>} - { accessToken, refreshToken, expiresIn }
  */
 const generateTokens = async (user, sessionData = {}) => {
     const sessionVersion = await authCache.getSessionVersion(user.id);
     const rememberMe = sessionData.rememberMe || false;
 
-    // Determinar expiración del refresh token según remember_me
+    // Determinar expiración del refresh token según rememberMe
     const refreshExpiresIn = rememberMe 
         ? config.jwt.refreshExpiresInLong  // 90 días
         : config.jwt.refreshExpiresIn;     // 14 días
@@ -411,25 +729,55 @@ const generateTokens = async (user, sessionData = {}) => {
     // Obtener organización primaria del usuario
     const primaryOrg = await organizationService.getPrimaryOrganization(user.id);
     
-    // activeOrgId: usar la especificada en sessionData o la primaria por defecto
-    const activeOrgId = sessionData.activeOrgId || (primaryOrg ? primaryOrg.organization_id : null);
-    const primaryOrgId = primaryOrg ? primaryOrg.organization_id : null;
+    // Determinar si es system-admin (puede acceder a todas las orgs y tener activeOrgId null)
+    const isSystemAdmin = user.role && user.role.name === 'system-admin';
+    const canAccessAllOrgs = isSystemAdmin;
+    
+    // activeOrgId (UUID interno):
+    // - Si es system-admin y no se especifica org, puede ser null (panel admin global)
+    // - Para otros roles, siempre usa la org primaria como fallback
+    let activeOrgId;
+    if (sessionData.activeOrgId !== undefined) {
+        activeOrgId = sessionData.activeOrgId;
+    } else {
+        activeOrgId = primaryOrg ? primaryOrg.organizationId : null;
+    }
+    
+    const primaryOrgId = primaryOrg ? primaryOrg.organizationId : null;
+    
+    // impersonating: comparar UUIDs internamente (fuente: sessionData y primaryOrg)
+    const impersonating = isSystemAdmin && activeOrgId !== null && activeOrgId !== primaryOrgId;
 
-    // Determinar si puede acceder a todas las orgs (solo system-admin)
-    const canAccessAllOrgs = user.role && user.role.name === 'system-admin';
+    // Resolver UUIDs → publicCodes para el JWT — nunca exponer UUIDs en tokens
+    const primaryOrgCode = primaryOrg ? primaryOrg.publicCode : null;
+
+    let activeOrgCode = null;
+    if (activeOrgId) {
+        const isUuidFormat = /^[0-9a-f]{8}-[0-9a-f]{4}/i.test(String(activeOrgId));
+        if (isUuidFormat) {
+            // Es UUID → resolver a publicCode via DB
+            const Organization = (await import('../organizations/models/Organization.js')).default;
+            const orgDetails = await Organization.findByPk(activeOrgId, { attributes: ['publicCode'] });
+            activeOrgCode = orgDetails ? orgDetails.publicCode : null;
+        } else {
+            // Ya es publicCode (viene de sessionData en formato código)
+            activeOrgCode = activeOrgId;
+        }
+    }
 
     const basePayload = {
         iss: JWT_ISSUER,
         aud: JWT_AUDIENCE,
-        sub: user.id,
-        activeOrgId,
-        primaryOrgId,
+        sub: user.publicCode,
+        activeOrgCode,
+        primaryOrgCode,
         canAccessAllOrgs,
         sessionVersion,
-        role: user.role ? user.role.name : null
+        role: user.role ? user.role.name : null,
+        ...(isSystemAdmin && { impersonating })
     };
 
-    const access_token = jwt.sign(
+    const accessToken = jwt.sign(
         {
             ...basePayload,
             tokenType: 'access',
@@ -439,7 +787,7 @@ const generateTokens = async (user, sessionData = {}) => {
         { expiresIn: JWT_ACCESS_EXPIRES_IN }
     );
 
-    const refresh_token = jwt.sign(
+    const refreshToken = jwt.sign(
         {
             ...basePayload,
             tokenType: 'refresh',
@@ -458,7 +806,7 @@ const generateTokens = async (user, sessionData = {}) => {
 
     await refreshTokenRepository.createRefreshToken({
         userId: user.id,
-        token: refresh_token,
+        token: refreshToken,
         expiresAt,
         userAgent: sessionData.userAgent || null,
         ipAddress: sessionData.ipAddress || null,
@@ -466,10 +814,10 @@ const generateTokens = async (user, sessionData = {}) => {
     });
 
     return {
-        access_token,
-        refresh_token,
-        expires_in: JWT_ACCESS_EXPIRES_IN,
-        token_type: 'Bearer'
+        accessToken,
+        refreshToken,
+        expiresIn: JWT_ACCESS_EXPIRES_IN,
+        tokenType: 'Bearer'
     };
 };
 
@@ -505,7 +853,11 @@ export const logout = async (refreshToken) => {
     }
     
     // Invalidar sesión del usuario (incrementa sessionVersion y limpia caché)
-    await authCache.invalidateUserSession(tokenData.user_id);
+    await authCache.invalidateUserSession(tokenData.userId);
+    
+    // Eliminar session context de Redis para evitar data stale
+    const { deleteSessionContext } = await import('./sessionContextCache.js');
+    await deleteSessionContext(tokenData.userId);
     
     return true;
 };
@@ -518,6 +870,10 @@ export const logout = async (refreshToken) => {
 export const logoutAll = async (userId) => {
     const revokedCount = await refreshTokenRepository.revokeAllUserTokens(userId, 'logout_all');
     await authCache.invalidateUserSession(userId);
+    
+    const { deleteSessionContext } = await import('./sessionContextCache.js');
+    await deleteSessionContext(userId);
+    
     return revokedCount;
 };
 
@@ -610,6 +966,29 @@ export const switchOrganization = async (userId, newActiveOrgId, sessionData = {
         throw error;
     }
     
+    // Verificar que la organización existe y está activa
+    // Importación dinámica para evitar dependencias circulares
+    const Organization = (await import('../organizations/models/Organization.js')).default;
+    const targetOrg = await Organization.findByPk(newActiveOrgId, {
+        attributes: ['id', 'isActive', 'name', 'publicCode', 'logoUrl']
+    });
+    
+    // Error 404: Organización no existe
+    if (!targetOrg) {
+        const error = new Error('auth.organization.not_found');
+        error.status = 404;
+        error.code = 'ORGANIZATION_NOT_FOUND';
+        throw error;
+    }
+    
+    // Error 404: Organización eliminada/desactivada (tratada como no existente para el cliente)
+    if (!targetOrg.isActive) {
+        const error = new Error('auth.organization.not_found');
+        error.status = 404;
+        error.code = 'ORGANIZATION_NOT_FOUND';
+        throw error;
+    }
+    
     // Verificar que el usuario puede acceder a la organización
     const canAccess = await organizationService.canAccessOrganization(
         userId, 
@@ -617,6 +996,7 @@ export const switchOrganization = async (userId, newActiveOrgId, sessionData = {
         user.role.name
     );
     
+    // Error 403: Usuario sin permiso para esta organización
     if (!canAccess) {
         const error = new Error('auth.organization.access_denied');
         error.status = 403;
@@ -631,20 +1011,26 @@ export const switchOrganization = async (userId, newActiveOrgId, sessionData = {
     // Invalidar cache de scope organizacional
     await organizationService.invalidateUserOrgScope(userId);
     
-    // Actualizar session_context en Redis con la nueva org activa
+    // Actualizar session_context en Redis con la nueva org activa e info completa
     const { updateActiveOrg } = await import('./sessionContextCache.js');
-    await updateActiveOrg(userId, newActiveOrgId);
+    await updateActiveOrg(userId, newActiveOrgId, {
+        publicCode: targetOrg.publicCode,
+        name: targetOrg.name,
+        logoUrl: targetOrg.logoUrl
+    });
     
     return {
         ...tokens,
-        active_organization_id: newActiveOrgId
+        activeOrganizationId: newActiveOrgId
     };
 };
 
 /**
  * Obtener organizaciones disponibles del usuario
+ * SEGURIDAD: Retorna publicCodes en lugar de UUIDs internos
+ * 
  * @param {string} userId - ID del usuario
- * @returns {Promise<Array>} - Lista de organizaciones con detalles
+ * @returns {Promise<Object>} - Lista de organizaciones con detalles (solo publicCodes)
  */
 export const getUserAvailableOrganizations = async (userId) => {
     const user = await authRepository.findUserById(userId);
@@ -659,55 +1045,105 @@ export const getUserAvailableOrganizations = async (userId) => {
     // Obtener scope organizacional completo
     const scope = await organizationService.getOrganizationScope(userId, user.role.name);
     
-    // Para system-admin, obtener TODAS las organizaciones activas con detalles completos
-    let accessibleOrganizations = scope.userOrganizations;
+    // Importar modelo Organization
+    const Organization = (await import('../organizations/models/Organization.js')).default;
+    
+    // Función helper para mapear org a formato seguro (sin UUIDs)
+    // Recibe un Map de parentId -> parentPublicCode para resolver parentPublicCode
+    const mapOrgToSafeFormat = (org, parentPublicCodeMap, directOrgIds, userOrganizations) => ({
+        publicCode: org.publicCode,
+        slug: org.slug,
+        name: org.name,
+        logoUrl: org.logoUrl,
+        isPrimary: userOrganizations.find(uo => uo.organizationId === org.id)?.isPrimary || false,
+        isActive: org.isActive,
+        parentPublicCode: org.parentId ? (parentPublicCodeMap.get(org.parentId) || null) : null,
+        joinedAt: userOrganizations.find(uo => uo.organizationId === org.id)?.joinedAt || null,
+        isDirectMember: directOrgIds.includes(org.id)
+    });
+    
+    let accessibleOrganizations = [];
+    const directOrgIds = scope.userOrganizations.map(uo => uo.organizationId);
     
     if (scope.canAccessAll) {
         // system-admin: obtener todas las organizaciones del sistema con detalles
-        const Organization = (await import('../organizations/models/Organization.js')).default;
         const allOrgs = await Organization.findAll({
-            where: { is_active: true },
-            attributes: ['id', 'slug', 'name', 'logo_url', 'is_active', 'parent_id'],
+            where: { isActive: true },
+            attributes: ['id', 'publicCode', 'slug', 'name', 'logoUrl', 'isActive', 'parentId'],
             order: [['name', 'ASC']]
         });
         
-        // Mapear a formato consistente, marcando cuáles son de membresía directa
-        const directOrgIds = scope.userOrganizations.map(uo => uo.organization_id);
-        accessibleOrganizations = allOrgs.map(org => ({
-            organization_id: org.id,
-            slug: org.slug,
-            name: org.name,
-            logo_url: org.logo_url,
-            is_primary: scope.userOrganizations.find(uo => uo.organization_id === org.id)?.is_primary || false,
-            is_active: org.is_active,
-            parent_id: org.parent_id,
-            joined_at: scope.userOrganizations.find(uo => uo.organization_id === org.id)?.joined_at || null,
-            is_direct_member: directOrgIds.includes(org.id)
-        }));
+        // Crear mapa de id -> publicCode para resolver parentPublicCode
+        const parentPublicCodeMap = new Map(allOrgs.map(org => [org.id, org.publicCode]));
+        
+        // Mapear a formato seguro (sin UUIDs)
+        accessibleOrganizations = allOrgs.map(org => 
+            mapOrgToSafeFormat(org, parentPublicCodeMap, directOrgIds, scope.userOrganizations)
+        );
+        
     } else if (user.role.name === 'org-admin' || user.role.name === 'org-manager') {
         // Para org-admin/org-manager: obtener organizaciones accesibles con detalles
-        const Organization = (await import('../organizations/models/Organization.js')).default;
         const accessibleOrgs = await Organization.findAll({
             where: { 
                 id: scope.organizationIds,
-                is_active: true 
+                isActive: true 
             },
-            attributes: ['id', 'slug', 'name', 'logo_url', 'is_active', 'parent_id'],
+            attributes: ['id', 'publicCode', 'slug', 'name', 'logoUrl', 'isActive', 'parentId'],
             order: [['name', 'ASC']]
         });
         
-        const directOrgIds = scope.userOrganizations.map(uo => uo.organization_id);
-        accessibleOrganizations = accessibleOrgs.map(org => ({
-            organization_id: org.id,
-            slug: org.slug,
-            name: org.name,
-            logo_url: org.logo_url,
-            is_primary: scope.userOrganizations.find(uo => uo.organization_id === org.id)?.is_primary || false,
-            is_active: org.is_active,
-            parent_id: org.parent_id,
-            joined_at: scope.userOrganizations.find(uo => uo.organization_id === org.id)?.joined_at || null,
-            is_direct_member: directOrgIds.includes(org.id)
-        }));
+        // Obtener parentIds únicos que no están en el resultado
+        const parentIds = [...new Set(accessibleOrgs.map(org => org.parentId).filter(Boolean))];
+        const missingParentIds = parentIds.filter(pid => !accessibleOrgs.some(org => org.id === pid));
+        
+        // Buscar publicCodes de parents faltantes
+        let parentPublicCodeMap = new Map(accessibleOrgs.map(org => [org.id, org.publicCode]));
+        
+        if (missingParentIds.length > 0) {
+            const parentOrgs = await Organization.findAll({
+                where: { id: missingParentIds },
+                attributes: ['id', 'publicCode']
+            });
+            parentOrgs.forEach(org => parentPublicCodeMap.set(org.id, org.publicCode));
+        }
+        
+        accessibleOrganizations = accessibleOrgs.map(org => 
+            mapOrgToSafeFormat(org, parentPublicCodeMap, directOrgIds, scope.userOrganizations)
+        );
+        
+    } else {
+        // Para user/viewer: solo sus organizaciones directas
+        const userOrgIds = scope.userOrganizations.map(uo => uo.organizationId);
+        
+        if (userOrgIds.length > 0) {
+            const userOrgs = await Organization.findAll({
+                where: { 
+                    id: userOrgIds,
+                    isActive: true 
+                },
+                attributes: ['id', 'publicCode', 'slug', 'name', 'logoUrl', 'isActive', 'parentId'],
+                order: [['name', 'ASC']]
+            });
+            
+            // Obtener parent publicCodes
+            const parentIds = [...new Set(userOrgs.map(org => org.parentId).filter(Boolean))];
+            let parentPublicCodeMap = new Map(userOrgs.map(org => [org.id, org.publicCode]));
+            
+            if (parentIds.length > 0) {
+                const missingParentIds = parentIds.filter(pid => !userOrgs.some(org => org.id === pid));
+                if (missingParentIds.length > 0) {
+                    const parentOrgs = await Organization.findAll({
+                        where: { id: missingParentIds },
+                        attributes: ['id', 'publicCode']
+                    });
+                    parentOrgs.forEach(org => parentPublicCodeMap.set(org.id, org.publicCode));
+                }
+            }
+            
+            accessibleOrganizations = userOrgs.map(org => 
+                mapOrgToSafeFormat(org, parentPublicCodeMap, directOrgIds, scope.userOrganizations)
+            );
+        }
     }
     
     return {
@@ -715,4 +1151,20 @@ export const getUserAvailableOrganizations = async (userId) => {
         userOrganizations: accessibleOrganizations,
         totalAccessible: scope.organizationIds.length
     };
+};
+
+/**
+ * Generar tokens JWT para un usuario (función pública)
+ * Útil para operaciones como exit-impersonation donde se necesita generar tokens
+ * sin pasar por el flujo de login
+ * 
+ * @param {Object} user - Objeto usuario con id, role, etc.
+ * @param {Object} [sessionData] - Datos de la sesión
+ * @param {string} [sessionData.activeOrgId] - ID de org activa (puede ser null para system-admin)
+ * @param {string} [sessionData.userAgent] - User agent
+ * @param {string} [sessionData.ipAddress] - IP del cliente
+ * @returns {Promise<Object>} - { accessToken, refreshToken, expiresIn, tokenType }
+ */
+export const generateTokensForUser = async (user, sessionData = {}) => {
+    return await generateTokens(user, sessionData);
 };

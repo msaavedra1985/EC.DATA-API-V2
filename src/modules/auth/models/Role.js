@@ -1,21 +1,6 @@
-// modules/auth/models/Role.js
-// Modelo de Roles - Sistema RBAC (Role-Based Access Control)
-
 import { DataTypes } from 'sequelize';
 import sequelize from '../../../db/sql/sequelize.js';
 
-/**
- * Modelo Role - Roles del sistema para control de acceso
- * 
- * Roles disponibles:
- * - system-admin: Control total de la plataforma (todas las organizaciones)
- * - org-admin: Administrador de su organización
- * - org-manager: Gestión operativa avanzada dentro de la org
- * - user: Usuario interno estándar
- * - viewer: Solo lectura (dashboards y reportes)
- * - guest: Acceso temporal o limitado
- * - demo: Usuario de entorno demostración (read-only)
- */
 const Role = sequelize.define(
     'Role',
     {
@@ -36,7 +21,7 @@ const Role = sequelize.define(
             allowNull: false,
             comment: 'Descripción detallada de las responsabilidades del rol'
         },
-        is_active: {
+        isActive: {
             type: DataTypes.BOOLEAN,
             defaultValue: true,
             allowNull: false,

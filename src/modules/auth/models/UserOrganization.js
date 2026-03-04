@@ -3,16 +3,6 @@ import sequelize from '../../../db/sql/sequelize.js';
 import Organization from '../../organizations/models/Organization.js';
 import User from './User.js';
 
-/**
- * Modelo de relación Usuario-Organización (many-to-many)
- * Permite que un usuario pertenezca a múltiples organizaciones
- * 
- * Reglas:
- * - Un usuario SIEMPRE debe tener al menos 1 organización
- * - Solo puede tener 1 organización marcada como primaria (is_primary=true)
- * - system-admin: acceso a todas las organizaciones
- * - org-admin: acceso a su org + organizaciones hijas
- */
 const UserOrganization = sequelize.define('UserOrganization', {
     id: {
         type: DataTypes.UUID,
@@ -20,7 +10,7 @@ const UserOrganization = sequelize.define('UserOrganization', {
         defaultValue: DataTypes.UUIDV4,
         comment: 'UUID v7 - clave primaria'
     },
-    user_id: {
+    userId: {
         type: DataTypes.UUID,
         allowNull: false,
         references: {
@@ -31,7 +21,7 @@ const UserOrganization = sequelize.define('UserOrganization', {
         onDelete: 'CASCADE',
         comment: 'FK a users - usuario'
     },
-    organization_id: {
+    organizationId: {
         type: DataTypes.UUID,
         allowNull: false,
         references: {
@@ -42,23 +32,29 @@ const UserOrganization = sequelize.define('UserOrganization', {
         onDelete: 'RESTRICT',
         comment: 'FK a organizations - organización'
     },
-    is_primary: {
+    isPrimary: {
         type: DataTypes.BOOLEAN,
         allowNull: false,
         defaultValue: false,
         comment: 'Indica si es la organización primaria del usuario'
     },
-    joined_at: {
+    joinedAt: {
         type: DataTypes.DATE,
         allowNull: false,
         defaultValue: DataTypes.NOW,
         comment: 'Fecha cuando el usuario se unió a la organización'
+    },
+    roleInOrg: {
+        type: DataTypes.ENUM('admin', 'member', 'viewer'),
+        allowNull: false,
+        defaultValue: 'member',
+        comment: 'Rol del usuario dentro de esta organización específica'
     }
 }, {
     tableName: 'user_organizations',
     timestamps: true,
     underscored: true,
-    paranoid: true, // Soft delete
+    paranoid: true,
     indexes: [
         {
             unique: true,
@@ -77,19 +73,21 @@ const UserOrganization = sequelize.define('UserOrganization', {
         },
         {
             fields: ['joined_at']
+        },
+        {
+            fields: ['role_in_org']
         }
     ],
     comment: 'Relación many-to-many entre usuarios y organizaciones'
 });
 
-// Definir asociaciones inmediatamente después de crear el modelo
 UserOrganization.belongsTo(Organization, {
-    foreignKey: 'organization_id',
+    foreignKey: 'organizationId',
     as: 'organization'
 });
 
 UserOrganization.belongsTo(User, {
-    foreignKey: 'user_id',
+    foreignKey: 'userId',
     as: 'user'
 });
 

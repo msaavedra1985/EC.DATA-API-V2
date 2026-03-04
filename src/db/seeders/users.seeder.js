@@ -2,6 +2,7 @@
 import User from '../../modules/auth/models/User.js';
 import Role from '../../modules/auth/models/Role.js';
 import Organization from '../../modules/organizations/models/Organization.js';
+import UserOrganization from '../../modules/auth/models/UserOrganization.js';
 import bcrypt from 'bcrypt';
 import { generateUuidV7, generatePublicCode, generateHumanId } from '../../utils/identifiers.js';
 import { dbLogger } from '../../utils/logger.js';
@@ -38,10 +39,12 @@ export const seedUsers = async () => {
 
         dbLogger.info('✅ Roles cargados:', Object.keys(roleMap));
 
-        // Obtener organizaciones para asignar a usuarios
+        // Obtener organizaciones específicas por slug
         const organizations = await Organization.findAll({
-            attributes: ['id', 'slug'],
-            limit: 3
+            where: {
+                slug: ['ec-data', 'acme-corp', 'techsolutions-ar', 'global-enterprises']
+            },
+            attributes: ['id', 'slug']
         });
 
         // Mapear organizaciones
@@ -56,75 +59,85 @@ export const seedUsers = async () => {
         const passwordHash = await bcrypt.hash('TestPassword123!', 10);
 
         // Datos de usuarios de prueba (uno por cada rol)
+        // role_in_org: 'admin' | 'member' | 'viewer'
         const usersData = [
             {
                 email: 'admin@ecdata.com',
                 first_name: 'System',
                 last_name: 'Administrator',
                 role_name: 'system-admin',
-                organization_id: null, // System admin no pertenece a una org
+                org_slug: 'ec-data',
+                role_in_org: 'admin' // Admin de EC.DATA
             },
             {
                 email: 'orgadmin@acme.com',
                 first_name: 'John',
                 last_name: 'Smith',
                 role_name: 'org-admin',
-                org_slug: 'acme-corp'
+                org_slug: 'acme-corp',
+                role_in_org: 'admin'
             },
             {
                 email: 'manager@techsolutions.com.ar',
                 first_name: 'María',
                 last_name: 'García',
                 role_name: 'org-manager',
-                org_slug: 'techsolutions-ar'
+                org_slug: 'techsolutions-ar',
+                role_in_org: 'admin'
             },
             {
                 email: 'user@global.es',
                 first_name: 'Carlos',
                 last_name: 'Rodríguez',
                 role_name: 'user',
-                org_slug: 'global-enterprises'
+                org_slug: 'global-enterprises',
+                role_in_org: 'member'
             },
             {
                 email: 'viewer@acme.com',
                 first_name: 'Jane',
                 last_name: 'Doe',
                 role_name: 'viewer',
-                org_slug: 'acme-corp'
+                org_slug: 'acme-corp',
+                role_in_org: 'viewer'
             },
             {
                 email: 'guest@demo.com',
                 first_name: 'Guest',
                 last_name: 'User',
                 role_name: 'guest',
-                org_slug: null // Guest puede no tener org
+                org_slug: null,
+                role_in_org: null
             },
             {
                 email: 'demo@ecdata.com',
                 first_name: 'Demo',
                 last_name: 'Account',
                 role_name: 'demo',
-                org_slug: null // Demo no pertenece a org específica
+                org_slug: 'ec-data',
+                role_in_org: 'viewer'
             }
         ];
 
         // Crear usuarios con triple identificador
         const users = [];
+        const memberships = [];
+        
         for (const userData of usersData) {
             const id = generateUuidV7();
             // generateHumanId para usuarios (sin scope, es global)
             const humanId = await generateHumanId(User, null, null);
             // publicCode se genera a partir del UUID, no del humanId
-            const publicCode = generatePublicCode('USR', id);
+            const publicCode = generatePublicCode('USR');
             
             const roleId = roleMap[userData.role_name];
-            const organizationId = userData.org_slug ? orgMap[userData.org_slug] : null;
 
             if (!roleId) {
                 dbLogger.warn(`⚠️  Rol no encontrado: ${userData.role_name}, saltando usuario ${userData.email}`);
                 continue;
             }
 
+            // Crear usuario sin organization_id (usamos UserOrganization)
             const user = await User.create({
                 id,
                 human_id: humanId,
@@ -134,20 +147,45 @@ export const seedUsers = async () => {
                 first_name: userData.first_name,
                 last_name: userData.last_name,
                 role_id: roleId,
-                organization_id: organizationId,
+                phone: null,
+                language: 'es',
+                timezone: 'America/Santiago',
+                avatar_url: null,
                 is_active: true,
                 email_verified_at: new Date() // Pre-verificado para testing
             });
             
             users.push(user);
-            dbLogger.info(`✅ Usuario creado: ${user.email} (${user.public_code}) - Rol: ${userData.role_name}`);
+            dbLogger.info(`✅ Usuario creado: ${user.email} (${user.public_code}) - Rol global: ${userData.role_name}`);
+
+            // Crear relación UserOrganization si tiene organización
+            if (userData.org_slug && userData.role_in_org) {
+                const organizationId = orgMap[userData.org_slug];
+                
+                if (organizationId) {
+                    const membership = await UserOrganization.create({
+                        id: generateUuidV7(),
+                        user_id: user.id,
+                        organization_id: organizationId,
+                        role_in_org: userData.role_in_org,
+                        joined_at: new Date()
+                    });
+                    
+                    memberships.push(membership);
+                    dbLogger.info(`   ↳ Membresía creada: ${userData.org_slug} (${userData.role_in_org})`);
+                } else {
+                    dbLogger.warn(`⚠️  Organización no encontrada: ${userData.org_slug}`);
+                }
+            }
         }
 
         dbLogger.info(`✅ ${users.length} usuarios creados exitosamente`);
+        dbLogger.info(`✅ ${memberships.length} membresías de organización creadas`);
         dbLogger.info('🔑 Password para todos: TestPassword123!');
         
         return {
             usersCreated: users.length,
+            membershipsCreated: memberships.length,
             usersSkipped: 0
         };
     } catch (error) {

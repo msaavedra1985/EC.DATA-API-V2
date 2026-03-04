@@ -58,7 +58,7 @@ const seedRoles = async () => {
 };
 
 /**
- * Inserta países en la base de datos (idempotente - verifica por iso_alpha2)
+ * Inserta países en la base de datos (idempotente - verifica por isoAlpha2)
  * @returns {Promise<Object>} Países insertados y existentes
  */
 const seedCountries = async () => {
@@ -67,10 +67,13 @@ const seedCountries = async () => {
 
     for (const countryData of countries) {
         const [country, created] = await Country.findOrCreate({
-            where: { iso_alpha2: countryData.iso_alpha2 },
+            where: { isoAlpha2: countryData.iso_alpha2 },
             defaults: {
                 id: generateUuidV7(),
-                ...countryData,
+                isoAlpha2: countryData.iso_alpha2,
+                isoAlpha3: countryData.iso_alpha3,
+                isoNumeric: countryData.iso_numeric,
+                phoneCode: countryData.phone_code,
             },
         });
 
@@ -85,44 +88,38 @@ const seedCountries = async () => {
 };
 
 /**
- * Inserta traducciones de países (idempotente - verifica por country_id + lang)
+ * Inserta traducciones de países (idempotente - verifica por countryId + lang)
  * @returns {Promise<Object>} Traducciones insertadas y existentes
  */
 const seedCountryTranslations = async () => {
     let inserted = 0;
     let existing = 0;
 
-    // Crear mapa de países por iso_alpha2 para búsqueda eficiente
-    const allCountries = await Country.findAll();
-    const countryMap = {};
-    allCountries.forEach(country => {
-        // Mapear por índice basado en el orden en el array countries
-        const countryData = countries.find(c => c.iso_alpha2 === country.iso_alpha2);
-        if (countryData) {
-            const arrayIndex = countries.indexOf(countryData) + 1; // 1-based index
-            countryMap[arrayIndex] = country.id;
-        }
+    // Crear mapa de array index (1-based) → isoAlpha2 code
+    const countryCodeMap = {};
+    countries.forEach((c, i) => {
+        countryCodeMap[i + 1] = c.iso_alpha2;
     });
 
     for (const translation of countryTranslations) {
-        // Obtener el ID real del país desde el mapa
-        const countryId = countryMap[translation.country_id];
+        // Obtener el código ISO del país desde el mapa
+        const countryCode = countryCodeMap[translation.country_id];
 
-        if (!countryId) {
-            console.warn(`Country with array index ${translation.country_id} not found in database`);
-            continue; // Saltar si el país no existe
+        if (!countryCode) {
+            console.warn(`Country with array index ${translation.country_id} not found`);
+            continue;
         }
 
         const [trans, created] = await CountryTranslation.findOrCreate({
             where: {
-                country_id: countryId,
+                countryCode: countryCode,
                 lang: translation.lang,
             },
             defaults: {
-                country_id: countryId,
+                countryCode: countryCode,
                 lang: translation.lang,
                 name: translation.name,
-                official_name: translation.official_name,
+                officialName: translation.official_name,
             },
         });
 
@@ -138,35 +135,18 @@ const seedCountryTranslations = async () => {
 
 /**
  * Inserta organizaciones con jerarquía (idempotente - verifica por slug)
- * Procesa en 2 pasadas: primero raíz, luego hijas con parent_id
+ * Procesa en 2 pasadas: primero raíz, luego hijas con parentId
  * @returns {Promise<Object>} Organizaciones insertadas y existentes
  */
 const seedOrganizations = async () => {
     let inserted = 0;
     let existing = 0;
 
-    // Obtener todos los países para mapear country_id por índice del array countries
-    const allCountries = await Country.findAll({ order: [['id', 'ASC']] });
-    
-    // Crear mapa de países por índice (1-based) del array countries en seed-data.js
-    const countryMap = {};
-    for (let i = 0; i < allCountries.length; i++) {
-        // El índice en seed-data.js es 1-based, así que mapeamos i+1 al ID real de BD
-        countryMap[i + 1] = allCountries[i].id;
-    }
-
     // Mapa para rastrear organizaciones creadas
     const createdOrgs = {};
 
     // PASADA 1: Crear organizaciones sin parent (raíz) o que ya existen
     for (const orgData of organizations) {
-        // Obtener el ID real del país desde el mapa
-        const realCountryId = countryMap[orgData.country_id];
-        if (!realCountryId) {
-            console.warn(`Country with index ${orgData.country_id} not found in database`);
-            continue;
-        }
-
         const existingOrg = await Organization.findOne({ where: { slug: orgData.slug } });
 
         if (existingOrg) {
@@ -179,23 +159,22 @@ const seedOrganizations = async () => {
         if (!orgData.parent_slug) {
             const id = generateUuidV7();
             const humanId = await generateHumanId(Organization, null, null);
-            const publicCode = generatePublicCode('ORG', id);
+            const publicCode = generatePublicCode('ORG');
 
             const newOrg = await Organization.create({
                 id,
-                human_id: humanId,
-                public_code: publicCode,
+                humanId: humanId,
+                publicCode: publicCode,
                 slug: orgData.slug,
                 name: orgData.name,
-                country_id: realCountryId,
-                tax_id: orgData.tax_id,
+                taxId: orgData.tax_id,
                 email: orgData.email,
                 phone: orgData.phone,
                 address: orgData.address,
                 description: orgData.description,
-                logo_url: orgData.logo_url,
+                logoUrl: orgData.logo_url,
                 config: orgData.config,
-                parent_id: null,
+                parentId: null,
             });
 
             createdOrgs[orgData.slug] = newOrg.id;
@@ -203,16 +182,9 @@ const seedOrganizations = async () => {
         }
     }
 
-    // PASADA 2: Crear organizaciones hijas con parent_id
+    // PASADA 2: Crear organizaciones hijas con parentId
     for (const orgData of organizations) {
         if (!orgData.parent_slug) continue; // Ya procesada en pasada 1
-
-        // Obtener el ID real del país desde el mapa
-        const realCountryId = countryMap[orgData.country_id];
-        if (!realCountryId) {
-            console.warn(`Country with index ${orgData.country_id} not found in database`);
-            continue;
-        }
 
         // Verificar si ya existe
         if (createdOrgs[orgData.slug]) continue;
@@ -225,23 +197,22 @@ const seedOrganizations = async () => {
 
         const id = generateUuidV7();
         const humanId = await generateHumanId(Organization, null, null);
-        const publicCode = generatePublicCode('ORG', id);
+        const publicCode = generatePublicCode('ORG');
 
         const newOrg = await Organization.create({
             id,
-            human_id: humanId,
-            public_code: publicCode,
+            humanId: humanId,
+            publicCode: publicCode,
             slug: orgData.slug,
             name: orgData.name,
-            country_id: realCountryId,
-            tax_id: orgData.tax_id,
+            taxId: orgData.tax_id,
             email: orgData.email,
             phone: orgData.phone,
             address: orgData.address,
             description: orgData.description,
-            logo_url: orgData.logo_url,
+            logoUrl: orgData.logo_url,
             config: orgData.config,
-            parent_id: parentId,
+            parentId: parentId,
         });
 
         createdOrgs[orgData.slug] = newOrg.id;
@@ -255,7 +226,7 @@ const seedOrganizations = async () => {
  * Inserta usuarios de prueba con relaciones many-to-many (idempotente - verifica por email)
  * Password: "Test123!" (hasheado con bcrypt)
  * - system-admin: pertenecen a EC.DATA
- * - otros roles: pertenecen a su org asignada (is_primary=true)
+ * - otros roles: pertenecen a su org asignada (isPrimary=true)
  * @returns {Promise<Object>} Usuarios insertados y existentes
  */
 const seedUsers = async () => {
@@ -315,30 +286,30 @@ const seedUsers = async () => {
 
         // Generar campos obligatorios para nuevo usuario
         const id = generateUuidV7();
-        const humanId = await generateHumanId(User, 'organization_id', primaryOrgId);
-        const publicCode = generatePublicCode('EC', id);
+        const humanId = await generateHumanId(User, 'organizationId', primaryOrgId);
+        const publicCode = generatePublicCode('EC');
 
-        // Crear usuario (sin organization_id directo)
+        // Crear usuario (sin organizationId directo)
         const newUser = await User.create({
             id,
-            human_id: humanId,
-            public_code: publicCode,
+            humanId: humanId,
+            publicCode: publicCode,
             email: userData.email,
-            first_name: userData.first_name,
-            last_name: userData.last_name,
-            password_hash: passwordHash,
-            role_id: roleId,
-            organization_id: primaryOrgId, // Mantener por ahora para human_id scoping
-            is_active: true,
+            firstName: userData.first_name,
+            lastName: userData.last_name,
+            passwordHash: passwordHash,
+            roleId: roleId,
+            organizationId: primaryOrgId,
+            isActive: true,
         });
 
         // Crear relación en user_organizations (many-to-many)
         await UserOrganization.create({
             id: generateUuidV7(),
-            user_id: newUser.id,
-            organization_id: primaryOrgId,
-            is_primary: true, // Esta es su organización primaria
-            joined_at: new Date(),
+            userId: newUser.id,
+            organizationId: primaryOrgId,
+            isPrimary: true,
+            joinedAt: new Date(),
         });
 
         inserted++;

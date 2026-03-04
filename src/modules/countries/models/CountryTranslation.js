@@ -5,7 +5,7 @@ import Country from './Country.js';
 /**
  * Modelo de Traducciones de País
  * Soporta nombres de países en múltiples idiomas (español, inglés, etc.)
- * Patrón: entidad + traducciones en tabla separada
+ * FK: country_code → countries.iso_alpha2
  */
 const CountryTranslation = sequelize.define('CountryTranslation', {
     id: {
@@ -13,16 +13,16 @@ const CountryTranslation = sequelize.define('CountryTranslation', {
         primaryKey: true,
         autoIncrement: true
     },
-    country_id: {
-        type: DataTypes.INTEGER,
+    countryCode: {
+        type: DataTypes.STRING(2),
         allowNull: false,
         references: {
             model: 'countries',
-            key: 'id'
+            key: 'iso_alpha2'
         },
         onUpdate: 'CASCADE',
         onDelete: 'CASCADE',
-        comment: 'FK a tabla countries'
+        comment: 'FK a countries.iso_alpha2'
     },
     lang: {
         type: DataTypes.STRING(5),
@@ -34,7 +34,7 @@ const CountryTranslation = sequelize.define('CountryTranslation', {
         allowNull: false,
         comment: 'Nombre del país en el idioma especificado'
     },
-    official_name: {
+    officialName: {
         type: DataTypes.STRING(200),
         allowNull: true,
         comment: 'Nombre oficial completo del país'
@@ -47,8 +47,8 @@ const CountryTranslation = sequelize.define('CountryTranslation', {
     indexes: [
         {
             unique: true,
-            fields: ['country_id', 'lang'],
-            name: 'unique_country_lang'
+            fields: ['country_code', 'lang'],
+            name: 'unique_country_code_lang'
         },
         {
             fields: ['lang']
@@ -61,13 +61,15 @@ const CountryTranslation = sequelize.define('CountryTranslation', {
  * Relaciones entre Country y CountryTranslation
  */
 Country.hasMany(CountryTranslation, {
-    foreignKey: 'country_id',
+    foreignKey: 'countryCode',
+    sourceKey: 'isoAlpha2',
     as: 'translations',
     onDelete: 'CASCADE'
 });
 
 CountryTranslation.belongsTo(Country, {
-    foreignKey: 'country_id',
+    foreignKey: 'countryCode',
+    targetKey: 'isoAlpha2',
     as: 'country'
 });
 
