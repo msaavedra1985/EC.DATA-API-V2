@@ -26,6 +26,7 @@ export const config = {
         user: process.env.PGUSER || 'postgres',
         password: process.env.PGPASSWORD || 'postgres',
         url: process.env.DATABASE_URL || null,
+        ssl: process.env.PGSSLMODE === 'require' || process.env.PGSSLMODE === 'true',
     },
 
     // Redis para cache
