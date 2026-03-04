@@ -19,6 +19,7 @@ REST API Node.js/Express multi-tenant para plataformas e-commerce. Integra con f
 | **Al agregar keys Redis** | `agent-docs/redis-glossary.md` |
 | **Para ver tareas pendientes** | `agent-docs/backlog.md` |
 | **Al migrar datos de plataforma legacy** | `agent-docs/migration-guide.md` |
+| **Al hacer deploy en Azure** | `agent-docs/deployment-azure.md` |
 
 ## Índice de Documentación
 
@@ -33,6 +34,7 @@ agent-docs/
 ├── learnings.md          # Errores resueltos y gotchas
 ├── backlog.md            # Tareas pendientes por módulo
 ├── migration-guide.md    # Guía de migración legacy SQL Server → PostgreSQL
+├── deployment-azure.md   # Guía de deployment en Azure (flujos, gotchas, checklist)
 ├── nodejs-best-practices.md  # Mejores prácticas Node.js API
 ├── database.dbml.txt     # Schema de DB en formato DBML (actualizar con npm run db:dbml)
 ├── redis-glossary.md     # Inventario completo de keys Redis (obligatorio actualizar al agregar keys)
@@ -77,7 +79,10 @@ exports/
 
 ```bash
 npm run dev              # Desarrollo con watch
-npm run db:migrate       # Ejecutar migraciones
+npm run db:setup         # Fresh DB vacía: crea tablas + registra migraciones históricas
+npm run db:migrate       # Re-deploy: aplica solo migraciones nuevas
+npm run db:seed:core     # Poblar datos base (roles, países, tipos)
+npm run db:seed          # Poblar datos iniciales de la organización
 npm run db:dbml          # Generar visualización schema
 ```
 

@@ -12,14 +12,15 @@
     "lint": "eslint src/**/*.js tests/**/*.js",
     "lint:fix": "eslint src/**/*.js tests/**/*.js --fix",
     "db:dbml": "node src/db/utils/generateDbml.js",
+    "db:setup": "node src/db/scripts/setup-fresh-db.js",
     "db:seed": "node src/db/seeders/run.js",
     "db:seed:core": "node src/db/seeders/core-seed.js",
     "db:seed:geo": "node src/db/seeders/run-geo.js",
-    "db:migrate": "npx sequelize-cli db:migrate",
-    "db:migrate:undo": "npx sequelize-cli db:migrate:undo",
-    "db:migrate:undo:all": "npx sequelize-cli db:migrate:undo:all",
-    "db:migrate:status": "npx sequelize-cli db:migrate:status",
-    "db:migration:create": "npx sequelize-cli migration:generate --name"
+    "db:migrate": "./node_modules/.bin/sequelize db:migrate --config src/config/database.cjs --migrations-path src/db/migrations",
+    "db:migrate:undo": "./node_modules/.bin/sequelize db:migrate:undo --config src/config/database.cjs --migrations-path src/db/migrations",
+    "db:migrate:undo:all": "./node_modules/.bin/sequelize db:migrate:undo:all --config src/config/database.cjs --migrations-path src/db/migrations",
+    "db:migrate:status": "./node_modules/.bin/sequelize db:migrate:status --config src/config/database.cjs --migrations-path src/db/migrations",
+    "db:migration:create": "./node_modules/.bin/sequelize migration:generate --name --migrations-path src/db/migrations"
   },
   "keywords": [
     "api",

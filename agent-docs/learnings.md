@@ -702,7 +702,64 @@ const humanId    = await generateHumanId(Device, 'orgId', orgId); // con scope
 
 ## Deployment
 
-(Agregar problemas de deployment aquí)
+### Gotcha: `sequelize: not found` en Azure App Service
+**Fecha**: 2026-03-04
+**Síntoma**: `npm run db:migrate` falla con `sh: 1: sequelize: not found`
+**Causa**: `npx sequelize-cli` no puede resolver el binario local en el contexto de Azure App Service. `npx` busca en el PATH global, no en `node_modules/.bin`.
+**Solución**: Los scripts en `package.json` ahora usan `./node_modules/.bin/sequelize` con flags explícitos (`--config`, `--migrations-path`), sin depender de `npx` ni de `.sequelizerc`.
+**Archivos afectados**: `package.json` (scripts `db:migrate`, `db:migrate:undo`, `db:migrate:status`, `db:migrate:undo:all`, `db:migration:create`)
+
+---
+
+### Gotcha: `Cannot find config/config.json` en Azure
+**Fecha**: 2026-03-04
+**Síntoma**: sequelize-cli falla con `ERROR: Cannot find "/home/site/wwwroot/config/config.json". Have you run "sequelize init"?`
+**Causa**: El archivo `.sequelizerc` (que redirige al config correcto) no es leído por el CLI en Azure. El CLI cae al path por defecto `config/config.json` que no existe.
+**Solución**: Pasar `--config src/config/database.cjs` explícitamente en cada script `db:migrate*`. Ya corregido en `package.json`.
+**Archivos afectados**: `package.json`
+
+---
+
+### Gotcha: `relation "public.sites" does not exist` — DB vacía en producción
+**Fecha**: 2026-03-04
+**Síntoma**: Primera migración falla con `ERROR: relation "public.sites" does not exist`
+**Causa**: Las migraciones históricas asumen que las tablas base ya existen (fueron creadas originalmente por `sequelize.sync()` en desarrollo). En una DB vacía en producción, no hay tablas y `db:migrate` falla inmediatamente.
+**Solución**: Usar `npm run db:setup` para fresh deploy. Este script llama `sequelize.sync({ alter: false })` primero (crea todas las tablas desde los modelos) y luego registra las migraciones históricas en `SequelizeMeta` como "ya ejecutadas". `db:migrate` se usa solo para re-deploys (DB ya existente).
+**Archivo creado**: `src/db/scripts/setup-fresh-db.js`
+**Archivos afectados**: `package.json` (nuevo script `db:setup`)
+
+---
+
+### Gotcha: Cassandra bloquea el startup 30 segundos
+**Fecha**: 2026-03-04
+**Síntoma**: La API tarda 30+ segundos en arrancar (o el workflow timeout). El log muestra `🔌 Conectando a Cassandra...` y no avanza.
+**Causa**: El `connectTimeout` de cassandra-driver era 30000ms (30s) por defecto. Si Cassandra no está disponible (firewall, red), el proceso espera ese tiempo antes de continuar.
+**Solución**: Reducir `CASSANDRA_CONNECT_TIMEOUT` a `8000` (8 segundos). Ya es el default en el código. La variable de entorno permite sobreescribirlo. La conexión falla rápido y la API continua el arranque (Cassandra es no-bloqueante para el arranque).
+**Archivos afectados**: `src/db/cassandra/client.js`
+
+---
+
+### Gotcha: PostgreSQL SSL connection failure en Azure
+**Fecha**: 2026-03-04
+**Síntoma**: Error de conexión SSL al conectar a PostgreSQL en Azure
+**Causa**: Azure PostgreSQL Flexible Server requiere SSL. Sin `PGSSLMODE=require`, la conexión se rechaza.
+**Solución**:
+- Setear `PGSSLMODE=require` en Azure App Service → Application Settings
+- El código usa `rejectUnauthorized: false` para aceptar los certificados self-signed de Azure
+**Archivos afectados**: `src/config/database.cjs`, `src/db/sql/sequelize.js`
+
+---
+
+### Gotcha: Cassandra no conecta — firewall bloquea la IP de Azure
+**Fecha**: 2026-03-04
+**Síntoma**: `NoHostAvailableError: All host(s) tried for query failed. DriverError: Connection timeout` para Cassandra en producción, aunque funciona localmente.
+**Causa**: El firewall del servidor Cassandra (puerto 9042) no tiene habilitada la IP pública de salida del App Service de Azure.
+**Solución**:
+1. Arrancar la API y buscar el log `🌐 Outbound IP: X.X.X.X`
+2. Agregar esa IP al firewall del servidor Cassandra
+3. También verificar en Azure Portal → App Service → Networking → Outbound addresses
+**Nota**: La IP puede cambiar si Azure hace scale events. Si Cassandra deja de conectar repentinamente, verificar que la IP sigue siendo la misma.
+**Archivos afectados**: `src/index.js` (log de IP al startup)
 
 ---
 
