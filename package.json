@@ -13,6 +13,7 @@
     "lint:fix": "eslint src/**/*.js tests/**/*.js --fix",
     "db:dbml": "node src/db/utils/generateDbml.js",
     "db:seed": "node src/db/seeders/run.js",
+    "db:seed:core": "node src/db/seeders/core-seed.js",
     "db:seed:geo": "node src/db/seeders/run-geo.js",
     "db:migrate": "npx sequelize-cli db:migrate",
     "db:migrate:undo": "npx sequelize-cli db:migrate:undo",

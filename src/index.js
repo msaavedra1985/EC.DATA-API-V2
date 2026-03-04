@@ -26,6 +26,16 @@ const initializeServices = async () => {
         // Inicializar PostgreSQL
         await initializeDatabase();
 
+        // Auto-seed de datos base (roles, catálogos, usuario admin)
+        if (process.env.AUTO_SEED === 'true') {
+            try {
+                const { runCoreSeed } = await import('./db/seeders/core-seed.js');
+                await runCoreSeed();
+            } catch (seedErr) {
+                logger.warn({ err: seedErr }, '⚠️  Auto-seed falló (non-critical), el servidor continúa');
+            }
+        }
+
         // Inicializar Redis (opcional en desarrollo)
         await initializeRedis();
 

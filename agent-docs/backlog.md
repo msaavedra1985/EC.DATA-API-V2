@@ -45,6 +45,18 @@
 
 ## Infraestructura
 
+### Core Seed para Producción ✅ (2026-03-04)
+- [x] `src/db/seeders/device-metadata.seeder.js` — tipos, marcas, modelos, redes, servidores, licencias, vigencias (idempotente)
+- [x] `src/db/seeders/admin-user.seeder.js` — usuario admin@ecdata.com (idempotente, password vía `SEED_ADMIN_PASSWORD`)
+- [x] `src/db/seeders/core-seed.js` — runner orquestador: roles + countries + telemetría + device-metadata + admin user
+- [x] `npm run db:seed:core` — comando standalone
+- [x] `AUTO_SEED=true` — auto-seed al arrancar el servidor (en `initializeServices()`)
+
+### Logs HTTP en Producción ✅ (2026-03-04)
+- [x] pino-http configurado para suprimir logs 2xx/3xx en producción (`customLogLevel` → `'silent'`)
+- [x] `customReceivedMessage` desactivado fuera de desarrollo (una línea menos por request)
+- [x] `/docs` y `/swagger` ignorados en `autoLogging` fuera de desarrollo
+
 ### Optimizaciones de Seed
 - [ ] Considerar script de seed con batch INSERT (múltiples rows por query)
 - [ ] Agregar flag `--country=AR` para seed parcial por país

@@ -52,14 +52,13 @@ const createApp = () => {
     const pinoMiddleware = pinoHttp({
         logger: httpLogger,
         
-        // Personalizar el mensaje de log
+        // Nivel de log según status code y entorno
+        // En producción/staging: solo warn (4xx) y error (5xx) para mantener consola limpia
         customLogLevel: (req, res, err) => {
-            if (res.statusCode >= 400 && res.statusCode < 500) {
-                return 'warn';
-            } else if (res.statusCode >= 500 || err) {
-                return 'error';
-            }
-            return 'info';
+            if (res.statusCode >= 500 || err) return 'error';
+            if (res.statusCode >= 400) return 'warn';
+            if (config.env === 'development') return 'info';
+            return 'silent';
         },
         
         // Agregar ID único a cada request
@@ -69,10 +68,10 @@ const createApp = () => {
             return `req-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
         },
         
-        // Personalizar la serialización del request
-        customReceivedMessage: (req) => {
-            return `${req.method} ${req.url}`;
-        },
+        // Log de request entrante solo en desarrollo
+        customReceivedMessage: config.env === 'development'
+            ? (req) => `${req.method} ${req.url}`
+            : null,
         
         // Personalizar la serialización del response
         customSuccessMessage: (req, res) => {
@@ -81,12 +80,13 @@ const createApp = () => {
             return `${req.method} ${req.url} completed with ${res.statusCode} in ${responseTime}ms`;
         },
         
-        // No loggear rutas de health check y métricas en producción
+        // Ignorar rutas de health, métricas y docs fuera de desarrollo
         autoLogging: {
             ignore: (req) => {
-                if (config.env === 'production') {
-                    return req.url === '/api/v1/health' || req.url === '/metrics';
-                }
+                const alwaysIgnore = ['/api/v1/health', '/metrics'];
+                const devOnly = ['/docs', '/swagger'];
+                if (alwaysIgnore.some(p => req.url?.startsWith(p))) return true;
+                if (config.env !== 'development' && devOnly.some(p => req.url?.startsWith(p))) return true;
                 return false;
             }
         }

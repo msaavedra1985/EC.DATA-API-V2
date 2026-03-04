@@ -686,6 +686,20 @@ await queryInterface.addColumn('users', 'avatarUrl', { type: Sequelize.STRING })
 
 ---
 
+### Gotcha: `generatePublicCode` y `generateHumanId` requieren parámetros específicos
+**Fecha**: 2026-03-04
+**Síntoma**: Llamar `generatePublicCode()` sin argumento lanza `TypeError: Cannot read properties of undefined (reading 'toUpperCase')`.
+**Causa**: `generatePublicCode(prefix)` SIEMPRE requiere un prefijo string. `generateHumanId(model, scopeField, scopeValue)` es async y requiere el modelo Sequelize como primer argumento.
+**Firmas correctas**:
+```js
+const publicCode = generatePublicCode('USR');              // → 'USR-XXXX-XXXX'
+const humanId    = await generateHumanId(User, null, null); // sin scope
+const humanId    = await generateHumanId(Device, 'orgId', orgId); // con scope
+```
+**Archivos afectados**: Cualquier seeder o código que genere identifiers.
+
+---
+
 ## Deployment
 
 (Agregar problemas de deployment aquí)
