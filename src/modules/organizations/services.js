@@ -1,3 +1,4 @@
+import { Op } from 'sequelize';
 import UserOrganization from '../auth/models/UserOrganization.js';
 import User from '../auth/models/User.js';
 import Role from '../auth/models/Role.js';
@@ -22,28 +23,28 @@ const ORG_TREE_CACHE_PREFIX = 'ec:org_tree:';
  * Retorna todas las organizaciones donde el usuario es miembro
  * 
  * @param {string} userId - ID del usuario
- * @returns {Promise<Array>} - Lista de organizaciones con is_primary
+ * @returns {Promise<Array>} - Lista de organizaciones con isPrimary
  */
 export const getUserOrganizations = async (userId) => {
     const userOrgs = await UserOrganization.findAll({
-        where: { user_id: userId },
+        where: { userId },
         include: [{
             model: Organization,
             as: 'organization',
-            attributes: ['id', 'slug', 'name', 'logo_url', 'is_active', 'parent_id']
+            attributes: ['id', 'slug', 'name', 'logoUrl', 'isActive', 'parentId']
         }],
-        order: [['is_primary', 'DESC'], ['joined_at', 'ASC']]
+        order: [['isPrimary', 'DESC'], ['joinedAt', 'ASC']]
     });
 
     return userOrgs.map(uo => ({
-        organization_id: uo.organization.id,
+        organizationId: uo.organization.id,
         slug: uo.organization.slug,
         name: uo.organization.name,
-        logo_url: uo.organization.logo_url,
-        is_primary: uo.is_primary,
-        is_active: uo.organization.is_active,
-        parent_id: uo.organization.parent_id,
-        joined_at: uo.joined_at
+        logoUrl: uo.organization.logoUrl,
+        isPrimary: uo.isPrimary,
+        isActive: uo.organization.isActive,
+        parentId: uo.organization.parentId,
+        joinedAt: uo.joinedAt
     }));
 };
 
@@ -56,13 +57,13 @@ export const getUserOrganizations = async (userId) => {
 export const getPrimaryOrganization = async (userId) => {
     const userOrg = await UserOrganization.findOne({
         where: { 
-            user_id: userId,
-            is_primary: true
+            userId,
+            isPrimary: true
         },
         include: [{
             model: Organization,
             as: 'organization',
-            attributes: ['id', 'slug', 'name', 'logo_url', 'parent_id', 'is_active']
+            attributes: ['id', 'publicCode', 'slug', 'name', 'logoUrl', 'parentId', 'isActive']
         }]
     });
 
@@ -71,12 +72,13 @@ export const getPrimaryOrganization = async (userId) => {
     }
 
     return {
-        organization_id: userOrg.organization.id,
+        organizationId: userOrg.organization.id,
+        publicCode: userOrg.organization.publicCode,
         slug: userOrg.organization.slug,
         name: userOrg.organization.name,
-        logo_url: userOrg.organization.logo_url,
-        parent_id: userOrg.organization.parent_id,
-        is_active: userOrg.organization.is_active
+        logoUrl: userOrg.organization.logoUrl,
+        parentId: userOrg.organization.parentId,
+        isActive: userOrg.organization.isActive
     };
 };
 
@@ -118,7 +120,7 @@ export const calculateOrganizationScope = async (userId, roleSlug) => {
     if (roleSlug === 'system-admin') {
         const allOrgs = await Organization.findAll({
             attributes: ['id'],
-            where: { is_active: true }
+            where: { isActive: true }
         });
 
         return {
@@ -130,7 +132,7 @@ export const calculateOrganizationScope = async (userId, roleSlug) => {
 
     // Obtener organizaciones del usuario
     const userOrgs = await getUserOrganizations(userId);
-    const directOrgIds = userOrgs.map(uo => uo.organization_id);
+    const directOrgIds = userOrgs.map(uo => uo.organizationId);
 
     if (directOrgIds.length === 0) {
         return {
@@ -194,14 +196,14 @@ export const getOrganizationScope = async (userId, roleSlug) => {
     // Intentar obtener del cache
     const cached = await getCache(cacheKey);
     if (cached) {
-        return JSON.parse(cached);
+        return cached; // getCache ya parsea el JSON automáticamente
     }
 
     // Calcular scope
     const scope = await calculateOrganizationScope(userId, roleSlug);
 
     // Guardar en cache
-    await setCache(cacheKey, JSON.stringify(scope), ORG_SCOPE_CACHE_TTL);
+    await setCache(cacheKey, scope, ORG_SCOPE_CACHE_TTL); // setCache hace stringify automáticamente
 
     return scope;
 };
@@ -235,8 +237,8 @@ export const switchPrimaryOrganization = async (userId, newPrimaryOrgId) => {
     // Verificar que el usuario pertenece a la organización
     const userOrg = await UserOrganization.findOne({
         where: {
-            user_id: userId,
-            organization_id: newPrimaryOrgId
+            userId,
+            organizationId: newPrimaryOrgId
         }
     });
 
@@ -249,22 +251,22 @@ export const switchPrimaryOrganization = async (userId, newPrimaryOrgId) => {
     const transaction = await sequelize.transaction();
 
     try {
-        // Remover is_primary de todas las organizaciones del usuario
+        // Remover isPrimary de todas las organizaciones del usuario
         await UserOrganization.update(
-            { is_primary: false },
+            { isPrimary: false },
             { 
-                where: { user_id: userId },
+                where: { userId },
                 transaction
             }
         );
 
         // Marcar la nueva como primaria
         await UserOrganization.update(
-            { is_primary: true },
+            { isPrimary: true },
             {
                 where: {
-                    user_id: userId,
-                    organization_id: newPrimaryOrgId
+                    userId,
+                    organizationId: newPrimaryOrgId
                 },
                 transaction
             }
@@ -278,7 +280,7 @@ export const switchPrimaryOrganization = async (userId, newPrimaryOrgId) => {
 
         return {
             success: true,
-            new_primary_org_id: newPrimaryOrgId
+            newPrimaryOrgId
         };
 
     } catch (error) {
@@ -307,4 +309,155 @@ export const invalidateUserOrgScope = async (userId) => {
 export const invalidateOrgDescendants = async (organizationId) => {
     const cacheKey = `${ORG_TREE_CACHE_PREFIX}${organizationId}`;
     await deleteCache(cacheKey);
+};
+
+/**
+ * Validar unicidad de nombre y/o slug de organización
+ * Endpoint de validación para verificar disponibilidad antes de crear/editar
+ * 
+ * @param {Object} params - Parámetros de validación
+ * @param {string} [params.name] - Nombre a validar
+ * @param {string} [params.slug] - Slug a validar
+ * @param {string} [params.excludePublicCode] - public_code de organización a excluir
+ * @returns {Promise<Object>} - Resultado de validación { valid, conflicts }
+ */
+export const validateOrganization = async ({ name, slug, excludePublicCode }) => {
+    return await orgRepository.validateOrganizationUniqueness({ 
+        name, 
+        slug, 
+        excludePublicCode 
+    });
+};
+
+/**
+ * Agregar un usuario a una organización
+ * Crea una relación en UserOrganization
+ * 
+ * @param {string} userId - UUID del usuario
+ * @param {string} organizationId - UUID de la organización
+ * @param {boolean} isPrimary - Si esta será la organización primaria (default: false)
+ * @returns {Promise<Object>} - Relación creada
+ */
+export const addUserToOrganization = async (userId, organizationId, isPrimary = false) => {
+    // Verificar si el usuario ya pertenece a la organización
+    const existingRelation = await UserOrganization.findOne({
+        where: {
+            userId,
+            organizationId
+        }
+    });
+    
+    if (existingRelation) {
+        const error = new Error('User already belongs to this organization');
+        error.status = 409;
+        error.code = 'USER_ALREADY_IN_ORGANIZATION';
+        throw error;
+    }
+    
+    // Si se marca como primaria, usar transacción para garantizar consistencia
+    if (isPrimary) {
+        const { sequelize } = UserOrganization;
+        const transaction = await sequelize.transaction();
+        
+        try {
+            // Remover isPrimary de todas las organizaciones del usuario
+            await UserOrganization.update(
+                { isPrimary: false },
+                { 
+                    where: { userId },
+                    transaction
+                }
+            );
+            
+            // Crear nueva relación como primaria
+            const userOrg = await UserOrganization.create({
+                userId,
+                organizationId,
+                isPrimary: true,
+                joinedAt: new Date()
+            }, { transaction });
+            
+            await transaction.commit();
+            
+            // Invalidar cache de scope organizacional
+            await invalidateUserOrgScope(userId);
+            
+            return userOrg;
+        } catch (error) {
+            await transaction.rollback();
+            throw error;
+        }
+    } else {
+        // Crear relación sin afectar la organización primaria
+        const userOrg = await UserOrganization.create({
+            userId,
+            organizationId,
+            isPrimary: false,
+            joinedAt: new Date()
+        });
+        
+        // Invalidar cache de scope organizacional
+        await invalidateUserOrgScope(userId);
+        
+        return userOrg;
+    }
+};
+
+/**
+ * Remover un usuario de una organización
+ * Elimina la relación en UserOrganization (soft delete)
+ * 
+ * @param {string} userId - UUID del usuario
+ * @param {string} organizationId - UUID de la organización
+ * @returns {Promise<boolean>} - true si se removió correctamente
+ */
+export const removeUserFromOrganization = async (userId, organizationId) => {
+    // Buscar la relación
+    const userOrg = await UserOrganization.findOne({
+        where: {
+            userId,
+            organizationId
+        }
+    });
+    
+    if (!userOrg) {
+        const error = new Error('User is not a member of this organization');
+        error.status = 404;
+        error.code = 'USER_NOT_IN_ORGANIZATION';
+        throw error;
+    }
+    
+    // No permitir remover la organización primaria si es la única
+    if (userOrg.isPrimary) {
+        const totalOrgs = await UserOrganization.count({
+            where: { userId }
+        });
+        
+        if (totalOrgs === 1) {
+            const error = new Error('Cannot remove primary organization when it is the only one');
+            error.status = 400;
+            error.code = 'CANNOT_REMOVE_ONLY_PRIMARY_ORG';
+            throw error;
+        }
+        
+        // Si hay otras organizaciones, primero cambiar la primaria a otra
+        const otherOrg = await UserOrganization.findOne({
+            where: {
+                userId,
+                organizationId: { [Op.ne]: organizationId }
+            }
+        });
+        
+        if (otherOrg) {
+            await switchPrimaryOrganization(userId, otherOrg.organizationId);
+        }
+    }
+    
+    // Soft delete de la relación
+    await userOrg.destroy();
+    
+    // Invalidar cache de scope organizacional
+    await invalidateUserOrgScope(userId);
+    
+    return true;
 };

@@ -1,5 +1,15 @@
 import Organization from './models/Organization.js';
+import OrganizationCountry from './models/OrganizationCountry.js';
+import Country from '../countries/models/Country.js';
+import { Op } from 'sequelize';
+import sequelize from '../../db/sql/sequelize.js';
 import { generateUuidV7, generateHumanId, generatePublicCode } from '../../utils/identifiers.js';
+import { toPublicOrganizationDto } from '../../helpers/serializers.js';
+import { 
+    cacheOrganizationList, 
+    getCachedOrganizationList, 
+    invalidateAllOrganizationLists 
+} from './cache.js';
 
 /**
  * Repository para Organizations
@@ -7,79 +17,104 @@ import { generateUuidV7, generateHumanId, generatePublicCode } from '../../utils
  */
 
 /**
+ * Include estándar para cargar países asociados
+ */
+const countriesInclude = {
+    model: OrganizationCountry,
+    as: 'countries',
+    attributes: ['countryCode', 'isPrimary']
+};
+
+/**
  * Crear nueva organización con identificadores UUID v7
+ * Invalida cache de listas al crear
  * 
  * @param {Object} data - Datos de la organización
  * @returns {Promise<Object>} - Organización creada (sin campos sensibles)
  */
 export const createOrganization = async (data) => {
-    // Generar UUID v7
-    const id = generateUuidV7();
+    const { countries, ...orgData } = data;
     
-    // Generar human_id (scope global para organizations)
-    const humanId = await generateHumanId(Organization, null, null);
+    const transaction = await sequelize.transaction();
     
-    // Generar public_code con prefijo ORG-
-    const publicCode = generatePublicCode('ORG', humanId);
-    
-    // Crear organización
-    const organization = await Organization.create({
-        id,
-        human_id: humanId,
-        public_code: publicCode,
-        ...data
-    });
-    
-    // Retornar sin campos sensibles
-    return {
-        id: organization.id,
-        public_code: organization.public_code,
-        human_id: organization.human_id,
-        slug: organization.slug,
-        name: organization.name,
-        country_id: organization.country_id,
-        tax_id: organization.tax_id,
-        email: organization.email,
-        phone: organization.phone,
-        address: organization.address,
-        settings: organization.settings,
-        is_active: organization.is_active,
-        created_at: organization.created_at,
-        updated_at: organization.updated_at
-    };
+    try {
+        // Generar UUID v7
+        const id = generateUuidV7();
+        
+        // Generar human_id (scope global para organizations)
+        const humanId = await generateHumanId(Organization, null, null);
+        
+        // Generar public_code con prefijo ORG- usando UUID v7
+        const publicCode = generatePublicCode('ORG');
+        
+        // Crear organización
+        const organization = await Organization.create({
+            id,
+            humanId,
+            publicCode,
+            ...orgData
+        }, { transaction });
+        
+        // Crear relaciones con países
+        if (countries && countries.length > 0) {
+            const countryRecords = countries.map(c => ({
+                organizationId: id,
+                countryCode: c.code,
+                isPrimary: c.isPrimary || false
+            }));
+            
+            await OrganizationCountry.bulkCreate(countryRecords, { transaction });
+        }
+        
+        await transaction.commit();
+        
+        // Recargar con asociaciones
+        const orgWithCountries = await Organization.findByPk(id, {
+            include: [countriesInclude]
+        });
+        
+        // Invalidar cache de listas (fire-and-forget, no bloquear respuesta)
+        invalidateAllOrganizationLists().catch(() => {});
+        
+        // Retornar DTO público seguro (public_code como id, sin UUID ni human_id)
+        return toPublicOrganizationDto(orgWithCountries);
+    } catch (error) {
+        await transaction.rollback();
+        throw error;
+    }
 };
 
 /**
- * Buscar organización por public_code
+ * Buscar organización por public_code (retorna DTO público)
  * 
  * @param {string} publicCode - public_code de la organización
- * @returns {Promise<Object|null>} - Organización o null
+ * @returns {Promise<Object|null>} - DTO público de organización o null
  */
 export const findOrganizationByPublicCode = async (publicCode) => {
     const organization = await Organization.findOne({
-        where: { public_code: publicCode }
+        where: { publicCode },
+        include: [countriesInclude]
     });
     
     if (!organization) {
         return null;
     }
     
-    return {
-        id: organization.id,
-        public_code: organization.public_code,
-        human_id: organization.human_id,
-        slug: organization.slug,
-        name: organization.name,
-        country_id: organization.country_id,
-        tax_id: organization.tax_id,
-        email: organization.email,
-        phone: organization.phone,
-        address: organization.address,
-        settings: organization.settings,
-        is_active: organization.is_active,
-        created_at: organization.created_at,
-        updated_at: organization.updated_at
-    };
+    return toPublicOrganizationDto(organization);
+};
+
+/**
+ * Buscar organización por public_code (SOLO USO INTERNO - retorna modelo con UUID)
+ * Esta función NO debe usarse para respuestas API, solo para lógica interna
+ * que requiere el UUID para relaciones o verificaciones de permisos
+ * 
+ * @param {string} publicCode - public_code de la organización
+ * @returns {Promise<Object|null>} - Modelo de Sequelize con UUID o null
+ */
+export const findOrganizationByPublicCodeInternal = async (publicCode) => {
+    return await Organization.findOne({
+        where: { publicCode }
+    });
 };
 
 /**
@@ -90,29 +125,27 @@ export const findOrganizationByPublicCode = async (publicCode) => {
  */
 export const findOrganizationByHumanId = async (humanId) => {
     const organization = await Organization.findOne({
-        where: { human_id: humanId }
+        where: { humanId },
+        include: [countriesInclude]
     });
     
     if (!organization) {
         return null;
     }
     
-    return {
-        id: organization.id,
-        public_code: organization.public_code,
-        human_id: organization.human_id,
-        slug: organization.slug,
-        name: organization.name,
-        country_id: organization.country_id,
-        tax_id: organization.tax_id,
-        email: organization.email,
-        phone: organization.phone,
-        address: organization.address,
-        settings: organization.settings,
-        is_active: organization.is_active,
-        created_at: organization.created_at,
-        updated_at: organization.updated_at
-    };
+    return toPublicOrganizationDto(organization);
+};
+
+/**
+ * Buscar organización por ID (SOLO USO INTERNO - retorna modelo con todos los campos)
+ * Esta función NO debe usarse para respuestas API, solo para lógica interna
+ * que requiere acceso al modelo completo para relaciones o verificaciones
+ * 
+ * @param {string} id - UUID de la organización
+ * @returns {Promise<Object|null>} - Modelo de Sequelize o null
+ */
+export const findOrganizationByIdInternal = async (id) => {
+    return await Organization.findByPk(id);
 };
 
 /**
@@ -122,28 +155,15 @@ export const findOrganizationByHumanId = async (humanId) => {
  * @returns {Promise<Object|null>} - Organización o null
  */
 export const findOrganizationById = async (id) => {
-    const organization = await Organization.findByPk(id);
+    const organization = await Organization.findByPk(id, {
+        include: [countriesInclude]
+    });
     
     if (!organization) {
         return null;
     }
     
-    return {
-        id: organization.id,
-        public_code: organization.public_code,
-        human_id: organization.human_id,
-        slug: organization.slug,
-        name: organization.name,
-        country_id: organization.country_id,
-        tax_id: organization.tax_id,
-        email: organization.email,
-        phone: organization.phone,
-        address: organization.address,
-        settings: organization.settings,
-        is_active: organization.is_active,
-        created_at: organization.created_at,
-        updated_at: organization.updated_at
-    };
+    return toPublicOrganizationDto(organization);
 };
 
 /**
@@ -154,33 +174,20 @@ export const findOrganizationById = async (id) => {
  */
 export const findOrganizationBySlug = async (slug) => {
     const organization = await Organization.findOne({
-        where: { slug }
+        where: { slug },
+        include: [countriesInclude]
     });
     
     if (!organization) {
         return null;
     }
     
-    return {
-        id: organization.id,
-        public_code: organization.public_code,
-        human_id: organization.human_id,
-        slug: organization.slug,
-        name: organization.name,
-        country_id: organization.country_id,
-        tax_id: organization.tax_id,
-        email: organization.email,
-        phone: organization.phone,
-        address: organization.address,
-        settings: organization.settings,
-        is_active: organization.is_active,
-        created_at: organization.created_at,
-        updated_at: organization.updated_at
-    };
+    return toPublicOrganizationDto(organization);
 };
 
 /**
- * Listar organizaciones con paginación
+ * Listar organizaciones con paginación y cache
+ * Cache: 5 minutos | Key: org:list:{limit}:{offset}:{filtersHash}
  * 
  * @param {number} limit - Límite de resultados
  * @param {number} offset - Offset para paginación
@@ -188,80 +195,146 @@ export const findOrganizationBySlug = async (slug) => {
  * @returns {Promise<Object>} - Lista de organizaciones y total
  */
 export const listOrganizations = async (limit = 50, offset = 0, filters = {}) => {
-    const where = {};
-    
-    if (filters.is_active !== undefined) {
-        where.is_active = filters.is_active;
+    // Intentar obtener desde cache
+    const cached = await getCachedOrganizationList(limit, offset, filters);
+    if (cached) {
+        return cached;
     }
     
-    if (filters.country_id) {
-        where.country_id = filters.country_id;
+    const where = {};
+    
+    if (filters.isActive !== undefined) {
+        where.isActive = filters.isActive;
+    }
+
+    // Filtro de scope - organizaciones permitidas por permisos
+    if (filters.organizationIds && Array.isArray(filters.organizationIds)) {
+        where.id = { [Op.in]: filters.organizationIds };
+    }
+
+    // Búsqueda por nombre o slug
+    if (filters.search) {
+        where[Op.or] = [
+            { name: { [Op.iLike]: `%${filters.search}%` } },
+            { slug: { [Op.iLike]: `%${filters.search}%` } }
+        ];
+    }
+
+    // Filtro por parentId
+    if (filters.parentId) {
+        where.parentId = filters.parentId;
+    }
+
+    // Filtro por countryCode a través de organization_countries
+    const include = [countriesInclude];
+    let orgIds;
+    if (filters.countryCode) {
+        const countryOrgs = await OrganizationCountry.findAll({
+            where: { countryCode: filters.countryCode },
+            attributes: ['organizationId'],
+            raw: true
+        });
+        orgIds = countryOrgs.map(co => co.organization_id);
+        if (where.id) {
+            // Intersectar con filtro de scope existente
+            const existingIds = where.id[Op.in] || [];
+            where.id = { [Op.in]: orgIds.filter(id => existingIds.includes(id)) };
+        } else {
+            where.id = { [Op.in]: orgIds };
+        }
     }
     
     const { count, rows } = await Organization.findAndCountAll({
         where,
+        include,
         limit,
         offset,
-        order: [['created_at', 'DESC']]
+        order: [['createdAt', 'DESC'], ['id', 'ASC']],
+        distinct: true
     });
     
-    return {
+    const result = {
+        items: rows.map(org => toPublicOrganizationDto(org)),
         total: count,
-        organizations: rows.map(org => ({
-            id: org.id,
-            public_code: org.public_code,
-            human_id: org.human_id,
-            slug: org.slug,
-            name: org.name,
-            country_id: org.country_id,
-            is_active: org.is_active,
-            created_at: org.created_at,
-            updated_at: org.updated_at
-        }))
+        page: Math.floor(offset / limit) + 1,
+        limit: parseInt(limit)
     };
+    
+    // Guardar en cache
+    await cacheOrganizationList(limit, offset, filters, result);
+    
+    return result;
 };
 
 /**
  * Actualizar organización
+ * Invalida cache de listas al actualizar
  * 
  * @param {string} id - ID de la organización
  * @param {Object} updates - Datos a actualizar
  * @returns {Promise<Object>} - Organización actualizada
  */
 export const updateOrganization = async (id, updates) => {
-    const organization = await Organization.findByPk(id);
+    const { countries, ...orgUpdates } = updates;
     
-    if (!organization) {
-        return null;
+    const transaction = await sequelize.transaction();
+    
+    try {
+        const organization = await Organization.findByPk(id);
+        
+        if (!organization) {
+            await transaction.rollback();
+            return null;
+        }
+        
+        // No permitir actualizar id, humanId, o publicCode
+        delete orgUpdates.id;
+        delete orgUpdates.humanId;
+        delete orgUpdates.publicCode;
+        
+        // Actualizar campos de la organización
+        if (Object.keys(orgUpdates).length > 0) {
+            await organization.update(orgUpdates, { transaction });
+        }
+        
+        // Actualizar países si se proporcionan
+        if (countries && countries.length > 0) {
+            // Eliminar relaciones existentes
+            await OrganizationCountry.destroy({
+                where: { organizationId: id },
+                transaction
+            });
+            
+            // Crear nuevas relaciones
+            const countryRecords = countries.map(c => ({
+                organizationId: id,
+                countryCode: c.code,
+                isPrimary: c.isPrimary || false
+            }));
+            
+            await OrganizationCountry.bulkCreate(countryRecords, { transaction });
+        }
+        
+        await transaction.commit();
+        
+        // Recargar con asociaciones
+        const orgWithCountries = await Organization.findByPk(id, {
+            include: [countriesInclude]
+        });
+        
+        // Invalidar cache de listas (la actualización puede cambiar ordenamiento/filtros)
+        await invalidateAllOrganizationLists();
+        
+        return toPublicOrganizationDto(orgWithCountries);
+    } catch (error) {
+        await transaction.rollback();
+        throw error;
     }
-    
-    // No permitir actualizar id, human_id, o public_code
-    delete updates.id;
-    delete updates.human_id;
-    delete updates.public_code;
-    
-    await organization.update(updates);
-    
-    return {
-        id: organization.id,
-        public_code: organization.public_code,
-        human_id: organization.human_id,
-        slug: organization.slug,
-        name: organization.name,
-        country_id: organization.country_id,
-        tax_id: organization.tax_id,
-        email: organization.email,
-        phone: organization.phone,
-        address: organization.address,
-        settings: organization.settings,
-        is_active: organization.is_active,
-        created_at: organization.created_at,
-        updated_at: organization.updated_at
-    };
 };
 
 /**
  * Soft delete de organización
+ * Invalida cache de listas al eliminar
  * 
  * @param {string} id - ID de la organización
  * @returns {Promise<boolean>} - true si se eliminó
@@ -275,6 +348,9 @@ export const deleteOrganization = async (id) => {
     
     await organization.destroy(); // Soft delete por paranoid: true
     
+    // Invalidar cache de listas (organización eliminada afecta todas las listas)
+    await invalidateAllOrganizationLists();
+    
     return true;
 };
 
@@ -285,26 +361,15 @@ export const deleteOrganization = async (id) => {
  */
 export const getRootOrganization = async () => {
     const organization = await Organization.findOne({
-        where: { parent_id: null }
+        where: { parentId: null },
+        include: [countriesInclude]
     });
     
     if (!organization) {
         return null;
     }
     
-    return {
-        id: organization.id,
-        public_code: organization.public_code,
-        human_id: organization.human_id,
-        slug: organization.slug,
-        name: organization.name,
-        parent_id: organization.parent_id,
-        logo_url: organization.logo_url,
-        description: organization.description,
-        config: organization.config,
-        is_active: organization.is_active,
-        created_at: organization.created_at
-    };
+    return toPublicOrganizationDto(organization);
 };
 
 /**
@@ -315,20 +380,12 @@ export const getRootOrganization = async () => {
  */
 export const getChildOrganizations = async (parentId) => {
     const organizations = await Organization.findAll({
-        where: { parent_id: parentId, is_active: true },
+        where: { parentId, isActive: true },
+        include: [countriesInclude],
         order: [['name', 'ASC']]
     });
     
-    return organizations.map(org => ({
-        id: org.id,
-        public_code: org.public_code,
-        human_id: org.human_id,
-        slug: org.slug,
-        name: org.name,
-        parent_id: org.parent_id,
-        logo_url: org.logo_url,
-        is_active: org.is_active
-    }));
+    return organizations.map(org => toPublicOrganizationDto(org));
 };
 
 /**
@@ -342,7 +399,7 @@ export const getOrganizationDescendants = async (organizationId) => {
     
     // Obtener hijos directos
     const children = await Organization.findAll({
-        where: { parent_id: organizationId },
+        where: { parentId: organizationId },
         attributes: ['id']
     });
     
@@ -356,4 +413,68 @@ export const getOrganizationDescendants = async (organizationId) => {
     }
     
     return descendants;
+};
+
+/**
+ * Validar unicidad de nombre y/o slug de organización
+ * Verifica si ya existe una organización con el nombre o slug proporcionado
+ * Permite excluir una organización específica (útil para edición)
+ * 
+ * @param {Object} params - Parámetros de validación
+ * @param {string} [params.name] - Nombre a validar
+ * @param {string} [params.slug] - Slug a validar
+ * @param {string} [params.excludePublicCode] - public_code de organización a excluir
+ * @returns {Promise<Object>} - Resultado de validación { valid, conflicts: { name, slug } }
+ */
+export const validateOrganizationUniqueness = async ({ name, slug, excludePublicCode }) => {
+    const conflicts = {
+        name: false,
+        slug: false
+    };
+    
+    // Construir condiciones de búsqueda
+    const conditions = [];
+    
+    if (name) {
+        conditions.push({ name: { [Op.iLike]: name } });
+    }
+    
+    if (slug) {
+        conditions.push({ slug: { [Op.iLike]: slug } });
+    }
+    
+    // Si no hay nada que validar, retornar válido
+    if (conditions.length === 0) {
+        return { valid: true, conflicts };
+    }
+    
+    // Buscar organizaciones que coincidan con nombre o slug
+    const where = {
+        [Op.or]: conditions
+    };
+    
+    // Excluir organización actual si se proporciona excludePublicCode
+    if (excludePublicCode) {
+        where.publicCode = { [Op.ne]: excludePublicCode };
+    }
+    
+    const existingOrganizations = await Organization.findAll({
+        where,
+        attributes: ['name', 'slug']
+    });
+    
+    // Verificar conflictos específicos (case-insensitive)
+    for (const org of existingOrganizations) {
+        if (name && org.name.toLowerCase() === name.toLowerCase()) {
+            conflicts.name = true;
+        }
+        if (slug && org.slug.toLowerCase() === slug.toLowerCase()) {
+            conflicts.slug = true;
+        }
+    }
+    
+    // La validación es válida si no hay conflictos
+    const valid = !conflicts.name && !conflicts.slug;
+    
+    return { valid, conflicts };
 };

@@ -1,28 +1,8 @@
-// modules/auth/models/User.js
-// Modelo de Usuario con Sequelize - Autenticación y autorización
-
 import { DataTypes } from 'sequelize';
 import sequelize from '../../../db/sql/sequelize.js';
 import Role from './Role.js';
 import Organization from '../../organizations/models/Organization.js';
 
-/**
- * Modelo User - Usuarios del sistema con autenticación JWT
- * Sistema de identificadores: UUID v7 + human_id + public_code
- * 
- * Campos principales:
- * - id: UUID v7 (clave primaria, time-ordered)
- * - human_id: Incremental por organization_id (solo uso interno/soporte)
- * - public_code: ID público opaco (formato: EC-XXXXX-Y)
- * - email: Único, usado para login
- * - password_hash: bcrypt hash (nunca devolver al cliente)
- * - first_name, last_name: Nombre completo
- * - role_id: FK a roles table (RBAC system)
- * - organization_id: FK a organizations (multi-tenancy)
- * - is_active: Habilitar/deshabilitar usuarios sin eliminar
- * - last_login_at: Tracking de actividad
- * - email_verified_at: Verificación de email
- */
 const User = sequelize.define(
     'User',
     {
@@ -31,12 +11,12 @@ const User = sequelize.define(
             primaryKey: true,
             comment: 'UUID v7 - clave primaria time-ordered'
         },
-        human_id: {
+        humanId: {
             type: DataTypes.INTEGER,
             allowNull: false,
             comment: 'ID incremental scoped por organization_id (solo uso interno/soporte)'
         },
-        public_code: {
+        publicCode: {
             type: DataTypes.STRING(50),
             allowNull: false,
             unique: true,
@@ -53,22 +33,28 @@ const User = sequelize.define(
             },
             comment: 'Email único para login'
         },
-        password_hash: {
+        username: {
+            type: DataTypes.STRING(50),
+            allowNull: false,
+            unique: true,
+            comment: 'Nombre de usuario único para login (formato: primera letra nombre + apellido)'
+        },
+        passwordHash: {
             type: DataTypes.STRING(255),
             allowNull: false,
             comment: 'Hash bcrypt de la contraseña (nunca devolver al cliente)'
         },
-        first_name: {
+        firstName: {
             type: DataTypes.STRING(100),
             allowNull: false,
             comment: 'Nombre del usuario'
         },
-        last_name: {
+        lastName: {
             type: DataTypes.STRING(100),
             allowNull: false,
             comment: 'Apellido del usuario'
         },
-        role_id: {
+        roleId: {
             type: DataTypes.UUID,
             allowNull: false,
             references: {
@@ -79,7 +65,7 @@ const User = sequelize.define(
             onDelete: 'RESTRICT',
             comment: 'FK a roles table para RBAC'
         },
-        organization_id: {
+        organizationId: {
             type: DataTypes.UUID,
             allowNull: true,
             references: {
@@ -90,21 +76,43 @@ const User = sequelize.define(
             onDelete: 'RESTRICT',
             comment: 'FK a organizations para multi-tenancy (null = usuario global)'
         },
-        is_active: {
+        isActive: {
             type: DataTypes.BOOLEAN,
             defaultValue: true,
             allowNull: false,
             comment: 'Usuario activo/inactivo (soft disable)'
         },
-        last_login_at: {
+        lastLoginAt: {
             type: DataTypes.DATE,
             allowNull: true,
             comment: 'Última fecha de login exitoso'
         },
-        email_verified_at: {
+        emailVerifiedAt: {
             type: DataTypes.DATE,
             allowNull: true,
             comment: 'Fecha de verificación de email (null = no verificado)'
+        },
+        phone: {
+            type: DataTypes.STRING(50),
+            allowNull: true,
+            comment: 'Número de teléfono del usuario (formato internacional)'
+        },
+        language: {
+            type: DataTypes.STRING(5),
+            allowNull: true,
+            defaultValue: 'es',
+            comment: 'Idioma preferido del usuario (es, en)'
+        },
+        timezone: {
+            type: DataTypes.STRING(100),
+            allowNull: true,
+            defaultValue: 'America/Argentina/Buenos_Aires',
+            comment: 'Zona horaria del usuario (formato IANA)'
+        },
+        avatarUrl: {
+            type: DataTypes.TEXT,
+            allowNull: true,
+            comment: 'URL del avatar del usuario (puede ser URL larga de storage)'
         }
     },
     {
@@ -143,51 +151,32 @@ const User = sequelize.define(
     }
 );
 
-// Relación con Role
 User.belongsTo(Role, {
-    foreignKey: 'role_id',
+    foreignKey: 'roleId',
     as: 'role'
 });
 
-// Relación many-to-many con Organizations a través de UserOrganization
 User.belongsToMany(Organization, {
     through: 'user_organizations',
-    foreignKey: 'user_id',
-    otherKey: 'organization_id',
+    foreignKey: 'userId',
+    otherKey: 'organizationId',
     as: 'organizations'
 });
 
-/**
- * Método de instancia para verificar si el usuario tiene un rol específico
- * @param {string} roleName - Nombre del rol a verificar
- * @returns {boolean}
- */
 User.prototype.hasRole = function (roleName) {
     return this.role && this.role.name === roleName;
 };
 
-/**
- * Método de instancia para verificar si el usuario es system-admin
- * @returns {boolean}
- */
 User.prototype.isSystemAdmin = function () {
     return this.hasRole('system-admin');
 };
 
-/**
- * Método de instancia para verificar si el usuario es org-admin
- * @returns {boolean}
- */
 User.prototype.isOrgAdmin = function () {
     return this.hasRole('org-admin');
 };
 
-/**
- * Método de instancia para obtener nombre completo
- * @returns {string}
- */
 User.prototype.getFullName = function () {
-    return `${this.first_name} ${this.last_name}`.trim();
+    return `${this.firstName} ${this.lastName}`.trim();
 };
 
 export default User;

@@ -3,7 +3,10 @@ import createApp from './app.js';
 import { config, validateConfig } from './config/env.js';
 import { initializeDatabase, closeDatabase } from './db/sql/sequelize.js';
 import { initializeRedis, closeRedis } from './db/redis/client.js';
+import { initCassandra, closeCassandra, hasCredentials } from './db/cassandra/client.js';
 import { startTokenCleanupScheduler } from './utils/cleanupTokens.js';
+import { warmUpTelemetryCache } from './modules/telemetry/index.js';
+import { initializeMqtt, closeMqtt, initializeWebSocket, closeWebSocket } from './modules/realtime/index.js';
 import logger from './utils/logger.js';
 
 // Importar todos los modelos en orden de dependencias (necesario para Sequelize.sync())
@@ -23,8 +26,33 @@ const initializeServices = async () => {
         // Inicializar PostgreSQL
         await initializeDatabase();
 
+        // Auto-seed de datos base (roles, catálogos, usuario admin)
+        if (process.env.AUTO_SEED === 'true') {
+            try {
+                const { runCoreSeed } = await import('./db/seeders/core-seed.js');
+                await runCoreSeed();
+            } catch (seedErr) {
+                logger.warn({ err: seedErr }, '⚠️  Auto-seed falló (non-critical), el servidor continúa');
+            }
+        }
+
         // Inicializar Redis (opcional en desarrollo)
         await initializeRedis();
+
+        // Inicializar Cassandra (opcional - solo si hay credenciales)
+        if (hasCredentials()) {
+            await initCassandra();
+        } else {
+            logger.info('⏸️  Cassandra: Credenciales no configuradas, saltando inicialización');
+        }
+
+        // Warm-up de cache de telemetría (variables globales, measurement types)
+        try {
+            await warmUpTelemetryCache();
+            logger.info('✅ Telemetry cache warmed up successfully');
+        } catch (cacheError) {
+            logger.warn({ err: cacheError }, '⚠️  Telemetry cache warm-up failed (non-critical)');
+        }
 
         logger.info('✅ All services initialized successfully');
     } catch (error) {
@@ -47,7 +75,7 @@ const startServer = async () => {
         // Crear aplicación Express (incluye Swagger y métricas)
         const app = createApp();
 
-        // Iniciar servidor HTTP en 0.0.0.0:5000 (preparado para Socket.io)
+        // Iniciar servidor HTTP en 0.0.0.0:5000
         const server = app.listen(config.port, '0.0.0.0', () => {
             logger.info(`
 ╔════════════════════════════════════════════════════════════╗
@@ -60,11 +88,22 @@ const startServer = async () => {
 ║  Health:       ${`${config.apiUrl}/api/v1/health`.padEnd(43)} ║
 ║  Docs:         ${config.env === 'development' ? `${config.apiUrl}/docs`.padEnd(43) : 'N/A (production)'.padEnd(43)} ║
 ║  Metrics:      ${config.env === 'development' ? `${config.apiUrl}/metrics`.padEnd(43) : 'N/A (production)'.padEnd(43)} ║
+║  WebSocket:    ${`${config.apiUrl.replace('http', 'ws')}/ws`.padEnd(43)} ║
 ║                                                            ║
 ║  Status:       ✅ Server running successfully             ║
 ╚════════════════════════════════════════════════════════════╝
             `);
         });
+
+        // Inicializar WebSocket server sobre el mismo HTTP server
+        initializeWebSocket(server);
+
+        // Inicializar conexiones MQTT a brokers IoT (no-bloqueante)
+        try {
+            initializeMqtt();
+        } catch (mqttError) {
+            logger.warn({ err: mqttError }, '⚠️  MQTT initialization failed (non-critical)');
+        }
 
         // Manejo de señales para graceful shutdown
         const gracefulShutdown = async signal => {
@@ -79,8 +118,11 @@ const startServer = async () => {
                 }
                 
                 // Cerrar conexiones a servicios externos
+                closeWebSocket();
+                await closeMqtt();
                 await closeDatabase();
                 await closeRedis();
+                await closeCassandra();
                 
                 logger.info('✅ Graceful shutdown completed');
                 process.exit(0);
