@@ -92,7 +92,7 @@ async function setupFreshDatabase() {
         console.log('✅ Conexión exitosa');
 
         console.log('\n🔍 Verificando que la base de datos esté vacía...');
-        const [[{ count }]] = await sequelize.query(
+        const [{ count }] = await sequelize.query(
             `SELECT COUNT(*) as count FROM pg_tables WHERE schemaname = 'public'`,
             { type: 'SELECT' }
         );
