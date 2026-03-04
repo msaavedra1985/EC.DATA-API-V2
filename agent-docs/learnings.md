@@ -703,3 +703,15 @@ const humanId    = await generateHumanId(Device, 'orgId', orgId); // con scope
 ## Deployment
 
 (Agregar problemas de deployment aquí)
+
+---
+
+### Bug: Redis desincronizado del JWT — system-admin ve dispositivos de todas las orgs al impersonar
+**Fecha**: 2026-03-04
+**Síntoma**: System-admin impersonando una org (JWT: `activeOrgId: bestech_uuid, impersonating: true`) ve dispositivos de TODAS las organizaciones en vez de solo los de la org impersonada.
+**Causa raíz**: El middleware `enforceActiveOrganization` toma Redis como fuente de verdad para system-admin. Si Redis tiene `activeOrgId: null` (aunque el JWT diga Bestech), el middleware activa modo global (`showAll: true`) y todos los filtros de org se eliminan. Redis queda con null cuando un **login fresh sin `organizationId`** resetea el session context (porque el system-admin no tiene `primaryOrg`). Si el user tiene tokens vigentes de un switch-org previo, el JWT sigue teniendo Bestech pero Redis ya fue reseteado.
+**Fix**: Cuando Redis tiene `activeOrgId: null` PERO el JWT tiene `activeOrgId: non-null` + `impersonating: true`, el JWT es más específico sobre la intención (el null en Redis es un reset accidental, no una elección explícita de modo global). Usar el JWT en ese caso concreto.
+- El flag `impersonating: true` es el discriminador clave: modo global explícito nunca produce `impersonating: true`.
+- El fix en el **refresh flow** es el self-healing: al refrescar el token en ese estado, Redis queda actualizado con el valor correcto del JWT.
+**Regla general**: "Redis gana" no aplica cuando Redis=null + JWT tiene `impersonating:true`. La única forma de llegar a ese estado es un reset externo (login concurrente), no una elección deliberada del usuario.
+**Archivos afectados**: `src/middleware/enforceActiveOrganization.js` (Caso 1 `all=true` y Caso 3 sin filtros), `src/modules/auth/services.js` (refresh flow).

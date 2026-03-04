@@ -512,10 +512,22 @@ export const refreshAccessToken = async (refreshToken, sessionData = {}) => {
         
         let effectiveActiveOrgId;
         if (isSystemAdmin && existingContext) {
-            // System-admin: Redis siempre gana (incluyendo null explícito = modo global)
-            effectiveActiveOrgId = existingContext.activeOrgId ?? null;
-            if (effectiveActiveOrgId !== decoded.activeOrgId) {
-                authLogger.debug({ userId, redisActiveOrgId: effectiveActiveOrgId, jwtActiveOrgId: decoded.activeOrgId }, 'Refresh: usando activeOrgId de Redis (diferente al JWT)');
+            if (!existingContext.activeOrgId && decoded.activeOrgId && decoded.impersonating) {
+                // Redis tiene null pero el JWT tiene activeOrgId + impersonating:true
+                // Redis fue reseteado externamente (ej: login concurrente sin organizationId)
+                // El JWT tiene la intención más reciente → usarlo y dejar que Redis se sincronice
+                effectiveActiveOrgId = decoded.activeOrgId;
+                authLogger.warn({
+                    userId,
+                    redisActiveOrgId: null,
+                    jwtActiveOrgId: decoded.activeOrgId
+                }, 'Refresh: Redis activeOrgId null pero JWT tiene impersonating:true — usando JWT, Redis se sincronizará');
+            } else {
+                // Redis gana en todos los demás casos (fuente de verdad)
+                effectiveActiveOrgId = existingContext.activeOrgId ?? null;
+                if (effectiveActiveOrgId !== decoded.activeOrgId) {
+                    authLogger.debug({ userId, redisActiveOrgId: effectiveActiveOrgId, jwtActiveOrgId: decoded.activeOrgId }, 'Refresh: usando activeOrgId de Redis (diferente al JWT)');
+                }
             }
         } else if (decoded.activeOrgId !== undefined && decoded.activeOrgId !== null) {
             effectiveActiveOrgId = decoded.activeOrgId;
