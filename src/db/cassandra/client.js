@@ -30,9 +30,9 @@ const cassandraConfig = {
     protocolOptions: {
         port: cassandraPort
     },
-    // Timeouts y reintentos (aumentados para conexiones remotas)
+    // Timeouts — reducido para no bloquear el arranque del servidor
     socketOptions: {
-        connectTimeout: 30000,
+        connectTimeout: parseInt(process.env.CASSANDRA_CONNECT_TIMEOUT || '8000', 10),
         readTimeout: 30000
     },
     // Política de reconexión exponencial

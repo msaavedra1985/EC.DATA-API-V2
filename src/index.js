@@ -54,6 +54,12 @@ const initializeServices = async () => {
             logger.warn({ err: cacheError }, '⚠️  Telemetry cache warm-up failed (non-critical)');
         }
 
+        // Loguear IP pública saliente (fire-and-forget, no bloquea el arranque)
+        fetch('https://api.ipify.org?format=json', { signal: AbortSignal.timeout(5000) })
+            .then(res => res.json())
+            .then(data => logger.info(`🌐 Outbound IP: ${data.ip}`))
+            .catch(() => logger.warn('⚠️  No se pudo determinar la IP pública saliente'));
+
         logger.info('✅ All services initialized successfully');
     } catch (error) {
         logger.error(error, '❌ Service initialization failed');
