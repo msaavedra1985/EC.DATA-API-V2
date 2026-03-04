@@ -1,7 +1,7 @@
 // modules/channels/cache.js
 // Gestión de cache Redis para Channels
 
-import { getCache, setCache, deleteCache } from '../../db/redis/client.js';
+import { getCache, setCache, deleteCache, scanAndDelete } from '../../db/redis/client.js';
 import logger from '../../utils/logger.js';
 
 // v2: Nueva estructura de respuesta con items[] en lugar de channels[]
@@ -16,7 +16,7 @@ const CHANNEL_LIST_CACHE_TTL = 600; // 10 minutos
 export const cacheChannelList = async (cacheKey, data) => {
     try {
         const fullKey = `${CHANNEL_LIST_CACHE_PREFIX}${cacheKey}`;
-        await setCache(fullKey, JSON.stringify(data), CHANNEL_LIST_CACHE_TTL);
+        await setCache(fullKey, data, CHANNEL_LIST_CACHE_TTL);
         logger.debug({ cacheKey: fullKey }, 'Channel list cached');
     } catch (error) {
         logger.error({ err: error, cacheKey }, 'Error caching channel list');
@@ -34,7 +34,7 @@ export const getCachedChannelList = async (cacheKey) => {
         const cached = await getCache(fullKey);
         
         if (cached) {
-            const parsed = JSON.parse(cached);
+            const parsed = typeof cached === 'object' ? cached : JSON.parse(cached);
             // Validar estructura nueva (items) - si tiene estructura legacy (channels), invalidar
             if (!parsed.items && parsed.channels) {
                 logger.debug({ cacheKey: fullKey }, 'Channel list cache has legacy structure, invalidating');
@@ -59,9 +59,7 @@ export const getCachedChannelList = async (cacheKey) => {
  */
 export const invalidateChannelCache = async () => {
     try {
-        // En Redis, buscamos todas las keys que comienzan con el prefijo y las eliminamos
-        // Esto requiere escanear las keys del patrón
-        await deleteCache(`${CHANNEL_LIST_CACHE_PREFIX}*`);
+        await scanAndDelete(`${CHANNEL_LIST_CACHE_PREFIX}*`);
         logger.debug('Channel list cache invalidated');
     } catch (error) {
         logger.error({ err: error }, 'Error invalidating channel cache');

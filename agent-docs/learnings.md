@@ -341,14 +341,29 @@ Paso 5 - Actualizar código:
 **Síntoma**: Cache de devices (y potencialmente sites, channels, dashboards) nunca servía resultados con Redis real. Con in-memory funcionaba por coincidencia.
 **Causa**: Mismo patrón que `sessionContextCache`: `JSON.stringify(data)` manual + `setCache` (que ya serializa) + `getCache` (que auto-parsea) + `JSON.parse(cached)` manual = doble serialización/deserialización que falla con Redis.
 **Módulos afectados** (mismo bug):
-- `src/modules/devices/cache.js` ← **corregido**
-- `src/modules/sites/cache.js` ← pendiente
-- `src/modules/channels/cache.js` ← pendiente
-- `src/modules/dashboards/cache.js` ← pendiente
+- `src/modules/devices/cache.js` ← **corregido** (2026-03-03)
+- `src/modules/sites/cache.js` ← **corregido** (2026-03-04)
+- `src/modules/channels/cache.js` ← **corregido** (2026-03-04)
+- `src/modules/dashboards/cache.js` ← **corregido** (2026-03-04)
 - `src/modules/organizations/services.js` (org tree cache) ← pendiente
 - `src/modules/realtime/services/sessionService.js` ← pendiente
 - `src/modules/realtime/services/tokenService.js` ← pendiente
 **Regla**: NUNCA hacer `JSON.stringify` manual antes de `setCache`. NUNCA hacer `JSON.parse` manual después de `getCache`. Ambas funciones ya manejan serialización internamente. En el getter, usar `typeof cached === 'object' ? cached : JSON.parse(cached)` para compatibilidad.
+
+### `deleteCache` NO soporta wildcards — usar `scanAndDelete`
+**Fecha**: 2026-03-04
+**Síntoma**: Después de crear un equipo/site/channel/dashboard, el listado seguía mostrando datos stale del cache hasta que expiraba el TTL (10 min). La invalidación no surtía efecto.
+**Causa**: `invalidateDeviceCache()` (y equivalentes en sites, channels, dashboards) llamaban `deleteCache('ec:v2:devices:list:*')`. Pero `deleteCache` usa `redisClient.del(key)` — que borra por **nombre exacto**. Intenta borrar una key llamada literalmente `DEV:EC:ec:v2:devices:list:*` (con el asterisco como carácter), que no existe → no borra nada.
+**Solución**: Usar `scanAndDelete(pattern)` que hace SCAN con MATCH + DEL y sí soporta glob patterns.
+```js
+// MAL - deleteCache no soporta wildcards
+await deleteCache(`${DEVICE_LIST_CACHE_PREFIX}*`);
+
+// BIEN - scanAndDelete sí soporta wildcards
+await scanAndDelete(`${DEVICE_LIST_CACHE_PREFIX}*`);
+```
+**Módulos corregidos**: `devices/cache.js`, `sites/cache.js`, `channels/cache.js`, `dashboards/cache.js`
+**Regla**: Para borrar múltiples keys por patrón, SIEMPRE usar `scanAndDelete`. `deleteCache` solo sirve para borrar una key exacta.
 
 ### `?all=true` bypaseaba impersonación de system-admin
 **Fecha**: 2026-03-03

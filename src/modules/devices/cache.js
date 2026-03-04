@@ -1,7 +1,7 @@
 // modules/devices/cache.js
 // Gestión de cache Redis para Devices
 
-import { getCache, setCache, deleteCache } from '../../db/redis/client.js';
+import { getCache, setCache, deleteCache, scanAndDelete } from '../../db/redis/client.js';
 import logger from '../../utils/logger.js';
 
 // v2: Nueva estructura de respuesta con items[] en lugar de devices[]
@@ -60,7 +60,7 @@ export const invalidateDeviceCache = async () => {
     try {
         // En Redis, buscamos todas las keys que comienzan con el prefijo y las eliminamos
         // Esto requiere escanear las keys del patrón
-        await deleteCache(`${DEVICE_LIST_CACHE_PREFIX}*`);
+        await scanAndDelete(`${DEVICE_LIST_CACHE_PREFIX}*`);
         logger.debug('Device list cache invalidated');
     } catch (error) {
         logger.error({ err: error }, 'Error invalidating device cache');

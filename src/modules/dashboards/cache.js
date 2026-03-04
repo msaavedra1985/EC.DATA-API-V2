@@ -1,7 +1,7 @@
 // modules/dashboards/cache.js
 // Gestión de cache Redis para Dashboards
 
-import { getCache, setCache, deleteCache } from '../../db/redis/client.js';
+import { getCache, setCache, scanAndDelete } from '../../db/redis/client.js';
 import logger from '../../utils/logger.js';
 
 const DASHBOARD_LIST_CACHE_PREFIX = 'ec:v1:dashboards:list:';
@@ -18,7 +18,7 @@ const GROUP_LIST_CACHE_TTL = 600;
 export const cacheDashboardList = async (cacheKey, data) => {
     try {
         const fullKey = `${DASHBOARD_LIST_CACHE_PREFIX}${cacheKey}`;
-        await setCache(fullKey, JSON.stringify(data), DASHBOARD_LIST_CACHE_TTL);
+        await setCache(fullKey, data, DASHBOARD_LIST_CACHE_TTL);
         logger.debug({ cacheKey: fullKey }, 'Dashboard list cached');
     } catch (error) {
         logger.error({ err: error, cacheKey }, 'Error caching dashboard list');
@@ -36,7 +36,7 @@ export const getCachedDashboardList = async (cacheKey) => {
         const cached = await getCache(fullKey);
 
         if (cached) {
-            const parsed = typeof cached === 'string' ? JSON.parse(cached) : cached;
+            const parsed = typeof cached === 'object' ? cached : JSON.parse(cached);
             logger.debug({ cacheKey: fullKey }, 'Dashboard list cache hit');
             return parsed;
         }
@@ -55,7 +55,7 @@ export const getCachedDashboardList = async (cacheKey) => {
  */
 export const invalidateDashboardCache = async () => {
     try {
-        await deleteCache(`${DASHBOARD_LIST_CACHE_PREFIX}*`);
+        await scanAndDelete(`${DASHBOARD_LIST_CACHE_PREFIX}*`);
         logger.debug('Dashboard list cache invalidated');
     } catch (error) {
         logger.error({ err: error }, 'Error invalidating dashboard cache');
@@ -70,7 +70,7 @@ export const invalidateDashboardCache = async () => {
 export const cacheGroupList = async (cacheKey, data) => {
     try {
         const fullKey = `${GROUP_LIST_CACHE_PREFIX}${cacheKey}`;
-        await setCache(fullKey, JSON.stringify(data), GROUP_LIST_CACHE_TTL);
+        await setCache(fullKey, data, GROUP_LIST_CACHE_TTL);
         logger.debug({ cacheKey: fullKey }, 'Dashboard group list cached');
     } catch (error) {
         logger.error({ err: error, cacheKey }, 'Error caching dashboard group list');
@@ -88,7 +88,7 @@ export const getCachedGroupList = async (cacheKey) => {
         const cached = await getCache(fullKey);
 
         if (cached) {
-            const parsed = typeof cached === 'string' ? JSON.parse(cached) : cached;
+            const parsed = typeof cached === 'object' ? cached : JSON.parse(cached);
             logger.debug({ cacheKey: fullKey }, 'Dashboard group list cache hit');
             return parsed;
         }
@@ -107,7 +107,7 @@ export const getCachedGroupList = async (cacheKey) => {
  */
 export const invalidateGroupCache = async () => {
     try {
-        await deleteCache(`${GROUP_LIST_CACHE_PREFIX}*`);
+        await scanAndDelete(`${GROUP_LIST_CACHE_PREFIX}*`);
         logger.debug('Dashboard group list cache invalidated');
     } catch (error) {
         logger.error({ err: error }, 'Error invalidating dashboard group cache');
