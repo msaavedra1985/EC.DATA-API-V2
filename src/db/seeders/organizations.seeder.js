@@ -17,7 +17,6 @@ const organizationsData = [
         phone: '+56-2-2345-6789',
         address: 'Av. Providencia 1234, Santiago, Chile',
         description: 'Enterprise data solutions and scalable backend infrastructure',
-        website: 'https://ecdata.com',
         config: {
             timezone: 'America/Santiago',
             currency: 'CLP',
@@ -109,7 +108,6 @@ export const seedOrganizations = async () => {
             phone: rootData.phone,
             address: rootData.address,
             description: rootData.description,
-            website: rootData.website,
             config: rootData.config,
             isActive: rootData.isActive
         });
@@ -138,7 +136,6 @@ export const seedOrganizations = async () => {
                 phone: data.phone,
                 address: data.address,
                 description: data.description,
-                website: data.website,
                 config: data.config,
                 isActive: data.isActive
             });
