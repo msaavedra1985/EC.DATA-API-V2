@@ -37,7 +37,10 @@ const DeviceValidityPeriodTranslation = sequelize.define('DeviceValidityPeriodTr
     tableName: 'device_validity_period_translations',
     timestamps: false,
     underscored: true,
-    paranoid: false
+    paranoid: false,
+    indexes: [
+        { unique: true, fields: ['device_validity_period_id', 'lang'], name: 'device_validity_period_translations_vp_lang_idx' }
+    ]
 });
 
 DeviceValidityPeriod.hasMany(DeviceValidityPeriodTranslation, {

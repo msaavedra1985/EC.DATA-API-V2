@@ -37,7 +37,10 @@ const DeviceLicenseTranslation = sequelize.define('DeviceLicenseTranslation', {
     tableName: 'device_license_translations',
     timestamps: false,
     underscored: true,
-    paranoid: false
+    paranoid: false,
+    indexes: [
+        { unique: true, fields: ['device_license_id', 'lang'], name: 'device_license_translations_license_lang_idx' }
+    ]
 });
 
 DeviceLicense.hasMany(DeviceLicenseTranslation, {
