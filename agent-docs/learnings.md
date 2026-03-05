@@ -323,6 +323,40 @@ Paso 5 - Actualizar código:
 
 ---
 
+## Seeders
+
+### SQL export de canales incluía columna uuid que no existe
+**Fecha**: 2026-03-05
+**Síntoma**: `psql -f sirenis-devices.sql` falla con `column "uuid" of relation "channels" does not exist`
+**Causa**: Las columnas del INSERT fueron escritas a mano. Al hacer el JOIN `SELECT * FROM channels c JOIN devices d` se mezclaron columnas de ambas tablas — `uuid` viene de `devices`, no de `channels`.
+**Solución**: Generar el SQL usando `SELECT * FROM channels` (sin JOIN) y derivar la lista de columnas dinámicamente desde `Object.keys(rows[0])`. Jamás escribir columnas de INSERT a mano para exports SQL — siempre usar el schema real.
+**Archivos afectados**: `exports/sirenis-devices.sql` (generador inline en Node.js)
+
+### `db:seed` skipea todos los usuarios después de `db:seed:core`
+**Fecha**: 2026-03-05
+**Síntoma**: Después de `db:seed:core`, correr `db:seed` crea las organizaciones demo pero no crea ningún usuario demo.
+**Causa**: `users.seeder.js` chequeaba `User.count() > 0` para decidir si saltear. Como `db:seed:core` ya creó `admin@ecdata.com`, el conteo era 1 → skip de todos los usuarios demo.
+**Solución**: 
+- Cambiar el check de existencia a un usuario demo específico: `User.findOne({ where: { email: 'orgadmin@acme.com' } })`
+- Cambiar `User.create()` → `User.findOrCreate()` para que cada usuario sea idempotente individualmente (maneja `admin@ecdata.com` que puede existir del core-seed)
+- Cambiar `UserOrganization.create()` → `UserOrganization.findOrCreate()` igualmente
+**Archivos afectados**: `src/db/seeders/users.seeder.js`
+
+### Campo `website` en organizations.seeder.js no existe en el modelo
+**Fecha**: 2026-03-05
+**Síntoma**: Dead code — `website` se pasa a `Organization.create()` pero Sequelize lo ignora silenciosamente porque no está definido en el modelo Organization.
+**Solución**: Remover el campo `website` de los datos y de los llamados a `Organization.create()`. El modelo solo tiene `logoUrl`.
+**Archivos afectados**: `src/db/seeders/organizations.seeder.js`
+
+### `User.create()` en seeder no seteaba `organizationId` ni `UserOrganization.isPrimary`
+**Fecha**: 2026-03-05
+**Síntoma**: Usuarios demo creados sin `organization_id` en la tabla `users` y con `is_primary = false` en `user_organizations`.
+**Causa**: El seeder nunca pasaba `organizationId` a `User.create()`, y `UserOrganization.create()` no seteaba `isPrimary`.
+**Solución**: Agregar `organizationId: userData.orgSlug ? (orgMap[userData.orgSlug] ?? null) : null` en `User.findOrCreate()` defaults, y `isPrimary: true` en `UserOrganization.findOrCreate()` defaults.
+**Archivos afectados**: `src/db/seeders/users.seeder.js`
+
+---
+
 ## Redis
 
 ### Double JSON serialization en sessionContextCache

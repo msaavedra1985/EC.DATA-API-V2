@@ -15,12 +15,14 @@ export const seedUsers = async () => {
     try {
         dbLogger.info('👤 Iniciando seeder de usuarios...');
 
-        const existingCount = await User.count();
+        const demoUserExists = await User.findOne({ where: { email: 'orgadmin@acme.com' } });
 
-        if (existingCount > 0) {
-            dbLogger.info(`ℹ️  Ya existen ${existingCount} usuarios. Saltando seeder.`);
+        if (demoUserExists) {
+            const existingCount = await User.count();
+            dbLogger.info(`ℹ️  Usuarios demo ya existen (${existingCount} total). Saltando seeder.`);
             return {
                 usersCreated: 0,
+                membershipsCreated: 0,
                 usersSkipped: existingCount
             };
         }
@@ -123,10 +125,6 @@ export const seedUsers = async () => {
         const memberships = [];
 
         for (const userData of usersData) {
-            const id = generateUuidV7();
-            const humanId = await generateHumanId(User, null, null);
-            const publicCode = generatePublicCode('USR');
-
             const roleId = roleMap[userData.roleName];
 
             if (!roleId) {
@@ -134,41 +132,58 @@ export const seedUsers = async () => {
                 continue;
             }
 
-            const user = await User.create({
-                id,
-                humanId,
-                publicCode,
-                email: userData.email,
-                username: userData.username,
-                passwordHash,
-                firstName: userData.firstName,
-                lastName: userData.lastName,
-                roleId,
-                phone: null,
-                language: 'es',
-                timezone: 'America/Santiago',
-                avatarUrl: null,
-                isActive: true,
-                emailVerifiedAt: new Date()
+            const id = generateUuidV7();
+            const humanId = await generateHumanId(User, null, null);
+            const publicCode = generatePublicCode('USR');
+
+            const [user, created] = await User.findOrCreate({
+                where: { email: userData.email },
+                defaults: {
+                    id,
+                    humanId,
+                    publicCode,
+                    username: userData.username,
+                    passwordHash,
+                    firstName: userData.firstName,
+                    lastName: userData.lastName,
+                    roleId,
+                    organizationId: userData.orgSlug ? (orgMap[userData.orgSlug] ?? null) : null,
+                    phone: null,
+                    language: 'es',
+                    timezone: 'America/Santiago',
+                    avatarUrl: null,
+                    isActive: true,
+                    emailVerifiedAt: new Date()
+                }
             });
 
-            users.push(user);
-            dbLogger.info(`✅ Usuario creado: ${user.email} (${user.publicCode}) - Rol global: ${userData.roleName}`);
+            if (created) {
+                users.push(user);
+                dbLogger.info(`✅ Usuario creado: ${user.email} (${user.publicCode}) - Rol global: ${userData.roleName}`);
+            } else {
+                dbLogger.info(`⏭️  Usuario ya existe: ${user.email}, saltando`);
+            }
 
             if (userData.orgSlug && userData.roleInOrg) {
                 const organizationId = orgMap[userData.orgSlug];
 
                 if (organizationId) {
-                    const membership = await UserOrganization.create({
-                        id: generateUuidV7(),
-                        userId: user.id,
-                        organizationId,
-                        roleInOrg: userData.roleInOrg,
-                        joinedAt: new Date()
+                    const [membership, memberCreated] = await UserOrganization.findOrCreate({
+                        where: { userId: user.id, organizationId },
+                        defaults: {
+                            id: generateUuidV7(),
+                            isPrimary: true,
+                            roleInOrg: userData.roleInOrg,
+                            joinedAt: new Date()
+                        }
                     });
 
-                    memberships.push(membership);
-                    dbLogger.info(`   ↳ Membresía creada: ${userData.orgSlug} (${userData.roleInOrg})`);
+                    if (memberCreated) {
+                        memberships.push(membership);
+                        dbLogger.info(`   ↳ Membresía creada: ${userData.orgSlug} (${userData.roleInOrg})`);
+                    } else {
+                        dbLogger.info(`   ↳ Membresía ya existe: ${userData.orgSlug}, saltando`);
+                    }
                 } else {
                     dbLogger.warn(`⚠️  Organización no encontrada: ${userData.orgSlug}`);
                 }

@@ -280,6 +280,16 @@ export const seedDeviceMetadata = async () => {
     try {
         dbLogger.info('🔧 Iniciando seeder de device-metadata...');
 
+        const [{ count }] = await sequelize.query(
+            `SELECT COUNT(*) as count FROM device_types`,
+            { type: QueryTypes.SELECT }
+        );
+
+        if (parseInt(count, 10) > 0) {
+            dbLogger.info(`⏭️  Device metadata ya existe (${count} tipos de dispositivo). Saltando seeder.`);
+            return { deviceTypes: 0, deviceBrands: 0, deviceModels: 0, deviceNetworks: 0, deviceServers: 0, deviceLicenses: 0, deviceValidityPeriods: 0 };
+        }
+
         const deviceTypes       = await seedDeviceTypes();
         const deviceBrands      = await seedDeviceBrands();
         const deviceModels      = await seedDeviceModels();

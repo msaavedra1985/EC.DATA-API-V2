@@ -124,7 +124,8 @@ router.post('/token', authenticate, enforceActiveOrganization, async (req, res) 
             }
         }
 
-        if (requestedServices.length > 0) {
+        // system-admin no pasa por el filtro — ya tiene exactamente lo que su rol garantiza
+        if (requestedServices.length > 0 && role !== 'system-admin') {
             allowedServices = allowedServices.filter(s =>
                 s === 'SYSTEM' || requestedServices.includes(s)
             );
