@@ -111,8 +111,8 @@ SELECT
     NULL,
     NULL,
     true,
-    'Fri Oct 23 2020 22:22:02 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:08:54 GMT+0000 (Coordinated Universal Time)'
+    '2020-10-23T22:22:02.000Z',
+    '2026-02-12T17:08:54.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM devices WHERE id = '019c52d3-bf66-70f0-bc46-509a0c3a1fff');
 
 INSERT INTO devices (id, human_id, public_code, uuid, organization_id, site_id, name, description, device_type_id, brand_id, model_id, server_id, network_id, license_id, validity_period_id, topic, status, firmware_version, serial_number, ip_address, mac_address, location_name, physical_location, electrical_location, latitude, longitude, city, timezone, installation_date, warranty_months, expiration_date, last_seen_at, metadata, is_active, created_at, updated_at)
@@ -148,11 +148,11 @@ SELECT
     NULL,
     NULL,
     NULL,
-    'Thu Feb 12 2026 16:48:50 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:50.000Z',
     NULL,
     true,
-    'Thu Aug 05 2021 12:00:41 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:08:55 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-05T12:00:41.000Z',
+    '2026-02-12T17:08:55.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM devices WHERE id = '019c52d3-c07e-725f-ac03-f93e8921ef61');
 
 INSERT INTO devices (id, human_id, public_code, uuid, organization_id, site_id, name, description, device_type_id, brand_id, model_id, server_id, network_id, license_id, validity_period_id, topic, status, firmware_version, serial_number, ip_address, mac_address, location_name, physical_location, electrical_location, latitude, longitude, city, timezone, installation_date, warranty_months, expiration_date, last_seen_at, metadata, is_active, created_at, updated_at)
@@ -188,11 +188,11 @@ SELECT
     NULL,
     NULL,
     NULL,
-    'Thu Feb 12 2026 16:48:51 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:51.000Z',
     NULL,
     true,
-    'Tue Aug 10 2021 15:26:56 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:08:55 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-10T15:26:56.000Z',
+    '2026-02-12T17:08:55.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM devices WHERE id = '019c52d3-c0c9-7359-bfef-d70854a05e20');
 
 INSERT INTO devices (id, human_id, public_code, uuid, organization_id, site_id, name, description, device_type_id, brand_id, model_id, server_id, network_id, license_id, validity_period_id, topic, status, firmware_version, serial_number, ip_address, mac_address, location_name, physical_location, electrical_location, latitude, longitude, city, timezone, installation_date, warranty_months, expiration_date, last_seen_at, metadata, is_active, created_at, updated_at)
@@ -228,11 +228,11 @@ SELECT
     NULL,
     NULL,
     NULL,
-    'Thu Feb 12 2026 16:48:58 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:58.000Z',
     NULL,
     true,
-    'Tue Aug 10 2021 15:28:21 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:08:55 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-10T15:28:21.000Z',
+    '2026-02-12T17:08:55.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM devices WHERE id = '019c52d3-c116-71ea-b71c-7b9a9bb10b70');
 
 INSERT INTO devices (id, human_id, public_code, uuid, organization_id, site_id, name, description, device_type_id, brand_id, model_id, server_id, network_id, license_id, validity_period_id, topic, status, firmware_version, serial_number, ip_address, mac_address, location_name, physical_location, electrical_location, latitude, longitude, city, timezone, installation_date, warranty_months, expiration_date, last_seen_at, metadata, is_active, created_at, updated_at)
@@ -268,11 +268,11 @@ SELECT
     NULL,
     NULL,
     NULL,
-    'Thu Feb 12 2026 16:48:50 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:50.000Z',
     NULL,
     true,
-    'Tue Aug 10 2021 15:29:49 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:08:55 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-10T15:29:49.000Z',
+    '2026-02-12T17:08:55.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM devices WHERE id = '019c52d3-c15f-7234-8a1c-b41244d0dfaa');
 
 INSERT INTO devices (id, human_id, public_code, uuid, organization_id, site_id, name, description, device_type_id, brand_id, model_id, server_id, network_id, license_id, validity_period_id, topic, status, firmware_version, serial_number, ip_address, mac_address, location_name, physical_location, electrical_location, latitude, longitude, city, timezone, installation_date, warranty_months, expiration_date, last_seen_at, metadata, is_active, created_at, updated_at)
@@ -308,11 +308,11 @@ SELECT
     NULL,
     NULL,
     NULL,
-    'Thu Feb 12 2026 16:48:50 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:50.000Z',
     NULL,
     true,
-    'Fri Aug 13 2021 14:48:21 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:08:55 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-13T14:48:21.000Z',
+    '2026-02-12T17:08:55.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM devices WHERE id = '019c52d3-c1aa-701f-be0c-d991cb4785bf');
 
 INSERT INTO devices (id, human_id, public_code, uuid, organization_id, site_id, name, description, device_type_id, brand_id, model_id, server_id, network_id, license_id, validity_period_id, topic, status, firmware_version, serial_number, ip_address, mac_address, location_name, physical_location, electrical_location, latitude, longitude, city, timezone, installation_date, warranty_months, expiration_date, last_seen_at, metadata, is_active, created_at, updated_at)
@@ -348,11 +348,11 @@ SELECT
     NULL,
     NULL,
     NULL,
-    'Thu Feb 12 2026 16:48:50 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:50.000Z',
     NULL,
     true,
-    'Fri Aug 13 2021 15:05:59 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:08:55 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-13T15:05:59.000Z',
+    '2026-02-12T17:08:55.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM devices WHERE id = '019c52d3-c1f3-739f-bfed-8fcbc23e16d8');
 
 INSERT INTO devices (id, human_id, public_code, uuid, organization_id, site_id, name, description, device_type_id, brand_id, model_id, server_id, network_id, license_id, validity_period_id, topic, status, firmware_version, serial_number, ip_address, mac_address, location_name, physical_location, electrical_location, latitude, longitude, city, timezone, installation_date, warranty_months, expiration_date, last_seen_at, metadata, is_active, created_at, updated_at)
@@ -388,11 +388,11 @@ SELECT
     NULL,
     NULL,
     NULL,
-    'Thu Feb 12 2026 16:48:50 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:50.000Z',
     NULL,
     true,
-    'Fri Aug 13 2021 15:06:52 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:08:55 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-13T15:06:52.000Z',
+    '2026-02-12T17:08:55.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM devices WHERE id = '019c52d3-c23d-761a-a04e-4443e0a4cafe');
 
 INSERT INTO devices (id, human_id, public_code, uuid, organization_id, site_id, name, description, device_type_id, brand_id, model_id, server_id, network_id, license_id, validity_period_id, topic, status, firmware_version, serial_number, ip_address, mac_address, location_name, physical_location, electrical_location, latitude, longitude, city, timezone, installation_date, warranty_months, expiration_date, last_seen_at, metadata, is_active, created_at, updated_at)
@@ -428,11 +428,11 @@ SELECT
     NULL,
     NULL,
     NULL,
-    'Thu Feb 12 2026 16:48:50 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:50.000Z',
     NULL,
     true,
-    'Fri Aug 13 2021 15:07:56 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:08:55 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-13T15:07:56.000Z',
+    '2026-02-12T17:08:55.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM devices WHERE id = '019c52d3-c286-72ba-b41b-fbb5675ebbbd');
 
 INSERT INTO devices (id, human_id, public_code, uuid, organization_id, site_id, name, description, device_type_id, brand_id, model_id, server_id, network_id, license_id, validity_period_id, topic, status, firmware_version, serial_number, ip_address, mac_address, location_name, physical_location, electrical_location, latitude, longitude, city, timezone, installation_date, warranty_months, expiration_date, last_seen_at, metadata, is_active, created_at, updated_at)
@@ -468,11 +468,11 @@ SELECT
     NULL,
     NULL,
     NULL,
-    'Thu Feb 12 2026 16:48:55 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:55.000Z',
     NULL,
     true,
-    'Fri Aug 13 2021 15:09:58 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:08:55 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-13T15:09:58.000Z',
+    '2026-02-12T17:08:55.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM devices WHERE id = '019c52d3-c2d0-7181-86f4-e3cfcae00fed');
 
 INSERT INTO devices (id, human_id, public_code, uuid, organization_id, site_id, name, description, device_type_id, brand_id, model_id, server_id, network_id, license_id, validity_period_id, topic, status, firmware_version, serial_number, ip_address, mac_address, location_name, physical_location, electrical_location, latitude, longitude, city, timezone, installation_date, warranty_months, expiration_date, last_seen_at, metadata, is_active, created_at, updated_at)
@@ -508,11 +508,11 @@ SELECT
     NULL,
     NULL,
     NULL,
-    'Thu Feb 12 2026 16:48:50 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:50.000Z',
     NULL,
     true,
-    'Fri Aug 13 2021 15:12:10 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:08:55 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-13T15:12:10.000Z',
+    '2026-02-12T17:08:55.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM devices WHERE id = '019c52d3-c31f-708f-83f3-94bcb934dcaa');
 
 INSERT INTO devices (id, human_id, public_code, uuid, organization_id, site_id, name, description, device_type_id, brand_id, model_id, server_id, network_id, license_id, validity_period_id, topic, status, firmware_version, serial_number, ip_address, mac_address, location_name, physical_location, electrical_location, latitude, longitude, city, timezone, installation_date, warranty_months, expiration_date, last_seen_at, metadata, is_active, created_at, updated_at)
@@ -548,11 +548,11 @@ SELECT
     NULL,
     NULL,
     NULL,
-    'Mon Dec 11 2023 14:40:11 GMT+0000 (Coordinated Universal Time)',
+    '2023-12-11T14:40:11.000Z',
     NULL,
     true,
-    'Wed Jan 19 2022 15:18:59 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:08:55 GMT+0000 (Coordinated Universal Time)'
+    '2022-01-19T15:18:59.000Z',
+    '2026-02-12T17:08:55.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM devices WHERE id = '019c52d3-c36a-743c-8e7e-c71a82ce31a3');
 
 INSERT INTO devices (id, human_id, public_code, uuid, organization_id, site_id, name, description, device_type_id, brand_id, model_id, server_id, network_id, license_id, validity_period_id, topic, status, firmware_version, serial_number, ip_address, mac_address, location_name, physical_location, electrical_location, latitude, longitude, city, timezone, installation_date, warranty_months, expiration_date, last_seen_at, metadata, is_active, created_at, updated_at)
@@ -588,11 +588,11 @@ SELECT
     NULL,
     NULL,
     NULL,
-    'Mon Dec 11 2023 14:40:11 GMT+0000 (Coordinated Universal Time)',
+    '2023-12-11T14:40:11.000Z',
     NULL,
     true,
-    'Wed Jan 19 2022 15:18:59 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:08:55 GMT+0000 (Coordinated Universal Time)'
+    '2022-01-19T15:18:59.000Z',
+    '2026-02-12T17:08:55.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM devices WHERE id = '019c52d3-c3b3-714d-9fb7-f1335eccee4e');
 
 INSERT INTO devices (id, human_id, public_code, uuid, organization_id, site_id, name, description, device_type_id, brand_id, model_id, server_id, network_id, license_id, validity_period_id, topic, status, firmware_version, serial_number, ip_address, mac_address, location_name, physical_location, electrical_location, latitude, longitude, city, timezone, installation_date, warranty_months, expiration_date, last_seen_at, metadata, is_active, created_at, updated_at)
@@ -628,11 +628,11 @@ SELECT
     NULL,
     NULL,
     NULL,
-    'Mon Dec 11 2023 14:40:11 GMT+0000 (Coordinated Universal Time)',
+    '2023-12-11T14:40:11.000Z',
     NULL,
     true,
-    'Wed Jan 19 2022 15:18:59 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:08:55 GMT+0000 (Coordinated Universal Time)'
+    '2022-01-19T15:18:59.000Z',
+    '2026-02-12T17:08:55.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM devices WHERE id = '019c52d3-c3fd-74bf-a2b3-293fbf49f58c');
 
 INSERT INTO devices (id, human_id, public_code, uuid, organization_id, site_id, name, description, device_type_id, brand_id, model_id, server_id, network_id, license_id, validity_period_id, topic, status, firmware_version, serial_number, ip_address, mac_address, location_name, physical_location, electrical_location, latitude, longitude, city, timezone, installation_date, warranty_months, expiration_date, last_seen_at, metadata, is_active, created_at, updated_at)
@@ -668,11 +668,11 @@ SELECT
     NULL,
     NULL,
     NULL,
-    'Mon Dec 11 2023 14:40:12 GMT+0000 (Coordinated Universal Time)',
+    '2023-12-11T14:40:12.000Z',
     NULL,
     true,
-    'Wed Jan 19 2022 15:18:59 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:08:56 GMT+0000 (Coordinated Universal Time)'
+    '2022-01-19T15:18:59.000Z',
+    '2026-02-12T17:08:56.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM devices WHERE id = '019c52d3-c447-701c-abe6-060018944fa5');
 
 INSERT INTO devices (id, human_id, public_code, uuid, organization_id, site_id, name, description, device_type_id, brand_id, model_id, server_id, network_id, license_id, validity_period_id, topic, status, firmware_version, serial_number, ip_address, mac_address, location_name, physical_location, electrical_location, latitude, longitude, city, timezone, installation_date, warranty_months, expiration_date, last_seen_at, metadata, is_active, created_at, updated_at)
@@ -708,11 +708,11 @@ SELECT
     NULL,
     NULL,
     NULL,
-    'Thu Feb 12 2026 16:48:59 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:59.000Z',
     NULL,
     true,
-    'Sat Mar 26 2022 21:53:48 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:08:56 GMT+0000 (Coordinated Universal Time)'
+    '2022-03-26T21:53:48.000Z',
+    '2026-02-12T17:08:56.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM devices WHERE id = '019c52d3-c490-735d-97c4-e5be9a99dc31');
 
 INSERT INTO devices (id, human_id, public_code, uuid, organization_id, site_id, name, description, device_type_id, brand_id, model_id, server_id, network_id, license_id, validity_period_id, topic, status, firmware_version, serial_number, ip_address, mac_address, location_name, physical_location, electrical_location, latitude, longitude, city, timezone, installation_date, warranty_months, expiration_date, last_seen_at, metadata, is_active, created_at, updated_at)
@@ -748,11 +748,11 @@ SELECT
     NULL,
     NULL,
     NULL,
-    'Thu Feb 12 2026 16:49:02 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:49:02.000Z',
     NULL,
     true,
-    'Sat Mar 26 2022 21:56:44 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:08:56 GMT+0000 (Coordinated Universal Time)'
+    '2022-03-26T21:56:44.000Z',
+    '2026-02-12T17:08:56.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM devices WHERE id = '019c52d3-c4dc-7550-9b87-9125f59922ac');
 
 INSERT INTO devices (id, human_id, public_code, uuid, organization_id, site_id, name, description, device_type_id, brand_id, model_id, server_id, network_id, license_id, validity_period_id, topic, status, firmware_version, serial_number, ip_address, mac_address, location_name, physical_location, electrical_location, latitude, longitude, city, timezone, installation_date, warranty_months, expiration_date, last_seen_at, metadata, is_active, created_at, updated_at)
@@ -788,11 +788,11 @@ SELECT
     NULL,
     NULL,
     NULL,
-    'Thu Feb 12 2026 16:48:50 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:50.000Z',
     NULL,
     true,
-    'Sat Mar 26 2022 21:59:51 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:08:56 GMT+0000 (Coordinated Universal Time)'
+    '2022-03-26T21:59:51.000Z',
+    '2026-02-12T17:08:56.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM devices WHERE id = '019c52d3-c526-723a-9513-58cc1da65c97');
 
 INSERT INTO devices (id, human_id, public_code, uuid, organization_id, site_id, name, description, device_type_id, brand_id, model_id, server_id, network_id, license_id, validity_period_id, topic, status, firmware_version, serial_number, ip_address, mac_address, location_name, physical_location, electrical_location, latitude, longitude, city, timezone, installation_date, warranty_months, expiration_date, last_seen_at, metadata, is_active, created_at, updated_at)
@@ -828,11 +828,11 @@ SELECT
     NULL,
     NULL,
     NULL,
-    'Fri Dec 05 2025 16:09:30 GMT+0000 (Coordinated Universal Time)',
+    '2025-12-05T16:09:30.000Z',
     NULL,
     true,
-    'Sat Mar 26 2022 22:02:21 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:08:56 GMT+0000 (Coordinated Universal Time)'
+    '2022-03-26T22:02:21.000Z',
+    '2026-02-12T17:08:56.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM devices WHERE id = '019c52d3-c570-742e-bbbd-ea2200ef8a22');
 
 INSERT INTO devices (id, human_id, public_code, uuid, organization_id, site_id, name, description, device_type_id, brand_id, model_id, server_id, network_id, license_id, validity_period_id, topic, status, firmware_version, serial_number, ip_address, mac_address, location_name, physical_location, electrical_location, latitude, longitude, city, timezone, installation_date, warranty_months, expiration_date, last_seen_at, metadata, is_active, created_at, updated_at)
@@ -868,11 +868,11 @@ SELECT
     NULL,
     NULL,
     NULL,
-    'Thu Feb 12 2026 16:48:56 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:56.000Z',
     NULL,
     true,
-    'Sat Mar 26 2022 22:05:24 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:08:56 GMT+0000 (Coordinated Universal Time)'
+    '2022-03-26T22:05:24.000Z',
+    '2026-02-12T17:08:56.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM devices WHERE id = '019c52d3-c5ba-71bf-82fb-b9da4e031188');
 
 INSERT INTO devices (id, human_id, public_code, uuid, organization_id, site_id, name, description, device_type_id, brand_id, model_id, server_id, network_id, license_id, validity_period_id, topic, status, firmware_version, serial_number, ip_address, mac_address, location_name, physical_location, electrical_location, latitude, longitude, city, timezone, installation_date, warranty_months, expiration_date, last_seen_at, metadata, is_active, created_at, updated_at)
@@ -908,11 +908,11 @@ SELECT
     NULL,
     NULL,
     NULL,
-    'Thu Feb 12 2026 16:49:03 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:49:03.000Z',
     NULL,
     true,
-    'Sat Mar 26 2022 22:10:36 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:08:56 GMT+0000 (Coordinated Universal Time)'
+    '2022-03-26T22:10:36.000Z',
+    '2026-02-12T17:08:56.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM devices WHERE id = '019c52d3-c603-757b-95fc-5f623c675100');
 
 INSERT INTO devices (id, human_id, public_code, uuid, organization_id, site_id, name, description, device_type_id, brand_id, model_id, server_id, network_id, license_id, validity_period_id, topic, status, firmware_version, serial_number, ip_address, mac_address, location_name, physical_location, electrical_location, latitude, longitude, city, timezone, installation_date, warranty_months, expiration_date, last_seen_at, metadata, is_active, created_at, updated_at)
@@ -948,11 +948,11 @@ SELECT
     NULL,
     NULL,
     NULL,
-    'Thu Jun 19 2025 16:31:31 GMT+0000 (Coordinated Universal Time)',
+    '2025-06-19T16:31:31.000Z',
     NULL,
     true,
-    'Sat Mar 26 2022 22:21:30 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:08:56 GMT+0000 (Coordinated Universal Time)'
+    '2022-03-26T22:21:30.000Z',
+    '2026-02-12T17:08:56.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM devices WHERE id = '019c52d3-c64d-715e-8013-178a880c9011');
 
 INSERT INTO devices (id, human_id, public_code, uuid, organization_id, site_id, name, description, device_type_id, brand_id, model_id, server_id, network_id, license_id, validity_period_id, topic, status, firmware_version, serial_number, ip_address, mac_address, location_name, physical_location, electrical_location, latitude, longitude, city, timezone, installation_date, warranty_months, expiration_date, last_seen_at, metadata, is_active, created_at, updated_at)
@@ -988,11 +988,11 @@ SELECT
     NULL,
     NULL,
     NULL,
-    'Thu Feb 12 2026 16:49:04 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:49:04.000Z',
     NULL,
     true,
-    'Sat Mar 26 2022 22:23:52 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:08:56 GMT+0000 (Coordinated Universal Time)'
+    '2022-03-26T22:23:52.000Z',
+    '2026-02-12T17:08:56.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM devices WHERE id = '019c52d3-c69c-7749-8e16-bee1f4ebf585');
 
 INSERT INTO devices (id, human_id, public_code, uuid, organization_id, site_id, name, description, device_type_id, brand_id, model_id, server_id, network_id, license_id, validity_period_id, topic, status, firmware_version, serial_number, ip_address, mac_address, location_name, physical_location, electrical_location, latitude, longitude, city, timezone, installation_date, warranty_months, expiration_date, last_seen_at, metadata, is_active, created_at, updated_at)
@@ -1028,11 +1028,11 @@ SELECT
     NULL,
     NULL,
     NULL,
-    'Thu Feb 12 2026 16:48:51 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:51.000Z',
     NULL,
     true,
-    'Sat Mar 26 2022 22:25:48 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:08:56 GMT+0000 (Coordinated Universal Time)'
+    '2022-03-26T22:25:48.000Z',
+    '2026-02-12T17:08:56.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM devices WHERE id = '019c52d3-c6e6-70a2-ba1f-5776f96830ce');
 
 INSERT INTO devices (id, human_id, public_code, uuid, organization_id, site_id, name, description, device_type_id, brand_id, model_id, server_id, network_id, license_id, validity_period_id, topic, status, firmware_version, serial_number, ip_address, mac_address, location_name, physical_location, electrical_location, latitude, longitude, city, timezone, installation_date, warranty_months, expiration_date, last_seen_at, metadata, is_active, created_at, updated_at)
@@ -1068,11 +1068,11 @@ SELECT
     NULL,
     NULL,
     NULL,
-    'Thu Feb 12 2026 16:48:51 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:51.000Z',
     NULL,
     true,
-    'Sat Mar 26 2022 22:27:08 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:08:56 GMT+0000 (Coordinated Universal Time)'
+    '2022-03-26T22:27:08.000Z',
+    '2026-02-12T17:08:56.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM devices WHERE id = '019c52d3-c731-7739-9c7b-ed5c99b0e97d');
 
 INSERT INTO devices (id, human_id, public_code, uuid, organization_id, site_id, name, description, device_type_id, brand_id, model_id, server_id, network_id, license_id, validity_period_id, topic, status, firmware_version, serial_number, ip_address, mac_address, location_name, physical_location, electrical_location, latitude, longitude, city, timezone, installation_date, warranty_months, expiration_date, last_seen_at, metadata, is_active, created_at, updated_at)
@@ -1108,11 +1108,11 @@ SELECT
     NULL,
     NULL,
     NULL,
-    'Thu Feb 12 2026 16:48:59 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:59.000Z',
     NULL,
     true,
-    'Sat Mar 26 2022 22:35:40 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:08:56 GMT+0000 (Coordinated Universal Time)'
+    '2022-03-26T22:35:40.000Z',
+    '2026-02-12T17:08:56.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM devices WHERE id = '019c52d3-c77b-7462-8695-b5f6e3e520e3');
 
 INSERT INTO devices (id, human_id, public_code, uuid, organization_id, site_id, name, description, device_type_id, brand_id, model_id, server_id, network_id, license_id, validity_period_id, topic, status, firmware_version, serial_number, ip_address, mac_address, location_name, physical_location, electrical_location, latitude, longitude, city, timezone, installation_date, warranty_months, expiration_date, last_seen_at, metadata, is_active, created_at, updated_at)
@@ -1148,11 +1148,11 @@ SELECT
     NULL,
     NULL,
     NULL,
-    'Thu Feb 12 2026 16:49:02 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:49:02.000Z',
     NULL,
     true,
-    'Sat Mar 26 2022 21:58:30 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:08:56 GMT+0000 (Coordinated Universal Time)'
+    '2022-03-26T21:58:30.000Z',
+    '2026-02-12T17:08:56.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM devices WHERE id = '019c52d3-c7c5-741a-913c-9deb9d04872d');
 
 INSERT INTO devices (id, human_id, public_code, uuid, organization_id, site_id, name, description, device_type_id, brand_id, model_id, server_id, network_id, license_id, validity_period_id, topic, status, firmware_version, serial_number, ip_address, mac_address, location_name, physical_location, electrical_location, latitude, longitude, city, timezone, installation_date, warranty_months, expiration_date, last_seen_at, metadata, is_active, created_at, updated_at)
@@ -1188,11 +1188,11 @@ SELECT
     NULL,
     NULL,
     NULL,
-    'Thu Feb 12 2026 16:49:06 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:49:06.000Z',
     NULL,
     true,
-    'Tue Aug 16 2022 13:29:24 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:08:56 GMT+0000 (Coordinated Universal Time)'
+    '2022-08-16T13:29:24.000Z',
+    '2026-02-12T17:08:56.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM devices WHERE id = '019c52d3-c818-750f-b276-202fd6f44ff8');
 
 INSERT INTO devices (id, human_id, public_code, uuid, organization_id, site_id, name, description, device_type_id, brand_id, model_id, server_id, network_id, license_id, validity_period_id, topic, status, firmware_version, serial_number, ip_address, mac_address, location_name, physical_location, electrical_location, latitude, longitude, city, timezone, installation_date, warranty_months, expiration_date, last_seen_at, metadata, is_active, created_at, updated_at)
@@ -1228,11 +1228,11 @@ SELECT
     NULL,
     NULL,
     NULL,
-    'Thu Feb 12 2026 16:49:06 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:49:06.000Z',
     NULL,
     true,
-    'Tue Aug 16 2022 13:35:53 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:08:57 GMT+0000 (Coordinated Universal Time)'
+    '2022-08-16T13:35:53.000Z',
+    '2026-02-12T17:08:57.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM devices WHERE id = '019c52d3-c862-76de-8f61-1a2241bdbdbc');
 
 INSERT INTO devices (id, human_id, public_code, uuid, organization_id, site_id, name, description, device_type_id, brand_id, model_id, server_id, network_id, license_id, validity_period_id, topic, status, firmware_version, serial_number, ip_address, mac_address, location_name, physical_location, electrical_location, latitude, longitude, city, timezone, installation_date, warranty_months, expiration_date, last_seen_at, metadata, is_active, created_at, updated_at)
@@ -1268,11 +1268,11 @@ SELECT
     NULL,
     NULL,
     NULL,
-    'Thu Feb 12 2026 16:49:06 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:49:06.000Z',
     NULL,
     true,
-    'Tue Aug 16 2022 13:39:36 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:08:57 GMT+0000 (Coordinated Universal Time)'
+    '2022-08-16T13:39:36.000Z',
+    '2026-02-12T17:08:57.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM devices WHERE id = '019c52d3-c8ac-742f-9041-9f119228fae3');
 
 INSERT INTO devices (id, human_id, public_code, uuid, organization_id, site_id, name, description, device_type_id, brand_id, model_id, server_id, network_id, license_id, validity_period_id, topic, status, firmware_version, serial_number, ip_address, mac_address, location_name, physical_location, electrical_location, latitude, longitude, city, timezone, installation_date, warranty_months, expiration_date, last_seen_at, metadata, is_active, created_at, updated_at)
@@ -1308,11 +1308,11 @@ SELECT
     NULL,
     NULL,
     NULL,
-    'Thu Feb 12 2026 16:49:06 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:49:06.000Z',
     NULL,
     true,
-    'Wed Aug 20 2025 22:05:34 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:08:57 GMT+0000 (Coordinated Universal Time)'
+    '2025-08-20T22:05:34.000Z',
+    '2026-02-12T17:08:57.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM devices WHERE id = '019c52d3-c8f8-71ea-872a-3d3421769de7');
 
 INSERT INTO devices (id, human_id, public_code, uuid, organization_id, site_id, name, description, device_type_id, brand_id, model_id, server_id, network_id, license_id, validity_period_id, topic, status, firmware_version, serial_number, ip_address, mac_address, location_name, physical_location, electrical_location, latitude, longitude, city, timezone, installation_date, warranty_months, expiration_date, last_seen_at, metadata, is_active, created_at, updated_at)
@@ -1348,11 +1348,11 @@ SELECT
     NULL,
     NULL,
     NULL,
-    'Thu Feb 12 2026 16:48:50 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:50.000Z',
     NULL,
     true,
-    'Wed Aug 11 2021 02:04:15 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:08:57 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-11T02:04:15.000Z',
+    '2026-02-12T17:08:57.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM devices WHERE id = '019c52d3-c943-746c-838b-baacdc401a85');
 
 INSERT INTO devices (id, human_id, public_code, uuid, organization_id, site_id, name, description, device_type_id, brand_id, model_id, server_id, network_id, license_id, validity_period_id, topic, status, firmware_version, serial_number, ip_address, mac_address, location_name, physical_location, electrical_location, latitude, longitude, city, timezone, installation_date, warranty_months, expiration_date, last_seen_at, metadata, is_active, created_at, updated_at)
@@ -1388,11 +1388,11 @@ SELECT
     NULL,
     NULL,
     NULL,
-    'Thu Feb 12 2026 16:48:51 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:51.000Z',
     NULL,
     true,
-    'Fri Aug 13 2021 14:46:25 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:08:57 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-13T14:46:25.000Z',
+    '2026-02-12T17:08:57.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM devices WHERE id = '019c52d3-c98e-7564-80fe-4da6db231ebd');
 
 INSERT INTO devices (id, human_id, public_code, uuid, organization_id, site_id, name, description, device_type_id, brand_id, model_id, server_id, network_id, license_id, validity_period_id, topic, status, firmware_version, serial_number, ip_address, mac_address, location_name, physical_location, electrical_location, latitude, longitude, city, timezone, installation_date, warranty_months, expiration_date, last_seen_at, metadata, is_active, created_at, updated_at)
@@ -1428,11 +1428,11 @@ SELECT
     NULL,
     NULL,
     NULL,
-    'Thu Feb 12 2026 16:48:50 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:50.000Z',
     NULL,
     true,
-    'Fri Aug 13 2021 14:50:13 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:08:57 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-13T14:50:13.000Z',
+    '2026-02-12T17:08:57.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM devices WHERE id = '019c52d3-c9d8-73dd-938b-c2670566482e');
 
 INSERT INTO devices (id, human_id, public_code, uuid, organization_id, site_id, name, description, device_type_id, brand_id, model_id, server_id, network_id, license_id, validity_period_id, topic, status, firmware_version, serial_number, ip_address, mac_address, location_name, physical_location, electrical_location, latitude, longitude, city, timezone, installation_date, warranty_months, expiration_date, last_seen_at, metadata, is_active, created_at, updated_at)
@@ -1468,11 +1468,11 @@ SELECT
     NULL,
     NULL,
     NULL,
-    'Thu Feb 12 2026 16:48:31 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:31.000Z',
     NULL,
     true,
-    'Fri Aug 13 2021 14:56:42 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:08:57 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-13T14:56:42.000Z',
+    '2026-02-12T17:08:57.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM devices WHERE id = '019c52d3-ca23-722e-bd54-fce8a7551177');
 
 INSERT INTO devices (id, human_id, public_code, uuid, organization_id, site_id, name, description, device_type_id, brand_id, model_id, server_id, network_id, license_id, validity_period_id, topic, status, firmware_version, serial_number, ip_address, mac_address, location_name, physical_location, electrical_location, latitude, longitude, city, timezone, installation_date, warranty_months, expiration_date, last_seen_at, metadata, is_active, created_at, updated_at)
@@ -1508,11 +1508,11 @@ SELECT
     NULL,
     NULL,
     NULL,
-    'Thu Feb 12 2026 16:48:50 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:50.000Z',
     NULL,
     true,
-    'Fri Aug 13 2021 14:57:55 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:08:57 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-13T14:57:55.000Z',
+    '2026-02-12T17:08:57.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM devices WHERE id = '019c52d3-ca6c-74d9-96cd-e19f3f088846');
 
 INSERT INTO devices (id, human_id, public_code, uuid, organization_id, site_id, name, description, device_type_id, brand_id, model_id, server_id, network_id, license_id, validity_period_id, topic, status, firmware_version, serial_number, ip_address, mac_address, location_name, physical_location, electrical_location, latitude, longitude, city, timezone, installation_date, warranty_months, expiration_date, last_seen_at, metadata, is_active, created_at, updated_at)
@@ -1548,11 +1548,11 @@ SELECT
     NULL,
     NULL,
     NULL,
-    'Thu Feb 12 2026 16:48:50 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:50.000Z',
     NULL,
     true,
-    'Fri Aug 13 2021 15:04:49 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:08:57 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-13T15:04:49.000Z',
+    '2026-02-12T17:08:57.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM devices WHERE id = '019c52d3-cab8-705f-84df-d27b0e24874d');
 
 INSERT INTO devices (id, human_id, public_code, uuid, organization_id, site_id, name, description, device_type_id, brand_id, model_id, server_id, network_id, license_id, validity_period_id, topic, status, firmware_version, serial_number, ip_address, mac_address, location_name, physical_location, electrical_location, latitude, longitude, city, timezone, installation_date, warranty_months, expiration_date, last_seen_at, metadata, is_active, created_at, updated_at)
@@ -1588,11 +1588,11 @@ SELECT
     NULL,
     NULL,
     NULL,
-    'Thu Feb 12 2026 16:48:55 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:55.000Z',
     NULL,
     true,
-    'Fri Aug 13 2021 15:08:54 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:08:57 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-13T15:08:54.000Z',
+    '2026-02-12T17:08:57.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM devices WHERE id = '019c52d3-cb01-732a-99f8-4c06a55a973b');
 
 INSERT INTO devices (id, human_id, public_code, uuid, organization_id, site_id, name, description, device_type_id, brand_id, model_id, server_id, network_id, license_id, validity_period_id, topic, status, firmware_version, serial_number, ip_address, mac_address, location_name, physical_location, electrical_location, latitude, longitude, city, timezone, installation_date, warranty_months, expiration_date, last_seen_at, metadata, is_active, created_at, updated_at)
@@ -1628,11 +1628,11 @@ SELECT
     NULL,
     NULL,
     NULL,
-    'Thu Feb 12 2026 16:48:50 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:50.000Z',
     NULL,
     true,
-    'Fri Aug 13 2021 15:11:04 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:08:57 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-13T15:11:04.000Z',
+    '2026-02-12T17:08:57.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM devices WHERE id = '019c52d3-cb4b-77ec-820c-82e24f69bd4b');
 
 INSERT INTO devices (id, human_id, public_code, uuid, organization_id, site_id, name, description, device_type_id, brand_id, model_id, server_id, network_id, license_id, validity_period_id, topic, status, firmware_version, serial_number, ip_address, mac_address, location_name, physical_location, electrical_location, latitude, longitude, city, timezone, installation_date, warranty_months, expiration_date, last_seen_at, metadata, is_active, created_at, updated_at)
@@ -1668,11 +1668,11 @@ SELECT
     NULL,
     NULL,
     NULL,
-    'Wed Nov 05 2025 12:09:08 GMT+0000 (Coordinated Universal Time)',
+    '2025-11-05T12:09:08.000Z',
     NULL,
     true,
-    'Wed Sep 15 2021 13:31:37 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:08:57 GMT+0000 (Coordinated Universal Time)'
+    '2021-09-15T13:31:37.000Z',
+    '2026-02-12T17:08:57.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM devices WHERE id = '019c52d3-cb95-7512-8bf8-b0fbf71a13d2');
 
 INSERT INTO devices (id, human_id, public_code, uuid, organization_id, site_id, name, description, device_type_id, brand_id, model_id, server_id, network_id, license_id, validity_period_id, topic, status, firmware_version, serial_number, ip_address, mac_address, location_name, physical_location, electrical_location, latitude, longitude, city, timezone, installation_date, warranty_months, expiration_date, last_seen_at, metadata, is_active, created_at, updated_at)
@@ -1708,11 +1708,11 @@ SELECT
     NULL,
     NULL,
     NULL,
-    'Thu Feb 12 2026 16:48:53 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:53.000Z',
     NULL,
     true,
-    'Sat Mar 26 2022 22:01:09 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:08:57 GMT+0000 (Coordinated Universal Time)'
+    '2022-03-26T22:01:09.000Z',
+    '2026-02-12T17:08:57.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM devices WHERE id = '019c52d3-cbe0-751f-9b1f-a954ae564a17');
 
 -- --------------------------------------------------------
@@ -1736,11 +1736,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:50 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:50.000Z',
     NULL,
     true,
-    'Thu Aug 05 2021 12:00:41 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:08:58 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-05T12:00:41.000Z',
+    '2026-02-12T17:08:58.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-ccbd-7234-81de-05d825c8fa74');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -1758,11 +1758,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:50 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:50.000Z',
     NULL,
     true,
-    'Wed Aug 18 2021 01:33:53 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:08:58 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-18T01:33:53.000Z',
+    '2026-02-12T17:08:58.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-cd07-74f9-907e-acd79f475404');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -1780,11 +1780,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:50 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:50.000Z',
     NULL,
     true,
-    'Wed Aug 18 2021 01:34:48 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:08:58 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-18T01:34:48.000Z',
+    '2026-02-12T17:08:58.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-cd52-713e-b2b9-9a15181f32a3');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -1802,11 +1802,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:50 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:50.000Z',
     NULL,
     true,
-    'Wed Aug 18 2021 01:35:35 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:08:58 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-18T01:35:35.000Z',
+    '2026-02-12T17:08:58.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-cd9b-724b-a54a-9e66ee0fb53a');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -1824,11 +1824,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:50 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:50.000Z',
     NULL,
     true,
-    'Wed Aug 18 2021 01:35:58 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:08:58 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-18T01:35:58.000Z',
+    '2026-02-12T17:08:58.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-cde4-72ac-962c-1a2414829ed0');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -1846,11 +1846,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:50 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:50.000Z',
     NULL,
     true,
-    'Wed Aug 18 2021 01:36:17 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:08:58 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-18T01:36:17.000Z',
+    '2026-02-12T17:08:58.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-ce2d-760b-9d44-d709b801a274');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -1868,11 +1868,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:51 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:51.000Z',
     NULL,
     true,
-    'Tue Aug 10 2021 15:26:56 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:08:58 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-10T15:26:56.000Z',
+    '2026-02-12T17:08:58.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-ce76-7106-90a2-e4f7964a40ac');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -1890,11 +1890,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:51 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:51.000Z',
     NULL,
     true,
-    'Wed Aug 18 2021 01:37:35 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:08:58 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-18T01:37:35.000Z',
+    '2026-02-12T17:08:58.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-cebf-7769-84ea-142d6923d464');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -1912,11 +1912,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:51 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:51.000Z',
     NULL,
     true,
-    'Wed Aug 18 2021 01:38:08 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:08:58 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-18T01:38:08.000Z',
+    '2026-02-12T17:08:58.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-cf09-7066-b383-555d4c9d2be9');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -1934,11 +1934,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:51 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:51.000Z',
     NULL,
     true,
-    'Wed Aug 18 2021 01:38:41 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:08:58 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-18T01:38:41.000Z',
+    '2026-02-12T17:08:58.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-cf54-77d7-bec3-8a471719732a');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -1956,11 +1956,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:51 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:51.000Z',
     NULL,
     true,
-    'Wed Aug 18 2021 01:39:11 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:08:58 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-18T01:39:11.000Z',
+    '2026-02-12T17:08:58.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-cfa4-778b-bded-bbfbf1283a36');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -1978,11 +1978,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:51 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:51.000Z',
     NULL,
     true,
-    'Wed Aug 18 2021 01:39:29 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:08:59 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-18T01:39:29.000Z',
+    '2026-02-12T17:08:59.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-cff8-762e-aff4-149dfaa4eb5c');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -2000,11 +2000,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:44 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:44.000Z',
     NULL,
     true,
-    'Wed Aug 18 2021 01:42:07 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:08:59 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-18T01:42:07.000Z',
+    '2026-02-12T17:08:59.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-d042-747f-8b69-54b9d7d84614');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -2022,11 +2022,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:58 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:58.000Z',
     NULL,
     true,
-    'Tue Aug 10 2021 15:28:21 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:08:59 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-10T15:28:21.000Z',
+    '2026-02-12T17:08:59.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-d0d7-70b9-88e4-7b5aa2053a6d');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -2044,11 +2044,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:58 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:58.000Z',
     NULL,
     true,
-    'Tue Aug 17 2021 11:01:38 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:08:59 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-17T11:01:38.000Z',
+    '2026-02-12T17:08:59.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-d122-7529-97f0-aea04501d4ee');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -2066,11 +2066,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:58 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:58.000Z',
     NULL,
     true,
-    'Wed Aug 18 2021 01:05:40 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:08:59 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-18T01:05:40.000Z',
+    '2026-02-12T17:08:59.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-d16b-725e-8c82-9c49d88f333c');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -2088,11 +2088,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:58 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:58.000Z',
     NULL,
     true,
-    'Wed Aug 18 2021 01:06:14 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:08:59 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-18T01:06:14.000Z',
+    '2026-02-12T17:08:59.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-d1b5-7439-b06f-c54f7053da84');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -2110,11 +2110,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:58 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:58.000Z',
     NULL,
     true,
-    'Wed Aug 18 2021 01:06:36 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:08:59 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-18T01:06:36.000Z',
+    '2026-02-12T17:08:59.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-d1fe-74ce-b2a3-4043aeb2ebfd');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -2132,11 +2132,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:58 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:58.000Z',
     NULL,
     true,
-    'Wed Aug 18 2021 01:07:37 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:08:59 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-18T01:07:37.000Z',
+    '2026-02-12T17:08:59.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-d290-757a-bb13-ce4799a52db2');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -2154,11 +2154,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:58 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:58.000Z',
     NULL,
     true,
-    'Wed Aug 18 2021 01:07:14 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:08:59 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-18T01:07:14.000Z',
+    '2026-02-12T17:08:59.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-d246-762c-9fea-efe621be8f2a');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -2176,11 +2176,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:44 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:44.000Z',
     NULL,
     true,
-    'Wed Aug 18 2021 01:40:42 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:08:59 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-18T01:40:42.000Z',
+    '2026-02-12T17:08:59.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-d2d9-73c8-b5b3-143bf7152596');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -2201,8 +2201,8 @@ SELECT
     NULL,
     NULL,
     true,
-    'Mon Aug 23 2021 20:11:19 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:08:59 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-23T20:11:19.000Z',
+    '2026-02-12T17:08:59.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-d08d-756a-9d1d-a5a96891271e');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -2220,11 +2220,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:50 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:50.000Z',
     NULL,
     true,
-    'Tue Aug 10 2021 15:29:49 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:08:59 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-10T15:29:49.000Z',
+    '2026-02-12T17:08:59.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-d322-7171-bcca-9922e8348702');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -2242,11 +2242,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:50 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:50.000Z',
     NULL,
     true,
-    'Thu Aug 19 2021 19:16:33 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:08:59 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-19T19:16:33.000Z',
+    '2026-02-12T17:08:59.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-d36c-736e-a8a0-4ce84ac51dc4');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -2264,11 +2264,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:50 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:50.000Z',
     NULL,
     true,
-    'Thu Aug 19 2021 19:16:51 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:08:59 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-19T19:16:51.000Z',
+    '2026-02-12T17:08:59.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-d3b5-770f-8511-462cad34f728');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -2286,11 +2286,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:50 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:50.000Z',
     NULL,
     true,
-    'Thu Aug 19 2021 19:17:08 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:00 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-19T19:17:08.000Z',
+    '2026-02-12T17:09:00.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-d3ff-76cf-b591-96614a2b376d');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -2308,11 +2308,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:50 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:50.000Z',
     NULL,
     true,
-    'Thu Aug 19 2021 19:17:27 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:00 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-19T19:17:27.000Z',
+    '2026-02-12T17:09:00.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-d448-7223-aee4-a08ba5b4c4c0');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -2330,11 +2330,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:50 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:50.000Z',
     NULL,
     true,
-    'Thu Aug 19 2021 19:17:44 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:00 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-19T19:17:44.000Z',
+    '2026-02-12T17:09:00.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-d492-77e0-8aa5-2a677991ca5a');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -2352,11 +2352,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:44 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:44.000Z',
     NULL,
     true,
-    'Thu Aug 19 2021 19:19:22 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:00 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-19T19:19:22.000Z',
+    '2026-02-12T17:09:00.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-d4db-748c-ad46-699243d93015');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -2374,11 +2374,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:50 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:50.000Z',
     NULL,
     true,
-    'Fri Aug 13 2021 14:48:21 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:01 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-13T14:48:21.000Z',
+    '2026-02-12T17:09:01.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-d92f-747c-876f-0e2922dcb062');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -2396,11 +2396,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:50 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:50.000Z',
     NULL,
     true,
-    'Mon Aug 23 2021 15:09:06 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:01 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-23T15:09:06.000Z',
+    '2026-02-12T17:09:01.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-d979-74ba-ad52-ed7d3618f3c1');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -2418,11 +2418,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:50 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:50.000Z',
     NULL,
     true,
-    'Mon Aug 23 2021 15:10:12 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:01 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-23T15:10:12.000Z',
+    '2026-02-12T17:09:01.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-d9cc-75ad-b04f-b7f4019a9a6e');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -2440,11 +2440,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:50 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:50.000Z',
     NULL,
     true,
-    'Mon Aug 23 2021 15:13:02 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:01 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-23T15:13:02.000Z',
+    '2026-02-12T17:09:01.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-daad-712f-acf9-3e77486674a3');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -2462,11 +2462,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:50 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:50.000Z',
     NULL,
     true,
-    'Mon Aug 23 2021 15:11:54 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:01 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-23T15:11:54.000Z',
+    '2026-02-12T17:09:01.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-da14-7558-8614-6139aae91edb');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -2484,11 +2484,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:50 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:50.000Z',
     NULL,
     true,
-    'Mon Aug 23 2021 15:12:23 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:01 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-23T15:12:23.000Z',
+    '2026-02-12T17:09:01.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-da5d-727d-b653-69de9811a8d1');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -2506,11 +2506,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:44 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:44.000Z',
     NULL,
     true,
-    'Mon Aug 23 2021 15:20:18 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:01 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-23T15:20:18.000Z',
+    '2026-02-12T17:09:01.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-daf8-75aa-ad1b-7ebfb40ad0bd');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -2528,11 +2528,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:50 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:50.000Z',
     NULL,
     true,
-    'Fri Aug 13 2021 15:05:59 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:03 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-13T15:05:59.000Z',
+    '2026-02-12T17:09:03.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-e2ae-74a9-978d-21a4635d451a');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -2550,11 +2550,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:50 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:50.000Z',
     NULL,
     true,
-    'Mon Aug 23 2021 15:16:11 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:03 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-23T15:16:11.000Z',
+    '2026-02-12T17:09:03.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-e2f8-749a-9f8a-defa1785cb49');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -2572,11 +2572,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:50 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:50.000Z',
     NULL,
     true,
-    'Mon Aug 23 2021 15:16:44 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:03 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-23T15:16:44.000Z',
+    '2026-02-12T17:09:03.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-e341-7438-9051-97513dd3e323');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -2594,11 +2594,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:50 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:50.000Z',
     NULL,
     true,
-    'Mon Aug 23 2021 15:17:07 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:04 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-23T15:17:07.000Z',
+    '2026-02-12T17:09:04.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-e38b-74ea-ac81-be9dab511a4f');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -2616,11 +2616,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:50 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:50.000Z',
     NULL,
     true,
-    'Mon Aug 23 2021 15:17:29 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:04 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-23T15:17:29.000Z',
+    '2026-02-12T17:09:04.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-e3d4-7774-bf6d-9d0409f0c666');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -2638,11 +2638,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:50 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:50.000Z',
     NULL,
     true,
-    'Mon Aug 23 2021 15:17:49 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:04 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-23T15:17:49.000Z',
+    '2026-02-12T17:09:04.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-e41e-7729-aad4-915f20c74e37');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -2660,11 +2660,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:50 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:50.000Z',
     NULL,
     true,
-    'Fri Aug 13 2021 15:06:52 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:04 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-13T15:06:52.000Z',
+    '2026-02-12T17:09:04.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-e466-7466-9b39-df34f93e80ab');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -2682,11 +2682,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:50 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:50.000Z',
     NULL,
     true,
-    'Mon Aug 23 2021 15:22:48 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:04 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-23T15:22:48.000Z',
+    '2026-02-12T17:09:04.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-e4af-738a-a81d-387292d8e059');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -2704,11 +2704,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:50 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:50.000Z',
     NULL,
     true,
-    'Mon Aug 23 2021 15:23:07 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:04 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-23T15:23:07.000Z',
+    '2026-02-12T17:09:04.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-e4f8-717a-8b1e-56d0a8873667');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -2726,11 +2726,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:50 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:50.000Z',
     NULL,
     true,
-    'Mon Aug 23 2021 15:30:10 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:04 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-23T15:30:10.000Z',
+    '2026-02-12T17:09:04.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-e5d2-77d6-b3d8-e65a041f293a');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -2748,11 +2748,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:50 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:50.000Z',
     NULL,
     true,
-    'Mon Aug 23 2021 15:27:27 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:04 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-23T15:27:27.000Z',
+    '2026-02-12T17:09:04.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-e540-7704-b145-c87203a461d1');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -2770,11 +2770,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:50 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:50.000Z',
     NULL,
     true,
-    'Mon Aug 23 2021 15:29:15 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:04 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-23T15:29:15.000Z',
+    '2026-02-12T17:09:04.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-e589-75cd-89a5-ee1acb079604');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -2792,11 +2792,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:50 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:50.000Z',
     NULL,
     true,
-    'Fri Aug 13 2021 15:07:56 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:04 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-13T15:07:56.000Z',
+    '2026-02-12T17:09:04.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-e61a-7343-997f-d38952b2b857');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -2814,11 +2814,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:50 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:50.000Z',
     NULL,
     true,
-    'Thu Aug 19 2021 15:53:22 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:04 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-19T15:53:22.000Z',
+    '2026-02-12T17:09:04.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-e663-76ac-b196-06c3b1eea720');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -2836,11 +2836,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:50 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:50.000Z',
     NULL,
     true,
-    'Thu Aug 19 2021 15:53:40 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:04 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-19T15:53:40.000Z',
+    '2026-02-12T17:09:04.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-e6ac-70bc-b9a3-335134cb2c61');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -2858,11 +2858,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:50 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:50.000Z',
     NULL,
     true,
-    'Thu Aug 19 2021 15:54:17 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:04 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-19T15:54:17.000Z',
+    '2026-02-12T17:09:04.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-e73e-7232-bd6f-78b9954d5210');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -2880,11 +2880,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:50 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:50.000Z',
     NULL,
     true,
-    'Thu Aug 19 2021 15:54:02 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:04 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-19T15:54:02.000Z',
+    '2026-02-12T17:09:04.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-e6f5-715c-a8aa-96bce56d6015');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -2902,11 +2902,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:50 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:50.000Z',
     NULL,
     true,
-    'Thu Aug 19 2021 15:54:33 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:05 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-19T15:54:33.000Z',
+    '2026-02-12T17:09:05.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-e78a-700f-9d78-fe81544d84d0');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -2924,11 +2924,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:44 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:44.000Z',
     NULL,
     true,
-    'Thu Aug 19 2021 15:57:04 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:05 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-19T15:57:04.000Z',
+    '2026-02-12T17:09:05.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-e7d3-739c-a7bd-0bd64e902f70');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -2946,11 +2946,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:44 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:44.000Z',
     NULL,
     true,
-    'Thu Aug 19 2021 16:04:21 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:05 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-19T16:04:21.000Z',
+    '2026-02-12T17:09:05.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-e81c-751e-ad90-38eaebc3849c');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -2968,11 +2968,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:55 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:55.000Z',
     NULL,
     true,
-    'Fri Aug 13 2021 15:09:58 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:05 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-13T15:09:58.000Z',
+    '2026-02-12T17:09:05.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-eafc-76fc-8f3c-5d4112406134');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -2990,11 +2990,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:55 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:55.000Z',
     NULL,
     true,
-    'Tue Aug 17 2021 16:55:10 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:05 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-17T16:55:10.000Z',
+    '2026-02-12T17:09:05.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-eb45-721f-98c5-570480b61b37');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -3012,11 +3012,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:55 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:55.000Z',
     NULL,
     true,
-    'Tue Aug 17 2021 16:57:54 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:06 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-17T16:57:54.000Z',
+    '2026-02-12T17:09:06.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-eb92-7371-9bd8-3f8527d86a64');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -3034,11 +3034,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:55 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:55.000Z',
     NULL,
     true,
-    'Tue Aug 17 2021 17:01:38 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:06 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-17T17:01:38.000Z',
+    '2026-02-12T17:09:06.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-ebe2-73b9-8d34-b4b372fdce3a');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -3056,11 +3056,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:55 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:55.000Z',
     NULL,
     true,
-    'Tue Aug 17 2021 17:03:25 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:06 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-17T17:03:25.000Z',
+    '2026-02-12T17:09:06.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-ec2b-734b-9a1d-b55d2c77e926');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -3078,11 +3078,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:55 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:55.000Z',
     NULL,
     true,
-    'Tue Aug 17 2021 17:04:37 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:06 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-17T17:04:37.000Z',
+    '2026-02-12T17:09:06.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-ec74-76be-bb98-4db9c5d3e9e3');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -3100,11 +3100,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Wed Jul 24 2024 16:38:38 GMT+0000 (Coordinated Universal Time)',
+    '2024-07-24T16:38:38.000Z',
     NULL,
     true,
-    'Tue Aug 17 2021 17:09:47 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:05 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-17T17:09:47.000Z',
+    '2026-02-12T17:09:05.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-eab2-702e-a03d-c2b2c097d7a5');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -3122,11 +3122,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:50 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:50.000Z',
     NULL,
     true,
-    'Fri Aug 13 2021 15:12:10 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:06 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-13T15:12:10.000Z',
+    '2026-02-12T17:09:06.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-ef21-7400-9d73-29e4e31ce6f7');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -3144,11 +3144,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:50 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:50.000Z',
     NULL,
     true,
-    'Fri Aug 20 2021 01:30:22 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:07 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-20T01:30:22.000Z',
+    '2026-02-12T17:09:07.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-ef6a-775c-9c58-fba7b900a755');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -3166,11 +3166,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:50 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:50.000Z',
     NULL,
     true,
-    'Fri Aug 20 2021 01:32:04 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:07 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-20T01:32:04.000Z',
+    '2026-02-12T17:09:07.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-efb2-7293-aa34-5d953d1cf49b');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -3188,11 +3188,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:50 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:50.000Z',
     NULL,
     true,
-    'Fri Aug 20 2021 01:32:18 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:07 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-20T01:32:18.000Z',
+    '2026-02-12T17:09:07.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-effb-7671-a0cb-776c25898f57');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -3210,11 +3210,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:50 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:50.000Z',
     NULL,
     true,
-    'Fri Aug 20 2021 01:32:32 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:07 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-20T01:32:32.000Z',
+    '2026-02-12T17:09:07.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-f045-72d8-a422-3f64f827784b');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -3232,11 +3232,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:50 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:50.000Z',
     NULL,
     true,
-    'Fri Aug 20 2021 01:33:30 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:07 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-20T01:33:30.000Z',
+    '2026-02-12T17:09:07.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-f08f-750f-9db1-b4a345aea9c3');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -3254,11 +3254,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:44 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:44.000Z',
     NULL,
     true,
-    'Fri Aug 20 2021 01:34:42 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:07 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-20T01:34:42.000Z',
+    '2026-02-12T17:09:07.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-f0d8-70a8-89a6-15a741dfccb8');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -3276,11 +3276,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Mon Dec 11 2023 14:40:11 GMT+0000 (Coordinated Universal Time)',
+    '2023-12-11T14:40:11.000Z',
     NULL,
     true,
-    'Thu Jan 20 2022 15:40:24 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:07 GMT+0000 (Coordinated Universal Time)'
+    '2022-01-20T15:40:24.000Z',
+    '2026-02-12T17:09:07.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-f1fc-76df-8928-d621081712d9');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -3298,11 +3298,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Mon Dec 11 2023 14:40:11 GMT+0000 (Coordinated Universal Time)',
+    '2023-12-11T14:40:11.000Z',
     NULL,
     true,
-    'Wed Jan 19 2022 15:18:59 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:07 GMT+0000 (Coordinated Universal Time)'
+    '2022-01-19T15:18:59.000Z',
+    '2026-02-12T17:09:07.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-f1b3-7569-99c0-8040c69ab726');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -3320,11 +3320,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Mon Dec 11 2023 14:40:11 GMT+0000 (Coordinated Universal Time)',
+    '2023-12-11T14:40:11.000Z',
     NULL,
     true,
-    'Thu Jan 20 2022 15:43:21 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:07 GMT+0000 (Coordinated Universal Time)'
+    '2022-01-20T15:43:21.000Z',
+    '2026-02-12T17:09:07.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-f246-7689-bde6-5980cb7d7436');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -3342,11 +3342,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Mon Dec 11 2023 14:40:11 GMT+0000 (Coordinated Universal Time)',
+    '2023-12-11T14:40:11.000Z',
     NULL,
     true,
-    'Thu Jan 20 2022 15:43:21 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:07 GMT+0000 (Coordinated Universal Time)'
+    '2022-01-20T15:43:21.000Z',
+    '2026-02-12T17:09:07.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-f293-70cd-bc05-05803e5ff924');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -3364,11 +3364,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Mon Dec 11 2023 14:40:11 GMT+0000 (Coordinated Universal Time)',
+    '2023-12-11T14:40:11.000Z',
     NULL,
     true,
-    'Thu Jan 20 2022 15:43:21 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:07 GMT+0000 (Coordinated Universal Time)'
+    '2022-01-20T15:43:21.000Z',
+    '2026-02-12T17:09:07.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-f2dc-751e-829a-ae8ad21bd572');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -3386,11 +3386,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Mon Dec 11 2023 14:40:11 GMT+0000 (Coordinated Universal Time)',
+    '2023-12-11T14:40:11.000Z',
     NULL,
     true,
-    'Thu Jan 20 2022 15:43:21 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:08 GMT+0000 (Coordinated Universal Time)'
+    '2022-01-20T15:43:21.000Z',
+    '2026-02-12T17:09:08.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-f326-7456-bae3-0ae5605bf997');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -3408,11 +3408,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Mon Dec 11 2023 14:40:11 GMT+0000 (Coordinated Universal Time)',
+    '2023-12-11T14:40:11.000Z',
     NULL,
     true,
-    'Thu Jan 20 2022 15:43:21 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:08 GMT+0000 (Coordinated Universal Time)'
+    '2022-01-20T15:43:21.000Z',
+    '2026-02-12T17:09:08.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-f36f-710a-8374-cfaa85f65284');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -3430,11 +3430,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Mon Dec 11 2023 14:40:11 GMT+0000 (Coordinated Universal Time)',
+    '2023-12-11T14:40:11.000Z',
     NULL,
     true,
-    'Thu Jan 20 2022 15:43:21 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:08 GMT+0000 (Coordinated Universal Time)'
+    '2022-01-20T15:43:21.000Z',
+    '2026-02-12T17:09:08.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-f3b8-77df-a67d-1fb84354b3fc');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -3452,11 +3452,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Mon Dec 11 2023 14:40:11 GMT+0000 (Coordinated Universal Time)',
+    '2023-12-11T14:40:11.000Z',
     NULL,
     true,
-    'Thu Jan 20 2022 15:43:21 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:08 GMT+0000 (Coordinated Universal Time)'
+    '2022-01-20T15:43:21.000Z',
+    '2026-02-12T17:09:08.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-f401-7294-be08-4071d81de908');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -3474,11 +3474,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Mon Dec 11 2023 14:40:11 GMT+0000 (Coordinated Universal Time)',
+    '2023-12-11T14:40:11.000Z',
     NULL,
     true,
-    'Thu Jan 20 2022 16:35:09 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:08 GMT+0000 (Coordinated Universal Time)'
+    '2022-01-20T16:35:09.000Z',
+    '2026-02-12T17:09:08.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-f44a-73a8-aa70-c3cd96868b24');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -3496,11 +3496,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Mon Dec 11 2023 14:40:11 GMT+0000 (Coordinated Universal Time)',
+    '2023-12-11T14:40:11.000Z',
     NULL,
     true,
-    'Thu Jan 20 2022 16:35:09 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:08 GMT+0000 (Coordinated Universal Time)'
+    '2022-01-20T16:35:09.000Z',
+    '2026-02-12T17:09:08.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-f494-7498-b701-3e0eb579bd37');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -3518,11 +3518,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Mon Dec 11 2023 14:40:11 GMT+0000 (Coordinated Universal Time)',
+    '2023-12-11T14:40:11.000Z',
     NULL,
     true,
-    'Thu Jan 20 2022 16:35:09 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:08 GMT+0000 (Coordinated Universal Time)'
+    '2022-01-20T16:35:09.000Z',
+    '2026-02-12T17:09:08.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-f4dd-754c-a38a-e8315d4db554');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -3540,11 +3540,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Mon Dec 11 2023 14:40:11 GMT+0000 (Coordinated Universal Time)',
+    '2023-12-11T14:40:11.000Z',
     NULL,
     true,
-    'Thu Jan 20 2022 16:35:09 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:08 GMT+0000 (Coordinated Universal Time)'
+    '2022-01-20T16:35:09.000Z',
+    '2026-02-12T17:09:08.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-f526-7138-9443-0ab916974175');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -3562,11 +3562,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Mon Dec 11 2023 14:40:11 GMT+0000 (Coordinated Universal Time)',
+    '2023-12-11T14:40:11.000Z',
     NULL,
     true,
-    'Thu Jan 20 2022 16:35:09 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:08 GMT+0000 (Coordinated Universal Time)'
+    '2022-01-20T16:35:09.000Z',
+    '2026-02-12T17:09:08.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-f570-76db-a84b-72d529e8ba4c');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -3584,11 +3584,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Mon Dec 11 2023 14:40:11 GMT+0000 (Coordinated Universal Time)',
+    '2023-12-11T14:40:11.000Z',
     NULL,
     true,
-    'Thu Jan 20 2022 16:35:09 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:08 GMT+0000 (Coordinated Universal Time)'
+    '2022-01-20T16:35:09.000Z',
+    '2026-02-12T17:09:08.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-f5b9-77b9-8058-822682bc1b55');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -3606,11 +3606,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Mon Dec 11 2023 14:40:11 GMT+0000 (Coordinated Universal Time)',
+    '2023-12-11T14:40:11.000Z',
     NULL,
     true,
-    'Thu Jan 20 2022 16:35:09 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:08 GMT+0000 (Coordinated Universal Time)'
+    '2022-01-20T16:35:09.000Z',
+    '2026-02-12T17:09:08.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-f602-75a5-9ea7-78be1ba4e5c3');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -3628,11 +3628,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Mon Dec 11 2023 14:40:11 GMT+0000 (Coordinated Universal Time)',
+    '2023-12-11T14:40:11.000Z',
     NULL,
     true,
-    'Thu Jan 20 2022 16:35:09 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:08 GMT+0000 (Coordinated Universal Time)'
+    '2022-01-20T16:35:09.000Z',
+    '2026-02-12T17:09:08.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-f64b-73a9-aaa7-0b76ff3d0375');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -3650,11 +3650,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Mon Dec 11 2023 14:40:11 GMT+0000 (Coordinated Universal Time)',
+    '2023-12-11T14:40:11.000Z',
     NULL,
     true,
-    'Thu Jan 20 2022 15:40:24 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:08 GMT+0000 (Coordinated Universal Time)'
+    '2022-01-20T15:40:24.000Z',
+    '2026-02-12T17:09:08.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-f6e5-729a-8779-dd5764d1862c');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -3672,11 +3672,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Mon Dec 11 2023 14:40:11 GMT+0000 (Coordinated Universal Time)',
+    '2023-12-11T14:40:11.000Z',
     NULL,
     true,
-    'Wed Jan 19 2022 15:18:59 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:08 GMT+0000 (Coordinated Universal Time)'
+    '2022-01-19T15:18:59.000Z',
+    '2026-02-12T17:09:08.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-f694-7543-9814-22f7a660fc37');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -3694,11 +3694,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Mon Dec 11 2023 14:40:11 GMT+0000 (Coordinated Universal Time)',
+    '2023-12-11T14:40:11.000Z',
     NULL,
     true,
-    'Thu Jan 20 2022 15:43:21 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:09 GMT+0000 (Coordinated Universal Time)'
+    '2022-01-20T15:43:21.000Z',
+    '2026-02-12T17:09:09.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-f73e-75aa-8fa2-c79f86c0d778');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -3716,11 +3716,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Mon Dec 11 2023 14:40:11 GMT+0000 (Coordinated Universal Time)',
+    '2023-12-11T14:40:11.000Z',
     NULL,
     true,
-    'Thu Jan 20 2022 15:43:21 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:09 GMT+0000 (Coordinated Universal Time)'
+    '2022-01-20T15:43:21.000Z',
+    '2026-02-12T17:09:09.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-f788-74ed-a3e0-b4a8ee30ba3c');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -3738,11 +3738,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Mon Dec 11 2023 14:40:11 GMT+0000 (Coordinated Universal Time)',
+    '2023-12-11T14:40:11.000Z',
     NULL,
     true,
-    'Thu Jan 20 2022 15:43:21 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:09 GMT+0000 (Coordinated Universal Time)'
+    '2022-01-20T15:43:21.000Z',
+    '2026-02-12T17:09:09.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-f7d2-74f8-8d60-4229ea9ad69c');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -3760,11 +3760,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Mon Dec 11 2023 14:40:11 GMT+0000 (Coordinated Universal Time)',
+    '2023-12-11T14:40:11.000Z',
     NULL,
     true,
-    'Thu Jan 20 2022 15:43:21 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:09 GMT+0000 (Coordinated Universal Time)'
+    '2022-01-20T15:43:21.000Z',
+    '2026-02-12T17:09:09.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-f81e-75b7-b315-8cd914e0e3b2');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -3782,11 +3782,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Mon Dec 11 2023 14:40:11 GMT+0000 (Coordinated Universal Time)',
+    '2023-12-11T14:40:11.000Z',
     NULL,
     true,
-    'Thu Jan 20 2022 15:43:21 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:09 GMT+0000 (Coordinated Universal Time)'
+    '2022-01-20T15:43:21.000Z',
+    '2026-02-12T17:09:09.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-f866-7769-9659-9cce50bc1719');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -3804,11 +3804,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Mon Dec 11 2023 14:40:11 GMT+0000 (Coordinated Universal Time)',
+    '2023-12-11T14:40:11.000Z',
     NULL,
     true,
-    'Thu Jan 20 2022 15:43:21 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:09 GMT+0000 (Coordinated Universal Time)'
+    '2022-01-20T15:43:21.000Z',
+    '2026-02-12T17:09:09.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-f8b5-74a7-9bef-34c0f3495807');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -3826,11 +3826,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Mon Dec 11 2023 14:40:11 GMT+0000 (Coordinated Universal Time)',
+    '2023-12-11T14:40:11.000Z',
     NULL,
     true,
-    'Thu Jan 20 2022 15:43:21 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:09 GMT+0000 (Coordinated Universal Time)'
+    '2022-01-20T15:43:21.000Z',
+    '2026-02-12T17:09:09.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-f8fe-728f-b580-d78a80079c5e');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -3848,11 +3848,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Mon Dec 11 2023 14:40:11 GMT+0000 (Coordinated Universal Time)',
+    '2023-12-11T14:40:11.000Z',
     NULL,
     true,
-    'Thu Jan 20 2022 16:35:27 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:09 GMT+0000 (Coordinated Universal Time)'
+    '2022-01-20T16:35:27.000Z',
+    '2026-02-12T17:09:09.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-f94a-7411-b14e-3d9b04d382b1');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -3870,11 +3870,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Mon Dec 11 2023 14:40:11 GMT+0000 (Coordinated Universal Time)',
+    '2023-12-11T14:40:11.000Z',
     NULL,
     true,
-    'Thu Jan 20 2022 16:35:27 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:09 GMT+0000 (Coordinated Universal Time)'
+    '2022-01-20T16:35:27.000Z',
+    '2026-02-12T17:09:09.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-f993-70b4-8c7a-9059e449a1fb');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -3892,11 +3892,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Mon Dec 11 2023 14:40:11 GMT+0000 (Coordinated Universal Time)',
+    '2023-12-11T14:40:11.000Z',
     NULL,
     true,
-    'Thu Jan 20 2022 16:35:27 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:09 GMT+0000 (Coordinated Universal Time)'
+    '2022-01-20T16:35:27.000Z',
+    '2026-02-12T17:09:09.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-f9dd-7459-b4c2-b2f4b5f64d1f');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -3914,11 +3914,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Mon Dec 11 2023 14:40:11 GMT+0000 (Coordinated Universal Time)',
+    '2023-12-11T14:40:11.000Z',
     NULL,
     true,
-    'Thu Jan 20 2022 16:35:27 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:09 GMT+0000 (Coordinated Universal Time)'
+    '2022-01-20T16:35:27.000Z',
+    '2026-02-12T17:09:09.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-fa27-7589-b6ac-8a1ee95a1725');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -3936,11 +3936,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Mon Dec 11 2023 14:40:11 GMT+0000 (Coordinated Universal Time)',
+    '2023-12-11T14:40:11.000Z',
     NULL,
     true,
-    'Thu Jan 20 2022 16:35:27 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:09 GMT+0000 (Coordinated Universal Time)'
+    '2022-01-20T16:35:27.000Z',
+    '2026-02-12T17:09:09.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-fa70-746a-9282-8ec9300c6987');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -3958,11 +3958,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Mon Dec 11 2023 14:40:11 GMT+0000 (Coordinated Universal Time)',
+    '2023-12-11T14:40:11.000Z',
     NULL,
     true,
-    'Thu Jan 20 2022 16:35:27 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:09 GMT+0000 (Coordinated Universal Time)'
+    '2022-01-20T16:35:27.000Z',
+    '2026-02-12T17:09:09.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-fab9-763e-b04a-63f6cce82e20');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -3980,11 +3980,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Mon Dec 11 2023 14:40:11 GMT+0000 (Coordinated Universal Time)',
+    '2023-12-11T14:40:11.000Z',
     NULL,
     true,
-    'Thu Jan 20 2022 16:35:27 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:10 GMT+0000 (Coordinated Universal Time)'
+    '2022-01-20T16:35:27.000Z',
+    '2026-02-12T17:09:10.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-fb02-726e-8239-1acdd660f89a');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -4002,11 +4002,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Mon Dec 11 2023 14:40:11 GMT+0000 (Coordinated Universal Time)',
+    '2023-12-11T14:40:11.000Z',
     NULL,
     true,
-    'Thu Jan 20 2022 16:35:27 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:10 GMT+0000 (Coordinated Universal Time)'
+    '2022-01-20T16:35:27.000Z',
+    '2026-02-12T17:09:10.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-fb4a-75bf-93a7-5fe98985cc3a');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -4024,11 +4024,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Mon Dec 11 2023 14:40:11 GMT+0000 (Coordinated Universal Time)',
+    '2023-12-11T14:40:11.000Z',
     NULL,
     true,
-    'Wed Jan 19 2022 15:18:59 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:10 GMT+0000 (Coordinated Universal Time)'
+    '2022-01-19T15:18:59.000Z',
+    '2026-02-12T17:09:10.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-fb93-731c-94d8-317e18098125');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -4046,11 +4046,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Mon Dec 11 2023 14:40:11 GMT+0000 (Coordinated Universal Time)',
+    '2023-12-11T14:40:11.000Z',
     NULL,
     true,
-    'Thu Jan 20 2022 15:40:24 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:10 GMT+0000 (Coordinated Universal Time)'
+    '2022-01-20T15:40:24.000Z',
+    '2026-02-12T17:09:10.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-fbdc-76a8-b27f-cab204f71613');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -4068,11 +4068,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Mon Dec 11 2023 14:40:11 GMT+0000 (Coordinated Universal Time)',
+    '2023-12-11T14:40:11.000Z',
     NULL,
     true,
-    'Thu Jan 20 2022 15:43:21 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:10 GMT+0000 (Coordinated Universal Time)'
+    '2022-01-20T15:43:21.000Z',
+    '2026-02-12T17:09:10.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-fc25-7422-bcd4-3a093827c1ea');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -4090,11 +4090,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Mon Dec 11 2023 14:40:11 GMT+0000 (Coordinated Universal Time)',
+    '2023-12-11T14:40:11.000Z',
     NULL,
     true,
-    'Thu Jan 20 2022 15:43:21 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:10 GMT+0000 (Coordinated Universal Time)'
+    '2022-01-20T15:43:21.000Z',
+    '2026-02-12T17:09:10.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-fc6f-77dd-ac9c-9bfc2fb89fcc');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -4112,11 +4112,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Mon Dec 11 2023 14:40:11 GMT+0000 (Coordinated Universal Time)',
+    '2023-12-11T14:40:11.000Z',
     NULL,
     true,
-    'Thu Jan 20 2022 15:43:21 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:10 GMT+0000 (Coordinated Universal Time)'
+    '2022-01-20T15:43:21.000Z',
+    '2026-02-12T17:09:10.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-fcba-704e-bdbe-6407c4bdbd3a');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -4134,11 +4134,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Mon Dec 11 2023 14:40:11 GMT+0000 (Coordinated Universal Time)',
+    '2023-12-11T14:40:11.000Z',
     NULL,
     true,
-    'Thu Jan 20 2022 15:43:21 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:10 GMT+0000 (Coordinated Universal Time)'
+    '2022-01-20T15:43:21.000Z',
+    '2026-02-12T17:09:10.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-fd03-7758-99af-7e98982936c6');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -4156,11 +4156,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Mon Dec 11 2023 14:40:11 GMT+0000 (Coordinated Universal Time)',
+    '2023-12-11T14:40:11.000Z',
     NULL,
     true,
-    'Thu Jan 20 2022 15:43:21 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:10 GMT+0000 (Coordinated Universal Time)'
+    '2022-01-20T15:43:21.000Z',
+    '2026-02-12T17:09:10.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-fd4f-731f-a089-fc3df2a6e410');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -4178,11 +4178,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Mon Dec 11 2023 14:40:11 GMT+0000 (Coordinated Universal Time)',
+    '2023-12-11T14:40:11.000Z',
     NULL,
     true,
-    'Thu Jan 20 2022 15:43:21 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:10 GMT+0000 (Coordinated Universal Time)'
+    '2022-01-20T15:43:21.000Z',
+    '2026-02-12T17:09:10.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-fd99-767b-85a4-7641e9a07ad4');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -4200,11 +4200,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Mon Dec 11 2023 14:40:11 GMT+0000 (Coordinated Universal Time)',
+    '2023-12-11T14:40:11.000Z',
     NULL,
     true,
-    'Thu Jan 20 2022 15:43:21 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:10 GMT+0000 (Coordinated Universal Time)'
+    '2022-01-20T15:43:21.000Z',
+    '2026-02-12T17:09:10.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-fde2-728e-870d-74242242f8bd');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -4222,11 +4222,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Mon Dec 11 2023 14:40:11 GMT+0000 (Coordinated Universal Time)',
+    '2023-12-11T14:40:11.000Z',
     NULL,
     true,
-    'Thu Jan 20 2022 16:35:48 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:10 GMT+0000 (Coordinated Universal Time)'
+    '2022-01-20T16:35:48.000Z',
+    '2026-02-12T17:09:10.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-fe2b-70eb-b0c7-2c78ec896268');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -4244,11 +4244,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Mon Dec 11 2023 14:40:11 GMT+0000 (Coordinated Universal Time)',
+    '2023-12-11T14:40:11.000Z',
     NULL,
     true,
-    'Thu Jan 20 2022 16:35:48 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:10 GMT+0000 (Coordinated Universal Time)'
+    '2022-01-20T16:35:48.000Z',
+    '2026-02-12T17:09:10.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-fe74-72e3-b4de-0b7b5141c412');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -4266,11 +4266,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Mon Dec 11 2023 14:40:11 GMT+0000 (Coordinated Universal Time)',
+    '2023-12-11T14:40:11.000Z',
     NULL,
     true,
-    'Thu Jan 20 2022 16:35:48 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:10 GMT+0000 (Coordinated Universal Time)'
+    '2022-01-20T16:35:48.000Z',
+    '2026-02-12T17:09:10.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-febd-72ed-b3dd-d3ea66ae716e');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -4288,11 +4288,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Mon Dec 11 2023 14:40:11 GMT+0000 (Coordinated Universal Time)',
+    '2023-12-11T14:40:11.000Z',
     NULL,
     true,
-    'Thu Jan 20 2022 16:35:48 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:11 GMT+0000 (Coordinated Universal Time)'
+    '2022-01-20T16:35:48.000Z',
+    '2026-02-12T17:09:11.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-ff06-74d7-9c1f-85864ace8c68');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -4310,11 +4310,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Mon Dec 11 2023 14:40:11 GMT+0000 (Coordinated Universal Time)',
+    '2023-12-11T14:40:11.000Z',
     NULL,
     true,
-    'Thu Jan 20 2022 16:35:48 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:11 GMT+0000 (Coordinated Universal Time)'
+    '2022-01-20T16:35:48.000Z',
+    '2026-02-12T17:09:11.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-ff51-73f1-bfee-17c5376f2f75');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -4332,11 +4332,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Mon Dec 11 2023 14:40:11 GMT+0000 (Coordinated Universal Time)',
+    '2023-12-11T14:40:11.000Z',
     NULL,
     true,
-    'Thu Jan 20 2022 16:35:48 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:11 GMT+0000 (Coordinated Universal Time)'
+    '2022-01-20T16:35:48.000Z',
+    '2026-02-12T17:09:11.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-ff9c-71ca-844a-c7d3c543bf74');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -4354,11 +4354,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Mon Dec 11 2023 14:40:11 GMT+0000 (Coordinated Universal Time)',
+    '2023-12-11T14:40:11.000Z',
     NULL,
     true,
-    'Thu Jan 20 2022 16:35:48 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:11 GMT+0000 (Coordinated Universal Time)'
+    '2022-01-20T16:35:48.000Z',
+    '2026-02-12T17:09:11.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-ffe8-7080-8349-c9f74780e29f');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -4376,11 +4376,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Mon Dec 11 2023 14:40:11 GMT+0000 (Coordinated Universal Time)',
+    '2023-12-11T14:40:11.000Z',
     NULL,
     true,
-    'Thu Jan 20 2022 16:35:48 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:11 GMT+0000 (Coordinated Universal Time)'
+    '2022-01-20T16:35:48.000Z',
+    '2026-02-12T17:09:11.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-0032-7578-8555-a6a698562e6a');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -4398,11 +4398,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Mon Dec 11 2023 14:40:12 GMT+0000 (Coordinated Universal Time)',
+    '2023-12-11T14:40:12.000Z',
     NULL,
     true,
-    'Thu Jan 20 2022 15:40:24 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:11 GMT+0000 (Coordinated Universal Time)'
+    '2022-01-20T15:40:24.000Z',
+    '2026-02-12T17:09:11.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-00c9-75fc-b053-07cefc05d179');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -4420,11 +4420,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Mon Dec 11 2023 14:40:12 GMT+0000 (Coordinated Universal Time)',
+    '2023-12-11T14:40:12.000Z',
     NULL,
     true,
-    'Wed Jan 19 2022 15:18:59 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:11 GMT+0000 (Coordinated Universal Time)'
+    '2022-01-19T15:18:59.000Z',
+    '2026-02-12T17:09:11.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-007b-76d7-9067-7afe5c4d6365');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -4442,11 +4442,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Mon Dec 11 2023 14:40:12 GMT+0000 (Coordinated Universal Time)',
+    '2023-12-11T14:40:12.000Z',
     NULL,
     true,
-    'Thu Jan 20 2022 15:43:21 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:11 GMT+0000 (Coordinated Universal Time)'
+    '2022-01-20T15:43:21.000Z',
+    '2026-02-12T17:09:11.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-0113-7673-8872-5da04432e3ff');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -4464,11 +4464,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Mon Dec 11 2023 14:40:12 GMT+0000 (Coordinated Universal Time)',
+    '2023-12-11T14:40:12.000Z',
     NULL,
     true,
-    'Thu Jan 20 2022 15:43:21 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:11 GMT+0000 (Coordinated Universal Time)'
+    '2022-01-20T15:43:21.000Z',
+    '2026-02-12T17:09:11.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-0160-72f5-9f76-26228e8b9af7');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -4486,11 +4486,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Mon Dec 11 2023 14:40:12 GMT+0000 (Coordinated Universal Time)',
+    '2023-12-11T14:40:12.000Z',
     NULL,
     true,
-    'Thu Jan 20 2022 15:43:21 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:11 GMT+0000 (Coordinated Universal Time)'
+    '2022-01-20T15:43:21.000Z',
+    '2026-02-12T17:09:11.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-01a9-72bb-a769-be6f4290600d');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -4508,11 +4508,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Mon Dec 11 2023 14:40:12 GMT+0000 (Coordinated Universal Time)',
+    '2023-12-11T14:40:12.000Z',
     NULL,
     true,
-    'Thu Jan 20 2022 15:43:21 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:11 GMT+0000 (Coordinated Universal Time)'
+    '2022-01-20T15:43:21.000Z',
+    '2026-02-12T17:09:11.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-01f3-70df-bc97-5841e69f6a64');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -4530,11 +4530,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Mon Dec 11 2023 14:40:12 GMT+0000 (Coordinated Universal Time)',
+    '2023-12-11T14:40:12.000Z',
     NULL,
     true,
-    'Thu Jan 20 2022 15:43:21 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:11 GMT+0000 (Coordinated Universal Time)'
+    '2022-01-20T15:43:21.000Z',
+    '2026-02-12T17:09:11.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-023f-76c4-b877-e883f1d032ac');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -4552,11 +4552,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Mon Dec 11 2023 14:40:12 GMT+0000 (Coordinated Universal Time)',
+    '2023-12-11T14:40:12.000Z',
     NULL,
     true,
-    'Thu Jan 20 2022 15:43:21 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:11 GMT+0000 (Coordinated Universal Time)'
+    '2022-01-20T15:43:21.000Z',
+    '2026-02-12T17:09:11.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-0288-77e8-acbe-93f1278b653d');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -4574,11 +4574,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Mon Dec 11 2023 14:40:12 GMT+0000 (Coordinated Universal Time)',
+    '2023-12-11T14:40:12.000Z',
     NULL,
     true,
-    'Thu Jan 20 2022 15:43:21 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:12 GMT+0000 (Coordinated Universal Time)'
+    '2022-01-20T15:43:21.000Z',
+    '2026-02-12T17:09:12.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-02d0-766e-a184-d74cb2ee9731');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -4596,11 +4596,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Mon Dec 11 2023 14:40:12 GMT+0000 (Coordinated Universal Time)',
+    '2023-12-11T14:40:12.000Z',
     NULL,
     true,
-    'Thu Jan 20 2022 16:36:03 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:12 GMT+0000 (Coordinated Universal Time)'
+    '2022-01-20T16:36:03.000Z',
+    '2026-02-12T17:09:12.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-031b-775c-93a6-a377ab014d54');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -4618,11 +4618,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Mon Dec 11 2023 14:40:12 GMT+0000 (Coordinated Universal Time)',
+    '2023-12-11T14:40:12.000Z',
     NULL,
     true,
-    'Thu Jan 20 2022 16:36:03 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:12 GMT+0000 (Coordinated Universal Time)'
+    '2022-01-20T16:36:03.000Z',
+    '2026-02-12T17:09:12.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-0364-7301-b252-b2524cc8223a');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -4640,11 +4640,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Mon Dec 11 2023 14:40:12 GMT+0000 (Coordinated Universal Time)',
+    '2023-12-11T14:40:12.000Z',
     NULL,
     true,
-    'Thu Jan 20 2022 16:36:03 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:12 GMT+0000 (Coordinated Universal Time)'
+    '2022-01-20T16:36:03.000Z',
+    '2026-02-12T17:09:12.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-03ae-762c-b8e5-1904f7c249ea');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -4662,11 +4662,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Mon Dec 11 2023 14:40:12 GMT+0000 (Coordinated Universal Time)',
+    '2023-12-11T14:40:12.000Z',
     NULL,
     true,
-    'Thu Jan 20 2022 16:36:03 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:12 GMT+0000 (Coordinated Universal Time)'
+    '2022-01-20T16:36:03.000Z',
+    '2026-02-12T17:09:12.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-03f8-7118-ba33-47a823016f08');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -4684,11 +4684,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Mon Dec 11 2023 14:40:12 GMT+0000 (Coordinated Universal Time)',
+    '2023-12-11T14:40:12.000Z',
     NULL,
     true,
-    'Thu Jan 20 2022 16:36:03 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:12 GMT+0000 (Coordinated Universal Time)'
+    '2022-01-20T16:36:03.000Z',
+    '2026-02-12T17:09:12.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-0441-7697-b712-b8d5a5a60803');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -4706,11 +4706,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Mon Dec 11 2023 14:40:12 GMT+0000 (Coordinated Universal Time)',
+    '2023-12-11T14:40:12.000Z',
     NULL,
     true,
-    'Thu Jan 20 2022 16:36:03 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:12 GMT+0000 (Coordinated Universal Time)'
+    '2022-01-20T16:36:03.000Z',
+    '2026-02-12T17:09:12.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-048a-711b-9c12-6d285b611584');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -4728,11 +4728,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Mon Dec 11 2023 14:40:12 GMT+0000 (Coordinated Universal Time)',
+    '2023-12-11T14:40:12.000Z',
     NULL,
     true,
-    'Thu Jan 20 2022 16:36:03 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:12 GMT+0000 (Coordinated Universal Time)'
+    '2022-01-20T16:36:03.000Z',
+    '2026-02-12T17:09:12.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-04d3-776c-8372-62a98b5ea179');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -4750,11 +4750,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Mon Dec 11 2023 14:40:12 GMT+0000 (Coordinated Universal Time)',
+    '2023-12-11T14:40:12.000Z',
     NULL,
     true,
-    'Thu Jan 20 2022 16:36:03 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:12 GMT+0000 (Coordinated Universal Time)'
+    '2022-01-20T16:36:03.000Z',
+    '2026-02-12T17:09:12.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-051c-7189-8a07-e83ef1bb608c');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -4772,11 +4772,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:59 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:59.000Z',
     NULL,
     true,
-    'Tue Mar 29 2022 11:33:17 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:12 GMT+0000 (Coordinated Universal Time)'
+    '2022-03-29T11:33:17.000Z',
+    '2026-02-12T17:09:12.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-056a-7060-a05a-2ef5a7c7143f');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -4794,11 +4794,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:59 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:59.000Z',
     NULL,
     true,
-    'Tue Mar 29 2022 11:33:17 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:12 GMT+0000 (Coordinated Universal Time)'
+    '2022-03-29T11:33:17.000Z',
+    '2026-02-12T17:09:12.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-05b4-725d-a896-679518d495e4');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -4816,11 +4816,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:59 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:59.000Z',
     NULL,
     true,
-    'Tue Mar 29 2022 11:33:17 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:12 GMT+0000 (Coordinated Universal Time)'
+    '2022-03-29T11:33:17.000Z',
+    '2026-02-12T17:09:12.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-05fd-75ed-8484-40aab487cb4d');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -4838,11 +4838,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:59 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:59.000Z',
     NULL,
     true,
-    'Tue Mar 29 2022 11:33:17 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:12 GMT+0000 (Coordinated Universal Time)'
+    '2022-03-29T11:33:17.000Z',
+    '2026-02-12T17:09:12.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-0647-700a-84ef-04d381b3d389');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -4860,11 +4860,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:59 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:59.000Z',
     NULL,
     true,
-    'Tue Mar 29 2022 11:33:17 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:12 GMT+0000 (Coordinated Universal Time)'
+    '2022-03-29T11:33:17.000Z',
+    '2026-02-12T17:09:12.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-0690-7590-9977-f5fb0b82fbe2');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -4882,11 +4882,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:59 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:59.000Z',
     NULL,
     true,
-    'Tue Mar 29 2022 11:33:17 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:13 GMT+0000 (Coordinated Universal Time)'
+    '2022-03-29T11:33:17.000Z',
+    '2026-02-12T17:09:13.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-06d9-7258-9847-6285cc102b05');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -4904,11 +4904,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:44 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:44.000Z',
     NULL,
     true,
-    'Tue Apr 05 2022 14:47:34 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:13 GMT+0000 (Coordinated Universal Time)'
+    '2022-04-05T14:47:34.000Z',
+    '2026-02-12T17:09:13.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-0722-730b-8687-3b1edace1362');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -4926,11 +4926,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:49:02 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:49:02.000Z',
     NULL,
     true,
-    'Tue Mar 29 2022 11:33:17 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:13 GMT+0000 (Coordinated Universal Time)'
+    '2022-03-29T11:33:17.000Z',
+    '2026-02-12T17:09:13.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-07b6-772c-a7a3-aa88b3528175');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -4948,11 +4948,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:49:02 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:49:02.000Z',
     NULL,
     true,
-    'Tue Mar 29 2022 11:33:17 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:13 GMT+0000 (Coordinated Universal Time)'
+    '2022-03-29T11:33:17.000Z',
+    '2026-02-12T17:09:13.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-07ff-7189-b9ee-db2d03dec95e');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -4970,11 +4970,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:49:02 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:49:02.000Z',
     NULL,
     true,
-    'Tue Mar 29 2022 11:33:17 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:13 GMT+0000 (Coordinated Universal Time)'
+    '2022-03-29T11:33:17.000Z',
+    '2026-02-12T17:09:13.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-084a-746c-9b69-03d88ac3a8f7');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -4992,11 +4992,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:49:02 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:49:02.000Z',
     NULL,
     true,
-    'Tue Mar 29 2022 11:33:17 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:13 GMT+0000 (Coordinated Universal Time)'
+    '2022-03-29T11:33:17.000Z',
+    '2026-02-12T17:09:13.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-08e3-7518-80de-e3638b807c55');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -5014,11 +5014,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:49:02 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:49:02.000Z',
     NULL,
     true,
-    'Tue Mar 29 2022 11:33:17 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:13 GMT+0000 (Coordinated Universal Time)'
+    '2022-03-29T11:33:17.000Z',
+    '2026-02-12T17:09:13.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-092d-7619-8b6c-744195ceae84');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -5036,11 +5036,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:49:02 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:49:02.000Z',
     NULL,
     true,
-    'Tue Mar 29 2022 11:33:17 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:13 GMT+0000 (Coordinated Universal Time)'
+    '2022-03-29T11:33:17.000Z',
+    '2026-02-12T17:09:13.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-0976-7657-a31f-9b66b986e82c');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -5061,8 +5061,8 @@ SELECT
     NULL,
     NULL,
     true,
-    'Tue Apr 05 2022 14:56:10 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:13 GMT+0000 (Coordinated Universal Time)'
+    '2022-04-05T14:56:10.000Z',
+    '2026-02-12T17:09:13.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-076b-773c-baad-64f7570e8a9b');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -5080,11 +5080,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:50 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:50.000Z',
     NULL,
     true,
-    'Tue Mar 29 2022 11:33:17 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:14 GMT+0000 (Coordinated Universal Time)'
+    '2022-03-29T11:33:17.000Z',
+    '2026-02-12T17:09:14.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-0af9-76b9-9727-b7f9742d3c3e');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -5102,11 +5102,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:50 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:50.000Z',
     NULL,
     true,
-    'Tue Mar 29 2022 11:33:17 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:14 GMT+0000 (Coordinated Universal Time)'
+    '2022-03-29T11:33:17.000Z',
+    '2026-02-12T17:09:14.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-0b44-7239-a985-4579c5930f89');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -5124,11 +5124,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:50 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:50.000Z',
     NULL,
     true,
-    'Tue Mar 29 2022 11:33:17 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:14 GMT+0000 (Coordinated Universal Time)'
+    '2022-03-29T11:33:17.000Z',
+    '2026-02-12T17:09:14.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-0b8d-74bf-adf1-18d66704c8a4');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -5146,11 +5146,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:50 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:50.000Z',
     NULL,
     true,
-    'Tue Mar 29 2022 11:33:17 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:14 GMT+0000 (Coordinated Universal Time)'
+    '2022-03-29T11:33:17.000Z',
+    '2026-02-12T17:09:14.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-0bd8-76e8-a106-2ca736064916');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -5168,11 +5168,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:50 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:50.000Z',
     NULL,
     true,
-    'Tue Mar 29 2022 11:33:17 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:14 GMT+0000 (Coordinated Universal Time)'
+    '2022-03-29T11:33:17.000Z',
+    '2026-02-12T17:09:14.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-0c21-74a7-948c-a272468be572');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -5190,11 +5190,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:50 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:50.000Z',
     NULL,
     true,
-    'Tue Mar 29 2022 11:33:17 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:14 GMT+0000 (Coordinated Universal Time)'
+    '2022-03-29T11:33:17.000Z',
+    '2026-02-12T17:09:14.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-0c6a-747c-ad6a-837a7fa971f7');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -5212,11 +5212,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:44 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:44.000Z',
     NULL,
     true,
-    'Tue Apr 05 2022 15:10:10 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:14 GMT+0000 (Coordinated Universal Time)'
+    '2022-04-05T15:10:10.000Z',
+    '2026-02-12T17:09:14.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-0cb3-72a8-9972-db3a19209b04');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -5234,11 +5234,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Fri Dec 05 2025 16:09:30 GMT+0000 (Coordinated Universal Time)',
+    '2025-12-05T16:09:30.000Z',
     NULL,
     true,
-    'Tue Mar 29 2022 11:33:17 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:15 GMT+0000 (Coordinated Universal Time)'
+    '2022-03-29T11:33:17.000Z',
+    '2026-02-12T17:09:15.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-0f04-764a-860b-be11a736913f');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -5256,11 +5256,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Fri Dec 05 2025 16:09:30 GMT+0000 (Coordinated Universal Time)',
+    '2025-12-05T16:09:30.000Z',
     NULL,
     true,
-    'Tue Mar 29 2022 11:33:17 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:15 GMT+0000 (Coordinated Universal Time)'
+    '2022-03-29T11:33:17.000Z',
+    '2026-02-12T17:09:15.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-0f4d-7503-bd60-6446d2c21cb2');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -5278,11 +5278,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Fri Dec 05 2025 16:09:30 GMT+0000 (Coordinated Universal Time)',
+    '2025-12-05T16:09:30.000Z',
     NULL,
     true,
-    'Tue Mar 29 2022 11:33:17 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:15 GMT+0000 (Coordinated Universal Time)'
+    '2022-03-29T11:33:17.000Z',
+    '2026-02-12T17:09:15.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-0f96-76e4-958d-31bf4faeb36f');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -5300,11 +5300,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Fri Dec 05 2025 16:09:30 GMT+0000 (Coordinated Universal Time)',
+    '2025-12-05T16:09:30.000Z',
     NULL,
     true,
-    'Tue Mar 29 2022 11:33:17 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:15 GMT+0000 (Coordinated Universal Time)'
+    '2022-03-29T11:33:17.000Z',
+    '2026-02-12T17:09:15.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-0fdf-72b8-9aef-56e0b8fe22fc');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -5322,11 +5322,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Fri Dec 05 2025 16:09:30 GMT+0000 (Coordinated Universal Time)',
+    '2025-12-05T16:09:30.000Z',
     NULL,
     true,
-    'Tue Mar 29 2022 11:33:17 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:15 GMT+0000 (Coordinated Universal Time)'
+    '2022-03-29T11:33:17.000Z',
+    '2026-02-12T17:09:15.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-1028-70da-9baf-708e0807516d');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -5344,11 +5344,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Fri Dec 05 2025 16:09:30 GMT+0000 (Coordinated Universal Time)',
+    '2025-12-05T16:09:30.000Z',
     NULL,
     true,
-    'Tue Mar 29 2022 11:33:17 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:15 GMT+0000 (Coordinated Universal Time)'
+    '2022-03-29T11:33:17.000Z',
+    '2026-02-12T17:09:15.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-1072-7690-ac30-33b931a6e43f');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -5369,8 +5369,8 @@ SELECT
     NULL,
     NULL,
     true,
-    'Tue Apr 05 2022 14:12:33 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:15 GMT+0000 (Coordinated Universal Time)'
+    '2022-04-05T14:12:33.000Z',
+    '2026-02-12T17:09:15.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-10bb-729d-8842-41609424ffb3');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -5388,11 +5388,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:56 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:56.000Z',
     NULL,
     true,
-    'Tue Mar 29 2022 11:33:17 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:15 GMT+0000 (Coordinated Universal Time)'
+    '2022-03-29T11:33:17.000Z',
+    '2026-02-12T17:09:15.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-1105-71fa-b6fc-6a8e6572f0f2');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -5410,11 +5410,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:56 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:56.000Z',
     NULL,
     true,
-    'Tue Mar 29 2022 11:33:17 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:15 GMT+0000 (Coordinated Universal Time)'
+    '2022-03-29T11:33:17.000Z',
+    '2026-02-12T17:09:15.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-1156-73af-9e74-282a73acdf00');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -5432,11 +5432,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:56 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:56.000Z',
     NULL,
     true,
-    'Tue Mar 29 2022 11:33:17 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:15 GMT+0000 (Coordinated Universal Time)'
+    '2022-03-29T11:33:17.000Z',
+    '2026-02-12T17:09:15.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-11a7-709b-a5be-4e3c9a19f347');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -5454,11 +5454,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:56 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:56.000Z',
     NULL,
     true,
-    'Tue Mar 29 2022 11:33:17 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:15 GMT+0000 (Coordinated Universal Time)'
+    '2022-03-29T11:33:17.000Z',
+    '2026-02-12T17:09:15.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-11f0-7709-b466-c9c3eeb10089');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -5476,11 +5476,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:56 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:56.000Z',
     NULL,
     true,
-    'Tue Mar 29 2022 11:33:17 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:15 GMT+0000 (Coordinated Universal Time)'
+    '2022-03-29T11:33:17.000Z',
+    '2026-02-12T17:09:15.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-1238-76cd-82c9-ea92eae718ea');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -5498,11 +5498,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:56 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:56.000Z',
     NULL,
     true,
-    'Tue Mar 29 2022 11:33:17 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:16 GMT+0000 (Coordinated Universal Time)'
+    '2022-03-29T11:33:17.000Z',
+    '2026-02-12T17:09:16.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-1283-7498-99af-dd085e3f2f79');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -5520,11 +5520,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:44 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:44.000Z',
     NULL,
     true,
-    'Tue Apr 05 2022 14:20:26 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:16 GMT+0000 (Coordinated Universal Time)'
+    '2022-04-05T14:20:26.000Z',
+    '2026-02-12T17:09:16.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-12ce-71b4-8772-bebaed43b1e9');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -5542,11 +5542,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:49:03 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:49:03.000Z',
     NULL,
     true,
-    'Tue Mar 29 2022 11:33:17 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:16 GMT+0000 (Coordinated Universal Time)'
+    '2022-03-29T11:33:17.000Z',
+    '2026-02-12T17:09:16.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-1318-730e-8830-e7180bf3da05');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -5564,11 +5564,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:49:03 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:49:03.000Z',
     NULL,
     true,
-    'Tue Mar 29 2022 11:33:17 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:16 GMT+0000 (Coordinated Universal Time)'
+    '2022-03-29T11:33:17.000Z',
+    '2026-02-12T17:09:16.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-1360-7388-9e1c-94d03517142d');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -5586,11 +5586,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:49:03 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:49:03.000Z',
     NULL,
     true,
-    'Tue Mar 29 2022 11:33:17 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:16 GMT+0000 (Coordinated Universal Time)'
+    '2022-03-29T11:33:17.000Z',
+    '2026-02-12T17:09:16.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-13aa-766d-99c6-797e5dc9a0ad');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -5608,11 +5608,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:49:03 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:49:03.000Z',
     NULL,
     true,
-    'Tue Mar 29 2022 11:33:17 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:16 GMT+0000 (Coordinated Universal Time)'
+    '2022-03-29T11:33:17.000Z',
+    '2026-02-12T17:09:16.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-13f3-7199-81bd-1bacdb696db0');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -5630,11 +5630,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:49:03 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:49:03.000Z',
     NULL,
     true,
-    'Tue Mar 29 2022 11:33:17 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:16 GMT+0000 (Coordinated Universal Time)'
+    '2022-03-29T11:33:17.000Z',
+    '2026-02-12T17:09:16.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-143d-706e-95ac-da9077916231');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -5652,11 +5652,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:49:03 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:49:03.000Z',
     NULL,
     true,
-    'Tue Mar 29 2022 11:33:17 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:16 GMT+0000 (Coordinated Universal Time)'
+    '2022-03-29T11:33:17.000Z',
+    '2026-02-12T17:09:16.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-1485-7558-952f-d02937ab950c');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -5674,11 +5674,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Jun 19 2025 16:31:31 GMT+0000 (Coordinated Universal Time)',
+    '2025-06-19T16:31:31.000Z',
     NULL,
     true,
-    'Tue Mar 29 2022 11:33:17 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:16 GMT+0000 (Coordinated Universal Time)'
+    '2022-03-29T11:33:17.000Z',
+    '2026-02-12T17:09:16.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-1517-721a-8970-50a0eb73d616');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -5696,11 +5696,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Jun 19 2025 16:31:31 GMT+0000 (Coordinated Universal Time)',
+    '2025-06-19T16:31:31.000Z',
     NULL,
     true,
-    'Tue Mar 29 2022 11:33:17 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:16 GMT+0000 (Coordinated Universal Time)'
+    '2022-03-29T11:33:17.000Z',
+    '2026-02-12T17:09:16.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-1561-75ea-80aa-5272670cdf9f');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -5718,11 +5718,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Jun 19 2025 16:31:31 GMT+0000 (Coordinated Universal Time)',
+    '2025-06-19T16:31:31.000Z',
     NULL,
     true,
-    'Tue Mar 29 2022 11:33:17 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:16 GMT+0000 (Coordinated Universal Time)'
+    '2022-03-29T11:33:17.000Z',
+    '2026-02-12T17:09:16.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-15aa-7720-a624-febf05e4816c');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -5740,11 +5740,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Jun 19 2025 16:31:31 GMT+0000 (Coordinated Universal Time)',
+    '2025-06-19T16:31:31.000Z',
     NULL,
     true,
-    'Tue Mar 29 2022 11:33:17 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:16 GMT+0000 (Coordinated Universal Time)'
+    '2022-03-29T11:33:17.000Z',
+    '2026-02-12T17:09:16.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-15f4-76ed-ab39-505eae65b668');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -5762,11 +5762,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Jun 19 2025 16:31:31 GMT+0000 (Coordinated Universal Time)',
+    '2025-06-19T16:31:31.000Z',
     NULL,
     true,
-    'Tue Mar 29 2022 11:33:17 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:16 GMT+0000 (Coordinated Universal Time)'
+    '2022-03-29T11:33:17.000Z',
+    '2026-02-12T17:09:16.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-163d-770e-b0dc-d5ea76cd6f69');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -5784,11 +5784,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Jun 19 2025 16:31:31 GMT+0000 (Coordinated Universal Time)',
+    '2025-06-19T16:31:31.000Z',
     NULL,
     true,
-    'Tue Mar 29 2022 11:33:17 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:17 GMT+0000 (Coordinated Universal Time)'
+    '2022-03-29T11:33:17.000Z',
+    '2026-02-12T17:09:17.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-1686-7529-859b-567947dc372e');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -5806,11 +5806,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Fri Nov 08 2024 23:18:34 GMT+0000 (Coordinated Universal Time)',
+    '2024-11-08T23:18:34.000Z',
     NULL,
     true,
-    'Tue Apr 05 2022 14:31:50 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:16 GMT+0000 (Coordinated Universal Time)'
+    '2022-04-05T14:31:50.000Z',
+    '2026-02-12T17:09:16.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-14ce-767a-a43f-93828f68ec65');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -5828,11 +5828,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:49:04 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:49:04.000Z',
     NULL,
     true,
-    'Tue Mar 29 2022 11:33:17 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:17 GMT+0000 (Coordinated Universal Time)'
+    '2022-03-29T11:33:17.000Z',
+    '2026-02-12T17:09:17.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-16cf-77ee-b39d-c40a6ebd4319');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -5850,11 +5850,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:49:04 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:49:04.000Z',
     NULL,
     true,
-    'Tue Mar 29 2022 11:33:17 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:17 GMT+0000 (Coordinated Universal Time)'
+    '2022-03-29T11:33:17.000Z',
+    '2026-02-12T17:09:17.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-171a-73da-b86f-42e676fbdb7b');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -5872,11 +5872,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:49:04 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:49:04.000Z',
     NULL,
     true,
-    'Tue Mar 29 2022 11:33:17 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:17 GMT+0000 (Coordinated Universal Time)'
+    '2022-03-29T11:33:17.000Z',
+    '2026-02-12T17:09:17.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-176d-7334-8698-93519975e01f');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -5894,11 +5894,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:49:04 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:49:04.000Z',
     NULL,
     true,
-    'Tue Mar 29 2022 11:33:17 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:17 GMT+0000 (Coordinated Universal Time)'
+    '2022-03-29T11:33:17.000Z',
+    '2026-02-12T17:09:17.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-17b7-7238-b720-4c5cba6618e8');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -5916,11 +5916,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:49:04 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:49:04.000Z',
     NULL,
     true,
-    'Tue Mar 29 2022 11:33:17 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:17 GMT+0000 (Coordinated Universal Time)'
+    '2022-03-29T11:33:17.000Z',
+    '2026-02-12T17:09:17.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-1800-762b-af32-a3752e55a693');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -5938,11 +5938,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:49:04 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:49:04.000Z',
     NULL,
     true,
-    'Tue Mar 29 2022 11:33:17 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:17 GMT+0000 (Coordinated Universal Time)'
+    '2022-03-29T11:33:17.000Z',
+    '2026-02-12T17:09:17.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-1848-7379-9d8f-8671f5b340fd');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -5960,11 +5960,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:44 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:44.000Z',
     NULL,
     true,
-    'Wed Apr 20 2022 00:41:53 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:17 GMT+0000 (Coordinated Universal Time)'
+    '2022-04-20T00:41:53.000Z',
+    '2026-02-12T17:09:17.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-1891-755e-8c32-bdb5306f1220');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -5982,11 +5982,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:51 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:51.000Z',
     NULL,
     true,
-    'Tue Mar 29 2022 11:33:17 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:17 GMT+0000 (Coordinated Universal Time)'
+    '2022-03-29T11:33:17.000Z',
+    '2026-02-12T17:09:17.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-18da-77aa-acae-bd76393bcbc1');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -6004,11 +6004,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:51 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:51.000Z',
     NULL,
     true,
-    'Tue Mar 29 2022 11:33:17 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:17 GMT+0000 (Coordinated Universal Time)'
+    '2022-03-29T11:33:17.000Z',
+    '2026-02-12T17:09:17.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-1924-70e9-b7b5-68d458405959');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -6026,11 +6026,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:51 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:51.000Z',
     NULL,
     true,
-    'Tue Mar 29 2022 11:33:17 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:17 GMT+0000 (Coordinated Universal Time)'
+    '2022-03-29T11:33:17.000Z',
+    '2026-02-12T17:09:17.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-196d-74cc-b4f1-4d00bf7a49d1');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -6048,11 +6048,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:51 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:51.000Z',
     NULL,
     true,
-    'Tue Mar 29 2022 11:33:17 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:17 GMT+0000 (Coordinated Universal Time)'
+    '2022-03-29T11:33:17.000Z',
+    '2026-02-12T17:09:17.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-19b7-748f-a75a-4b243c58daec');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -6070,11 +6070,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:51 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:51.000Z',
     NULL,
     true,
-    'Tue Mar 29 2022 11:33:17 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:17 GMT+0000 (Coordinated Universal Time)'
+    '2022-03-29T11:33:17.000Z',
+    '2026-02-12T17:09:17.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-19ff-76f4-af20-b184db953c27');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -6092,11 +6092,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:51 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:51.000Z',
     NULL,
     true,
-    'Tue Mar 29 2022 11:33:17 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:18 GMT+0000 (Coordinated Universal Time)'
+    '2022-03-29T11:33:17.000Z',
+    '2026-02-12T17:09:18.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-1a48-767e-a606-a5c43007aaa3');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -6114,11 +6114,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:51 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:51.000Z',
     NULL,
     true,
-    'Tue Mar 29 2022 11:33:17 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:18 GMT+0000 (Coordinated Universal Time)'
+    '2022-03-29T11:33:17.000Z',
+    '2026-02-12T17:09:18.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-1a92-76ea-95b5-b8ec38ff045b');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -6136,11 +6136,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:51 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:51.000Z',
     NULL,
     true,
-    'Tue Mar 29 2022 11:33:17 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:18 GMT+0000 (Coordinated Universal Time)'
+    '2022-03-29T11:33:17.000Z',
+    '2026-02-12T17:09:18.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-1adc-7294-83b0-e509befaea70');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -6158,11 +6158,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:51 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:51.000Z',
     NULL,
     true,
-    'Tue Mar 29 2022 11:33:17 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:18 GMT+0000 (Coordinated Universal Time)'
+    '2022-03-29T11:33:17.000Z',
+    '2026-02-12T17:09:18.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-1b28-735f-9a8f-67b8ec3a19ac');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -6180,11 +6180,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:51 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:51.000Z',
     NULL,
     true,
-    'Tue Mar 29 2022 11:33:17 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:18 GMT+0000 (Coordinated Universal Time)'
+    '2022-03-29T11:33:17.000Z',
+    '2026-02-12T17:09:18.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-1b71-76ce-bc26-a693f543b300');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -6202,11 +6202,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:51 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:51.000Z',
     NULL,
     true,
-    'Tue Mar 29 2022 11:33:17 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:18 GMT+0000 (Coordinated Universal Time)'
+    '2022-03-29T11:33:17.000Z',
+    '2026-02-12T17:09:18.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-1bba-750c-9510-1d97581172dc');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -6224,11 +6224,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:51 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:51.000Z',
     NULL,
     true,
-    'Tue Mar 29 2022 11:33:17 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:18 GMT+0000 (Coordinated Universal Time)'
+    '2022-03-29T11:33:17.000Z',
+    '2026-02-12T17:09:18.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-1c02-72d0-9b96-51457087fb2a');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -6246,11 +6246,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:44 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:44.000Z',
     NULL,
     true,
-    'Wed May 08 2024 22:16:43 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:18 GMT+0000 (Coordinated Universal Time)'
+    '2024-05-08T22:16:43.000Z',
+    '2026-02-12T17:09:18.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-1c4b-71ff-8e29-8d2ec298ebef');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -6268,11 +6268,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:59 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:59.000Z',
     NULL,
     true,
-    'Tue Mar 29 2022 11:33:17 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:18 GMT+0000 (Coordinated Universal Time)'
+    '2022-03-29T11:33:17.000Z',
+    '2026-02-12T17:09:18.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-1c94-7267-88d6-ea333dc52b1c');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -6290,11 +6290,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:59 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:59.000Z',
     NULL,
     true,
-    'Tue Mar 29 2022 11:33:17 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:18 GMT+0000 (Coordinated Universal Time)'
+    '2022-03-29T11:33:17.000Z',
+    '2026-02-12T17:09:18.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-1cdc-748c-a323-c43cad469dce');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -6312,11 +6312,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:59 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:59.000Z',
     NULL,
     true,
-    'Tue Mar 29 2022 11:33:17 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:18 GMT+0000 (Coordinated Universal Time)'
+    '2022-03-29T11:33:17.000Z',
+    '2026-02-12T17:09:18.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-1d25-7098-96c8-cc1acc81aafc');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -6334,11 +6334,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:59 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:59.000Z',
     NULL,
     true,
-    'Tue Mar 29 2022 11:33:17 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:18 GMT+0000 (Coordinated Universal Time)'
+    '2022-03-29T11:33:17.000Z',
+    '2026-02-12T17:09:18.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-1d72-7159-86af-bb29e9f1fb33');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -6356,11 +6356,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:59 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:59.000Z',
     NULL,
     true,
-    'Tue Mar 29 2022 11:33:17 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:18 GMT+0000 (Coordinated Universal Time)'
+    '2022-03-29T11:33:17.000Z',
+    '2026-02-12T17:09:18.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-1dbb-749f-9256-9a99f2970cea');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -6378,11 +6378,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:59 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:59.000Z',
     NULL,
     true,
-    'Tue Mar 29 2022 11:33:17 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:18 GMT+0000 (Coordinated Universal Time)'
+    '2022-03-29T11:33:17.000Z',
+    '2026-02-12T17:09:18.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-1e04-7068-84dc-1288c64b6ec9');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -6400,11 +6400,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:44 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:44.000Z',
     NULL,
     true,
-    'Wed Apr 20 2022 01:22:49 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:19 GMT+0000 (Coordinated Universal Time)'
+    '2022-04-20T01:22:49.000Z',
+    '2026-02-12T17:09:19.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-1e4c-745f-af7b-37213afbf42c');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -6422,11 +6422,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:49:02 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:49:02.000Z',
     NULL,
     true,
-    'Tue Mar 29 2022 11:33:02 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:13 GMT+0000 (Coordinated Universal Time)'
+    '2022-03-29T11:33:02.000Z',
+    '2026-02-12T17:09:13.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-0a5b-704f-9978-4bebec44e62c');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -6444,11 +6444,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Tue Dec 26 2023 14:59:49 GMT+0000 (Coordinated Universal Time)',
+    '2023-12-26T14:59:49.000Z',
     NULL,
     true,
-    'Fri Apr 22 2022 16:09:02 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:13 GMT+0000 (Coordinated Universal Time)'
+    '2022-04-22T16:09:02.000Z',
+    '2026-02-12T17:09:13.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-09c2-70ca-81b8-0d2aa5f9d43a');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -6466,11 +6466,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Sat Dec 23 2023 20:18:59 GMT+0000 (Coordinated Universal Time)',
+    '2023-12-23T20:18:59.000Z',
     NULL,
     true,
-    'Fri Apr 22 2022 16:25:11 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:13 GMT+0000 (Coordinated Universal Time)'
+    '2022-04-22T16:25:11.000Z',
+    '2026-02-12T17:09:13.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-0a0b-75c1-9925-e935338aaa84');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -6488,11 +6488,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:44 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:44.000Z',
     NULL,
     true,
-    'Fri Jun 14 2024 04:39:27 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:14 GMT+0000 (Coordinated Universal Time)'
+    '2024-06-14T04:39:27.000Z',
+    '2026-02-12T17:09:14.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-0aae-72e9-a906-64d39d14c529');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -6510,11 +6510,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:49:06 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:49:06.000Z',
     NULL,
     true,
-    'Tue Aug 16 2022 13:30:24 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:19 GMT+0000 (Coordinated Universal Time)'
+    '2022-08-16T13:30:24.000Z',
+    '2026-02-12T17:09:19.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-1e95-7093-9ef2-e291f4f32e22');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -6532,11 +6532,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:49:06 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:49:06.000Z',
     NULL,
     true,
-    'Tue Aug 16 2022 13:29:24 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:19 GMT+0000 (Coordinated Universal Time)'
+    '2022-08-16T13:29:24.000Z',
+    '2026-02-12T17:09:19.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-1ede-731b-976a-f12d4920a992');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -6554,11 +6554,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:49:06 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:49:06.000Z',
     NULL,
     true,
-    'Tue Aug 16 2022 14:03:09 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:19 GMT+0000 (Coordinated Universal Time)'
+    '2022-08-16T14:03:09.000Z',
+    '2026-02-12T17:09:19.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-1f27-73df-be05-7cbb62823104');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -6576,11 +6576,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:49:06 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:49:06.000Z',
     NULL,
     true,
-    'Fri Dec 29 2023 15:03:06 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:19 GMT+0000 (Coordinated Universal Time)'
+    '2023-12-29T15:03:06.000Z',
+    '2026-02-12T17:09:19.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-1f71-76bd-9c74-356428bc788c');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -6598,11 +6598,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:49:06 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:49:06.000Z',
     NULL,
     true,
-    'Tue Aug 16 2022 13:35:53 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:19 GMT+0000 (Coordinated Universal Time)'
+    '2022-08-16T13:35:53.000Z',
+    '2026-02-12T17:09:19.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-2005-75b8-9c1e-0a68103c3f83');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -6620,11 +6620,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:49:06 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:49:06.000Z',
     NULL,
     true,
-    'Tue Aug 16 2022 13:37:21 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:19 GMT+0000 (Coordinated Universal Time)'
+    '2022-08-16T13:37:21.000Z',
+    '2026-02-12T17:09:19.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-1fbb-761f-b8e6-73acf129091f');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -6642,11 +6642,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:49:06 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:49:06.000Z',
     NULL,
     true,
-    'Tue Aug 16 2022 14:04:14 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:19 GMT+0000 (Coordinated Universal Time)'
+    '2022-08-16T14:04:14.000Z',
+    '2026-02-12T17:09:19.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-204e-73b9-a7bc-ecd82d9b1c0e');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -6664,11 +6664,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:49:06 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:49:06.000Z',
     NULL,
     true,
-    'Fri Dec 29 2023 15:03:39 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:19 GMT+0000 (Coordinated Universal Time)'
+    '2023-12-29T15:03:39.000Z',
+    '2026-02-12T17:09:19.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-2097-763e-964b-e69b7520cab6');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -6686,11 +6686,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:49:06 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:49:06.000Z',
     NULL,
     true,
-    'Tue Aug 16 2022 13:40:08 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:19 GMT+0000 (Coordinated Universal Time)'
+    '2022-08-16T13:40:08.000Z',
+    '2026-02-12T17:09:19.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-20e0-70bc-a423-27997bda5933');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -6708,11 +6708,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:49:06 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:49:06.000Z',
     NULL,
     true,
-    'Tue Aug 16 2022 13:39:36 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:19 GMT+0000 (Coordinated Universal Time)'
+    '2022-08-16T13:39:36.000Z',
+    '2026-02-12T17:09:19.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-2129-7077-9375-bb63d0517de3');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -6730,11 +6730,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:49:06 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:49:06.000Z',
     NULL,
     true,
-    'Tue Aug 16 2022 14:04:43 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:19 GMT+0000 (Coordinated Universal Time)'
+    '2022-08-16T14:04:43.000Z',
+    '2026-02-12T17:09:19.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-2174-71bb-889f-22a5d1681285');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -6752,11 +6752,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:49:06 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:49:06.000Z',
     NULL,
     true,
-    'Fri Dec 29 2023 15:04:11 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:19 GMT+0000 (Coordinated Universal Time)'
+    '2023-12-29T15:04:11.000Z',
+    '2026-02-12T17:09:19.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-21bd-743c-aa52-eb1b203cd27e');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -6774,11 +6774,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:49:02 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:49:02.000Z',
     NULL,
     true,
-    'Wed Aug 20 2025 22:06:16 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:20 GMT+0000 (Coordinated Universal Time)'
+    '2025-08-20T22:06:16.000Z',
+    '2026-02-12T17:09:20.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-2206-72db-bcd0-9ac730365c89');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -6796,11 +6796,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:49:06 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:49:06.000Z',
     NULL,
     true,
-    'Wed Aug 20 2025 22:06:46 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:20 GMT+0000 (Coordinated Universal Time)'
+    '2025-08-20T22:06:46.000Z',
+    '2026-02-12T17:09:20.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-224f-72f5-9491-78c0e6c2fa5e');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -6818,11 +6818,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:49:06 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:49:06.000Z',
     NULL,
     true,
-    'Wed Aug 20 2025 23:11:47 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:20 GMT+0000 (Coordinated Universal Time)'
+    '2025-08-20T23:11:47.000Z',
+    '2026-02-12T17:09:20.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-2297-773a-8014-7903cff94924');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -6840,11 +6840,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:49:06 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:49:06.000Z',
     NULL,
     true,
-    'Wed Aug 20 2025 23:12:17 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:20 GMT+0000 (Coordinated Universal Time)'
+    '2025-08-20T23:12:17.000Z',
+    '2026-02-12T17:09:20.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-22e0-73ef-811f-01d0ffda4722');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -6862,11 +6862,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:49:06 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:49:06.000Z',
     NULL,
     true,
-    'Wed Aug 20 2025 23:12:53 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:20 GMT+0000 (Coordinated Universal Time)'
+    '2025-08-20T23:12:53.000Z',
+    '2026-02-12T17:09:20.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-232a-777a-9e2a-bbb4bfb10f93');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -6884,11 +6884,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:50 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:50.000Z',
     NULL,
     true,
-    'Wed Aug 11 2021 02:04:15 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:00 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-11T02:04:15.000Z',
+    '2026-02-12T17:09:00.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-d525-700f-b6fb-7453bd69afcc');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -6906,11 +6906,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:50 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:50.000Z',
     NULL,
     true,
-    'Wed Aug 18 2021 01:15:11 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:00 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-18T01:15:11.000Z',
+    '2026-02-12T17:09:00.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-d570-71f0-b56c-f86fc66166b5');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -6928,11 +6928,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:50 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:50.000Z',
     NULL,
     true,
-    'Wed Aug 18 2021 01:15:38 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:00 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-18T01:15:38.000Z',
+    '2026-02-12T17:09:00.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-d5ba-737d-a5d0-da59d787359e');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -6950,11 +6950,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:50 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:50.000Z',
     NULL,
     true,
-    'Wed Aug 18 2021 01:16:05 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:00 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-18T01:16:05.000Z',
+    '2026-02-12T17:09:00.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-d609-760f-8f05-ae0fb5ca7ad6');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -6972,11 +6972,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:50 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:50.000Z',
     NULL,
     true,
-    'Wed Aug 18 2021 01:16:18 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:00 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-18T01:16:18.000Z',
+    '2026-02-12T17:09:00.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-d652-70f8-b8e9-b5de0db7371d');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -6994,11 +6994,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:50 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:50.000Z',
     NULL,
     true,
-    'Wed Aug 18 2021 01:16:38 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:00 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-18T01:16:38.000Z',
+    '2026-02-12T17:09:00.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-d69c-727e-a160-3b8937069dae');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -7016,11 +7016,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:06 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:06.000Z',
     NULL,
     true,
-    'Sat Aug 21 2021 20:14:05 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:00 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-21T20:14:05.000Z',
+    '2026-02-12T17:09:00.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-d6e5-71ce-94c0-09ef974b5428');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -7038,11 +7038,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:51 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:51.000Z',
     NULL,
     true,
-    'Fri Aug 13 2021 14:46:25 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:00 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-13T14:46:25.000Z',
+    '2026-02-12T17:09:00.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-d72e-72ce-8631-8f792ecde34e');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -7060,11 +7060,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:51 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:51.000Z',
     NULL,
     true,
-    'Mon Aug 23 2021 18:54:46 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:00 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-23T18:54:46.000Z',
+    '2026-02-12T17:09:00.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-d777-726a-824d-ab20958ff55e');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -7082,11 +7082,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:51 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:51.000Z',
     NULL,
     true,
-    'Mon Aug 23 2021 18:55:04 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:00 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-23T18:55:04.000Z',
+    '2026-02-12T17:09:00.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-d7c1-702c-afc9-f1a2d04205c8');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -7104,11 +7104,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:51 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:51.000Z',
     NULL,
     true,
-    'Mon Aug 23 2021 18:55:30 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:01 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-23T18:55:30.000Z',
+    '2026-02-12T17:09:01.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-d80b-74ed-afb1-d7c15eee6f77');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -7126,11 +7126,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:51 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:51.000Z',
     NULL,
     true,
-    'Mon Aug 23 2021 18:56:58 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:01 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-23T18:56:58.000Z',
+    '2026-02-12T17:09:01.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-d854-75ab-92e0-1d56758a4cd9');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -7148,11 +7148,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:51 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:51.000Z',
     NULL,
     true,
-    'Mon Aug 23 2021 18:57:21 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:01 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-23T18:57:21.000Z',
+    '2026-02-12T17:09:01.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-d89d-74e0-a063-ac1db47d7d79');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -7170,11 +7170,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:44 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:44.000Z',
     NULL,
     true,
-    'Mon Aug 23 2021 18:59:58 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:01 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-23T18:59:58.000Z',
+    '2026-02-12T17:09:01.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-d8e6-7598-b542-4ff4c44367bb');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -7192,11 +7192,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:50 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:50.000Z',
     NULL,
     true,
-    'Fri Aug 13 2021 14:50:13 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:01 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-13T14:50:13.000Z',
+    '2026-02-12T17:09:01.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-db41-7038-8a96-3402b747946c');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -7214,11 +7214,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:50 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:50.000Z',
     NULL,
     true,
-    'Mon Aug 23 2021 13:49:31 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:01 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-23T13:49:31.000Z',
+    '2026-02-12T17:09:01.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-db8a-7498-8ff4-ba25210363b1');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -7236,11 +7236,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:50 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:50.000Z',
     NULL,
     true,
-    'Mon Aug 23 2021 13:49:55 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:02 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-23T13:49:55.000Z',
+    '2026-02-12T17:09:02.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-dbd2-72e0-926e-1839f8e9ecf9');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -7258,11 +7258,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:50 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:50.000Z',
     NULL,
     true,
-    'Mon Aug 23 2021 13:50:12 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:02 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-23T13:50:12.000Z',
+    '2026-02-12T17:09:02.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-dc1b-74f6-af66-fd0cb6d8cd92');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -7280,11 +7280,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:50 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:50.000Z',
     NULL,
     true,
-    'Mon Aug 23 2021 13:50:33 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:02 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-23T13:50:33.000Z',
+    '2026-02-12T17:09:02.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-dc64-7495-a730-383baece74fd');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -7302,11 +7302,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:50 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:50.000Z',
     NULL,
     true,
-    'Mon Aug 23 2021 13:51:08 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:02 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-23T13:51:08.000Z',
+    '2026-02-12T17:09:02.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-dcad-7029-a6b3-c8c849118f3d');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -7324,11 +7324,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:31 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:31.000Z',
     NULL,
     true,
-    'Fri Aug 13 2021 14:56:42 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:02 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-13T14:56:42.000Z',
+    '2026-02-12T17:09:02.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-dcf7-76cc-8862-76efd6f89061');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -7346,11 +7346,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:31 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:31.000Z',
     NULL,
     true,
-    'Wed Aug 18 2021 01:29:17 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:02 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-18T01:29:17.000Z',
+    '2026-02-12T17:09:02.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-dd40-7718-87e5-52cb39ee64fb');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -7368,11 +7368,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:31 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:31.000Z',
     NULL,
     true,
-    'Wed Aug 18 2021 01:29:33 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:02 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-18T01:29:33.000Z',
+    '2026-02-12T17:09:02.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-dd8d-7281-92f8-799f48fece84');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -7390,11 +7390,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:31 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:31.000Z',
     NULL,
     true,
-    'Wed Aug 18 2021 01:29:50 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:02 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-18T01:29:50.000Z',
+    '2026-02-12T17:09:02.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-ddd6-7476-9dcd-47e871266efd');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -7412,11 +7412,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:31 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:31.000Z',
     NULL,
     true,
-    'Wed Aug 18 2021 01:30:15 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:02 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-18T01:30:15.000Z',
+    '2026-02-12T17:09:02.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-de1e-73ce-b75f-1a23d7bc0c91');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -7434,11 +7434,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:31 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:31.000Z',
     NULL,
     true,
-    'Wed Aug 18 2021 01:30:31 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:02 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-18T01:30:31.000Z',
+    '2026-02-12T17:09:02.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-de67-7408-a74c-ac2dca04fea2');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -7456,11 +7456,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:44 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:44.000Z',
     NULL,
     true,
-    'Wed Aug 18 2021 01:31:16 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:02 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-18T01:31:16.000Z',
+    '2026-02-12T17:09:02.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-deb0-75ba-b1ee-80a6bae72eb6');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -7478,11 +7478,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:50 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:50.000Z',
     NULL,
     true,
-    'Fri Aug 13 2021 14:57:55 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:02 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-13T14:57:55.000Z',
+    '2026-02-12T17:09:02.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-def8-752e-9fd4-6e22f6dba617');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -7500,11 +7500,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:50 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:50.000Z',
     NULL,
     true,
-    'Wed Aug 18 2021 01:23:58 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:02 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-18T01:23:58.000Z',
+    '2026-02-12T17:09:02.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-df41-769c-971a-d1b0af92d1c0');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -7522,11 +7522,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:50 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:50.000Z',
     NULL,
     true,
-    'Wed Aug 18 2021 01:24:24 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:02 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-18T01:24:24.000Z',
+    '2026-02-12T17:09:02.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-df8a-77ef-847d-f09b8e1985e1');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -7544,11 +7544,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:50 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:50.000Z',
     NULL,
     true,
-    'Wed Aug 18 2021 01:25:00 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:03 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-18T01:25:00.000Z',
+    '2026-02-12T17:09:03.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-dfd2-753f-aad2-460718bfbdc8');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -7566,11 +7566,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:50 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:50.000Z',
     NULL,
     true,
-    'Wed Aug 18 2021 01:25:19 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:03 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-18T01:25:19.000Z',
+    '2026-02-12T17:09:03.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-e01c-703d-9dff-ac0435e5cd73');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -7588,11 +7588,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:50 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:50.000Z',
     NULL,
     true,
-    'Wed Aug 18 2021 01:25:36 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:03 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-18T01:25:36.000Z',
+    '2026-02-12T17:09:03.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-e065-7238-bf86-1b692cda51f2');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -7610,11 +7610,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:50 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:50.000Z',
     NULL,
     true,
-    'Fri Aug 13 2021 15:04:49 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:03 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-13T15:04:49.000Z',
+    '2026-02-12T17:09:03.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-e0ae-7427-adb6-e1fe08c974a4');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -7632,11 +7632,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:50 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:50.000Z',
     NULL,
     true,
-    'Mon Aug 23 2021 13:54:25 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:03 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-23T13:54:25.000Z',
+    '2026-02-12T17:09:03.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-e0f6-722f-a2b2-c1d9a8684bc9');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -7654,11 +7654,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:50 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:50.000Z',
     NULL,
     true,
-    'Mon Aug 23 2021 13:54:45 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:03 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-23T13:54:45.000Z',
+    '2026-02-12T17:09:03.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-e13f-745a-a958-40b4b9a9e007');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -7676,11 +7676,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:50 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:50.000Z',
     NULL,
     true,
-    'Mon Aug 23 2021 13:54:59 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:03 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-23T13:54:59.000Z',
+    '2026-02-12T17:09:03.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-e188-7449-a7c7-525450f502e9');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -7698,11 +7698,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:50 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:50.000Z',
     NULL,
     true,
-    'Mon Aug 23 2021 13:55:13 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:03 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-23T13:55:13.000Z',
+    '2026-02-12T17:09:03.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-e1d4-75b7-8c8a-5e2de045b4d4');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -7720,11 +7720,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:50 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:50.000Z',
     NULL,
     true,
-    'Mon Aug 23 2021 13:55:35 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:03 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-23T13:55:35.000Z',
+    '2026-02-12T17:09:03.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-e21d-73e9-be24-7c40808ec666');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -7742,11 +7742,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:44 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:44.000Z',
     NULL,
     true,
-    'Mon Aug 23 2021 18:51:11 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:03 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-23T18:51:11.000Z',
+    '2026-02-12T17:09:03.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-e266-712e-af8a-ee48ddbcb5c5');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -7764,11 +7764,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:55 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:55.000Z',
     NULL,
     true,
-    'Fri Aug 13 2021 15:08:54 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:05 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-13T15:08:54.000Z',
+    '2026-02-12T17:09:05.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-e868-77e9-b526-7a1c9b492762');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -7786,11 +7786,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:55 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:55.000Z',
     NULL,
     true,
-    'Wed Aug 18 2021 01:09:31 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:05 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-18T01:09:31.000Z',
+    '2026-02-12T17:09:05.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-e8b1-7532-8c92-33ca3450676e');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -7808,11 +7808,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:55 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:55.000Z',
     NULL,
     true,
-    'Wed Aug 18 2021 01:09:44 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:05 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-18T01:09:44.000Z',
+    '2026-02-12T17:09:05.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-e8fa-732c-b472-c5fd3d3f304d');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -7830,11 +7830,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:55 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:55.000Z',
     NULL,
     true,
-    'Wed Aug 18 2021 01:09:57 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:05 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-18T01:09:57.000Z',
+    '2026-02-12T17:09:05.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-e942-7211-83c4-842c215cf834');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -7852,11 +7852,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:55 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:55.000Z',
     NULL,
     true,
-    'Wed Aug 18 2021 01:10:32 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:05 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-18T01:10:32.000Z',
+    '2026-02-12T17:09:05.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-e98b-762d-8bcc-b92aee727ac4');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -7874,11 +7874,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:55 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:55.000Z',
     NULL,
     true,
-    'Wed Aug 18 2021 01:10:51 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:05 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-18T01:10:51.000Z',
+    '2026-02-12T17:09:05.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-e9d4-7588-a5f1-538d848a4c50');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -7896,11 +7896,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:44 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:44.000Z',
     NULL,
     true,
-    'Wed Aug 18 2021 01:12:49 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:05 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-18T01:12:49.000Z',
+    '2026-02-12T17:09:05.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-ea1d-734a-81d9-f155959c802d');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -7918,11 +7918,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:44 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:44.000Z',
     NULL,
     true,
-    'Wed Jan 10 2024 11:58:50 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:05 GMT+0000 (Coordinated Universal Time)'
+    '2024-01-10T11:58:50.000Z',
+    '2026-02-12T17:09:05.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-ea66-7465-bf6a-0a6bb285e085');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -7940,11 +7940,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:50 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:50.000Z',
     NULL,
     true,
-    'Fri Aug 13 2021 15:11:04 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:06 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-13T15:11:04.000Z',
+    '2026-02-12T17:09:06.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-ecbd-71f1-9924-5488eeb65cee');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -7962,11 +7962,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:50 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:50.000Z',
     NULL,
     true,
-    'Wed Aug 18 2021 01:20:51 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:06 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-18T01:20:51.000Z',
+    '2026-02-12T17:09:06.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-ed0a-75d9-bb7d-522ffceda2e3');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -7984,11 +7984,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:50 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:50.000Z',
     NULL,
     true,
-    'Wed Aug 18 2021 01:21:13 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:06 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-18T01:21:13.000Z',
+    '2026-02-12T17:09:06.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-ed53-732b-86ed-a0d92767cc01');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -8006,11 +8006,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:50 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:50.000Z',
     NULL,
     true,
-    'Wed Aug 18 2021 01:21:29 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:06 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-18T01:21:29.000Z',
+    '2026-02-12T17:09:06.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-ed9c-7239-9ba1-3133e9ea0f70');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -8028,11 +8028,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:50 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:50.000Z',
     NULL,
     true,
-    'Wed Aug 18 2021 01:21:56 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:06 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-18T01:21:56.000Z',
+    '2026-02-12T17:09:06.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-edea-72c1-b347-66ad1e79c0ba');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -8050,11 +8050,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:50 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:50.000Z',
     NULL,
     true,
-    'Wed Aug 18 2021 01:22:15 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:06 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-18T01:22:15.000Z',
+    '2026-02-12T17:09:06.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-ee33-7158-90c1-32507d724909');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -8072,11 +8072,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:44 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:44.000Z',
     NULL,
     true,
-    'Wed Aug 18 2021 01:27:38 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:06 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-18T01:27:38.000Z',
+    '2026-02-12T17:09:06.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-ee80-745d-a768-82b4f67c0407');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -8094,11 +8094,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:44 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:44.000Z',
     NULL,
     true,
-    'Fri Aug 20 2021 05:10:01 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:06 GMT+0000 (Coordinated Universal Time)'
+    '2021-08-20T05:10:01.000Z',
+    '2026-02-12T17:09:06.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-eed8-774f-a346-8c0086e46dfd');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -8116,11 +8116,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Wed Nov 05 2025 12:09:08 GMT+0000 (Coordinated Universal Time)',
+    '2025-11-05T12:09:08.000Z',
     NULL,
     true,
-    'Wed Dec 13 2023 14:47:25 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:07 GMT+0000 (Coordinated Universal Time)'
+    '2023-12-13T14:47:25.000Z',
+    '2026-02-12T17:09:07.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-f120-7618-89a3-4a8370504a3a');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -8138,11 +8138,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Sat Nov 08 2025 12:03:44 GMT+0000 (Coordinated Universal Time)',
+    '2025-11-08T12:03:44.000Z',
     NULL,
     true,
-    'Fri Jun 14 2024 04:32:49 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:07 GMT+0000 (Coordinated Universal Time)'
+    '2024-06-14T04:32:49.000Z',
+    '2026-02-12T17:09:07.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d3-f16a-749c-8dee-0d1f7a761091');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -8160,11 +8160,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:53 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:53.000Z',
     NULL,
     true,
-    'Tue Mar 29 2022 11:33:17 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:14 GMT+0000 (Coordinated Universal Time)'
+    '2022-03-29T11:33:17.000Z',
+    '2026-02-12T17:09:14.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-0cfc-70b1-963c-b81b5e82a52e');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -8182,11 +8182,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:53 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:53.000Z',
     NULL,
     true,
-    'Tue Mar 29 2022 11:33:17 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:14 GMT+0000 (Coordinated Universal Time)'
+    '2022-03-29T11:33:17.000Z',
+    '2026-02-12T17:09:14.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-0d45-719e-b647-58da7eb58bd1');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -8204,11 +8204,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:53 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:53.000Z',
     NULL,
     true,
-    'Tue Mar 29 2022 11:33:17 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:14 GMT+0000 (Coordinated Universal Time)'
+    '2022-03-29T11:33:17.000Z',
+    '2026-02-12T17:09:14.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-0d8e-7698-87a4-77b1d7b856eb');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -8226,11 +8226,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:53 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:53.000Z',
     NULL,
     true,
-    'Tue Mar 29 2022 11:33:17 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:14 GMT+0000 (Coordinated Universal Time)'
+    '2022-03-29T11:33:17.000Z',
+    '2026-02-12T17:09:14.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-0e23-730b-bdb0-311874d2e22a');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -8248,11 +8248,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:53 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:53.000Z',
     NULL,
     true,
-    'Tue Mar 29 2022 11:33:17 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:14 GMT+0000 (Coordinated Universal Time)'
+    '2022-03-29T11:33:17.000Z',
+    '2026-02-12T17:09:14.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-0dd8-712a-8715-b0eb22e2d0fd');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -8270,11 +8270,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:53 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:53.000Z',
     NULL,
     true,
-    'Tue Mar 29 2022 11:33:17 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:14 GMT+0000 (Coordinated Universal Time)'
+    '2022-03-29T11:33:17.000Z',
+    '2026-02-12T17:09:14.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-0e71-7610-bbc5-c2bdb22cdef1');
 
 INSERT INTO channels (id, human_id, public_code, device_id, organization_id, name, description, ch, measurement_type_id, phase_system, phase, process, status, last_sync_at, metadata, is_active, created_at, updated_at)
@@ -8292,11 +8292,11 @@ SELECT
     NULL,
     true,
     'active',
-    'Thu Feb 12 2026 16:48:44 GMT+0000 (Coordinated Universal Time)',
+    '2026-02-12T16:48:44.000Z',
     NULL,
     true,
-    'Wed May 08 2024 22:20:42 GMT+0000 (Coordinated Universal Time)',
-    'Thu Feb 12 2026 17:09:15 GMT+0000 (Coordinated Universal Time)'
+    '2024-05-08T22:20:42.000Z',
+    '2026-02-12T17:09:15.000Z'
 WHERE NOT EXISTS (SELECT 1 FROM channels WHERE id = '019c52d4-0ebb-73be-8058-a874a0334cb5');
 
 COMMIT;
