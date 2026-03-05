@@ -10,7 +10,7 @@
  *   1. Importa todos los modelos Sequelize para registrarlos
  *   2. Llama sequelize.sync({ alter: false }) → crea todas las tablas desde los modelos
  *   3. Crea la tabla SequelizeMeta (registro interno de sequelize-cli)
- *   4. Inserta las 42 migraciones históricas como "ya ejecutadas"
+ *   4. Inserta las 41 migraciones históricas como "ya ejecutadas"
  *      → Esto evita que db:migrate las intente correr sobre tablas recién creadas
  *
  * Uso:
@@ -82,7 +82,6 @@ const HISTORICAL_MIGRATIONS = [
     '20260224120000-make-dashboard-page-name-nullable.cjs',
     '20260226100000-add-mqtt-key-to-variables.cjs',
     '20260226180000-fix-dashboard-order-number-constraints.cjs',
-    '20260304000001-add-unique-indexes-to-device-translations.cjs',
 ];
 
 async function setupFreshDatabase() {

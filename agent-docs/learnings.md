@@ -786,3 +786,18 @@ DO $$ DECLARE r RECORD; BEGIN FOR r IN (SELECT t.typname FROM pg_type t JOIN pg_
 - El fix en el **refresh flow** es el self-healing: al refrescar el token en ese estado, Redis queda actualizado con el valor correcto del JWT.
 **Regla general**: "Redis gana" no aplica cuando Redis=null + JWT tiene `impersonating:true`. La única forma de llegar a ese estado es un reset externo (login concurrente), no una elección deliberada del usuario.
 **Archivos afectados**: `src/middleware/enforceActiveOrganization.js` (Caso 1 `all=true` y Caso 3 sin filtros), `src/modules/auth/services.js` (refresh flow).
+
+---
+
+### Gotcha: Seeders usan snake_case en ORM creates — Sequelize los ignora silenciosamente
+**Fecha**: 2026-03-04
+**Síntoma**: `notNull Violation: Model.fieldName cannot be null` al correr cualquier seeder, aunque el objeto pasado a `create()` parece tener todos los campos.
+**Causa**: Con `underscored: true`, Sequelize mapea columnas DB snake_case a propiedades JS camelCase. El objeto pasado a `create()` DEBE usar camelCase. Si se pasa snake_case (ej: `{ human_id: x }`), Sequelize lo ignora silenciosamente y el campo queda null → ValidationError.
+**Solución**: Siempre usar camelCase en:
+- `Model.create({ humanId, publicCode, isActive, ... })`
+- `Model.findOrCreate({ where: { isActive: true }, defaults: { ... } })`
+- `Model.bulkCreate([ { humanId, ... } ])`
+- `where: { isActive: true }` (no `{ is_active: true }`)
+- Acceso a propiedades de instancias: `org.publicCode` (no `org.public_code`)
+**Excepciones que SÍ usan snake_case**: campos en `Model.indexes[].fields[]` (son nombres de columnas DB), raw SQL, y resultados de queries `raw: true`.
+**Archivos corregidos**: `src/db/seeders/countries.seeder.js`, `organizations.seeder.js`, `users.seeder.js`, `sites.seeder.js`, `seed-devices-channels.js`, `admin-user.seeder.js`
