@@ -801,3 +801,16 @@ DO $$ DECLARE r RECORD; BEGIN FOR r IN (SELECT t.typname FROM pg_type t JOIN pg_
 - Acceso a propiedades de instancias: `org.publicCode` (no `org.public_code`)
 **Excepciones que SÍ usan snake_case**: campos en `Model.indexes[].fields[]` (son nombres de columnas DB), raw SQL, y resultados de queries `raw: true`.
 **Archivos corregidos**: `src/db/seeders/countries.seeder.js`, `organizations.seeder.js`, `users.seeder.js`, `sites.seeder.js`, `seed-devices-channels.js`, `admin-user.seeder.js`
+
+---
+
+### Bug: `ON CONFLICT` en raw SQL falla si el constraint no existe en la DB
+**Fecha**: 2026-03-05
+**Síntoma**: `there is no unique or exclusion constraint matching the ON CONFLICT specification` al correr `db:seed:core` en la DB de producción.
+**Causa**: PostgreSQL valida que exista el constraint en la tabla al parsear el query — incluso si el `ON CONFLICT` nunca se activaría en la práctica (porque el código ya tiene un guard que evita duplicados). Si la tabla fue creada sin el constraint (por `db:setup` corriendo con código viejo antes de que el modelo tuviera `indexes`), el error es inevitable.
+**Caso concreto**: `device-metadata.seeder.js` usaba `ON CONFLICT (device_type_id, lang) DO NOTHING` en los inserts de traducciones. Pero las traducciones solo se insertan dentro de `if (row)` (cuando el padre es recién creado vía `RETURNING`), así que jamás podría haber un conflicto. El `ON CONFLICT` era código muerto que requería un constraint inexistente.
+**Fix**: Eliminar el `ON CONFLICT` de los inserts de traducciones. La idempotencia se garantiza por el guard `if (row)`, no por el constraint. El seeder ahora funciona en cualquier DB, con o sin constraints únicos en las tablas de traducción.
+**Patrón anti-frágil para seeders**:
+- Si ya tenés un guard que evita insertar duplicados (ej: `if (row)` tras un `RETURNING`), NO agregar `ON CONFLICT` a los sub-inserts — crea dependencia frágil del estado de la DB
+- Usar `ON CONFLICT` solo cuando el seeder puede encontrarse con datos pre-existentes y necesita upsert real (ej: `telemetry.seeder.js` usa `ON CONFLICT DO UPDATE` para actualizar valores si cambian)
+**Archivos afectados**: `src/db/seeders/device-metadata.seeder.js`

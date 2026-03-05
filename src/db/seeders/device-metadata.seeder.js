@@ -107,8 +107,7 @@ const seedDeviceTypes = async () => {
             for (const [lang, tr] of Object.entries(dt.translations)) {
                 await sequelize.query(
                     `INSERT INTO device_type_translations (device_type_id, lang, name, description)
-                     VALUES (:deviceTypeId, :lang, :name, :description)
-                     ON CONFLICT (device_type_id, lang) DO NOTHING`,
+                     VALUES (:deviceTypeId, :lang, :name, :description)`,
                     { replacements: { deviceTypeId: row.id, lang, name: tr.name, description: tr.description }, type: QueryTypes.INSERT }
                 );
             }
@@ -132,8 +131,7 @@ const seedDeviceBrands = async () => {
             for (const [lang, tr] of Object.entries(brand.translations)) {
                 await sequelize.query(
                     `INSERT INTO device_brand_translations (device_brand_id, lang, name, description)
-                     VALUES (:brandId, :lang, :name, :description)
-                     ON CONFLICT (device_brand_id, lang) DO NOTHING`,
+                     VALUES (:brandId, :lang, :name, :description)`,
                     { replacements: { brandId: row.id, lang, name: tr.name, description: tr.description }, type: QueryTypes.INSERT }
                 );
             }
@@ -164,8 +162,7 @@ const seedDeviceModels = async () => {
                 for (const [lang, tr] of Object.entries(model.translations)) {
                     await sequelize.query(
                         `INSERT INTO device_model_translations (device_model_id, lang, name, description)
-                         VALUES (:modelId, :lang, :name, :description)
-                         ON CONFLICT (device_model_id, lang) DO NOTHING`,
+                         VALUES (:modelId, :lang, :name, :description)`,
                         { replacements: { modelId: row.id, lang, name: tr.name, description: tr.description }, type: QueryTypes.INSERT }
                     );
                 }
@@ -190,8 +187,7 @@ const seedDeviceNetworks = async () => {
             for (const [lang, tr] of Object.entries(net.translations)) {
                 await sequelize.query(
                     `INSERT INTO device_network_translations (device_network_id, lang, name, description)
-                     VALUES (:networkId, :lang, :name, :description)
-                     ON CONFLICT (device_network_id, lang) DO NOTHING`,
+                     VALUES (:networkId, :lang, :name, :description)`,
                     { replacements: { networkId: row.id, lang, name: tr.name, description: tr.description }, type: QueryTypes.INSERT }
                 );
             }
@@ -215,8 +211,7 @@ const seedDeviceServers = async () => {
             for (const [lang, tr] of Object.entries(srv.translations)) {
                 await sequelize.query(
                     `INSERT INTO device_server_translations (device_server_id, lang, name, description)
-                     VALUES (:serverId, :lang, :name, :description)
-                     ON CONFLICT (device_server_id, lang) DO NOTHING`,
+                     VALUES (:serverId, :lang, :name, :description)`,
                     { replacements: { serverId: row.id, lang, name: tr.name, description: tr.description }, type: QueryTypes.INSERT }
                 );
             }
@@ -240,8 +235,7 @@ const seedDeviceLicenses = async () => {
             for (const [lang, tr] of Object.entries(lic.translations)) {
                 await sequelize.query(
                     `INSERT INTO device_license_translations (device_license_id, lang, name, description)
-                     VALUES (:licenseId, :lang, :name, :description)
-                     ON CONFLICT (device_license_id, lang) DO NOTHING`,
+                     VALUES (:licenseId, :lang, :name, :description)`,
                     { replacements: { licenseId: row.id, lang, name: tr.name, description: tr.description }, type: QueryTypes.INSERT }
                 );
             }
@@ -265,8 +259,7 @@ const seedDeviceValidityPeriods = async () => {
             for (const [lang, tr] of Object.entries(vp.translations)) {
                 await sequelize.query(
                     `INSERT INTO device_validity_period_translations (device_validity_period_id, lang, name, description)
-                     VALUES (:vpId, :lang, :name, :description)
-                     ON CONFLICT (device_validity_period_id, lang) DO NOTHING`,
+                     VALUES (:vpId, :lang, :name, :description)`,
                     { replacements: { vpId: row.id, lang, name: tr.name, description: tr.description }, type: QueryTypes.INSERT }
                 );
             }
@@ -276,8 +269,12 @@ const seedDeviceValidityPeriods = async () => {
 };
 
 /**
- * Seeder completo de metadatos de dispositivos
- * Idempotente: usa ON CONFLICT DO NOTHING en todos los inserts
+ * Seeder completo de metadatos de dispositivos.
+ * Idempotente via guard `if (row)` después del RETURNING:
+ * - Los padres (device_types, device_brands, etc.) usan ON CONFLICT (code) DO NOTHING
+ * - Si el padre ya existe, RETURNING devuelve vacío → row=undefined → las traducciones se saltan
+ * - Las traducciones NO usan ON CONFLICT porque solo se insertan cuando el padre es nuevo
+ * → Funciona en cualquier DB, con o sin constraints únicos en las tablas de traducción
  */
 export const seedDeviceMetadata = async () => {
     try {
