@@ -164,6 +164,39 @@ const user = await User.findByPk(id);
 user.organizationId;  // CORRECTO
 ```
 
+## Endpoints de Datos CORE — Requerimientos para Paneles Admin
+
+**Regla obligatoria**: Todo endpoint que exponga datos de catálogo o datos core con traducciones DEBE soportar el query param `with_translations=true` desde el primer día de implementación.
+
+**El problema que evita**: Sin este param, el frontend de administración necesita hacer 2 requests en paralelo (`?lang=es` y `?lang=en`) y mergear los resultados por ID para reconstruir el objeto de traducciones. Esto duplica el tráfico y complica el código del front.
+
+**Patrón canónico** (seguir siempre):
+
+```
+Controller → Service → Repository
+- Controller: lee `req.query.with_translations === 'true'`, pasa como `withTranslations` al service
+- Service: recibe `withTranslations`, pasa al repo, mapea con `toDTO` o `toDTOWithTranslations` según el flag
+- Repository: cuando `withTranslations=true`, incluye TODAS las traducciones (sin filtrar por `lang`)
+```
+
+**Comportamiento esperado**:
+- `with_translations=false` (default): respuesta normal con `name` y `description` en el idioma solicitado
+- `with_translations=true`: respuesta incluye campo `translations: { es: { name, description }, en: { name, description } }`
+
+**Aplica a**: cualquier endpoint de listado (`GET /catalogo`) que tenga tabla de traducciones asociada. No aplica a endpoints sin i18n.
+
+**Módulos que ya implementan esto**:
+- `GET /api/v1/telemetry/variables?with_translations=true`
+- `GET /api/v1/devices/types?with_translations=true`
+- `GET /api/v1/devices/brands?with_translations=true`
+- `GET /api/v1/devices/models?with_translations=true`
+- `GET /api/v1/devices/servers?with_translations=true`
+- `GET /api/v1/devices/networks?with_translations=true`
+- `GET /api/v1/devices/licenses?with_translations=true`
+- `GET /api/v1/devices/validity-periods?with_translations=true`
+
+---
+
 ## Module Creation Checklist
 
 Al crear un nuevo módulo:
@@ -177,3 +210,4 @@ Al crear un nuevo módulo:
 7. [ ] Registrar router en `src/index.js`
 8. [ ] Crear migración si hay cambios de schema
 9. [ ] Actualizar `modules.md` con descripción del módulo
+10. [ ] Si tiene traducciones: soportar `with_translations=true` en los endpoints de listado (ver sección "Endpoints de Datos CORE" más arriba)

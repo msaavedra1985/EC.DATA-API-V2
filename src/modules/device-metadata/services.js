@@ -201,9 +201,9 @@ export const invalidateCache = async (lang = null) => {
 // DEVICE TYPES CRUD
 // ============================================
 
-export const listDeviceTypes = async (lang = 'es', includeInactive = false) => {
-    const types = await repository.getDeviceTypes(lang, includeInactive);
-    return types.map(toDTO);
+export const listDeviceTypes = async (lang = 'es', includeInactive = false, withTranslations = false) => {
+    const types = await repository.getDeviceTypes(lang, includeInactive, withTranslations);
+    return types.map(withTranslations ? toDTOWithTranslations : toDTO);
 };
 
 export const getDeviceTypeById = async (id) => {
@@ -245,9 +245,9 @@ export const deleteDeviceType = async (id, hard = false) => {
 // DEVICE BRANDS CRUD
 // ============================================
 
-export const listDeviceBrands = async (lang = 'es', includeInactive = false) => {
-    const brands = await repository.getDeviceBrands(lang, includeInactive);
-    return brands.map(toDTO);
+export const listDeviceBrands = async (lang = 'es', includeInactive = false, withTranslations = false) => {
+    const brands = await repository.getDeviceBrands(lang, includeInactive, withTranslations);
+    return brands.map(withTranslations ? toDTOWithTranslations : toDTO);
 };
 
 export const getDeviceBrandById = async (id) => {
@@ -289,9 +289,9 @@ export const deleteDeviceBrand = async (id, hard = false) => {
 // DEVICE MODELS CRUD
 // ============================================
 
-export const listDeviceModels = async (lang = 'es', includeInactive = false, brandId = null) => {
-    const models = await repository.getDeviceModels(lang, includeInactive, brandId);
-    return models.map(toDTO);
+export const listDeviceModels = async (lang = 'es', includeInactive = false, brandId = null, withTranslations = false) => {
+    const models = await repository.getDeviceModels(lang, includeInactive, brandId, withTranslations);
+    return models.map(withTranslations ? toDTOWithTranslations : toDTO);
 };
 
 export const getDeviceModelById = async (id) => {
@@ -333,9 +333,9 @@ export const deleteDeviceModel = async (id, hard = false) => {
 // DEVICE SERVERS CRUD
 // ============================================
 
-export const listDeviceServers = async (lang = 'es', includeInactive = false) => {
-    const servers = await repository.getDeviceServers(lang, includeInactive);
-    return servers.map(toDTO);
+export const listDeviceServers = async (lang = 'es', includeInactive = false, withTranslations = false) => {
+    const servers = await repository.getDeviceServers(lang, includeInactive, withTranslations);
+    return servers.map(withTranslations ? toDTOWithTranslations : toDTO);
 };
 
 export const getDeviceServerById = async (id) => {
@@ -377,9 +377,9 @@ export const deleteDeviceServer = async (id, hard = false) => {
 // DEVICE NETWORKS CRUD
 // ============================================
 
-export const listDeviceNetworks = async (lang = 'es', includeInactive = false) => {
-    const networks = await repository.getDeviceNetworks(lang, includeInactive);
-    return networks.map(toDTO);
+export const listDeviceNetworks = async (lang = 'es', includeInactive = false, withTranslations = false) => {
+    const networks = await repository.getDeviceNetworks(lang, includeInactive, withTranslations);
+    return networks.map(withTranslations ? toDTOWithTranslations : toDTO);
 };
 
 export const getDeviceNetworkById = async (id) => {
@@ -421,9 +421,9 @@ export const deleteDeviceNetwork = async (id, hard = false) => {
 // DEVICE LICENSES CRUD
 // ============================================
 
-export const listDeviceLicenses = async (lang = 'es', includeInactive = false) => {
-    const licenses = await repository.getDeviceLicenses(lang, includeInactive);
-    return licenses.map(toDTO);
+export const listDeviceLicenses = async (lang = 'es', includeInactive = false, withTranslations = false) => {
+    const licenses = await repository.getDeviceLicenses(lang, includeInactive, withTranslations);
+    return licenses.map(withTranslations ? toDTOWithTranslations : toDTO);
 };
 
 export const getDeviceLicenseById = async (id) => {
@@ -465,9 +465,9 @@ export const deleteDeviceLicense = async (id, hard = false) => {
 // DEVICE VALIDITY PERIODS CRUD
 // ============================================
 
-export const listDeviceValidityPeriods = async (lang = 'es', includeInactive = false) => {
-    const periods = await repository.getDeviceValidityPeriods(lang, includeInactive);
-    return periods.map(toDTO);
+export const listDeviceValidityPeriods = async (lang = 'es', includeInactive = false, withTranslations = false) => {
+    const periods = await repository.getDeviceValidityPeriods(lang, includeInactive, withTranslations);
+    return periods.map(withTranslations ? toDTOWithTranslations : toDTO);
 };
 
 export const getDeviceValidityPeriodById = async (id) => {

@@ -114,7 +114,8 @@ export const listDeviceTypes = async (req, res) => {
     try {
         const lang = getLang(req);
         const includeInactive = req.query.include_inactive === 'true';
-        const data = await services.listDeviceTypes(lang, includeInactive);
+        const withTranslations = req.query.with_translations === 'true';
+        const data = await services.listDeviceTypes(lang, includeInactive, withTranslations);
         return res.json({ success: true, data });
     } catch (error) {
         metadataLogger.error('Error listando device types', { error: error.message });
@@ -209,7 +210,8 @@ export const listDeviceBrands = async (req, res) => {
     try {
         const lang = getLang(req);
         const includeInactive = req.query.include_inactive === 'true';
-        const data = await services.listDeviceBrands(lang, includeInactive);
+        const withTranslations = req.query.with_translations === 'true';
+        const data = await services.listDeviceBrands(lang, includeInactive, withTranslations);
         return res.json({ success: true, data });
     } catch (error) {
         metadataLogger.error('Error listando device brands', { error: error.message });
@@ -306,7 +308,8 @@ export const listDeviceModels = async (req, res) => {
         const lang = getLang(req);
         const includeInactive = req.query.include_inactive === 'true';
         const brandId = req.query.brandId ? parseInt(req.query.brandId) : null;
-        const data = await services.listDeviceModels(lang, includeInactive, brandId);
+        const withTranslations = req.query.with_translations === 'true';
+        const data = await services.listDeviceModels(lang, includeInactive, brandId, withTranslations);
         return res.json({ success: true, data });
     } catch (error) {
         metadataLogger.error('Error listando device models', { error: error.message });
@@ -406,7 +409,8 @@ export const listDeviceServers = async (req, res) => {
     try {
         const lang = getLang(req);
         const includeInactive = req.query.include_inactive === 'true';
-        const data = await services.listDeviceServers(lang, includeInactive);
+        const withTranslations = req.query.with_translations === 'true';
+        const data = await services.listDeviceServers(lang, includeInactive, withTranslations);
         return res.json({ success: true, data });
     } catch (error) {
         metadataLogger.error('Error listando device servers', { error: error.message });
@@ -504,7 +508,8 @@ export const listDeviceNetworks = async (req, res) => {
     try {
         const lang = getLang(req);
         const includeInactive = req.query.include_inactive === 'true';
-        const data = await services.listDeviceNetworks(lang, includeInactive);
+        const withTranslations = req.query.with_translations === 'true';
+        const data = await services.listDeviceNetworks(lang, includeInactive, withTranslations);
         return res.json({ success: true, data });
     } catch (error) {
         metadataLogger.error('Error listando device networks', { error: error.message });
@@ -599,7 +604,8 @@ export const listDeviceLicenses = async (req, res) => {
     try {
         const lang = getLang(req);
         const includeInactive = req.query.include_inactive === 'true';
-        const data = await services.listDeviceLicenses(lang, includeInactive);
+        const withTranslations = req.query.with_translations === 'true';
+        const data = await services.listDeviceLicenses(lang, includeInactive, withTranslations);
         return res.json({ success: true, data });
     } catch (error) {
         metadataLogger.error('Error listando device licenses', { error: error.message });
@@ -695,7 +701,8 @@ export const listDeviceValidityPeriods = async (req, res) => {
     try {
         const lang = getLang(req);
         const includeInactive = req.query.include_inactive === 'true';
-        const data = await services.listDeviceValidityPeriods(lang, includeInactive);
+        const withTranslations = req.query.with_translations === 'true';
+        const data = await services.listDeviceValidityPeriods(lang, includeInactive, withTranslations);
         return res.json({ success: true, data });
     } catch (error) {
         metadataLogger.error('Error listando validity periods', { error: error.message });

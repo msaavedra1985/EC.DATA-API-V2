@@ -27,18 +27,15 @@ import { MeasurementType, MeasurementTypeTranslation, Variable, VariableTranslat
 // DEVICE TYPES
 // ============================================
 
-export const getDeviceTypes = async (lang = 'es', includeInactive = false) => {
+export const getDeviceTypes = async (lang = 'es', includeInactive = false, withTranslations = false) => {
     const where = includeInactive ? {} : { isActive: true };
-    return DeviceType.findAll({
-        where,
-        include: [{
-            model: DeviceTypeTranslation,
-            as: 'translations',
-            where: { lang },
-            required: false
-        }],
-        order: [[{ model: DeviceTypeTranslation, as: 'translations' }, 'name', 'ASC']]
-    });
+    const translationInclude = withTranslations
+        ? { model: DeviceTypeTranslation, as: 'translations', required: false }
+        : { model: DeviceTypeTranslation, as: 'translations', where: { lang }, required: false };
+    const order = withTranslations
+        ? [['displayOrder', 'ASC'], ['id', 'ASC']]
+        : [[{ model: DeviceTypeTranslation, as: 'translations' }, 'name', 'ASC']];
+    return DeviceType.findAll({ where, include: [translationInclude], order });
 };
 
 export const findDeviceTypeById = async (id) => {
@@ -121,18 +118,15 @@ export const deleteDeviceType = async (id, hard = false) => {
 // DEVICE BRANDS
 // ============================================
 
-export const getDeviceBrands = async (lang = 'es', includeInactive = false) => {
+export const getDeviceBrands = async (lang = 'es', includeInactive = false, withTranslations = false) => {
     const where = includeInactive ? {} : { isActive: true };
-    return DeviceBrand.findAll({
-        where,
-        include: [{
-            model: DeviceBrandTranslation,
-            as: 'translations',
-            where: { lang },
-            required: false
-        }],
-        order: [[{ model: DeviceBrandTranslation, as: 'translations' }, 'name', 'ASC']]
-    });
+    const translationInclude = withTranslations
+        ? { model: DeviceBrandTranslation, as: 'translations', required: false }
+        : { model: DeviceBrandTranslation, as: 'translations', where: { lang }, required: false };
+    const order = withTranslations
+        ? [['displayOrder', 'ASC'], ['id', 'ASC']]
+        : [[{ model: DeviceBrandTranslation, as: 'translations' }, 'name', 'ASC']];
+    return DeviceBrand.findAll({ where, include: [translationInclude], order });
 };
 
 export const findDeviceBrandById = async (id) => {
@@ -215,26 +209,19 @@ export const deleteDeviceBrand = async (id, hard = false) => {
 // DEVICE MODELS
 // ============================================
 
-export const getDeviceModels = async (lang = 'es', includeInactive = false, brandId = null) => {
+export const getDeviceModels = async (lang = 'es', includeInactive = false, brandId = null, withTranslations = false) => {
     const where = includeInactive ? {} : { isActive: true };
     if (brandId) where.deviceBrandId = brandId;
-    
+    const translationInclude = withTranslations
+        ? { model: DeviceModelTranslation, as: 'translations', required: false }
+        : { model: DeviceModelTranslation, as: 'translations', where: { lang }, required: false };
+    const order = withTranslations
+        ? [['displayOrder', 'ASC'], ['id', 'ASC']]
+        : [[{ model: DeviceModelTranslation, as: 'translations' }, 'name', 'ASC']];
     return DeviceModel.findAll({
         where,
-        include: [
-            {
-                model: DeviceModelTranslation,
-                as: 'translations',
-                where: { lang },
-                required: false
-            },
-            {
-                model: DeviceBrand,
-                as: 'brand',
-                attributes: ['id', 'code']
-            }
-        ],
-        order: [[{ model: DeviceModelTranslation, as: 'translations' }, 'name', 'ASC']]
+        include: [translationInclude, { model: DeviceBrand, as: 'brand', attributes: ['id', 'code'] }],
+        order
     });
 };
 
@@ -320,18 +307,15 @@ export const deleteDeviceModel = async (id, hard = false) => {
 // DEVICE SERVERS
 // ============================================
 
-export const getDeviceServers = async (lang = 'es', includeInactive = false) => {
+export const getDeviceServers = async (lang = 'es', includeInactive = false, withTranslations = false) => {
     const where = includeInactive ? {} : { isActive: true };
-    return DeviceServer.findAll({
-        where,
-        include: [{
-            model: DeviceServerTranslation,
-            as: 'translations',
-            where: { lang },
-            required: false
-        }],
-        order: [[{ model: DeviceServerTranslation, as: 'translations' }, 'name', 'ASC']]
-    });
+    const translationInclude = withTranslations
+        ? { model: DeviceServerTranslation, as: 'translations', required: false }
+        : { model: DeviceServerTranslation, as: 'translations', where: { lang }, required: false };
+    const order = withTranslations
+        ? [['displayOrder', 'ASC'], ['id', 'ASC']]
+        : [[{ model: DeviceServerTranslation, as: 'translations' }, 'name', 'ASC']];
+    return DeviceServer.findAll({ where, include: [translationInclude], order });
 };
 
 export const findDeviceServerById = async (id) => {
@@ -407,18 +391,15 @@ export const deleteDeviceServer = async (id, hard = false) => {
 // DEVICE NETWORKS
 // ============================================
 
-export const getDeviceNetworks = async (lang = 'es', includeInactive = false) => {
+export const getDeviceNetworks = async (lang = 'es', includeInactive = false, withTranslations = false) => {
     const where = includeInactive ? {} : { isActive: true };
-    return DeviceNetwork.findAll({
-        where,
-        include: [{
-            model: DeviceNetworkTranslation,
-            as: 'translations',
-            where: { lang },
-            required: false
-        }],
-        order: [[{ model: DeviceNetworkTranslation, as: 'translations' }, 'name', 'ASC']]
-    });
+    const translationInclude = withTranslations
+        ? { model: DeviceNetworkTranslation, as: 'translations', required: false }
+        : { model: DeviceNetworkTranslation, as: 'translations', where: { lang }, required: false };
+    const order = withTranslations
+        ? [['displayOrder', 'ASC'], ['id', 'ASC']]
+        : [[{ model: DeviceNetworkTranslation, as: 'translations' }, 'name', 'ASC']];
+    return DeviceNetwork.findAll({ where, include: [translationInclude], order });
 };
 
 export const findDeviceNetworkById = async (id) => {
@@ -494,18 +475,15 @@ export const deleteDeviceNetwork = async (id, hard = false) => {
 // DEVICE LICENSES
 // ============================================
 
-export const getDeviceLicenses = async (lang = 'es', includeInactive = false) => {
+export const getDeviceLicenses = async (lang = 'es', includeInactive = false, withTranslations = false) => {
     const where = includeInactive ? {} : { isActive: true };
-    return DeviceLicense.findAll({
-        where,
-        include: [{
-            model: DeviceLicenseTranslation,
-            as: 'translations',
-            where: { lang },
-            required: false
-        }],
-        order: [[{ model: DeviceLicenseTranslation, as: 'translations' }, 'name', 'ASC']]
-    });
+    const translationInclude = withTranslations
+        ? { model: DeviceLicenseTranslation, as: 'translations', required: false }
+        : { model: DeviceLicenseTranslation, as: 'translations', where: { lang }, required: false };
+    const order = withTranslations
+        ? [['displayOrder', 'ASC'], ['id', 'ASC']]
+        : [[{ model: DeviceLicenseTranslation, as: 'translations' }, 'name', 'ASC']];
+    return DeviceLicense.findAll({ where, include: [translationInclude], order });
 };
 
 export const findDeviceLicenseById = async (id) => {
@@ -581,18 +559,15 @@ export const deleteDeviceLicense = async (id, hard = false) => {
 // DEVICE VALIDITY PERIODS
 // ============================================
 
-export const getDeviceValidityPeriods = async (lang = 'es', includeInactive = false) => {
+export const getDeviceValidityPeriods = async (lang = 'es', includeInactive = false, withTranslations = false) => {
     const where = includeInactive ? {} : { isActive: true };
-    return DeviceValidityPeriod.findAll({
-        where,
-        include: [{
-            model: DeviceValidityPeriodTranslation,
-            as: 'translations',
-            where: { lang },
-            required: false
-        }],
-        order: [[{ model: DeviceValidityPeriodTranslation, as: 'translations' }, 'name', 'ASC']]
-    });
+    const translationInclude = withTranslations
+        ? { model: DeviceValidityPeriodTranslation, as: 'translations', required: false }
+        : { model: DeviceValidityPeriodTranslation, as: 'translations', where: { lang }, required: false };
+    const order = withTranslations
+        ? [['displayOrder', 'ASC'], ['id', 'ASC']]
+        : [[{ model: DeviceValidityPeriodTranslation, as: 'translations' }, 'name', 'ASC']];
+    return DeviceValidityPeriod.findAll({ where, include: [translationInclude], order });
 };
 
 export const findDeviceValidityPeriodById = async (id) => {
