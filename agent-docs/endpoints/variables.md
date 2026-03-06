@@ -1,6 +1,6 @@
 # Variables — Diccionario de Medición
 
-Las variables son el diccionario central del sistema. Cada variable define un dato físico que puede medirse, qué columna ocupa en Cassandra, cómo visualizarlo, y qué unidad de escala usar. Son datos de **solo lectura** vía API — se configuran en la DB y se consultan a través de `GET /devices/metadata`.
+Las variables son el diccionario central del sistema. Cada variable define un dato físico que puede medirse, qué columna ocupa en Cassandra, cómo visualizarlo, y qué unidad de escala usar.
 
 ---
 
@@ -18,8 +18,6 @@ Channel ──────────┘ (channel_variables muchos-a-muchos)
 - **Variable**: mapea un dato a una columna específica de Cassandra.
 - **Channel**: cada canal tiene un `measurementTypeId` y una lista de variables habilitadas (via `channel_variables`).
 - **unit → unitScales**: el campo `unit` de la variable es la clave para buscar escalas de display en el objeto `unitScales` que devuelve `GET /devices/metadata`.
-
-Las variables **no tienen endpoints CRUD propios**. Se gestionan directamente en la DB (via seeder o SQL). Se modifican con una migración cuando se agrega o cambia una variable del sistema.
 
 ---
 
@@ -42,6 +40,9 @@ Las variables **no tienen endpoints CRUD propios**. Se gestionan directamente en
 | `showInBilling` | boolean | Mostrar en sección de facturación |
 | `showInAnalysis` | boolean | Mostrar en sección de análisis |
 | `isRealtime` | boolean | Tiene dato en tiempo real vía WebSocket |
+| `decimalPlaces` | integer | Decimales para formatear el valor en UI (default: 2) |
+| `icon` | string | Nombre del ícono (lucide, heroicons). Ej: `thermometer`, `zap` |
+| `color` | string | Color hex para la variable en gráficos. Ej: `#3B82F6` |
 | `isDefault` | boolean | Variable por defecto del tipo de medición (preseleccionada en la UI) |
 | `mqttKey` | string | Key exacta en el payload MQTT (`E`, `P`, `PF`). `null` si no aplica para realtime |
 | `isActive` | boolean | Estado activo |
@@ -375,9 +376,184 @@ Por eso una variable del tipo `iot` con `columnName: 'val1'` y otra del tipo `io
 
 ---
 
+## API CRUD — Endpoints de Gestión
+
+Base: `GET /api/v1/telemetry/variables`
+
+| Método | Ruta | Auth | Descripción |
+|--------|------|------|-------------|
+| `GET` | `/variables` | Cualquier usuario | Lista con filtros y paginación |
+| `GET` | `/variables/:id` | Cualquier usuario | Detalle con todas las traducciones |
+| `POST` | `/variables` | `system-admin` | Crear nueva variable |
+| `PUT` | `/variables/:id` | `system-admin` | Editar variable existente |
+| `DELETE` | `/variables/:id` | `system-admin` | Soft-delete (setea `isActive = false`) |
+
+---
+
+### GET /telemetry/variables
+
+**Query params:**
+
+| Param | Tipo | Default | Descripción |
+|-------|------|---------|-------------|
+| `lang` | string | `es` | Idioma de traducción |
+| `include_inactive` | boolean | `false` | Incluir variables inactivas |
+| `search` | string | — | Búsqueda por nombre, descripción, code o columnName |
+| `measurement_type_id` | integer | — | Filtrar por tipo de medición |
+| `is_realtime` | boolean | — | Filtrar por soporte realtime |
+| `is_default` | boolean | — | Filtrar por variable por defecto |
+| `show_in_billing` | boolean | — | Filtrar por visibilidad en facturación |
+| `show_in_analysis` | boolean | — | Filtrar por visibilidad en análisis |
+| `chart_type` | enum | — | Filtrar por tipo de gráfico |
+| `aggregation_type` | enum | — | Filtrar por tipo de agregación |
+| `page` | integer | `1` | Página |
+| `limit` | integer | `100` | Resultados por página (máx 200) |
+| `sort_by` | string | `displayOrder` | Campo de orden |
+| `sort_order` | string | `ASC` | Dirección: `ASC` o `DESC` |
+
+**Response:**
+```json
+{
+  "ok": true,
+  "data": [
+    {
+      "id": 2,
+      "code": "ee_energy",
+      "measurementTypeId": 1,
+      "columnName": "e",
+      "unit": "Wh",
+      "chartType": "column",
+      "axisName": "Energia (wh)",
+      "axisId": "energia",
+      "axisMin": 0,
+      "axisFunction": "total",
+      "aggregationType": null,
+      "displayOrder": 1,
+      "showInBilling": true,
+      "showInAnalysis": true,
+      "isRealtime": false,
+      "isDefault": true,
+      "decimalPlaces": 2,
+      "icon": null,
+      "color": null,
+      "isActive": true,
+      "createdAt": "2026-03-01T00:00:00.000Z",
+      "updatedAt": "2026-03-01T00:00:00.000Z",
+      "name": "Energia Calculada",
+      "description": "energia",
+      "measurementTypeName": "Energía eléctrica"
+    }
+  ],
+  "meta": { "total": 75, "page": 1, "limit": 100 }
+}
+```
+
+---
+
+### GET /telemetry/variables/:id
+
+Devuelve el detalle con **todas las traducciones** disponibles en el campo `translations`.
+
+**Response:**
+```json
+{
+  "ok": true,
+  "data": {
+    "id": 2,
+    "code": "ee_energy",
+    "...campos iguales al listado...",
+    "translations": {
+      "es": { "name": "Energia Calculada", "description": "energia" },
+      "en": { "name": "Calculated Energy", "description": "energy" }
+    }
+  }
+}
+```
+
+---
+
+### POST /telemetry/variables
+
+**Body (JSON):**
+```json
+{
+  "code": "iot_co2_custom",
+  "measurementTypeId": 3,
+  "columnName": "val1",
+  "unit": "ppm",
+  "chartType": "spline",
+  "axisName": "CO2 (ppm)",
+  "axisId": "co2",
+  "axisMin": 0,
+  "axisFunction": null,
+  "aggregationType": "avg",
+  "displayOrder": 100,
+  "showInBilling": false,
+  "showInAnalysis": true,
+  "isRealtime": true,
+  "isDefault": false,
+  "decimalPlaces": 0,
+  "icon": "wind",
+  "color": "#10B981",
+  "isActive": true,
+  "translations": {
+    "es": { "name": "CO2 Personalizado", "description": "Concentración de CO2" },
+    "en": { "name": "Custom CO2", "description": "CO2 concentration" }
+  }
+}
+```
+
+**Reglas:**
+- `code` es requerido, debe ser snake_case, único en toda la tabla. **Inmutable una vez creado.**
+- `measurementTypeId` y `columnName` son requeridos.
+- `translations.es` es requerido.
+- `color` debe ser un hex de 6 dígitos con `#` (ej: `#3B82F6`).
+- Retorna `409` si el `code` ya existe.
+
+---
+
+### PUT /telemetry/variables/:id
+
+Edición parcial (patch). Solo se actualizan los campos presentes en el body.
+
+El campo `code` **no se puede cambiar** — es inmutable.
+
+**Ejemplo — solo cambiar visualización:**
+```json
+{
+  "color": "#EF4444",
+  "icon": "thermometer",
+  "decimalPlaces": 1,
+  "translations": {
+    "en": { "name": "Updated Name", "description": "Updated description" }
+  }
+}
+```
+
+---
+
+### DELETE /telemetry/variables/:id
+
+Soft-delete: setea `isActive = false`. No borra el registro de la DB.
+
+Para **reactivar** una variable eliminada: `PUT /:id` con `{ "isActive": true }`.
+
+---
+
+## Cache — Invalidación
+
+Cualquier operación CUD en variables invalida automáticamente:
+- `ec:telemetry:vars:global:*` — cache de variables para el módulo de telemetría
+- `ec:device_metadata:all:*` — cache del endpoint `GET /devices/metadata`
+
+No es necesario llamar manualmente al endpoint de invalidación de cache.
+
+---
+
 ## Notas técnicas
 
-- Las variables se cargan en `GET /devices/metadata` **sin traducciones**: la API devuelve la traducción del idioma solicitado ya resuelta en el campo `name`. No se expone el objeto `translations` en el DTO de listado.
+- Las variables en `GET /devices/metadata` **no incluyen** el campo `translations` — devuelven solo el `name` en el idioma solicitado. El listado de `/telemetry/variables` sí devuelve el objeto `translations` completo en el `GET /:id`.
 - El campo `mqttKey` **no se expone** en la API. Solo lo usa el backend para procesar el stream MQTT y actualizar el caché Redis de realtime (`ec:rt:last:{channelCode}:{varId}`).
 - Las variables están en la tabla `variables` de PostgreSQL. No en Cassandra — Cassandra solo almacena los valores numéricos por timestamp.
 - El campo `columnName` es una referencia directa al nombre de columna en Cassandra. Si cambia en Cassandra, hay que actualizar el registro en la tabla `variables`.
+- `code` sigue el patrón `{prefijo}_{nombre}` donde el prefijo corresponde al tipo de medición: `ee_`, `iot_`, `iotc_`, `iotr_`.

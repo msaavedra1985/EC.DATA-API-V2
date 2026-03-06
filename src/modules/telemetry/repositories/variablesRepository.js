@@ -11,11 +11,27 @@ import VariableTranslation from '../models/VariableTranslation.js';
 import MeasurementType from '../models/MeasurementType.js';
 import MeasurementTypeTranslation from '../models/MeasurementTypeTranslation.js';
 import logger from '../../../utils/logger.js';
+import { scanAndDelete } from '../../../db/redis/client.js';
 import { 
     getCachedGlobalVariables, 
     cacheGlobalVariables,
     invalidateGlobalVariablesCache 
 } from '../cache.js';
+
+// Patrón de cache de device_metadata — se invalida cuando cambian variables
+const DEVICE_METADATA_CACHE_PATTERN = 'ec:device_metadata:all:*';
+
+/**
+ * Invalida tanto el cache de variables globales como el de device_metadata.
+ * Las variables están incluidas en GET /devices/metadata, así que ambos caches
+ * deben limpiarse ante cualquier cambio en la tabla variables.
+ */
+const invalidateAllRelatedCaches = async () => {
+    await Promise.all([
+        invalidateGlobalVariablesCache(),
+        scanAndDelete(DEVICE_METADATA_CACHE_PATTERN)
+    ]);
+};
 
 /**
  * Obtiene lista de variables con filtros y paginación
@@ -26,7 +42,7 @@ import {
  * @param {number} options.measurementTypeId - Filtrar por tipo de medición
  * @param {boolean} options.isRealtime - Filtrar por soporte realtime
  * @param {boolean} options.isDefault - Filtrar por variable por defecto
- * @param {boolean} options.isActive - Filtrar por estado activo (default: true)
+ * @param {boolean} options.isActive - Filtrar por estado activo (null = sin filtro = todas)
  * @param {boolean} options.showInBilling - Filtrar por visibilidad en facturación
  * @param {boolean} options.showInAnalysis - Filtrar por visibilidad en análisis
  * @param {string} options.chartType - Filtrar por tipo de gráfico
@@ -44,7 +60,7 @@ export const findAll = async (options = {}) => {
         measurementTypeId,
         isRealtime,
         isDefault,
-        isActive = true,
+        isActive,
         showInBilling,
         showInAnalysis,
         chartType,
@@ -59,7 +75,7 @@ export const findAll = async (options = {}) => {
     const conditions = [];
     const replacements = { lang };
 
-    // Filtro por estado activo
+    // Filtro por estado activo — solo se aplica si se pasa explícitamente
     if (isActive !== undefined && isActive !== null) {
         conditions.push('v.is_active = :isActive');
         replacements.isActive = isActive;
@@ -113,6 +129,7 @@ export const findAll = async (options = {}) => {
             LOWER(COALESCE(vt.name, vt_default.name, '')) LIKE LOWER(:search)
             OR LOWER(COALESCE(vt.description, vt_default.description, '')) LIKE LOWER(:search)
             OR LOWER(v.column_name) LIKE LOWER(:search)
+            OR LOWER(v.code) LIKE LOWER(:search)
         )`);
         replacements.search = `%${search}%`;
     }
@@ -135,10 +152,11 @@ export const findAll = async (options = {}) => {
     const orderField = validSortFields[sortBy] || 'v.display_order';
     const orderDir = sortOrder.toUpperCase() === 'DESC' ? 'DESC' : 'ASC';
 
-    // Query principal con traducciones
+    // Query principal con traducciones y nuevos campos de visualización
     const query = `
         SELECT 
             v.id,
+            v.code,
             v.measurement_type_id AS "measurementTypeId",
             v.column_name AS "columnName",
             v.unit,
@@ -153,6 +171,9 @@ export const findAll = async (options = {}) => {
             v.show_in_analysis AS "showInAnalysis",
             v.is_realtime AS "isRealtime",
             v.is_default AS "isDefault",
+            v.decimal_places AS "decimalPlaces",
+            v.icon,
+            v.color,
             v.is_active AS "isActive",
             v.created_at AS "createdAt",
             v.updated_at AS "updatedAt",
@@ -212,7 +233,7 @@ export const findAll = async (options = {}) => {
 };
 
 /**
- * Obtiene una variable por ID con traducciones
+ * Obtiene una variable por ID con traducciones del idioma solicitado
  * 
  * @param {number} id - ID de la variable
  * @param {string} lang - Código de idioma
@@ -222,6 +243,7 @@ export const findById = async (id, lang = 'es') => {
     const query = `
         SELECT 
             v.id,
+            v.code,
             v.measurement_type_id AS "measurementTypeId",
             v.column_name AS "columnName",
             v.unit,
@@ -236,6 +258,9 @@ export const findById = async (id, lang = 'es') => {
             v.show_in_analysis AS "showInAnalysis",
             v.is_realtime AS "isRealtime",
             v.is_default AS "isDefault",
+            v.decimal_places AS "decimalPlaces",
+            v.icon,
+            v.color,
             v.is_active AS "isActive",
             v.created_at AS "createdAt",
             v.updated_at AS "updatedAt",
@@ -276,8 +301,9 @@ export const create = async (data, translations = {}, transaction = null) => {
     const t = transaction || await sequelize.transaction();
     
     try {
-        // Crear variable
+        // Crear variable con todos los campos incluyendo los nuevos
         const variable = await Variable.create({
+            code: data.code,
             measurementTypeId: data.measurementTypeId,
             columnName: data.columnName,
             unit: data.unit,
@@ -292,6 +318,9 @@ export const create = async (data, translations = {}, transaction = null) => {
             showInAnalysis: data.showInAnalysis ?? true,
             isRealtime: data.isRealtime ?? false,
             isDefault: data.isDefault ?? false,
+            decimalPlaces: data.decimalPlaces ?? 2,
+            icon: data.icon ?? null,
+            color: data.color ?? null,
             isActive: data.isActive ?? true
         }, { transaction: t });
 
@@ -307,14 +336,14 @@ export const create = async (data, translations = {}, transaction = null) => {
 
         await Promise.all(translationPromises);
 
-        // Invalidar cache global de variables
-        await invalidateGlobalVariablesCache();
+        // Invalidar cache de variables y device_metadata
+        await invalidateAllRelatedCaches();
 
         if (!transaction) {
             await t.commit();
         }
 
-        logger.info({ variableId: variable.id, columnName: data.columnName }, 'Variable created');
+        logger.info({ variableId: variable.id, code: data.code, columnName: data.columnName }, 'Variable created');
         
         return variable;
 
@@ -362,6 +391,9 @@ export const update = async (id, data, translations = {}, transaction = null) =>
         if (data.isRealtime !== undefined) updateFields.isRealtime = data.isRealtime;
         if (data.isDefault !== undefined) updateFields.isDefault = data.isDefault;
         if (data.isActive !== undefined) updateFields.isActive = data.isActive;
+        if (data.decimalPlaces !== undefined) updateFields.decimalPlaces = data.decimalPlaces;
+        if (data.icon !== undefined) updateFields.icon = data.icon;
+        if (data.color !== undefined) updateFields.color = data.color;
 
         if (Object.keys(updateFields).length > 0) {
             await variable.update(updateFields, { transaction: t });
@@ -386,8 +418,8 @@ export const update = async (id, data, translations = {}, transaction = null) =>
             }
         }
 
-        // Invalidar cache global de variables
-        await invalidateGlobalVariablesCache();
+        // Invalidar cache de variables y device_metadata
+        await invalidateAllRelatedCaches();
 
         if (!transaction) {
             await t.commit();
@@ -421,8 +453,8 @@ export const remove = async (id) => {
 
     await variable.update({ isActive: false });
 
-    // Invalidar cache global de variables
-    await invalidateGlobalVariablesCache();
+    // Invalidar cache de variables y device_metadata
+    await invalidateAllRelatedCaches();
 
     logger.info({ variableId: id }, 'Variable soft-deleted');
     
@@ -433,13 +465,29 @@ export const remove = async (id) => {
  * Obtiene todas las traducciones de una variable
  * 
  * @param {number} variableId - ID de la variable
- * @returns {Promise<Array>} Lista de traducciones
+ * @returns {Promise<Array>} Lista de traducciones por idioma
  */
 export const getTranslations = async (variableId) => {
     return await VariableTranslation.findAll({
         where: { variableId },
         order: [['lang', 'ASC']]
     });
+};
+
+/**
+ * Verifica si existe una variable con el mismo code (único global)
+ * 
+ * @param {string} code - Código slug de la variable
+ * @param {number} excludeId - ID a excluir (para updates)
+ * @returns {Promise<boolean>} True si existe duplicado
+ */
+export const existsCode = async (code, excludeId = null) => {
+    const where = { code };
+    if (excludeId) {
+        where.id = { [Op.ne]: excludeId };
+    }
+    const count = await Variable.count({ where });
+    return count > 0;
 };
 
 /**
@@ -471,5 +519,6 @@ export default {
     update,
     remove,
     getTranslations,
+    existsCode,
     existsDuplicate
 };

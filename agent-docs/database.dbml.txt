@@ -1007,6 +1007,9 @@ Table variables {
   created_at timestamptz [not null]
   updated_at timestamptz [not null]
   mqtt_key varchar(50) // Key exacta como llega en el payload MQTT (ej: PF, E, P). NULL si no aplica para realtime
+  decimal_places integer [default: 2] // Cantidad de decimales para formatear el valor en UI (ej: 2 para 1.23 kWh)
+  icon varchar(50) // Nombre del ícono para representar la variable (lucide, heroicons, etc.)
+  color varchar(7) // Color hex para la variable en gráficos y UI (ej: #3B82F6)
 
   Indexes {
     (code) [name: 'variables_code_key', unique]
