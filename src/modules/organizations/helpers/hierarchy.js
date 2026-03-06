@@ -15,10 +15,10 @@ const orgLogger = logger.child({ component: 'organizations' });
  */
 export const getChildren = async (organizationId, activeOnly = true) => {
     try {
-        const where = { parent_id: organizationId };
+        const where = { parentId: organizationId };
         
         if (activeOnly) {
-            where.is_active = true;
+            where.isActive = true;
         }
 
         const children = await Organization.findAll({
@@ -74,12 +74,12 @@ export const getAncestors = async (organizationId, activeOnly = true) => {
         const ancestors = [];
         let currentOrg = await Organization.findByPk(organizationId);
 
-        while (currentOrg && currentOrg.parent_id) {
-            const parent = await Organization.findByPk(currentOrg.parent_id);
+        while (currentOrg && currentOrg.parentId) {
+            const parent = await Organization.findByPk(currentOrg.parentId);
             
             if (!parent) break;
             
-            if (!activeOnly || parent.is_active) {
+            if (!activeOnly || parent.isActive) {
                 ancestors.push(parent);
             }
             
@@ -109,7 +109,7 @@ export const getHierarchyTree = async (organizationId, activeOnly = true) => {
             throw new Error(`Organization ${organizationId} not found`);
         }
 
-        if (activeOnly && !organization.is_active) {
+        if (activeOnly && !organization.isActive) {
             return null;
         }
 
@@ -120,11 +120,11 @@ export const getHierarchyTree = async (organizationId, activeOnly = true) => {
 
         return {
             id: organization.id,
-            public_code: organization.public_code,
+            publicCode: organization.publicCode,
             slug: organization.slug,
             name: organization.name,
-            logo_url: organization.logo_url,
-            is_active: organization.is_active,
+            logoUrl: organization.logoUrl,
+            isActive: organization.isActive,
             children: childrenTrees.filter(Boolean) // Filtrar nulls si hay inactivas
         };
     } catch (error) {
@@ -228,7 +228,7 @@ export const canHaveChild = async (parentId, maxDepth = 5) => {
 export const getRootOrganization = async () => {
     try {
         const root = await Organization.findOne({
-            where: { parent_id: null }
+            where: { parentId: null }
         });
 
         return root;
@@ -302,12 +302,12 @@ export const buildTree = (organizations) => {
     organizations.forEach(org => {
         const orgNode = orgMap[org.id];
         
-        if (!org.parent_id) {
+        if (!org.parentId) {
             // Es una raíz
             roots.push(orgNode);
-        } else if (orgMap[org.parent_id]) {
+        } else if (orgMap[org.parentId]) {
             // Agregar como hijo de su padre
-            orgMap[org.parent_id].children.push(orgNode);
+            orgMap[org.parentId].children.push(orgNode);
         }
     });
 
@@ -333,12 +333,12 @@ export const getChildrenWithHasChildren = async (organizationId, activeOnly = tr
                 
                 return {
                     id: child.id,
-                    public_code: child.public_code,
+                    publicCode: child.publicCode,
                     slug: child.slug,
                     name: child.name,
-                    parent_id: child.parent_id,
-                    logo_url: child.logo_url,
-                    is_active: child.is_active,
+                    parentId: child.parentId,
+                    logoUrl: child.logoUrl,
+                    isActive: child.isActive,
                     hasChildren: grandchildren.length > 0
                 };
             })
@@ -367,7 +367,7 @@ export const getTreeLevels = async (organizationId, levels = 2, activeOnly = tru
             throw new Error(`Organization ${organizationId} not found`);
         }
 
-        if (activeOnly && !organization.is_active) {
+        if (activeOnly && !organization.isActive) {
             return null;
         }
 
@@ -376,12 +376,12 @@ export const getTreeLevels = async (organizationId, levels = 2, activeOnly = tru
             const childrenCount = await getChildren(organizationId, activeOnly);
             return {
                 id: organization.id,
-                public_code: organization.public_code,
+                publicCode: organization.publicCode,
                 slug: organization.slug,
                 name: organization.name,
-                parent_id: organization.parent_id,
-                logo_url: organization.logo_url,
-                is_active: organization.is_active,
+                parentId: organization.parentId,
+                logoUrl: organization.logoUrl,
+                isActive: organization.isActive,
                 hasChildren: childrenCount.length > 0,
                 children: []
             };
@@ -395,12 +395,12 @@ export const getTreeLevels = async (organizationId, levels = 2, activeOnly = tru
 
         return {
             id: organization.id,
-            public_code: organization.public_code,
+            publicCode: organization.publicCode,
             slug: organization.slug,
             name: organization.name,
-            parent_id: organization.parent_id,
-            logo_url: organization.logo_url,
-            is_active: organization.is_active,
+            parentId: organization.parentId,
+            logoUrl: organization.logoUrl,
+            isActive: organization.isActive,
             hasChildren: children.length > 0,
             children: childrenTrees.filter(Boolean)
         };

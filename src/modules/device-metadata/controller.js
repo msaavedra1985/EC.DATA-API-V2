@@ -141,11 +141,11 @@ export const getDeviceType = async (req, res) => {
 
 export const createDeviceType = async (req, res) => {
     try {
-        const { code, icon, display_order, is_active } = req.body;
+        const { code, icon, displayOrder, isActive } = req.body;
         const translations = extractTranslations(req.body);
         
         const data = await services.createDeviceType(
-            { code, icon, display_order: display_order || 0, is_active: is_active !== false },
+            { code, icon, displayOrder: displayOrder || 0, isActive: isActive !== false },
             translations
         );
         return res.status(201).json({ success: true, data });
@@ -164,14 +164,14 @@ export const updateDeviceType = async (req, res) => {
         if (!id) {
             return res.status(400).json({ success: false, error: 'ID inválido' });
         }
-        const { code, icon, display_order, is_active } = req.body;
+        const { code, icon, displayOrder, isActive } = req.body;
         const translations = extractTranslations(req.body);
         
         const updateData = {};
         if (code !== undefined) updateData.code = code;
         if (icon !== undefined) updateData.icon = icon;
-        if (display_order !== undefined) updateData.display_order = display_order;
-        if (is_active !== undefined) updateData.is_active = is_active;
+        if (displayOrder !== undefined) updateData.displayOrder = displayOrder;
+        if (isActive !== undefined) updateData.isActive = isActive;
         
         const data = await services.updateDeviceType(id, updateData, translations);
         if (!data) {
@@ -236,11 +236,11 @@ export const getDeviceBrand = async (req, res) => {
 
 export const createDeviceBrand = async (req, res) => {
     try {
-        const { code, logo_url, website_url, display_order, is_active } = req.body;
+        const { code, logoUrl, websiteUrl, displayOrder, isActive } = req.body;
         const translations = extractTranslations(req.body);
         
         const data = await services.createDeviceBrand(
-            { code, logo_url, website_url, display_order: display_order || 0, is_active: is_active !== false },
+            { code, logoUrl, websiteUrl, displayOrder: displayOrder || 0, isActive: isActive !== false },
             translations
         );
         return res.status(201).json({ success: true, data });
@@ -259,15 +259,15 @@ export const updateDeviceBrand = async (req, res) => {
         if (!id) {
             return res.status(400).json({ success: false, error: 'ID inválido' });
         }
-        const { code, logo_url, website_url, display_order, is_active } = req.body;
+        const { code, logoUrl, websiteUrl, displayOrder, isActive } = req.body;
         const translations = extractTranslations(req.body);
         
         const updateData = {};
         if (code !== undefined) updateData.code = code;
-        if (logo_url !== undefined) updateData.logo_url = logo_url;
-        if (website_url !== undefined) updateData.website_url = website_url;
-        if (display_order !== undefined) updateData.display_order = display_order;
-        if (is_active !== undefined) updateData.is_active = is_active;
+        if (logoUrl !== undefined) updateData.logoUrl = logoUrl;
+        if (websiteUrl !== undefined) updateData.websiteUrl = websiteUrl;
+        if (displayOrder !== undefined) updateData.displayOrder = displayOrder;
+        if (isActive !== undefined) updateData.isActive = isActive;
         
         const data = await services.updateDeviceBrand(id, updateData, translations);
         if (!data) {
@@ -305,7 +305,7 @@ export const listDeviceModels = async (req, res) => {
     try {
         const lang = getLang(req);
         const includeInactive = req.query.include_inactive === 'true';
-        const brandId = req.query.brand_id ? parseInt(req.query.brand_id) : null;
+        const brandId = req.query.brandId ? parseInt(req.query.brandId) : null;
         const data = await services.listDeviceModels(lang, includeInactive, brandId);
         return res.json({ success: true, data });
     } catch (error) {
@@ -333,15 +333,15 @@ export const getDeviceModel = async (req, res) => {
 
 export const createDeviceModel = async (req, res) => {
     try {
-        const { code, device_brand_id, specs, display_order, is_active } = req.body;
+        const { code, deviceBrandId, specs, displayOrder, isActive } = req.body;
         const translations = extractTranslations(req.body);
         
-        if (!device_brand_id) {
-            return res.status(400).json({ success: false, error: 'device_brand_id es requerido' });
+        if (!deviceBrandId) {
+            return res.status(400).json({ success: false, error: 'deviceBrandId es requerido' });
         }
         
         const data = await services.createDeviceModel(
-            { code, device_brand_id, specs, display_order: display_order || 0, is_active: is_active !== false },
+            { code, deviceBrandId, specs, displayOrder: displayOrder || 0, isActive: isActive !== false },
             translations
         );
         return res.status(201).json({ success: true, data });
@@ -360,15 +360,15 @@ export const updateDeviceModel = async (req, res) => {
         if (!id) {
             return res.status(400).json({ success: false, error: 'ID inválido' });
         }
-        const { code, device_brand_id, specs, display_order, is_active } = req.body;
+        const { code, deviceBrandId, specs, displayOrder, isActive } = req.body;
         const translations = extractTranslations(req.body);
         
         const updateData = {};
         if (code !== undefined) updateData.code = code;
-        if (device_brand_id !== undefined) updateData.device_brand_id = device_brand_id;
+        if (deviceBrandId !== undefined) updateData.deviceBrandId = deviceBrandId;
         if (specs !== undefined) updateData.specs = specs;
-        if (display_order !== undefined) updateData.display_order = display_order;
-        if (is_active !== undefined) updateData.is_active = is_active;
+        if (displayOrder !== undefined) updateData.displayOrder = displayOrder;
+        if (isActive !== undefined) updateData.isActive = isActive;
         
         const data = await services.updateDeviceModel(id, updateData, translations);
         if (!data) {
@@ -433,11 +433,11 @@ export const getDeviceServer = async (req, res) => {
 
 export const createDeviceServer = async (req, res) => {
     try {
-        const { code, server_type, host, port, use_ssl, display_order, is_active } = req.body;
+        const { code, serverType, host, port, useSsl, displayOrder, isActive } = req.body;
         const translations = extractTranslations(req.body);
         
         const data = await services.createDeviceServer(
-            { code, server_type: server_type || 'mqtt', host, port, use_ssl: use_ssl || false, display_order: display_order || 0, is_active: is_active !== false },
+            { code, serverType: serverType || 'mqtt', host, port, useSsl: useSsl || false, displayOrder: displayOrder || 0, isActive: isActive !== false },
             translations
         );
         return res.status(201).json({ success: true, data });
@@ -456,17 +456,17 @@ export const updateDeviceServer = async (req, res) => {
         if (!id) {
             return res.status(400).json({ success: false, error: 'ID inválido' });
         }
-        const { code, server_type, host, port, use_ssl, display_order, is_active } = req.body;
+        const { code, serverType, host, port, useSsl, displayOrder, isActive } = req.body;
         const translations = extractTranslations(req.body);
         
         const updateData = {};
         if (code !== undefined) updateData.code = code;
-        if (server_type !== undefined) updateData.server_type = server_type;
+        if (serverType !== undefined) updateData.serverType = serverType;
         if (host !== undefined) updateData.host = host;
         if (port !== undefined) updateData.port = port;
-        if (use_ssl !== undefined) updateData.use_ssl = use_ssl;
-        if (display_order !== undefined) updateData.display_order = display_order;
-        if (is_active !== undefined) updateData.is_active = is_active;
+        if (useSsl !== undefined) updateData.useSsl = useSsl;
+        if (displayOrder !== undefined) updateData.displayOrder = displayOrder;
+        if (isActive !== undefined) updateData.isActive = isActive;
         
         const data = await services.updateDeviceServer(id, updateData, translations);
         if (!data) {
@@ -531,11 +531,11 @@ export const getDeviceNetwork = async (req, res) => {
 
 export const createDeviceNetwork = async (req, res) => {
     try {
-        const { code, icon, display_order, is_active } = req.body;
+        const { code, icon, displayOrder, isActive } = req.body;
         const translations = extractTranslations(req.body);
         
         const data = await services.createDeviceNetwork(
-            { code, icon, display_order: display_order || 0, is_active: is_active !== false },
+            { code, icon, displayOrder: displayOrder || 0, isActive: isActive !== false },
             translations
         );
         return res.status(201).json({ success: true, data });
@@ -554,14 +554,14 @@ export const updateDeviceNetwork = async (req, res) => {
         if (!id) {
             return res.status(400).json({ success: false, error: 'ID inválido' });
         }
-        const { code, icon, display_order, is_active } = req.body;
+        const { code, icon, displayOrder, isActive } = req.body;
         const translations = extractTranslations(req.body);
         
         const updateData = {};
         if (code !== undefined) updateData.code = code;
         if (icon !== undefined) updateData.icon = icon;
-        if (display_order !== undefined) updateData.display_order = display_order;
-        if (is_active !== undefined) updateData.is_active = is_active;
+        if (displayOrder !== undefined) updateData.displayOrder = displayOrder;
+        if (isActive !== undefined) updateData.isActive = isActive;
         
         const data = await services.updateDeviceNetwork(id, updateData, translations);
         if (!data) {
@@ -626,11 +626,11 @@ export const getDeviceLicense = async (req, res) => {
 
 export const createDeviceLicense = async (req, res) => {
     try {
-        const { code, icon, color, display_order, is_active } = req.body;
+        const { code, icon, color, displayOrder, isActive } = req.body;
         const translations = extractTranslations(req.body);
         
         const data = await services.createDeviceLicense(
-            { code, icon, color, display_order: display_order || 0, is_active: is_active !== false },
+            { code, icon, color, displayOrder: displayOrder || 0, isActive: isActive !== false },
             translations
         );
         return res.status(201).json({ success: true, data });
@@ -649,15 +649,15 @@ export const updateDeviceLicense = async (req, res) => {
         if (!id) {
             return res.status(400).json({ success: false, error: 'ID inválido' });
         }
-        const { code, icon, color, display_order, is_active } = req.body;
+        const { code, icon, color, displayOrder, isActive } = req.body;
         const translations = extractTranslations(req.body);
         
         const updateData = {};
         if (code !== undefined) updateData.code = code;
         if (icon !== undefined) updateData.icon = icon;
         if (color !== undefined) updateData.color = color;
-        if (display_order !== undefined) updateData.display_order = display_order;
-        if (is_active !== undefined) updateData.is_active = is_active;
+        if (displayOrder !== undefined) updateData.displayOrder = displayOrder;
+        if (isActive !== undefined) updateData.isActive = isActive;
         
         const data = await services.updateDeviceLicense(id, updateData, translations);
         if (!data) {
@@ -722,11 +722,11 @@ export const getDeviceValidityPeriod = async (req, res) => {
 
 export const createDeviceValidityPeriod = async (req, res) => {
     try {
-        const { code, months, display_order, is_active } = req.body;
+        const { code, months, displayOrder, isActive } = req.body;
         const translations = extractTranslations(req.body);
         
         const data = await services.createDeviceValidityPeriod(
-            { code, months, display_order: display_order || 0, is_active: is_active !== false },
+            { code, months, displayOrder: displayOrder || 0, isActive: isActive !== false },
             translations
         );
         return res.status(201).json({ success: true, data });
@@ -745,14 +745,14 @@ export const updateDeviceValidityPeriod = async (req, res) => {
         if (!id) {
             return res.status(400).json({ success: false, error: 'ID inválido' });
         }
-        const { code, months, display_order, is_active } = req.body;
+        const { code, months, displayOrder, isActive } = req.body;
         const translations = extractTranslations(req.body);
         
         const updateData = {};
         if (code !== undefined) updateData.code = code;
         if (months !== undefined) updateData.months = months;
-        if (display_order !== undefined) updateData.display_order = display_order;
-        if (is_active !== undefined) updateData.is_active = is_active;
+        if (displayOrder !== undefined) updateData.displayOrder = displayOrder;
+        if (isActive !== undefined) updateData.isActive = isActive;
         
         const data = await services.updateDeviceValidityPeriod(id, updateData, translations);
         if (!data) {
