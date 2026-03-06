@@ -84,6 +84,7 @@ const listFiltersSchema = z.object({
     search: z.string().max(100).optional(),
     measurementTypeId: z.coerce.number().int().positive().optional(),
     includeInactive: z.coerce.boolean().optional().default(false),
+    withTranslations: z.coerce.boolean().optional().default(false),
     isRealtime: z.coerce.boolean().optional(),
     isDefault: z.coerce.boolean().optional(),
     showInBilling: z.coerce.boolean().optional(),

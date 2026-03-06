@@ -72,6 +72,7 @@ const handleError = (res, error, defaultMessage) => {
  * Query params:
  *   lang             — idioma de traducción (default: 'es')
  *   include_inactive — incluir inactivas (default: false)
+ *   with_translations — incluir objeto completo de traducciones por idioma (default: false)
  *   search           — búsqueda por nombre, descripción o column_name
  *   measurement_type_id — filtrar por tipo de medición
  *   is_realtime      — filtrar por soporte realtime
@@ -87,6 +88,7 @@ router.get('/', authenticate, async (req, res) => {
         const filters = {
             lang: req.query.lang,
             includeInactive: req.query.include_inactive,
+            withTranslations: req.query.with_translations,
             search: req.query.search,
             measurementTypeId: req.query.measurement_type_id,
             isRealtime: req.query.is_realtime,

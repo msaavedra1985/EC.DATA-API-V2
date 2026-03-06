@@ -398,6 +398,7 @@ Base: `GET /api/v1/telemetry/variables`
 |-------|------|---------|-------------|
 | `lang` | string | `es` | Idioma de traducción |
 | `include_inactive` | boolean | `false` | Incluir variables inactivas |
+| `with_translations` | boolean | `false` | Incluir objeto completo de traducciones por idioma en cada item |
 | `search` | string | — | Búsqueda por nombre, descripción, code o columnName |
 | `measurement_type_id` | integer | — | Filtrar por tipo de medición |
 | `is_realtime` | boolean | — | Filtrar por soporte realtime |
@@ -445,6 +446,22 @@ Base: `GET /api/v1/telemetry/variables`
     }
   ],
   "meta": { "total": 75, "page": 1, "limit": 100 }
+}
+```
+
+Con `?with_translations=true`, cada item incluye el campo `translations`:
+```json
+{
+  "id": 2,
+  "code": "ee_energy",
+  "...demás campos...",
+  "name": "Energia Calculada",
+  "description": "energia",
+  "measurementTypeName": "Energía eléctrica",
+  "translations": {
+    "es": { "name": "Energia Calculada", "description": "energia" },
+    "en": { "name": "Calculated Energy", "description": "energy" }
+  }
 }
 ```
 

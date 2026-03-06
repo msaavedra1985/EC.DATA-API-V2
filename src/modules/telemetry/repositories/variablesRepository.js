@@ -65,6 +65,7 @@ export const findAll = async (options = {}) => {
         showInAnalysis,
         chartType,
         aggregationType,
+        withTranslations = false,
         limit = 50,
         offset = 0,
         sortBy = 'displayOrder',
@@ -152,6 +153,15 @@ export const findAll = async (options = {}) => {
     const orderField = validSortFields[sortBy] || 'v.display_order';
     const orderDir = sortOrder.toUpperCase() === 'DESC' ? 'DESC' : 'ASC';
 
+    // Subquery de traducciones completas (solo cuando se solicita con_translations=true)
+    const translationsSubquery = withTranslations
+        ? `(
+            SELECT json_object_agg(vt2.lang, json_build_object('name', vt2.name, 'description', vt2.description))
+            FROM variable_translations vt2
+            WHERE vt2.variable_id = v.id
+        ) AS translations,`
+        : '';
+
     // Query principal con traducciones y nuevos campos de visualización
     const query = `
         SELECT 
@@ -177,6 +187,7 @@ export const findAll = async (options = {}) => {
             v.is_active AS "isActive",
             v.created_at AS "createdAt",
             v.updated_at AS "updatedAt",
+            ${translationsSubquery}
             COALESCE(vt.name, vt_default.name, 'Unknown') AS name,
             COALESCE(vt.description, vt_default.description) AS description,
             COALESCE(mtt.name, mtt_default.name, 'Unknown') AS "measurementTypeName"
