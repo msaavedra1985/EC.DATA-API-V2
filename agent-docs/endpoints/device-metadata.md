@@ -87,13 +87,21 @@ Retorna **todos los catálogos en una sola llamada**. Ideal para cargar los form
       { "id": 1, "code": "electric_energy", "tablePrefix": "ee", "name": "Energía Eléctrica", "isActive": true }
     ],
     "variables": [
-      { "id": 1, "code": "ee_active_energy", "measurementTypeId": 1, "columnName": "active_energy", "name": "Energía Activa", "description": null, "unit": "kWh", "chartType": "line", "axisName": null, "axisId": null, "axisMin": null, "axisFunction": null, "aggregationType": null, "displayOrder": 1, "showInBilling": true, "showInAnalysis": true, "isRealtime": false, "isDefault": true, "isActive": true }
-    ]
+      { "id": 2, "code": "ee_energy", "measurementTypeId": 1, "columnName": "e", "name": "Energia Calculada", "description": "energia", "unit": "Wh", "chartType": "column", "axisName": "Energia (wh)", "axisId": "energia", "axisMin": 0, "axisFunction": "total", "aggregationType": null, "displayOrder": 1, "showInBilling": true, "showInAnalysis": true, "isRealtime": false, "isDefault": true, "isActive": true }
+    ],
+    "unitScales": {
+      "Wh": [
+        { "id": 1, "symbol": "Wh", "label": "Wattora", "factor": 1, "minValue": 0, "displayOrder": 1, "isActive": true },
+        { "id": 2, "symbol": "kWh", "label": "Kilowattora", "factor": 1000, "minValue": 1000, "displayOrder": 2, "isActive": true }
+      ]
+    }
   }
 }
 ```
 
 **Nota para frontend**: Este endpoint es la forma más eficiente de popular todos los selects de un formulario de dispositivo. Llamarlo una vez al cargar la vista y cachear en el state.
+
+> Documentación completa del modelo Variable, sus campos, tipos de gráfico, agregaciones y ejemplos de uso en: `agent-docs/endpoints/variables.md`
 
 ---
 
