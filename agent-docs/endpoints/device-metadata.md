@@ -395,6 +395,118 @@ Períodos de vigencia para licencias.
 
 ---
 
+## Auditoría de Uso (Usage)
+
+Cada catálogo tiene un endpoint `GET /{catalog}/:id/usage` que muestra **qué entidades lo están usando**. Diseñado para ser extensible: hoy muestra `devices`, pero a futuro puede incluir `sites`, `schedules`, o cualquier otra entidad que referencie el catálogo.
+
+### GET /{catalog}/:id/usage
+
+Disponible para los 7 catálogos:
+- `GET /devices/types/:id/usage`
+- `GET /devices/brands/:id/usage`
+- `GET /devices/models/:id/usage`
+- `GET /devices/servers/:id/usage`
+- `GET /devices/networks/:id/usage`
+- `GET /devices/licenses/:id/usage`
+- `GET /devices/validity-periods/:id/usage`
+
+**Permisos**: `system-admin`
+
+**Query params**:
+
+| Param | Tipo | Default | Descripción |
+|-------|------|---------|-------------|
+| `limit` | int | `50` | Cantidad máxima de items por tipo de entidad |
+
+**Response** `200`:
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": 5,
+    "code": "schneider",
+    "totalCount": 23,
+    "dependencies": {
+      "devices": {
+        "count": 23,
+        "items": [
+          { "publicCode": "DEV-7K9-R2T", "name": "Node Lobby", "organizationName": "Sirenis" },
+          { "publicCode": "DEV-4X2-M8P", "name": "Gateway Piscina", "organizationName": "Sirenis" }
+        ]
+      }
+    }
+  }
+}
+```
+
+**Response cuando no hay dependencias** `200`:
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": 99,
+    "code": "unused_brand",
+    "totalCount": 0,
+    "dependencies": {
+      "devices": {
+        "count": 0,
+        "items": []
+      }
+    }
+  }
+}
+```
+
+**Response 404** (ID no existe):
+
+```json
+{
+  "success": false,
+  "error": "Registro no encontrado"
+}
+```
+
+**Estructura extensible**: Cuando a futuro una nueva entidad (ej: `schedules`) referencie un catálogo, el response incluirá automáticamente esa entidad como una nueva clave en `dependencies`. Solo se necesita agregar una entrada al mapa `CATALOG_DEPENDENCIES` en `repository.js`:
+
+```json
+{
+  "dependencies": {
+    "devices": { "count": 23, "items": [...] },
+    "schedules": { "count": 5, "items": [...] }
+  }
+}
+```
+
+### Protección de Hard-Delete
+
+El hard delete (`DELETE /{catalog}/:id?hard=true`) ahora valida dependencias antes de eliminar:
+
+- Si `totalCount > 0`: retorna **409 Conflict** con las dependencias que bloquean la eliminación
+- Si `totalCount === 0`: procede con la eliminación
+- **Soft delete** (sin `?hard=true`) sigue funcionando sin validación — solo desactiva el registro
+
+**Response** `409` (hard delete bloqueado):
+
+```json
+{
+  "success": false,
+  "error": "No se puede eliminar: 23 dependencia(s) activa(s)",
+  "totalCount": 23,
+  "dependencies": {
+    "devices": {
+      "count": 23,
+      "items": [
+        { "publicCode": "DEV-7K9-R2T", "name": "Node Lobby", "organizationName": "Sirenis" }
+      ]
+    }
+  }
+}
+```
+
+---
+
 ## Resumen de Endpoints
 
 | Método | Ruta | Permisos | Descripción |
@@ -404,45 +516,52 @@ Períodos de vigencia para licencias.
 | | | | |
 | `GET` | `/devices/types` | Autenticado | Listar tipos |
 | `GET` | `/devices/types/:id` | Autenticado | Detalle tipo (con todas las traducciones) |
+| `GET` | `/devices/types/:id/usage` | system-admin | Auditoría: qué usa este tipo |
 | `POST` | `/devices/types` | system-admin | Crear tipo |
 | `PUT` | `/devices/types/:id` | system-admin | Editar tipo |
-| `DELETE` | `/devices/types/:id` | system-admin | Eliminar tipo |
+| `DELETE` | `/devices/types/:id` | system-admin | Eliminar tipo (409 si en uso + hard) |
 | | | | |
 | `GET` | `/devices/brands` | Autenticado | Listar marcas |
 | `GET` | `/devices/brands/:id` | Autenticado | Detalle marca |
+| `GET` | `/devices/brands/:id/usage` | system-admin | Auditoría: qué usa esta marca |
 | `POST` | `/devices/brands` | system-admin | Crear marca |
 | `PUT` | `/devices/brands/:id` | system-admin | Editar marca |
-| `DELETE` | `/devices/brands/:id` | system-admin | Eliminar marca |
+| `DELETE` | `/devices/brands/:id` | system-admin | Eliminar marca (409 si en uso + hard) |
 | | | | |
 | `GET` | `/devices/models` | Autenticado | Listar modelos (`?brand_id=` para filtrar) |
 | `GET` | `/devices/models/:id` | Autenticado | Detalle modelo |
+| `GET` | `/devices/models/:id/usage` | system-admin | Auditoría: qué usa este modelo |
 | `POST` | `/devices/models` | system-admin | Crear modelo (`device_brand_id` requerido) |
 | `PUT` | `/devices/models/:id` | system-admin | Editar modelo |
-| `DELETE` | `/devices/models/:id` | system-admin | Eliminar modelo |
+| `DELETE` | `/devices/models/:id` | system-admin | Eliminar modelo (409 si en uso + hard) |
 | | | | |
 | `GET` | `/devices/servers` | Autenticado | Listar servidores |
 | `GET` | `/devices/servers/:id` | Autenticado | Detalle servidor |
+| `GET` | `/devices/servers/:id/usage` | system-admin | Auditoría: qué usa este servidor |
 | `POST` | `/devices/servers` | system-admin | Crear servidor |
 | `PUT` | `/devices/servers/:id` | system-admin | Editar servidor |
-| `DELETE` | `/devices/servers/:id` | system-admin | Eliminar servidor |
+| `DELETE` | `/devices/servers/:id` | system-admin | Eliminar servidor (409 si en uso + hard) |
 | | | | |
 | `GET` | `/devices/networks` | Autenticado | Listar redes |
 | `GET` | `/devices/networks/:id` | Autenticado | Detalle red |
+| `GET` | `/devices/networks/:id/usage` | system-admin | Auditoría: qué usa esta red |
 | `POST` | `/devices/networks` | system-admin | Crear red |
 | `PUT` | `/devices/networks/:id` | system-admin | Editar red |
-| `DELETE` | `/devices/networks/:id` | system-admin | Eliminar red |
+| `DELETE` | `/devices/networks/:id` | system-admin | Eliminar red (409 si en uso + hard) |
 | | | | |
 | `GET` | `/devices/licenses` | Autenticado | Listar licencias |
 | `GET` | `/devices/licenses/:id` | Autenticado | Detalle licencia |
+| `GET` | `/devices/licenses/:id/usage` | system-admin | Auditoría: qué usa esta licencia |
 | `POST` | `/devices/licenses` | system-admin | Crear licencia |
 | `PUT` | `/devices/licenses/:id` | system-admin | Editar licencia |
-| `DELETE` | `/devices/licenses/:id` | system-admin | Eliminar licencia |
+| `DELETE` | `/devices/licenses/:id` | system-admin | Eliminar licencia (409 si en uso + hard) |
 | | | | |
 | `GET` | `/devices/validity-periods` | Autenticado | Listar vigencias |
 | `GET` | `/devices/validity-periods/:id` | Autenticado | Detalle vigencia |
+| `GET` | `/devices/validity-periods/:id/usage` | system-admin | Auditoría: qué usa esta vigencia |
 | `POST` | `/devices/validity-periods` | system-admin | Crear vigencia |
 | `PUT` | `/devices/validity-periods/:id` | system-admin | Editar vigencia |
-| `DELETE` | `/devices/validity-periods/:id` | system-admin | Eliminar vigencia |
+| `DELETE` | `/devices/validity-periods/:id` | system-admin | Eliminar vigencia (409 si en uso + hard) |
 
 ---
 
@@ -552,8 +671,40 @@ Solo actualiza la traducción EN del tipo con ID 3. No toca la traducción ES ni
 
 ```
 DELETE /api/v1/devices/brands/5           → Marca 5 queda con isActive: false
-DELETE /api/v1/devices/brands/5?hard=true → Marca 5 se elimina de la DB
+DELETE /api/v1/devices/brands/5?hard=true → Marca 5 se elimina de la DB (si no tiene dependencias)
 ```
+
+### 7. Flujo frontend: Usage antes de eliminar
+
+**Paso 1**: Cuando el admin quiere eliminar permanentemente un catálogo, primero consultar su usage:
+
+```
+GET /api/v1/devices/brands/5/usage
+```
+
+**Paso 2**: Evaluar la respuesta:
+
+```javascript
+const { data } = await api.get(`/devices/brands/${brandId}/usage`);
+
+if (data.totalCount > 0) {
+  // Mostrar modal de advertencia con las dependencias
+  // "Esta marca está siendo usada por 23 dispositivos. No se puede eliminar."
+  // Mostrar lista: data.dependencies.devices.items
+} else {
+  // Mostrar confirmación: "¿Eliminar permanentemente esta marca?"
+  // Si confirma → DELETE /devices/brands/5?hard=true
+}
+```
+
+**Paso 3**: Si el admin intenta hard delete sin consultar usage, la API protege igualmente:
+
+```
+DELETE /api/v1/devices/brands/5?hard=true
+→ 409: { success: false, error: "No se puede eliminar: 23 dependencia(s) activa(s)", dependencies: {...} }
+```
+
+**Recomendación UI**: Mostrar un botón "Ver uso" en cada fila del catálogo, y deshabilitar el botón de eliminación permanente si `totalCount > 0`.
 
 ---
 
@@ -561,12 +712,13 @@ DELETE /api/v1/devices/brands/5?hard=true → Marca 5 se elimina de la DB
 
 | Código | Cuándo | Body |
 |--------|--------|------|
-| `200` | Operación exitosa (list, get, update, delete) | `{ success: true, data/message }` |
+| `200` | Operación exitosa (list, get, update, delete, usage) | `{ success: true, data/message }` |
 | `201` | Registro creado | `{ success: true, data }` |
 | `400` | ID inválido o código duplicado | `{ success: false, error: "..." }` |
 | `401` | No autenticado | — |
 | `403` | Sin permisos (no es system-admin) | — |
 | `404` | Registro no encontrado | `{ success: false, error: "... no encontrado" }` |
+| `409` | Hard delete de catálogo en uso | `{ success: false, error: "...", totalCount, dependencies }` |
 | `500` | Error interno | `{ success: false, error: "Error interno del servidor" }` |
 
 ---

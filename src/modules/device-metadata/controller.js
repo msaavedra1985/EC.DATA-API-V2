@@ -36,6 +36,51 @@ const parseId = (idString) => {
 };
 
 // ============================================
+// CATALOG USAGE (auditoría de dependencias)
+// ============================================
+
+// Handler genérico — retorna un middleware para el catálogo indicado
+const makeCatalogUsageHandler = (catalogKey) => async (req, res) => {
+    try {
+        const id = parseId(req.params.id);
+        if (!id) {
+            return res.status(400).json({ success: false, error: 'ID inválido' });
+        }
+        const limit = Math.min(Math.max(parseInt(req.query.limit) || 50, 1), 200);
+        const { code, totalCount, dependencies } = await services.getCatalogUsage(catalogKey, id, limit);
+        if (code === null) {
+            return res.status(404).json({ success: false, error: 'Registro no encontrado' });
+        }
+        return res.json({ success: true, data: { id, code, totalCount, dependencies } });
+    } catch (error) {
+        metadataLogger.error(`Error obteniendo usage de ${catalogKey}`, { error: error.message });
+        return res.status(500).json({ success: false, error: 'Error interno del servidor' });
+    }
+};
+
+export const getDeviceTypeUsage = makeCatalogUsageHandler('deviceTypes');
+export const getDeviceBrandUsage = makeCatalogUsageHandler('deviceBrands');
+export const getDeviceModelUsage = makeCatalogUsageHandler('deviceModels');
+export const getDeviceServerUsage = makeCatalogUsageHandler('deviceServers');
+export const getDeviceNetworkUsage = makeCatalogUsageHandler('deviceNetworks');
+export const getDeviceLicenseUsage = makeCatalogUsageHandler('deviceLicenses');
+export const getDeviceValidityPeriodUsage = makeCatalogUsageHandler('deviceValidityPeriods');
+
+// Helper para manejar errores de dependencias en deletes
+const handleDeleteError = (res, error, entityLabel) => {
+    if (error.code === 'DEPENDENCY_CONFLICT') {
+        return res.status(409).json({
+            success: false,
+            error: error.message,
+            dependencies: error.usage.dependencies,
+            totalCount: error.usage.totalCount
+        });
+    }
+    metadataLogger.error(`Error eliminando ${entityLabel}`, { error: error.message });
+    return res.status(500).json({ success: false, error: 'Error interno del servidor' });
+};
+
+// ============================================
 // GET ALL METADATA
 // ============================================
 
@@ -152,8 +197,7 @@ export const deleteDeviceType = async (req, res) => {
         }
         return res.json({ success: true, message: 'Tipo de dispositivo eliminado' });
     } catch (error) {
-        metadataLogger.error('Error eliminando device type', { error: error.message });
-        return res.status(500).json({ success: false, error: 'Error interno del servidor' });
+        return handleDeleteError(res, error, 'device type');
     }
 };
 
@@ -249,8 +293,7 @@ export const deleteDeviceBrand = async (req, res) => {
         }
         return res.json({ success: true, message: 'Marca eliminada' });
     } catch (error) {
-        metadataLogger.error('Error eliminando device brand', { error: error.message });
-        return res.status(500).json({ success: false, error: 'Error interno del servidor' });
+        return handleDeleteError(res, error, 'device brand');
     }
 };
 
@@ -351,8 +394,7 @@ export const deleteDeviceModel = async (req, res) => {
         }
         return res.json({ success: true, message: 'Modelo eliminado' });
     } catch (error) {
-        metadataLogger.error('Error eliminando device model', { error: error.message });
-        return res.status(500).json({ success: false, error: 'Error interno del servidor' });
+        return handleDeleteError(res, error, 'device model');
     }
 };
 
@@ -450,8 +492,7 @@ export const deleteDeviceServer = async (req, res) => {
         }
         return res.json({ success: true, message: 'Servidor eliminado' });
     } catch (error) {
-        metadataLogger.error('Error eliminando device server', { error: error.message });
-        return res.status(500).json({ success: false, error: 'Error interno del servidor' });
+        return handleDeleteError(res, error, 'device server');
     }
 };
 
@@ -546,8 +587,7 @@ export const deleteDeviceNetwork = async (req, res) => {
         }
         return res.json({ success: true, message: 'Red eliminada' });
     } catch (error) {
-        metadataLogger.error('Error eliminando device network', { error: error.message });
-        return res.status(500).json({ success: false, error: 'Error interno del servidor' });
+        return handleDeleteError(res, error, 'device network');
     }
 };
 
@@ -643,8 +683,7 @@ export const deleteDeviceLicense = async (req, res) => {
         }
         return res.json({ success: true, message: 'Licencia eliminada' });
     } catch (error) {
-        metadataLogger.error('Error eliminando device license', { error: error.message });
-        return res.status(500).json({ success: false, error: 'Error interno del servidor' });
+        return handleDeleteError(res, error, 'device license');
     }
 };
 
@@ -739,7 +778,6 @@ export const deleteDeviceValidityPeriod = async (req, res) => {
         }
         return res.json({ success: true, message: 'Período eliminado' });
     } catch (error) {
-        metadataLogger.error('Error eliminando validity period', { error: error.message });
-        return res.status(500).json({ success: false, error: 'Error interno del servidor' });
+        return handleDeleteError(res, error, 'validity period');
     }
 };

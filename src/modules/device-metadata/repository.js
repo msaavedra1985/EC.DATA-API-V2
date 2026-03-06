@@ -664,6 +664,97 @@ export const deleteDeviceValidityPeriod = async (id, hard = false) => {
 };
 
 // ============================================
+// CATALOG USAGE (auditoría de dependencias)
+// ============================================
+
+// Mapa de dependencias: define qué entidades referencian cada catálogo
+// Para agregar una nueva entidad que referencia un catálogo, solo agregar una entrada aquí
+const CATALOG_DEPENDENCIES = {
+    deviceTypes: {
+        catalogTable: 'device_types',
+        deps: [{ entity: 'devices', table: 'devices', fkColumn: 'device_type_id', label: 'devices' }]
+    },
+    deviceBrands: {
+        catalogTable: 'device_brands',
+        deps: [{ entity: 'devices', table: 'devices', fkColumn: 'brand_id', label: 'devices' }]
+    },
+    deviceModels: {
+        catalogTable: 'device_models',
+        deps: [{ entity: 'devices', table: 'devices', fkColumn: 'model_id', label: 'devices' }]
+    },
+    deviceServers: {
+        catalogTable: 'device_servers',
+        deps: [{ entity: 'devices', table: 'devices', fkColumn: 'server_id', label: 'devices' }]
+    },
+    deviceNetworks: {
+        catalogTable: 'device_networks',
+        deps: [{ entity: 'devices', table: 'devices', fkColumn: 'network_id', label: 'devices' }]
+    },
+    deviceLicenses: {
+        catalogTable: 'device_licenses',
+        deps: [{ entity: 'devices', table: 'devices', fkColumn: 'license_id', label: 'devices' }]
+    },
+    deviceValidityPeriods: {
+        catalogTable: 'device_validity_periods',
+        deps: [{ entity: 'devices', table: 'devices', fkColumn: 'validity_period_id', label: 'devices' }]
+    }
+};
+
+// Consulta genérica de dependencias para una entidad específica
+const queryEntityDependency = async (dep, catalogId, limit = 50) => {
+    // Conteo total
+    const [countResult] = await sequelize.query(
+        `SELECT COUNT(*) as count FROM "${dep.table}" WHERE "${dep.fkColumn}" = :catalogId`,
+        { replacements: { catalogId }, type: sequelize.QueryTypes.SELECT }
+    );
+    const count = parseInt(countResult.count);
+
+    // Items con info de organización (solo si hay resultados)
+    let items = [];
+    if (count > 0) {
+        items = await sequelize.query(
+            `SELECT d.public_code AS "publicCode", d.name, o.name AS "organizationName"
+             FROM "${dep.table}" d
+             LEFT JOIN organizations o ON d.organization_id = o.id
+             WHERE d."${dep.fkColumn}" = :catalogId
+             ORDER BY o.name ASC, d.name ASC
+             LIMIT :limit`,
+            { replacements: { catalogId, limit }, type: sequelize.QueryTypes.SELECT }
+        );
+    }
+
+    return { count, items };
+};
+
+// Obtiene todas las dependencias de un catálogo agrupadas por tipo de entidad
+export const getCatalogUsage = async (catalogKey, catalogId, limit = 50) => {
+    const config = CATALOG_DEPENDENCIES[catalogKey];
+    if (!config) {
+        throw new Error(`Catálogo "${catalogKey}" no tiene dependencias configuradas`);
+    }
+
+    const [catalogItem] = await sequelize.query(
+        `SELECT code FROM "${config.catalogTable}" WHERE id = :catalogId`,
+        { replacements: { catalogId }, type: sequelize.QueryTypes.SELECT }
+    );
+    const code = catalogItem?.code || null;
+
+    let totalCount = 0;
+    const dependencies = {};
+
+    for (const dep of config.deps) {
+        const result = await queryEntityDependency(dep, catalogId, limit);
+        totalCount += result.count;
+        dependencies[dep.label] = {
+            count: result.count,
+            items: result.items
+        };
+    }
+
+    return { code, totalCount, dependencies };
+};
+
+// ============================================
 // MEASUREMENT TYPES (catálogo compartido desde telemetry)
 // ============================================
 

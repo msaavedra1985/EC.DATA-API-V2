@@ -200,6 +200,15 @@ export const updateDeviceType = async (id, data, translations) => {
 };
 
 export const deleteDeviceType = async (id, hard = false) => {
+    if (hard) {
+        const usage = await repository.getCatalogUsage('deviceTypes', id, 5);
+        if (usage.totalCount > 0) {
+            const error = new Error(`No se puede eliminar: ${usage.totalCount} dependencia(s) activa(s)`);
+            error.code = 'DEPENDENCY_CONFLICT';
+            error.usage = usage;
+            throw error;
+        }
+    }
     const result = await repository.deleteDeviceType(id, hard);
     if (!result) return null;
     await invalidateCache();
@@ -235,6 +244,15 @@ export const updateDeviceBrand = async (id, data, translations) => {
 };
 
 export const deleteDeviceBrand = async (id, hard = false) => {
+    if (hard) {
+        const usage = await repository.getCatalogUsage('deviceBrands', id, 5);
+        if (usage.totalCount > 0) {
+            const error = new Error(`No se puede eliminar: ${usage.totalCount} dependencia(s) activa(s)`);
+            error.code = 'DEPENDENCY_CONFLICT';
+            error.usage = usage;
+            throw error;
+        }
+    }
     const result = await repository.deleteDeviceBrand(id, hard);
     if (!result) return null;
     await invalidateCache();
@@ -270,6 +288,15 @@ export const updateDeviceModel = async (id, data, translations) => {
 };
 
 export const deleteDeviceModel = async (id, hard = false) => {
+    if (hard) {
+        const usage = await repository.getCatalogUsage('deviceModels', id, 5);
+        if (usage.totalCount > 0) {
+            const error = new Error(`No se puede eliminar: ${usage.totalCount} dependencia(s) activa(s)`);
+            error.code = 'DEPENDENCY_CONFLICT';
+            error.usage = usage;
+            throw error;
+        }
+    }
     const result = await repository.deleteDeviceModel(id, hard);
     if (!result) return null;
     await invalidateCache();
@@ -305,6 +332,15 @@ export const updateDeviceServer = async (id, data, translations) => {
 };
 
 export const deleteDeviceServer = async (id, hard = false) => {
+    if (hard) {
+        const usage = await repository.getCatalogUsage('deviceServers', id, 5);
+        if (usage.totalCount > 0) {
+            const error = new Error(`No se puede eliminar: ${usage.totalCount} dependencia(s) activa(s)`);
+            error.code = 'DEPENDENCY_CONFLICT';
+            error.usage = usage;
+            throw error;
+        }
+    }
     const result = await repository.deleteDeviceServer(id, hard);
     if (!result) return null;
     await invalidateCache();
@@ -340,6 +376,15 @@ export const updateDeviceNetwork = async (id, data, translations) => {
 };
 
 export const deleteDeviceNetwork = async (id, hard = false) => {
+    if (hard) {
+        const usage = await repository.getCatalogUsage('deviceNetworks', id, 5);
+        if (usage.totalCount > 0) {
+            const error = new Error(`No se puede eliminar: ${usage.totalCount} dependencia(s) activa(s)`);
+            error.code = 'DEPENDENCY_CONFLICT';
+            error.usage = usage;
+            throw error;
+        }
+    }
     const result = await repository.deleteDeviceNetwork(id, hard);
     if (!result) return null;
     await invalidateCache();
@@ -375,6 +420,15 @@ export const updateDeviceLicense = async (id, data, translations) => {
 };
 
 export const deleteDeviceLicense = async (id, hard = false) => {
+    if (hard) {
+        const usage = await repository.getCatalogUsage('deviceLicenses', id, 5);
+        if (usage.totalCount > 0) {
+            const error = new Error(`No se puede eliminar: ${usage.totalCount} dependencia(s) activa(s)`);
+            error.code = 'DEPENDENCY_CONFLICT';
+            error.usage = usage;
+            throw error;
+        }
+    }
     const result = await repository.deleteDeviceLicense(id, hard);
     if (!result) return null;
     await invalidateCache();
@@ -410,8 +464,25 @@ export const updateDeviceValidityPeriod = async (id, data, translations) => {
 };
 
 export const deleteDeviceValidityPeriod = async (id, hard = false) => {
+    if (hard) {
+        const usage = await repository.getCatalogUsage('deviceValidityPeriods', id, 5);
+        if (usage.totalCount > 0) {
+            const error = new Error(`No se puede eliminar: ${usage.totalCount} dependencia(s) activa(s)`);
+            error.code = 'DEPENDENCY_CONFLICT';
+            error.usage = usage;
+            throw error;
+        }
+    }
     const result = await repository.deleteDeviceValidityPeriod(id, hard);
     if (!result) return null;
     await invalidateCache();
     return true;
+};
+
+// ============================================
+// CATALOG USAGE (auditoría de dependencias)
+// ============================================
+
+export const getCatalogUsage = async (catalogKey, catalogId, limit = 50) => {
+    return repository.getCatalogUsage(catalogKey, catalogId, limit);
 };
