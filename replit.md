@@ -53,7 +53,8 @@ agent-docs/
     ├── resource-hierarchy.md  # Árbol de recursos
     ├── error-logs.md     # Logging de errores (público)
     ├── asset-categories.md  # Tags jerárquicos para canales
-    └── dashboards.md     # Dashboards multi-página, widgets (con dataSources inline), grupos, colaboradores
+    ├── dashboards.md     # Dashboards multi-página, widgets (con dataSources inline), grupos, colaboradores
+    └── device-metadata.md  # Catálogos core: types, brands, models, servers, networks, licenses, validity-periods
 ```
 
 ## Reglas Críticas (Resumen)
