@@ -18,7 +18,8 @@ import {
     DeviceLicense,
     DeviceLicenseTranslation,
     DeviceValidityPeriod,
-    DeviceValidityPeriodTranslation
+    DeviceValidityPeriodTranslation,
+    UnitScale
 } from './models/index.js';
 import { MeasurementType, MeasurementTypeTranslation, Variable, VariableTranslation } from '../telemetry/models/index.js';
 
@@ -786,4 +787,49 @@ export const getVariables = async (lang = 'es') => {
         }],
         order: [['measurement_type_id', 'ASC'], ['display_order', 'ASC NULLS LAST']]
     });
+};
+
+// ============================================
+// UNIT SCALES
+// ============================================
+
+export const getAllUnitScales = async (includeInactive = false) => {
+    const where = includeInactive ? {} : { isActive: true };
+    return UnitScale.findAll({
+        where,
+        order: [['base_unit', 'ASC'], ['display_order', 'ASC']]
+    });
+};
+
+export const getUnitScalesByBaseUnit = async (baseUnit) => {
+    return UnitScale.findAll({
+        where: { baseUnit, isActive: true },
+        order: [['display_order', 'ASC']]
+    });
+};
+
+export const findUnitScaleById = async (id) => {
+    return UnitScale.findByPk(id);
+};
+
+export const createUnitScale = async (data) => {
+    return UnitScale.create(data);
+};
+
+export const updateUnitScale = async (id, data) => {
+    const existing = await UnitScale.findByPk(id);
+    if (!existing) return null;
+    await UnitScale.update(data, { where: { id } });
+    return UnitScale.findByPk(id);
+};
+
+export const deleteUnitScale = async (id, hard = false) => {
+    const existing = await UnitScale.findByPk(id);
+    if (!existing) return null;
+    if (hard) {
+        await UnitScale.destroy({ where: { id } });
+    } else {
+        await UnitScale.update({ isActive: false }, { where: { id } });
+    }
+    return true;
 };

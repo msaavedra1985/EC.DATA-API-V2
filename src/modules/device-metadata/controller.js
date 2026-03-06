@@ -781,3 +781,119 @@ export const deleteDeviceValidityPeriod = async (req, res) => {
         return handleDeleteError(res, error, 'validity period');
     }
 };
+
+// ============================================
+// UNIT SCALES
+// ============================================
+
+export const listUnitScales = async (req, res) => {
+    try {
+        const includeInactive = req.query.include_inactive === 'true';
+        const data = await services.listUnitScales(includeInactive);
+        return res.json({ success: true, data });
+    } catch (error) {
+        metadataLogger.error('Error listando unit scales', { error: error.message });
+        return res.status(500).json({ success: false, error: 'Error interno del servidor' });
+    }
+};
+
+export const listUnitScalesByBaseUnit = async (req, res) => {
+    try {
+        const { baseUnit } = req.params;
+        const data = await services.listUnitScalesByBaseUnit(baseUnit);
+        return res.json({ success: true, data });
+    } catch (error) {
+        metadataLogger.error('Error listando unit scales por base unit', { error: error.message });
+        return res.status(500).json({ success: false, error: 'Error interno del servidor' });
+    }
+};
+
+export const getUnitScale = async (req, res) => {
+    try {
+        const id = parseId(req.params.id);
+        if (!id) {
+            return res.status(400).json({ success: false, error: 'ID inválido' });
+        }
+        const data = await services.getUnitScaleById(id);
+        if (!data) {
+            return res.status(404).json({ success: false, error: 'Escala no encontrada' });
+        }
+        return res.json({ success: true, data });
+    } catch (error) {
+        metadataLogger.error('Error obteniendo unit scale', { error: error.message });
+        return res.status(500).json({ success: false, error: 'Error interno del servidor' });
+    }
+};
+
+export const createUnitScale = async (req, res) => {
+    try {
+        const { baseUnit, symbol, label, factor, minValue, displayOrder, isActive } = req.body;
+        if (!baseUnit || !symbol || !label || factor === undefined || minValue === undefined) {
+            return res.status(400).json({ success: false, error: 'Campos requeridos: baseUnit, symbol, label, factor, minValue' });
+        }
+        const data = await services.createUnitScale({
+            baseUnit,
+            symbol,
+            label,
+            factor,
+            minValue,
+            displayOrder: displayOrder ?? 0,
+            isActive: isActive !== false
+        });
+        return res.status(201).json({ success: true, data });
+    } catch (error) {
+        metadataLogger.error('Error creando unit scale', { error: error.message });
+        if (error.name === 'SequelizeUniqueConstraintError') {
+            return res.status(409).json({ success: false, error: `Ya existe una escala para (${req.body.baseUnit}, ${req.body.symbol})` });
+        }
+        return res.status(500).json({ success: false, error: 'Error interno del servidor' });
+    }
+};
+
+export const updateUnitScale = async (req, res) => {
+    try {
+        const id = parseId(req.params.id);
+        if (!id) {
+            return res.status(400).json({ success: false, error: 'ID inválido' });
+        }
+        const { baseUnit, symbol, label, factor, minValue, displayOrder, isActive } = req.body;
+        const updateData = {};
+        if (baseUnit !== undefined) updateData.baseUnit = baseUnit;
+        if (symbol !== undefined) updateData.symbol = symbol;
+        if (label !== undefined) updateData.label = label;
+        if (factor !== undefined) updateData.factor = factor;
+        if (minValue !== undefined) updateData.minValue = minValue;
+        if (displayOrder !== undefined) updateData.displayOrder = displayOrder;
+        if (isActive !== undefined) updateData.isActive = isActive;
+
+        const data = await services.updateUnitScale(id, updateData);
+        if (!data) {
+            return res.status(404).json({ success: false, error: 'Escala no encontrada' });
+        }
+        return res.json({ success: true, data });
+    } catch (error) {
+        metadataLogger.error('Error actualizando unit scale', { error: error.message });
+        if (error.name === 'SequelizeUniqueConstraintError') {
+            return res.status(409).json({ success: false, error: 'Ya existe una escala con esa combinación base_unit + symbol' });
+        }
+        return res.status(500).json({ success: false, error: 'Error interno del servidor' });
+    }
+};
+
+export const deleteUnitScale = async (req, res) => {
+    try {
+        const id = parseId(req.params.id);
+        if (!id) {
+            return res.status(400).json({ success: false, error: 'ID inválido' });
+        }
+        const hard = req.query.hard === 'true';
+        const result = await services.deleteUnitScale(id, hard);
+        if (!result) {
+            return res.status(404).json({ success: false, error: 'Escala no encontrada' });
+        }
+        return res.json({ success: true, message: 'Escala eliminada' });
+    } catch (error) {
+        metadataLogger.error('Error eliminando unit scale', { error: error.message });
+        return res.status(500).json({ success: false, error: 'Error interno del servidor' });
+    }
+};

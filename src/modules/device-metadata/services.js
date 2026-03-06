@@ -75,6 +75,28 @@ const toDTOWithTranslations = (model) => {
 };
 
 /**
+ * Agrupar escalas por baseUnit: { Wh: [...], W: [...] }
+ */
+const groupUnitScales = (scales) => {
+    const grouped = {};
+    for (const scale of scales) {
+        const json = scale.toJSON ? scale.toJSON() : scale;
+        const key = json.baseUnit;
+        if (!grouped[key]) grouped[key] = [];
+        grouped[key].push({
+            id: json.id,
+            symbol: json.symbol,
+            label: json.label,
+            factor: Number(json.factor),
+            minValue: Number(json.minValue),
+            displayOrder: json.displayOrder,
+            isActive: json.isActive
+        });
+    }
+    return grouped;
+};
+
+/**
  * Transformar MeasurementType a DTO
  */
 const toMeasurementTypeDTO = (model) => {
@@ -128,7 +150,7 @@ export const getAllMetadata = async (lang = 'es') => {
         return cached;
     }
 
-    const [types, brands, models, servers, networks, licenses, validityPeriods, measurementTypes, variables] = await Promise.all([
+    const [types, brands, models, servers, networks, licenses, validityPeriods, measurementTypes, variables, unitScalesRaw] = await Promise.all([
         repository.getDeviceTypes(lang),
         repository.getDeviceBrands(lang),
         repository.getDeviceModels(lang),
@@ -137,8 +159,11 @@ export const getAllMetadata = async (lang = 'es') => {
         repository.getDeviceLicenses(lang),
         repository.getDeviceValidityPeriods(lang),
         repository.getMeasurementTypes(lang),
-        repository.getVariables(lang)
+        repository.getVariables(lang),
+        repository.getAllUnitScales()
     ]);
+
+    const unitScales = groupUnitScales(unitScalesRaw);
 
     const metadata = {
         deviceTypes: types.map(toDTO),
@@ -149,7 +174,8 @@ export const getAllMetadata = async (lang = 'es') => {
         licenses: licenses.map(toDTO),
         validityPeriods: validityPeriods.map(toDTO),
         measurementTypes: measurementTypes.map(toMeasurementTypeDTO),
-        variables: variables.map(toVariableDTO)
+        variables: variables.map(toVariableDTO),
+        unitScales
     };
 
     await setCache(cacheKey, metadata, CACHE_TTL);
@@ -485,4 +511,83 @@ export const deleteDeviceValidityPeriod = async (id, hard = false) => {
 
 export const getCatalogUsage = async (catalogKey, catalogId, limit = 50) => {
     return repository.getCatalogUsage(catalogKey, catalogId, limit);
+};
+
+// ============================================
+// UNIT SCALES CRUD
+// ============================================
+
+export const listUnitScales = async (includeInactive = false) => {
+    const scales = await repository.getAllUnitScales(includeInactive);
+    return scales.map(s => {
+        const json = s.toJSON();
+        return {
+            id: json.id,
+            baseUnit: json.baseUnit,
+            symbol: json.symbol,
+            label: json.label,
+            factor: Number(json.factor),
+            minValue: Number(json.minValue),
+            displayOrder: json.displayOrder,
+            isActive: json.isActive
+        };
+    });
+};
+
+export const listUnitScalesByBaseUnit = async (baseUnit) => {
+    const scales = await repository.getUnitScalesByBaseUnit(baseUnit);
+    return scales.map(s => {
+        const json = s.toJSON();
+        return {
+            id: json.id,
+            baseUnit: json.baseUnit,
+            symbol: json.symbol,
+            label: json.label,
+            factor: Number(json.factor),
+            minValue: Number(json.minValue),
+            displayOrder: json.displayOrder,
+            isActive: json.isActive
+        };
+    });
+};
+
+export const getUnitScaleGrouped = async () => {
+    const scales = await repository.getAllUnitScales();
+    return groupUnitScales(scales);
+};
+
+export const getUnitScaleById = async (id) => {
+    const scale = await repository.findUnitScaleById(id);
+    if (!scale) return null;
+    const json = scale.toJSON();
+    return {
+        id: json.id,
+        baseUnit: json.baseUnit,
+        symbol: json.symbol,
+        label: json.label,
+        factor: Number(json.factor),
+        minValue: Number(json.minValue),
+        displayOrder: json.displayOrder,
+        isActive: json.isActive
+    };
+};
+
+export const createUnitScale = async (data) => {
+    const scale = await repository.createUnitScale(data);
+    await invalidateCache();
+    return getUnitScaleById(scale.id);
+};
+
+export const updateUnitScale = async (id, data) => {
+    const scale = await repository.updateUnitScale(id, data);
+    if (!scale) return null;
+    await invalidateCache();
+    return getUnitScaleById(id);
+};
+
+export const deleteUnitScale = async (id, hard = false) => {
+    const result = await repository.deleteUnitScale(id, hard);
+    if (!result) return null;
+    await invalidateCache();
+    return true;
 };

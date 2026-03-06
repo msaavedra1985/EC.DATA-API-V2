@@ -708,6 +708,159 @@ DELETE /api/v1/devices/brands/5?hard=true
 
 ---
 
+## Unit Scales
+
+Catálogo de escalas de visualización para cada unidad de medida del sistema. Permite al frontend escalar automáticamente valores brutos del sensor (ej: 1.500.000 Wh → 1.5 MWh) sin lógica hardcodeada.
+
+**Base**: La columna `variables.unit` (ej: `'Wh'`) es la clave. El `GET /devices/metadata` devuelve `unitScales` agrupado por `baseUnit`.
+
+**Algoritmo de formateo (frontend)**:
+```typescript
+function formatValue(rawValue: number, unitScales: UnitScale[]): string {
+  if (!unitScales?.length) return String(rawValue);
+  const sorted = [...unitScales].sort((a, b) => b.minValue - a.minValue);
+  const scale = sorted.find(s => rawValue >= s.minValue) ?? unitScales[0];
+  return `${(rawValue / scale.factor).toFixed(2)} ${scale.symbol}`;
+}
+// rawValue=1_500_000 Wh → "1.50 MWh"
+// rawValue=850 Wh → "850.00 Wh"
+```
+
+### Campos del DTO
+
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| `id` | integer | ID del registro |
+| `baseUnit` | string | Unidad base del sensor (ej: `Wh`, `W`, `A`) — coincide con `variables.unit` |
+| `symbol` | string | Símbolo de display (ej: `kWh`, `MWh`) |
+| `label` | string | Nombre descriptivo (ej: `Kilowattora`) |
+| `factor` | number | Divisor: `displayed = rawValue / factor` |
+| `minValue` | number | Umbral mínimo del rawValue para activar esta escala |
+| `displayOrder` | integer | Orden dentro de la familia |
+| `isActive` | boolean | Estado activo |
+
+### Endpoints
+
+#### GET /api/v1/devices/unit-scales
+Lista todas las escalas activas.
+
+**Query params**:
+- `include_inactive=true` → incluye escalas inactivas
+
+**Response**:
+```json
+{
+  "success": true,
+  "data": [
+    { "id": 1, "baseUnit": "Wh", "symbol": "Wh", "label": "Wattora", "factor": 1, "minValue": 0, "displayOrder": 1, "isActive": true },
+    { "id": 2, "baseUnit": "Wh", "symbol": "kWh", "label": "Kilowattora", "factor": 1000, "minValue": 1000, "displayOrder": 2, "isActive": true }
+  ]
+}
+```
+
+---
+
+#### GET /api/v1/devices/unit-scales/by-unit/:baseUnit
+Lista las escalas activas de una unidad base específica, ordenadas por `displayOrder`.
+
+**Ejemplo**: `GET /api/v1/devices/unit-scales/by-unit/Wh`
+
+**Response**:
+```json
+{
+  "success": true,
+  "data": [
+    { "id": 1, "baseUnit": "Wh", "symbol": "Wh", "label": "Wattora", "factor": 1, "minValue": 0, "displayOrder": 1, "isActive": true },
+    { "id": 2, "baseUnit": "Wh", "symbol": "kWh", "label": "Kilowattora", "factor": 1000, "minValue": 1000, "displayOrder": 2, "isActive": true },
+    { "id": 3, "baseUnit": "Wh", "symbol": "MWh", "label": "Megawattora", "factor": 1000000, "minValue": 1000000, "displayOrder": 3, "isActive": true },
+    { "id": 4, "baseUnit": "Wh", "symbol": "GWh", "label": "Gigawattora", "factor": 1000000000, "minValue": 1000000000, "displayOrder": 4, "isActive": true }
+  ]
+}
+```
+
+---
+
+#### GET /api/v1/devices/unit-scales/:id
+Obtiene una escala por ID.
+
+---
+
+#### POST /api/v1/devices/unit-scales
+Crea una escala. Requiere `system-admin`.
+
+**Body (camelCase)**:
+```json
+{
+  "baseUnit": "TR",
+  "symbol": "TR",
+  "label": "Tonelada de refrigeración",
+  "factor": 1,
+  "minValue": 0,
+  "displayOrder": 1
+}
+```
+
+- Error `409` si ya existe `(baseUnit, symbol)` duplicado.
+
+---
+
+#### PUT /api/v1/devices/unit-scales/:id
+Actualiza una escala. Requiere `system-admin`. Body parcial — solo enviar campos a cambiar.
+
+---
+
+#### DELETE /api/v1/devices/unit-scales/:id
+Elimina una escala. Requiere `system-admin`.
+- Sin `?hard=true` → soft delete (marca `isActive: false`)
+- Con `?hard=true` → hard delete (elimina de la DB)
+
+### Unidades con escalas predefinidas (seeder)
+
+| Unidad base | Escalas | Notas |
+|-------------|---------|-------|
+| `Wh` | Wh → kWh → MWh → GWh | Energía activa |
+| `W` | W → kW → MW | Potencia activa (raw en W) |
+| `kW` | kW → MW → GW | Potencia activa (raw ya en kW) |
+| `VArh` | VArh → kVArh → MVArh | Energía reactiva |
+| `VAh` | VAh → kVAh → MVAh | Energía aparente |
+| `VA` | VA → kVA → MVA | Potencia aparente |
+| `VArx` | var → kvar → Mvar | Potencia reactiva |
+| `A` | mA → A → kA | Corriente |
+| `V` | V → kV | Voltaje |
+| `m3` | L → m³ → dam³ | Volumen acumulado |
+| `m3/h` | L/h → m³/h | Caudal |
+| `BTU` | BTU → kBTU → MBTU | Energía térmica |
+| `BTU/h` | BTU/h → kBTU/h → MBTU/h | Potencia térmica |
+| `cm` | cm → m → km | Distancia |
+| `hPa` | hPa → kPa → bar | Presión (hPa base) |
+| `mbar` | mbar → bar | Presión (mbar base) |
+| `Hz` | Hz → kHz → MHz | Frecuencia |
+| `ppm` | ppm → %vol | Concentración CO₂/gases |
+| `lux` | lux → klux | Iluminancia |
+
+### Integración con GET /devices/metadata
+
+El `GET /devices/metadata` incluye `unitScales` como objeto agrupado por `baseUnit`:
+
+```json
+{
+  "data": {
+    "deviceTypes": [...],
+    "unitScales": {
+      "Wh": [
+        { "id": 1, "symbol": "Wh", "label": "Wattora", "factor": 1, "minValue": 0, "displayOrder": 1, "isActive": true },
+        { "id": 2, "symbol": "kWh", "label": "Kilowattora", "factor": 1000, "minValue": 1000, "displayOrder": 2, "isActive": true }
+      ],
+      "W": [...]
+    }
+  }
+}
+```
+
+El frontend cachea este objeto al iniciar y usa `channel.unit` como clave para obtener las escalas correspondientes.
+
+---
+
 ## Códigos de Error
 
 | Código | Cuándo | Body |

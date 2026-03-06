@@ -17,6 +17,7 @@ import DeviceLicense from './DeviceLicense.js';
 import DeviceLicenseTranslation from './DeviceLicenseTranslation.js';
 import DeviceValidityPeriod from './DeviceValidityPeriod.js';
 import DeviceValidityPeriodTranslation from './DeviceValidityPeriodTranslation.js';
+import UnitScale from './UnitScale.js';
 
 export {
     DeviceType,
@@ -32,7 +33,8 @@ export {
     DeviceLicense,
     DeviceLicenseTranslation,
     DeviceValidityPeriod,
-    DeviceValidityPeriodTranslation
+    DeviceValidityPeriodTranslation,
+    UnitScale
 };
 
 export default {
@@ -49,5 +51,6 @@ export default {
     DeviceLicense,
     DeviceLicenseTranslation,
     DeviceValidityPeriod,
-    DeviceValidityPeriodTranslation
+    DeviceValidityPeriodTranslation,
+    UnitScale
 };

@@ -104,4 +104,15 @@ router.post('/validity-periods', authenticate, requireRole(['system-admin']), co
 router.put('/validity-periods/:id', authenticate, requireRole(['system-admin']), controller.updateDeviceValidityPeriod);
 router.delete('/validity-periods/:id', authenticate, requireRole(['system-admin']), controller.deleteDeviceValidityPeriod);
 
+// ============================================
+// UNIT SCALES
+// ============================================
+
+router.get('/unit-scales', authenticate, controller.listUnitScales);
+router.get('/unit-scales/by-unit/:baseUnit', authenticate, controller.listUnitScalesByBaseUnit);
+router.get('/unit-scales/:id', authenticate, controller.getUnitScale);
+router.post('/unit-scales', authenticate, requireRole(['system-admin']), controller.createUnitScale);
+router.put('/unit-scales/:id', authenticate, requireRole(['system-admin']), controller.updateUnitScale);
+router.delete('/unit-scales/:id', authenticate, requireRole(['system-admin']), controller.deleteUnitScale);
+
 export default router;

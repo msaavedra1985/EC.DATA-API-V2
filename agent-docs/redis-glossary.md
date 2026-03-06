@@ -364,7 +364,7 @@
 ### `ec:device_metadata:all:{lang}`
 - **TTL**: 3600s (1 hora)
 - **Tipo**: String (JSON)
-- **Descripción**: Cache completo de todo el metadata de dispositivos (types, brands, models, servers, networks, licenses, validity periods, measurement types, variables).
+- **Descripción**: Cache completo de todo el metadata de dispositivos (types, brands, models, servers, networks, licenses, validity periods, measurement types, variables, unitScales). `unitScales` viene agrupado por `baseUnit`: `{ "Wh": [...], "W": [...] }`. No hay key separada para unit scales — se invalida junto con el resto vía `invalidateCache()`.
 - **Archivo fuente**: `src/modules/device-metadata/services.js`
 - **Ejemplo de key**: `ec:device_metadata:all:es` → en Redis real: `DEV:EC:ec:device_metadata:all:es`
 - **Invalidación**: `invalidateCache(lang)` — al crear, actualizar o eliminar cualquier catálogo de metadata. Sin argumento elimina `ec:device_metadata:all:es` y `ec:device_metadata:all:en`.
