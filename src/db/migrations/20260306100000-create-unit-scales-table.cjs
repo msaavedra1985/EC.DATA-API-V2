@@ -60,14 +60,13 @@ module.exports = {
             }
         });
 
-        await queryInterface.addIndex('unit_scales', ['base_unit', 'symbol'], {
-            unique: true,
-            name: 'unit_scales_base_unit_symbol_idx'
-        });
+        await queryInterface.sequelize.query(
+            `CREATE UNIQUE INDEX IF NOT EXISTS unit_scales_base_unit_symbol_idx ON unit_scales (base_unit, symbol)`
+        );
 
-        await queryInterface.addIndex('unit_scales', ['base_unit'], {
-            name: 'unit_scales_base_unit_idx'
-        });
+        await queryInterface.sequelize.query(
+            `CREATE INDEX IF NOT EXISTS unit_scales_base_unit_idx ON unit_scales (base_unit)`
+        );
     },
 
     async down(queryInterface) {
