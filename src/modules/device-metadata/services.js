@@ -75,6 +75,28 @@ const toDTOWithTranslations = (model) => {
 };
 
 /**
+ * Agrupar escalas por baseUnit: { Wh: [...], W: [...] }
+ */
+const groupUnitScales = (scales) => {
+    const grouped = {};
+    for (const scale of scales) {
+        const json = scale.toJSON ? scale.toJSON() : scale;
+        const key = json.baseUnit;
+        if (!grouped[key]) grouped[key] = [];
+        grouped[key].push({
+            id: json.id,
+            symbol: json.symbol,
+            label: json.label,
+            factor: Number(json.factor),
+            minValue: Number(json.minValue),
+            displayOrder: json.displayOrder,
+            isActive: json.isActive
+        });
+    }
+    return grouped;
+};
+
+/**
  * Transformar MeasurementType a DTO
  */
 const toMeasurementTypeDTO = (model) => {
@@ -128,7 +150,7 @@ export const getAllMetadata = async (lang = 'es') => {
         return cached;
     }
 
-    const [types, brands, models, servers, networks, licenses, validityPeriods, measurementTypes, variables] = await Promise.all([
+    const [types, brands, models, servers, networks, licenses, validityPeriods, measurementTypes, variables, unitScalesRaw] = await Promise.all([
         repository.getDeviceTypes(lang),
         repository.getDeviceBrands(lang),
         repository.getDeviceModels(lang),
@@ -137,8 +159,11 @@ export const getAllMetadata = async (lang = 'es') => {
         repository.getDeviceLicenses(lang),
         repository.getDeviceValidityPeriods(lang),
         repository.getMeasurementTypes(lang),
-        repository.getVariables(lang)
+        repository.getVariables(lang),
+        repository.getAllUnitScales()
     ]);
+
+    const unitScales = groupUnitScales(unitScalesRaw);
 
     const metadata = {
         deviceTypes: types.map(toDTO),
@@ -149,7 +174,8 @@ export const getAllMetadata = async (lang = 'es') => {
         licenses: licenses.map(toDTO),
         validityPeriods: validityPeriods.map(toDTO),
         measurementTypes: measurementTypes.map(toMeasurementTypeDTO),
-        variables: variables.map(toVariableDTO)
+        variables: variables.map(toVariableDTO),
+        unitScales
     };
 
     await setCache(cacheKey, metadata, CACHE_TTL);
@@ -175,9 +201,9 @@ export const invalidateCache = async (lang = null) => {
 // DEVICE TYPES CRUD
 // ============================================
 
-export const listDeviceTypes = async (lang = 'es', includeInactive = false) => {
-    const types = await repository.getDeviceTypes(lang, includeInactive);
-    return types.map(toDTO);
+export const listDeviceTypes = async (lang = 'es', includeInactive = false, withTranslations = false) => {
+    const types = await repository.getDeviceTypes(lang, includeInactive, withTranslations);
+    return types.map(withTranslations ? toDTOWithTranslations : toDTO);
 };
 
 export const getDeviceTypeById = async (id) => {
@@ -200,6 +226,15 @@ export const updateDeviceType = async (id, data, translations) => {
 };
 
 export const deleteDeviceType = async (id, hard = false) => {
+    if (hard) {
+        const usage = await repository.getCatalogUsage('deviceTypes', id, 5);
+        if (usage.totalCount > 0) {
+            const error = new Error(`No se puede eliminar: ${usage.totalCount} dependencia(s) activa(s)`);
+            error.code = 'DEPENDENCY_CONFLICT';
+            error.usage = usage;
+            throw error;
+        }
+    }
     const result = await repository.deleteDeviceType(id, hard);
     if (!result) return null;
     await invalidateCache();
@@ -210,9 +245,9 @@ export const deleteDeviceType = async (id, hard = false) => {
 // DEVICE BRANDS CRUD
 // ============================================
 
-export const listDeviceBrands = async (lang = 'es', includeInactive = false) => {
-    const brands = await repository.getDeviceBrands(lang, includeInactive);
-    return brands.map(toDTO);
+export const listDeviceBrands = async (lang = 'es', includeInactive = false, withTranslations = false) => {
+    const brands = await repository.getDeviceBrands(lang, includeInactive, withTranslations);
+    return brands.map(withTranslations ? toDTOWithTranslations : toDTO);
 };
 
 export const getDeviceBrandById = async (id) => {
@@ -235,6 +270,15 @@ export const updateDeviceBrand = async (id, data, translations) => {
 };
 
 export const deleteDeviceBrand = async (id, hard = false) => {
+    if (hard) {
+        const usage = await repository.getCatalogUsage('deviceBrands', id, 5);
+        if (usage.totalCount > 0) {
+            const error = new Error(`No se puede eliminar: ${usage.totalCount} dependencia(s) activa(s)`);
+            error.code = 'DEPENDENCY_CONFLICT';
+            error.usage = usage;
+            throw error;
+        }
+    }
     const result = await repository.deleteDeviceBrand(id, hard);
     if (!result) return null;
     await invalidateCache();
@@ -245,9 +289,9 @@ export const deleteDeviceBrand = async (id, hard = false) => {
 // DEVICE MODELS CRUD
 // ============================================
 
-export const listDeviceModels = async (lang = 'es', includeInactive = false, brandId = null) => {
-    const models = await repository.getDeviceModels(lang, includeInactive, brandId);
-    return models.map(toDTO);
+export const listDeviceModels = async (lang = 'es', includeInactive = false, brandId = null, withTranslations = false) => {
+    const models = await repository.getDeviceModels(lang, includeInactive, brandId, withTranslations);
+    return models.map(withTranslations ? toDTOWithTranslations : toDTO);
 };
 
 export const getDeviceModelById = async (id) => {
@@ -270,6 +314,15 @@ export const updateDeviceModel = async (id, data, translations) => {
 };
 
 export const deleteDeviceModel = async (id, hard = false) => {
+    if (hard) {
+        const usage = await repository.getCatalogUsage('deviceModels', id, 5);
+        if (usage.totalCount > 0) {
+            const error = new Error(`No se puede eliminar: ${usage.totalCount} dependencia(s) activa(s)`);
+            error.code = 'DEPENDENCY_CONFLICT';
+            error.usage = usage;
+            throw error;
+        }
+    }
     const result = await repository.deleteDeviceModel(id, hard);
     if (!result) return null;
     await invalidateCache();
@@ -280,9 +333,9 @@ export const deleteDeviceModel = async (id, hard = false) => {
 // DEVICE SERVERS CRUD
 // ============================================
 
-export const listDeviceServers = async (lang = 'es', includeInactive = false) => {
-    const servers = await repository.getDeviceServers(lang, includeInactive);
-    return servers.map(toDTO);
+export const listDeviceServers = async (lang = 'es', includeInactive = false, withTranslations = false) => {
+    const servers = await repository.getDeviceServers(lang, includeInactive, withTranslations);
+    return servers.map(withTranslations ? toDTOWithTranslations : toDTO);
 };
 
 export const getDeviceServerById = async (id) => {
@@ -305,6 +358,15 @@ export const updateDeviceServer = async (id, data, translations) => {
 };
 
 export const deleteDeviceServer = async (id, hard = false) => {
+    if (hard) {
+        const usage = await repository.getCatalogUsage('deviceServers', id, 5);
+        if (usage.totalCount > 0) {
+            const error = new Error(`No se puede eliminar: ${usage.totalCount} dependencia(s) activa(s)`);
+            error.code = 'DEPENDENCY_CONFLICT';
+            error.usage = usage;
+            throw error;
+        }
+    }
     const result = await repository.deleteDeviceServer(id, hard);
     if (!result) return null;
     await invalidateCache();
@@ -315,9 +377,9 @@ export const deleteDeviceServer = async (id, hard = false) => {
 // DEVICE NETWORKS CRUD
 // ============================================
 
-export const listDeviceNetworks = async (lang = 'es', includeInactive = false) => {
-    const networks = await repository.getDeviceNetworks(lang, includeInactive);
-    return networks.map(toDTO);
+export const listDeviceNetworks = async (lang = 'es', includeInactive = false, withTranslations = false) => {
+    const networks = await repository.getDeviceNetworks(lang, includeInactive, withTranslations);
+    return networks.map(withTranslations ? toDTOWithTranslations : toDTO);
 };
 
 export const getDeviceNetworkById = async (id) => {
@@ -340,6 +402,15 @@ export const updateDeviceNetwork = async (id, data, translations) => {
 };
 
 export const deleteDeviceNetwork = async (id, hard = false) => {
+    if (hard) {
+        const usage = await repository.getCatalogUsage('deviceNetworks', id, 5);
+        if (usage.totalCount > 0) {
+            const error = new Error(`No se puede eliminar: ${usage.totalCount} dependencia(s) activa(s)`);
+            error.code = 'DEPENDENCY_CONFLICT';
+            error.usage = usage;
+            throw error;
+        }
+    }
     const result = await repository.deleteDeviceNetwork(id, hard);
     if (!result) return null;
     await invalidateCache();
@@ -350,9 +421,9 @@ export const deleteDeviceNetwork = async (id, hard = false) => {
 // DEVICE LICENSES CRUD
 // ============================================
 
-export const listDeviceLicenses = async (lang = 'es', includeInactive = false) => {
-    const licenses = await repository.getDeviceLicenses(lang, includeInactive);
-    return licenses.map(toDTO);
+export const listDeviceLicenses = async (lang = 'es', includeInactive = false, withTranslations = false) => {
+    const licenses = await repository.getDeviceLicenses(lang, includeInactive, withTranslations);
+    return licenses.map(withTranslations ? toDTOWithTranslations : toDTO);
 };
 
 export const getDeviceLicenseById = async (id) => {
@@ -375,6 +446,15 @@ export const updateDeviceLicense = async (id, data, translations) => {
 };
 
 export const deleteDeviceLicense = async (id, hard = false) => {
+    if (hard) {
+        const usage = await repository.getCatalogUsage('deviceLicenses', id, 5);
+        if (usage.totalCount > 0) {
+            const error = new Error(`No se puede eliminar: ${usage.totalCount} dependencia(s) activa(s)`);
+            error.code = 'DEPENDENCY_CONFLICT';
+            error.usage = usage;
+            throw error;
+        }
+    }
     const result = await repository.deleteDeviceLicense(id, hard);
     if (!result) return null;
     await invalidateCache();
@@ -385,9 +465,9 @@ export const deleteDeviceLicense = async (id, hard = false) => {
 // DEVICE VALIDITY PERIODS CRUD
 // ============================================
 
-export const listDeviceValidityPeriods = async (lang = 'es', includeInactive = false) => {
-    const periods = await repository.getDeviceValidityPeriods(lang, includeInactive);
-    return periods.map(toDTO);
+export const listDeviceValidityPeriods = async (lang = 'es', includeInactive = false, withTranslations = false) => {
+    const periods = await repository.getDeviceValidityPeriods(lang, includeInactive, withTranslations);
+    return periods.map(withTranslations ? toDTOWithTranslations : toDTO);
 };
 
 export const getDeviceValidityPeriodById = async (id) => {
@@ -410,7 +490,103 @@ export const updateDeviceValidityPeriod = async (id, data, translations) => {
 };
 
 export const deleteDeviceValidityPeriod = async (id, hard = false) => {
+    if (hard) {
+        const usage = await repository.getCatalogUsage('deviceValidityPeriods', id, 5);
+        if (usage.totalCount > 0) {
+            const error = new Error(`No se puede eliminar: ${usage.totalCount} dependencia(s) activa(s)`);
+            error.code = 'DEPENDENCY_CONFLICT';
+            error.usage = usage;
+            throw error;
+        }
+    }
     const result = await repository.deleteDeviceValidityPeriod(id, hard);
+    if (!result) return null;
+    await invalidateCache();
+    return true;
+};
+
+// ============================================
+// CATALOG USAGE (auditoría de dependencias)
+// ============================================
+
+export const getCatalogUsage = async (catalogKey, catalogId, limit = 50) => {
+    return repository.getCatalogUsage(catalogKey, catalogId, limit);
+};
+
+// ============================================
+// UNIT SCALES CRUD
+// ============================================
+
+export const listUnitScales = async (includeInactive = false) => {
+    const scales = await repository.getAllUnitScales(includeInactive);
+    return scales.map(s => {
+        const json = s.toJSON();
+        return {
+            id: json.id,
+            baseUnit: json.baseUnit,
+            symbol: json.symbol,
+            label: json.label,
+            factor: Number(json.factor),
+            minValue: Number(json.minValue),
+            displayOrder: json.displayOrder,
+            isActive: json.isActive
+        };
+    });
+};
+
+export const listUnitScalesByBaseUnit = async (baseUnit) => {
+    const scales = await repository.getUnitScalesByBaseUnit(baseUnit);
+    return scales.map(s => {
+        const json = s.toJSON();
+        return {
+            id: json.id,
+            baseUnit: json.baseUnit,
+            symbol: json.symbol,
+            label: json.label,
+            factor: Number(json.factor),
+            minValue: Number(json.minValue),
+            displayOrder: json.displayOrder,
+            isActive: json.isActive
+        };
+    });
+};
+
+export const getUnitScaleGrouped = async () => {
+    const scales = await repository.getAllUnitScales();
+    return groupUnitScales(scales);
+};
+
+export const getUnitScaleById = async (id) => {
+    const scale = await repository.findUnitScaleById(id);
+    if (!scale) return null;
+    const json = scale.toJSON();
+    return {
+        id: json.id,
+        baseUnit: json.baseUnit,
+        symbol: json.symbol,
+        label: json.label,
+        factor: Number(json.factor),
+        minValue: Number(json.minValue),
+        displayOrder: json.displayOrder,
+        isActive: json.isActive
+    };
+};
+
+export const createUnitScale = async (data) => {
+    const scale = await repository.createUnitScale(data);
+    await invalidateCache();
+    return getUnitScaleById(scale.id);
+};
+
+export const updateUnitScale = async (id, data) => {
+    const scale = await repository.updateUnitScale(id, data);
+    if (!scale) return null;
+    await invalidateCache();
+    return getUnitScaleById(id);
+};
+
+export const deleteUnitScale = async (id, hard = false) => {
+    const result = await repository.deleteUnitScale(id, hard);
     if (!result) return null;
     await invalidateCache();
     return true;

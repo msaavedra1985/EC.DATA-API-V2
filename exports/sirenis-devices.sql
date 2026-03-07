@@ -238,7 +238,7 @@ WHERE NOT EXISTS (SELECT 1 FROM devices WHERE id = '019c52d3-c116-71ea-b71c-7b9a
 INSERT INTO devices (id, human_id, public_code, uuid, organization_id, site_id, name, description, device_type_id, brand_id, model_id, server_id, network_id, license_id, validity_period_id, topic, status, firmware_version, serial_number, ip_address, mac_address, location_name, physical_location, electrical_location, latitude, longitude, city, timezone, installation_date, warranty_months, expiration_date, last_seen_at, metadata, is_active, created_at, updated_at)
 SELECT
     '019c52d3-c15f-7234-8a1c-b41244d0dfaa',
-    5,
+    5,1
     'DEV-HVT-WUW',
     '2d85da94-9a4f-4e81-a36c-fe655526fcf4',
     (SELECT id FROM organizations WHERE slug = 'sirenis'),

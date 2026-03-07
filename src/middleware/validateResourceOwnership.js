@@ -93,12 +93,12 @@ export const validateResourceOwnership = (options) => {
             }
 
             // Error 404: Recurso soft-deleted
-            if (checkSoftDelete && resource.deleted_at) {
+            if (checkSoftDelete && resource.deletedAt) {
                 ownershipLogger.debug({
                     userId: user.userId,
                     resourceId,
                     resourceName,
-                    deletedAt: resource.deleted_at
+                    deletedAt: resource.deletedAt
                 }, 'Resource is soft-deleted');
 
                 return errorResponse(res, {
@@ -108,8 +108,8 @@ export const validateResourceOwnership = (options) => {
                 });
             }
 
-            // Verificar que el recurso tiene organization_id
-            const resourceOrgId = resource.organization_id;
+            // Verificar que el recurso tiene organizationId
+            const resourceOrgId = resource.organizationId;
 
             if (!resourceOrgId) {
                 // Recurso sin organización (error de datos)

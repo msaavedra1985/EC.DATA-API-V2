@@ -26,18 +26,18 @@ export const getUserAccessibleOrganizations = async (user, activeOnly = true) =>
     try {
         // 1. system-admin: acceso a TODO
         if (user.role?.name === 'system-admin') {
-            const where = activeOnly ? { is_active: true } : {};
+            const where = activeOnly ? { isActive: true } : {};
             const allOrgs = await Organization.findAll({ where });
             return allOrgs.map(org => org.id);
         }
 
         // 2. Obtener membresías del usuario
         const memberships = await UserOrganization.findAll({
-            where: { user_id: user.id },
+            where: { userId: user.id },
             include: [{
                 model: Organization,
                 as: 'organization',
-                where: activeOnly ? { is_active: true } : undefined
+                where: activeOnly ? { isActive: true } : undefined
             }]
         });
 
@@ -50,8 +50,8 @@ export const getUserAccessibleOrganizations = async (user, activeOnly = true) =>
 
         // 3. Procesar cada membresía
         for (const membership of memberships) {
-            const orgId = membership.organization_id;
-            const roleInOrg = membership.role_in_org;
+            const orgId = membership.organizationId;
+            const roleInOrg = membership.roleInOrg;
 
             // Siempre agregar la org donde es miembro
             accessibleOrgIds.add(orgId);
@@ -107,12 +107,12 @@ export const isOrganizationAdmin = async (user, organizationId) => {
         // Verificar si tiene role_in_org='admin' para esa organización
         const membership = await UserOrganization.findOne({
             where: {
-                user_id: user.id,
-                organization_id: organizationId
+                userId: user.id,
+                organizationId: organizationId
             }
         });
 
-        return membership?.role_in_org === 'admin';
+        return membership?.roleInOrg === 'admin';
     } catch (error) {
         orgLogger.error({ err: error, userId: user?.id, organizationId }, 'Error checking if user is org admin');
         throw error;
@@ -154,13 +154,13 @@ export const getPermissionLevel = async (user, organizationId) => {
         // Buscar membresía
         const membership = await UserOrganization.findOne({
             where: {
-                user_id: user.id,
-                organization_id: organizationId
+                userId: user.id,
+                organizationId: organizationId
             }
         });
 
         if (!membership) {
-            // Verificar si tiene acceso indirecto (padre con role_in_org='admin')
+            // Verificar si tiene acceso indirecto (padre con roleInOrg='admin')
             const accessibleOrgIds = await getUserAccessibleOrganizations(user, false);
             if (accessibleOrgIds.includes(organizationId)) {
                 return { hasAccess: true, level: 'inherited-admin' };
@@ -171,7 +171,7 @@ export const getPermissionLevel = async (user, organizationId) => {
 
         return {
             hasAccess: true,
-            level: membership.role_in_org // 'admin' | 'member' | 'viewer'
+            level: membership.roleInOrg // 'admin' | 'member' | 'viewer'
         };
     } catch (error) {
         orgLogger.error({ err: error, userId: user?.id, organizationId }, 'Error getting permission level');
@@ -204,7 +204,7 @@ export const getUserAccessibleRoots = async (user, activeOnly = true) => {
 
         // Filtrar solo las raíz (parent_id = null) o cuyo padre NO esté en accessibleOrgIds
         const roots = organizations.filter(org => {
-            return !org.parent_id || !accessibleOrgIds.includes(org.parent_id);
+            return !org.parentId || !accessibleOrgIds.includes(org.parentId);
         });
 
         return roots;

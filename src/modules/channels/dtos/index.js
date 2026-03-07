@@ -143,6 +143,10 @@ export const getChannelsSchema = z.object({
         deviceId: z
             .string()
             .optional(),
+        device_id: z
+            .string()
+            .optional()
+            .describe('Alias snake_case de deviceId — acepta ambos formatos'),
         organizationId: z
             .string()
             .optional(),
@@ -198,6 +202,12 @@ export const getChannelsSchema = z.object({
             .optional()
             .default('0')
     }).transform((data) => {
+        // Normalizar alias snake_case: device_id → deviceId
+        if (data.device_id && !data.deviceId) {
+            data.deviceId = data.device_id;
+        }
+        delete data.device_id;
+
         if (data.page !== undefined && data.page >= 1) {
             const limit = data.limit || 20;
             return { ...data, offset: (data.page - 1) * limit };

@@ -112,6 +112,24 @@ const Variable = sequelize.define('Variable', {
         defaultValue: null,
         comment: 'Key exacta como llega en el payload MQTT (ej: PF, E, P). NULL si no aplica para realtime'
     },
+    decimalPlaces: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        defaultValue: 2,
+        comment: 'Cantidad de decimales para formatear el valor en UI (ej: 2 para 1.23 kWh)'
+    },
+    icon: {
+        type: DataTypes.STRING(50),
+        allowNull: true,
+        defaultValue: null,
+        comment: 'Nombre del ícono para representar la variable (lucide, heroicons, etc.)'
+    },
+    color: {
+        type: DataTypes.STRING(7),
+        allowNull: true,
+        defaultValue: null,
+        comment: 'Color hex para la variable en gráficos y UI (ej: #3B82F6)'
+    },
     isActive: {
         type: DataTypes.BOOLEAN,
         allowNull: false,
