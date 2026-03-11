@@ -21,6 +21,13 @@ import UserOrganization from '../modules/auth/models/UserOrganization.js';
 // Modelos con dependencia a Users
 import RefreshToken from '../modules/auth/models/RefreshToken.js';
 
+// Modelos del módulo Schedules (dependencias: Organizations)
+import Schedule from '../modules/schedules/models/Schedule.js';
+import ScheduleException from '../modules/schedules/models/ScheduleException.js';
+import Validity from '../modules/schedules/models/Validity.js';
+import TimeProfile from '../modules/schedules/models/TimeProfile.js';
+import TimeRange from '../modules/schedules/models/TimeRange.js';
+
 // Modelos del módulo Dashboards (dependencias: Organizations, Users)
 import Dashboard from '../modules/dashboards/models/Dashboard.js';
 import DashboardPage from '../modules/dashboards/models/DashboardPage.js';
@@ -96,7 +103,12 @@ export const models = [
     DashboardGroup,
     DashboardGroupItem,
     DashboardCollaborator,
-    DashboardGroupCollaborator
+    DashboardGroupCollaborator,
+    Schedule,
+    ScheduleException,
+    Validity,
+    TimeProfile,
+    TimeRange
 ];
 
 export default {
@@ -115,5 +127,10 @@ export default {
     DashboardGroup,
     DashboardGroupItem,
     DashboardCollaborator,
-    DashboardGroupCollaborator
+    DashboardGroupCollaborator,
+    Schedule,
+    ScheduleException,
+    Validity,
+    TimeProfile,
+    TimeRange
 };

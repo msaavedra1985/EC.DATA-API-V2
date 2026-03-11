@@ -1,0 +1,279 @@
+paths:
+  /api/v1/schedules:
+    post:
+      summary: Crear un schedule completo
+      tags: [Schedules]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateScheduleRequest'
+            example:
+              name: "Horario Comercial"
+              description: "Base para facturación"
+              validities:
+                - validFrom: null
+                  validTo: null
+                  timeProfiles:
+                    - name: "Turno Mañana"
+                      grid:
+                        "1":
+                          - { from: "08:00", to: "12:00" }
+                          - { from: "13:00", to: "18:00" }
+                        "7":
+                          - { from: "00:00", to: "24:00" }
+              exceptions:
+                - date: "2000-01-01"
+                  name: "Año Nuevo"
+                  type: "closed"
+                  repeatYearly: true
+      responses:
+        201:
+          description: Schedule creado exitosamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean, example: true }
+                  data:
+                    $ref: '#/components/schemas/ScheduleResponse'
+        400:
+          description: Error de validación de schema
+        422:
+          description: Error de reglas de negocio (solapamiento de vigencias o rangos)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean, example: false }
+                  error:
+                    type: object
+                    properties:
+                      code: { type: string, example: SCHEDULE_VALIDATION_ERROR }
+                      message: { type: string }
+                      details: { type: array, items: { type: string } }
+        401:
+          description: No autenticado
+        403:
+          description: Rol insuficiente (requiere org-admin o system-admin)
+
+    get:
+      summary: Listar schedules de la organización activa
+      tags: [Schedules]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          schema: { type: integer, default: 20, minimum: 1, maximum: 100 }
+        - name: offset
+          in: query
+          schema: { type: integer, default: 0, minimum: 0 }
+      responses:
+        200:
+          description: Lista de schedules
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean, example: true }
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ScheduleResponse'
+                  meta:
+                    type: object
+                    properties:
+                      total: { type: integer }
+                      limit: { type: integer }
+                      offset: { type: integer }
+        401:
+          description: No autenticado
+
+  /api/v1/schedules/{id}:
+    get:
+      summary: Obtener un schedule por publicCode
+      tags: [Schedules]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+          description: Public code del schedule (ej. SCH-4X9-R2T)
+      responses:
+        200:
+          description: Schedule encontrado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean, example: true }
+                  data:
+                    $ref: '#/components/schemas/ScheduleResponse'
+        404:
+          description: Schedule no encontrado
+        401:
+          description: No autenticado
+
+    delete:
+      summary: Eliminar un schedule (soft delete)
+      tags: [Schedules]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+          description: Public code del schedule
+      responses:
+        200:
+          description: Schedule eliminado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean, example: true }
+                  data:
+                    type: object
+                    properties:
+                      deleted: { type: boolean, example: true }
+        404:
+          description: Schedule no encontrado
+        401:
+          description: No autenticado
+        403:
+          description: Rol insuficiente
+
+components:
+  schemas:
+    TimeRangeInput:
+      type: object
+      required: [from, to]
+      properties:
+        from:
+          type: string
+          pattern: '^([01]\d|2[0-4]):[0-5]\d$'
+          example: "08:00"
+          description: Hora de inicio HH:mm
+        to:
+          type: string
+          pattern: '^([01]\d|2[0-4]):[0-5]\d$'
+          example: "12:00"
+          description: Hora de fin HH:mm (24:00 es válido)
+
+    TimeProfileInput:
+      type: object
+      required: [name, grid]
+      properties:
+        name:
+          type: string
+          example: "Turno Mañana"
+        grid:
+          type: object
+          description: "Keys = día ISO 8601 (1=Lunes...7=Domingo), values = array de rangos"
+          additionalProperties:
+            type: array
+            items:
+              $ref: '#/components/schemas/TimeRangeInput'
+
+    ValidityInput:
+      type: object
+      required: [timeProfiles]
+      properties:
+        validFrom:
+          type: string
+          format: date
+          nullable: true
+          example: null
+          description: "Inicio de vigencia YYYY-MM-DD. null = desde siempre"
+        validTo:
+          type: string
+          format: date
+          nullable: true
+          example: null
+          description: "Fin de vigencia YYYY-MM-DD. null = sin vencimiento"
+        timeProfiles:
+          type: array
+          items:
+            $ref: '#/components/schemas/TimeProfileInput'
+          minItems: 1
+
+    ExceptionInput:
+      type: object
+      required: [date, name]
+      properties:
+        date:
+          type: string
+          format: date
+          example: "2000-01-01"
+        name:
+          type: string
+          example: "Año Nuevo"
+        type:
+          type: string
+          enum: [closed, special]
+          default: closed
+        repeatYearly:
+          type: boolean
+          default: false
+
+    CreateScheduleRequest:
+      type: object
+      required: [name, validities]
+      properties:
+        name:
+          type: string
+          example: "Horario Comercial"
+        description:
+          type: string
+          nullable: true
+          example: "Base para facturación"
+        validities:
+          type: array
+          items:
+            $ref: '#/components/schemas/ValidityInput'
+          minItems: 1
+        exceptions:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExceptionInput'
+          default: []
+
+    ScheduleResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "SCH-4X9-R2T"
+          description: Public code del schedule (nunca el UUID interno)
+        name:
+          type: string
+          example: "Horario Comercial"
+        description:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        validities:
+          type: array
+          items:
+            $ref: '#/components/schemas/ValidityInput'
+        exceptions:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExceptionInput'

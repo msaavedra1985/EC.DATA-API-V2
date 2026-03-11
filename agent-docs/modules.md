@@ -20,6 +20,7 @@
 | error-logs | `src/modules/error-logs/` | Logging errores frontend | [endpoints/error-logs.md](endpoints/error-logs.md) |
 | dashboards | `src/modules/dashboards/` | Dashboards & Analytics multipágina | [endpoints/dashboards.md](endpoints/dashboards.md) |
 | realtime | `src/modules/realtime/` | WebSocket + MQTT para telemetría en tiempo real | — |
+| schedules | `src/modules/schedules/` | Motor de Horarios para facturación y analítica | `agent-docs/endpoints/schedules.md` |
 
 ## Archivos Clave por Módulo
 

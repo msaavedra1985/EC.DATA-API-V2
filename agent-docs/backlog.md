@@ -173,3 +173,11 @@
   - Repository/Services/Routes con CRUD completo
   - Documentación: agent-docs/endpoints/asset-categories.md
   - Seed: data/seed/seed-asset-categories.js
+
+
+## Módulo Schedules — ✅ COMPLETADO 2026-03-11
+- Implementación completa: 5 modelos, asociaciones, DTOs, validator (Reglas A+B), mapper, repository, services, routes
+- Migración: 20260311000000-create-schedules-tables.cjs (5 tablas)
+- Swagger: src/docs/swagger/schedules.yaml
+- Endpoints: POST GET-list GET-detail DELETE (soft delete)
+- Docs: agent-docs/endpoints/schedules.md

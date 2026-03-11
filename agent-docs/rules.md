@@ -213,3 +213,4 @@ paths:
 | realtime | `src/docs/swagger/realtime.yaml` |
 | asset-categories | `src/docs/swagger/asset-categories.yaml` |
 | seed | `src/docs/swagger/seed.yaml` |
+| schedules | `src/docs/swagger/schedules.yaml` |
