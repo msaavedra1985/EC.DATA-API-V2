@@ -25,93 +25,8 @@ import { authLogger } from '../../utils/logger.js';
 
 const router = express.Router();
 
-/**
- * @swagger
- * /auth/register:
- *   post:
- *     summary: Registrar un nuevo usuario
- *     description: Crea un nuevo usuario en el sistema y devuelve tokens de autenticación
- *     tags: [Auth]
- *     security: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - email
- *               - password
- *               - firstName
- *               - lastName
- *             properties:
- *               email:
- *                 type: string
- *                 format: email
- *                 example: user@example.com
- *               password:
- *                 type: string
- *                 minLength: 8
- *                 description: Debe contener al menos una mayúscula, una minúscula y un número
- *                 example: SecurePass123!
- *               firstName:
- *                 type: string
- *                 minLength: 2
- *                 example: Juan
- *               lastName:
- *                 type: string
- *                 minLength: 2
- *                 example: Pérez
- *               organizationId:
- *                 type: string
- *                 format: uuid
- *                 nullable: true
- *                 description: UUID de la organización (opcional)
- *     responses:
- *       201:
- *         description: Usuario registrado exitosamente
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 ok:
- *                   type: boolean
- *                   example: true
- *                 data:
- *                   type: object
- *                   properties:
- *                     user:
- *                       $ref: '#/components/schemas/User'
- *                     accessToken:
- *                       type: string
- *                     refreshToken:
- *                       type: string
- *                     expiresIn:
- *                       type: string
- *                       example: 15m
- *                     tokenType:
- *                       type: string
- *                       example: Bearer
- *                 meta:
- *                   type: object
- *                   properties:
- *                     timestamp:
- *                       type: string
- *                       format: date-time
- *       400:
- *         description: Datos de entrada inválidos
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
- *       409:
- *         description: El email ya está registrado
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
- */
+
+// 📄 Swagger: src/docs/swagger/auth.yaml -> POST /register
 router.post('/register', validate(registerSchema), async (req, res, next) => {
     try {
         const { email, password, firstName, lastName, organizationId } = req.body;
@@ -136,86 +51,8 @@ router.post('/register', validate(registerSchema), async (req, res, next) => {
     }
 });
 
-/**
- * @swagger
- * /auth/login:
- *   post:
- *     summary: Iniciar sesión
- *     description: Autentica un usuario y devuelve tokens JWT (access + refresh). Opcionalmente acepta 'rememberMe' para extender la duración de la sesión de 14 días (normal) a 90 días (extendida)
- *     tags: [Auth]
- *     security: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - email
- *               - password
- *             properties:
- *               email:
- *                 type: string
- *                 format: email
- *                 example: user@example.com
- *                 description: Email del usuario
- *               password:
- *                 type: string
- *                 example: SecurePass123!
- *                 description: Contraseña del usuario
- *               rememberMe:
- *                 type: boolean
- *                 default: false
- *                 example: true
- *                 description: Si es true, la sesión dura 90 días (refresh token) con 30 días de idle timeout. Si es false (por defecto), la sesión dura 14 días con 7 días de idle timeout
- *               organizationId:
- *                 type: string
- *                 nullable: true
- *                 example: ORG-abc123-1
- *                 description: Public code (o UUID) de la organización donde el usuario quiere iniciar sesión. Útil para re-login cuando la sesión expiró y el frontend recuerda la org activa. Si no se envía o es inválido, se usa la organización primaria del usuario como fallback
- *     responses:
- *       200:
- *         description: Login exitoso
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 ok:
- *                   type: boolean
- *                   example: true
- *                 data:
- *                   type: object
- *                   properties:
- *                     user:
- *                       $ref: '#/components/schemas/User'
- *                     accessToken:
- *                       type: string
- *                       description: Token JWT de acceso (válido por 15 minutos)
- *                     refreshToken:
- *                       type: string
- *                       description: Token JWT de refresco (válido por 14 o 90 días según rememberMe)
- *                     expiresIn:
- *                       type: string
- *                       example: 15m
- *                       description: Duración del access token
- *                     tokenType:
- *                       type: string
- *                       example: Bearer
- *                       description: Tipo de token para usar en el header Authorization
- *       400:
- *         description: Datos de entrada inválidos
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
- *       401:
- *         description: Credenciales incorrectas o usuario inactivo
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
- */
+
+// 📄 Swagger: src/docs/swagger/auth.yaml -> POST /login
 router.post('/login', loginRateLimitMiddleware, validate(loginSchema), async (req, res, next) => {
     try {
         const { identifier: rawIdentifier, email, password, rememberMe, captchaToken, organizationId } = req.body;
@@ -303,80 +140,8 @@ router.post('/login', loginRateLimitMiddleware, validate(loginSchema), async (re
     }
 });
 
-/**
- * @swagger
- * /auth/refresh:
- *   post:
- *     summary: Renovar access token
- *     description: Renueva el access token usando un refresh token válido. Implementa rotación automática (el refresh token viejo se invalida y se genera uno nuevo)
- *     tags: [Auth]
- *     security: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - refreshToken
- *             properties:
- *               refreshToken:
- *                 type: string
- *                 description: Refresh token JWT obtenido en login o refresh anterior
- *     responses:
- *       200:
- *         description: Tokens renovados exitosamente
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 ok:
- *                   type: boolean
- *                   example: true
- *                 data:
- *                   type: object
- *                   properties:
- *                     accessToken:
- *                       type: string
- *                       description: Nuevo access token (15 min validez)
- *                     refreshToken:
- *                       type: string
- *                       description: Nuevo refresh token (14 días validez)
- *                     expiresIn:
- *                       type: string
- *                       example: 15m
- *                     tokenType:
- *                       type: string
- *                       example: Bearer
- *       400:
- *         description: Refresh token inválido o mal formado
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
- *       401:
- *         description: Refresh token expirado, revocado, o detección de robo (todas las sesiones cerradas)
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
- *             examples:
- *               expired:
- *                 value:
- *                   ok: false
- *                   error:
- *                     message: Refresh token expirado
- *                     code: REFRESH_TOKEN_EXPIRED
- *                     status: 401
- *               theft_detected:
- *                 value:
- *                   ok: false
- *                   error:
- *                     message: Token revocado - todas las sesiones han sido cerradas por seguridad
- *                     code: TOKEN_REUSE_DETECTED
- *                     status: 401
- */
+
+// 📄 Swagger: src/docs/swagger/auth.yaml -> POST /refresh
 router.post('/refresh', validate(refreshTokenSchema), async (req, res, next) => {
     try {
         const { refreshToken } = req.body;
@@ -395,63 +160,8 @@ router.post('/refresh', validate(refreshTokenSchema), async (req, res, next) => 
     }
 });
 
-/**
- * @swagger
- * /auth/change-password:
- *   post:
- *     summary: Cambiar contraseña
- *     description: Cambia la contraseña del usuario autenticado. Auto-revoca TODOS los refresh tokens (cierra sesiones en todos los dispositivos por seguridad)
- *     tags: [Auth]
- *     security:
- *       - BearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - currentPassword
- *               - newPassword
- *             properties:
- *               currentPassword:
- *                 type: string
- *                 description: Contraseña actual del usuario
- *               newPassword:
- *                 type: string
- *                 minLength: 8
- *                 description: Nueva contraseña (debe contener mayúscula, minúscula y número)
- *                 example: NewSecure123!
- *     responses:
- *       200:
- *         description: Contraseña cambiada exitosamente
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 ok:
- *                   type: boolean
- *                   example: true
- *                 data:
- *                   type: object
- *                   properties:
- *                     message:
- *                       type: string
- *                       example: Password cambiado exitosamente
- *       400:
- *         description: Datos de entrada inválidos
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
- *       401:
- *         description: No autenticado o contraseña actual incorrecta
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
- */
+
+// 📄 Swagger: src/docs/swagger/auth.yaml -> POST /change-password
 router.post('/change-password', authenticate, validate(changePasswordSchema), async (req, res, next) => {
     try {
         const userId = req.user.userId;
@@ -467,44 +177,8 @@ router.post('/change-password', authenticate, validate(changePasswordSchema), as
     }
 });
 
-/**
- * @swagger
- * /auth/me:
- *   get:
- *     summary: Obtener perfil del usuario autenticado
- *     description: Devuelve la información completa del usuario actual
- *     tags: [Auth]
- *     security:
- *       - BearerAuth: []
- *     responses:
- *       200:
- *         description: Información del usuario obtenida exitosamente
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 ok:
- *                   type: boolean
- *                   example: true
- *                 data:
- *                   type: object
- *                   properties:
- *                     user:
- *                       $ref: '#/components/schemas/User'
- *       401:
- *         description: No autenticado o token inválido
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
- *       404:
- *         description: Usuario no encontrado
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
- */
+
+// 📄 Swagger: src/docs/swagger/auth.yaml -> GET /me
 router.get('/me', authenticate, async (req, res, next) => {
     try {
         const userId = req.user.userId;
@@ -625,71 +299,8 @@ router.get('/me', authenticate, async (req, res, next) => {
     }
 });
 
-/**
- * @swagger
- * /auth/logout:
- *   post:
- *     summary: Cerrar sesión actual
- *     description: |
- *       Cierra la sesión del usuario autenticado. Requiere el access token en el header Authorization.
- *       
- *       **Comportamiento:**
- *       - Si se envía `refreshToken` en el body: Solo cierra esa sesión específica
- *       - Si NO se envía `refreshToken`: Cierra TODAS las sesiones del usuario
- *       
- *       **Efectos:**
- *       - Revoca refresh token(s) de la base de datos
- *       - Incrementa `sessionVersion` (invalida todos los access tokens)
- *       - Limpia caché Redis del usuario
- *       
- *       **Ventana de invalidación:** El access token actual seguirá válido hasta 15 min (tiempo de expiración natural), pero no podrá renovarse.
- *     tags: [Auth]
- *     security:
- *       - BearerAuth: []
- *     requestBody:
- *       required: false
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               refreshToken:
- *                 type: string
- *                 description: Refresh token específico a revocar (opcional). Si no se envía, se revocan todos.
- *                 example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
- *     responses:
- *       200:
- *         description: Sesión cerrada exitosamente
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 ok:
- *                   type: boolean
- *                   example: true
- *                 data:
- *                   type: object
- *                   properties:
- *                     message:
- *                       type: string
- *                       example: Sesión cerrada exitosamente
- *                     sessionsClosed:
- *                       type: integer
- *                       description: Número de sesiones cerradas (solo si no se envió refreshToken)
- *       401:
- *         description: No autenticado, token inválido o refresh token no encontrado
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
- *       404:
- *         description: Refresh token no encontrado (si se especificó uno)
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
- */
+
+// 📄 Swagger: src/docs/swagger/auth.yaml -> POST /logout
 router.post('/logout', authenticate, async (req, res, next) => {
     try {
         const userId = req.user.userId;
@@ -716,43 +327,8 @@ router.post('/logout', authenticate, async (req, res, next) => {
     }
 });
 
-/**
- * @swagger
- * /auth/logout-all:
- *   post:
- *     summary: Cerrar todas las sesiones
- *     description: Revoca TODOS los refresh tokens del usuario autenticado (cierra sesión en todos los dispositivos)
- *     tags: [Auth]
- *     security:
- *       - BearerAuth: []
- *     responses:
- *       200:
- *         description: Todas las sesiones cerradas exitosamente
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 ok:
- *                   type: boolean
- *                   example: true
- *                 data:
- *                   type: object
- *                   properties:
- *                     message:
- *                       type: string
- *                       example: Todas las sesiones han sido cerradas
- *                     sessionsClosed:
- *                       type: integer
- *                       description: Número de sesiones que fueron revocadas
- *                       example: 3
- *       401:
- *         description: No autenticado o token inválido
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
- */
+
+// 📄 Swagger: src/docs/swagger/auth.yaml -> POST /logout-all
 router.post('/logout-all', authenticate, async (req, res, next) => {
     try {
         const userId = req.user.userId;
@@ -768,40 +344,8 @@ router.post('/logout-all', authenticate, async (req, res, next) => {
     }
 });
 
-/**
- * @swagger
- * /auth/sessions:
- *   get:
- *     summary: Listar sesiones activas
- *     description: Devuelve todas las sesiones activas del usuario autenticado con metadata (createdAt, lastUsedAt, userAgent, IP)
- *     tags: [Auth]
- *     security:
- *       - BearerAuth: []
- *     responses:
- *       200:
- *         description: Lista de sesiones obtenida exitosamente
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 ok:
- *                   type: boolean
- *                   example: true
- *                 data:
- *                   type: object
- *                   properties:
- *                     sessions:
- *                       type: array
- *                       items:
- *                         $ref: '#/components/schemas/Session'
- *       401:
- *         description: No autenticado o token inválido
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
- */
+
+// 📄 Swagger: src/docs/swagger/auth.yaml -> GET /sessions
 router.get('/sessions', authenticate, async (req, res, next) => {
     try {
         const userId = req.user.userId;
@@ -814,59 +358,8 @@ router.get('/sessions', authenticate, async (req, res, next) => {
     }
 });
 
-/**
- * @swagger
- * /auth/sessions/{sessionId}/revoke:
- *   post:
- *     summary: Revocar una sesión específica
- *     description: Revoca una sesión específica por su ID (útil para cerrar sesión en un dispositivo específico)
- *     tags: [Auth]
- *     security:
- *       - BearerAuth: []
- *     parameters:
- *       - in: path
- *         name: sessionId
- *         required: true
- *         schema:
- *           type: string
- *           format: uuid
- *         description: UUID de la sesión a revocar (refresh token ID)
- *     responses:
- *       200:
- *         description: Sesión revocada exitosamente
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 ok:
- *                   type: boolean
- *                   example: true
- *                 data:
- *                   type: object
- *                   properties:
- *                     message:
- *                       type: string
- *                       example: Sesión revocada exitosamente
- *       400:
- *         description: Session ID inválido
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
- *       401:
- *         description: No autenticado o token inválido
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
- *       404:
- *         description: Sesión no encontrada o no pertenece al usuario
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
- */
+
+// 📄 Swagger: src/docs/swagger/auth.yaml -> POST /sessions/:sessionId/revoke
 router.post('/sessions/:sessionId/revoke', authenticate, validate(revokeSessionSchema), async (req, res, next) => {
     try {
         const userId = req.user.userId;
@@ -882,40 +375,8 @@ router.post('/sessions/:sessionId/revoke', authenticate, validate(revokeSessionS
     }
 });
 
-/**
- * @swagger
- * /auth/admin-test:
- *   get:
- *     summary: Endpoint de prueba solo para administradores
- *     description: Endpoint protegido con requireRole() - solo accesible para system-admin y org-admin
- *     tags: [Auth]
- *     security:
- *       - BearerAuth: []
- *     responses:
- *       200:
- *         description: Acceso autorizado
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 ok:
- *                   type: boolean
- *                   example: true
- *                 data:
- *                   type: object
- *                   properties:
- *                     message:
- *                       type: string
- *                       example: Acceso autorizado - Eres un administrador
- *                     userRole:
- *                       type: string
- *                       example: system-admin
- *       401:
- *         description: No autenticado
- *       403:
- *         description: No autorizado - rol insuficiente
- */
+
+// 📄 Swagger: src/docs/swagger/auth.yaml -> GET /admin-test
 router.get('/admin-test', authenticate, requireRole(['system-admin', 'org-admin']), async (req, res, next) => {
     try {
         return successResponse(res, {
@@ -928,75 +389,8 @@ router.get('/admin-test', authenticate, requireRole(['system-admin', 'org-admin'
     }
 });
 
-/**
- * @swagger
- * /auth/organizations:
- *   get:
- *     summary: Obtener organizaciones disponibles del usuario
- *     description: Retorna todas las organizaciones a las que el usuario tiene acceso, incluyendo su organización primaria y scope organizacional
- *     tags: [Auth]
- *     security:
- *       - BearerAuth: []
- *     responses:
- *       200:
- *         description: Lista de organizaciones disponibles
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 ok:
- *                   type: boolean
- *                   example: true
- *                 data:
- *                   type: object
- *                   properties:
- *                     canAccessAll:
- *                       type: boolean
- *                       description: true si el usuario es system-admin y puede acceder a todas las organizaciones
- *                       example: false
- *                     userOrganizations:
- *                       type: array
- *                       description: Organizaciones donde el usuario es miembro
- *                       items:
- *                         type: object
- *                         properties:
- *                           publicCode:
- *                             type: string
- *                           slug:
- *                             type: string
- *                           name:
- *                             type: string
- *                           logoUrl:
- *                             type: string
- *                             nullable: true
- *                           isPrimary:
- *                             type: boolean
- *                           isActive:
- *                             type: boolean
- *                           parentPublicCode:
- *                             type: string
- *                             nullable: true
- *                           joinedAt:
- *                             type: string
- *                             format: date-time
- *                     totalAccessible:
- *                       type: integer
- *                       description: Total de organizaciones accesibles (incluye descendientes según rol)
- *                       example: 5
- *                 meta:
- *                   type: object
- *                   properties:
- *                     timestamp:
- *                       type: string
- *                       format: date-time
- *       401:
- *         description: No autenticado o token inválido
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
- */
+
+// 📄 Swagger: src/docs/swagger/auth.yaml -> GET /organizations
 router.get('/organizations', authenticate, async (req, res, next) => {
     try {
         const userId = req.user.userId;
@@ -1008,83 +402,8 @@ router.get('/organizations', authenticate, async (req, res, next) => {
     }
 });
 
-/**
- * @swagger
- * /auth/switch-org:
- *   post:
- *     summary: Cambiar organización activa del usuario
- *     description: Cambia la organización activa en el contexto de la sesión y genera nuevos tokens JWT con la nueva activeOrgId
- *     tags: [Auth]
- *     security:
- *       - BearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - organizationId
- *             properties:
- *               organizationId:
- *                 type: string
- *                 description: UUID o publicCode de la organización a la que se desea cambiar
- *                 example: 01234567-89ab-cdef-0123-456789abcdef
- *     responses:
- *       200:
- *         description: Organización cambiada exitosamente
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 ok:
- *                   type: boolean
- *                   example: true
- *                 data:
- *                   type: object
- *                   properties:
- *                     accessToken:
- *                       type: string
- *                       description: Nuevo access token JWT con activeOrgId actualizado
- *                     refreshToken:
- *                       type: string
- *                       description: Nuevo refresh token JWT
- *                     expiresIn:
- *                       type: string
- *                       example: 15m
- *                     tokenType:
- *                       type: string
- *                       example: Bearer
- *                     activeOrganizationId:
- *                       type: string
- *                       format: uuid
- *                       description: UUID de la nueva organización activa
- *                 meta:
- *                   type: object
- *                   properties:
- *                     timestamp:
- *                       type: string
- *                       format: date-time
- *       400:
- *         description: Datos de entrada inválidos
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
- *       401:
- *         description: No autenticado o token inválido
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
- *       403:
- *         description: Acceso denegado - El usuario no puede acceder a la organización especificada
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
- */
+
+// 📄 Swagger: src/docs/swagger/auth.yaml -> POST /switch-org
 router.post('/switch-org', authenticate, validate(switchOrgSchema), async (req, res, next) => {
     try {
         const userId = req.user.userId;
@@ -1186,44 +505,8 @@ router.post('/switch-org', authenticate, validate(switchOrgSchema), async (req, 
     }
 });
 
-/**
- * @swagger
- * /auth/impersonate-org:
- *   post:
- *     summary: Impersonar una organización (solo system-admin)
- *     description: |
- *       Permite a un system-admin "entrar" a una organización específica para ver/gestionar
- *       sus recursos como si fuera parte de ella. El JWT resultante tendrá `impersonating: true`.
- *       
- *       **Diferencia con switch-org:**
- *       - switch-org: Cambia entre orgs a las que el usuario pertenece
- *       - impersonate-org: Permite a system-admin acceder a CUALQUIER org
- *       
- *       El frontend debe mostrar un indicador visual cuando `impersonating: true`.
- *     tags: [Auth]
- *     security:
- *       - BearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - organizationId
- *             properties:
- *               organizationId:
- *                 type: string
- *                 description: Public code de la organización a impersonar (ej. ORG-XXXXX)
- *                 example: ORG-ABC123-4
- *     responses:
- *       200:
- *         description: Impersonación exitosa, nuevos tokens emitidos
- *       403:
- *         description: Solo system-admin puede usar este endpoint
- *       404:
- *         description: Organización no encontrada
- */
+
+// 📄 Swagger: src/docs/swagger/auth.yaml -> POST /impersonate-org
 router.post('/impersonate-org', authenticate, async (req, res, next) => {
     try {
         const userId = req.user.userId;
@@ -1345,23 +628,8 @@ router.post('/impersonate-org', authenticate, async (req, res, next) => {
     }
 });
 
-/**
- * @swagger
- * /auth/exit-impersonation:
- *   post:
- *     summary: Salir del modo impersonación (solo system-admin)
- *     description: |
- *       Permite a un system-admin salir del modo impersonación y volver al panel admin global.
- *       El JWT resultante tendrá `activeOrgId: null` e `impersonating: false`.
- *     tags: [Auth]
- *     security:
- *       - BearerAuth: []
- *     responses:
- *       200:
- *         description: Salida de impersonación exitosa, nuevos tokens emitidos
- *       403:
- *         description: Solo system-admin puede usar este endpoint
- */
+
+// 📄 Swagger: src/docs/swagger/auth.yaml -> POST /exit-impersonation
 router.post('/exit-impersonation', authenticate, async (req, res, next) => {
     try {
         const userId = req.user.userId;
@@ -1456,81 +724,8 @@ router.post('/exit-impersonation', authenticate, async (req, res, next) => {
     }
 });
 
-/**
- * @swagger
- * /auth/session-context:
- *   get:
- *     summary: Obtener contexto de sesión actual
- *     description: |
- *       Retorna el contexto de sesión cacheado en Redis sin necesidad de decodificar el JWT.
- *       Este endpoint es ultra-rápido ya que solo lee de Redis sin tocar la base de datos.
- *       
- *       El frontend debe usar este contexto en lugar de decodificar el JWT para obtener:
- *       - activeOrgId (organización actualmente activa)
- *       - primaryOrgId (organización primaria del usuario)
- *       - canAccessAllOrgs (si el usuario puede acceder a todas las orgs)
- *       - role (nombre del rol del usuario)
- *       - email, firstName, lastName, userId
- *     tags: [Auth]
- *     security:
- *       - BearerAuth: []
- *     responses:
- *       200:
- *         description: Contexto de sesión obtenido exitosamente
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 ok:
- *                   type: boolean
- *                   example: true
- *                 data:
- *                   type: object
- *                   properties:
- *                     sessionContext:
- *                       type: object
- *                       properties:
- *                         activeOrgId:
- *                           type: string
- *                           format: uuid
- *                           description: ID de la organización actualmente activa
- *                         primaryOrgId:
- *                           type: string
- *                           format: uuid
- *                           description: ID de la organización primaria del usuario
- *                         canAccessAllOrgs:
- *                           type: boolean
- *                           description: Si el usuario puede acceder a todas las organizaciones (system-admin)
- *                         role:
- *                           type: string
- *                           example: org-admin
- *                           description: Nombre del rol del usuario
- *                         email:
- *                           type: string
- *                           example: admin@ecdata.com
- *                         firstName:
- *                           type: string
- *                           example: System
- *                         lastName:
- *                           type: string
- *                           example: Admin
- *                         userId:
- *                           type: string
- *                           format: uuid
- *       401:
- *         description: No autenticado o token inválido
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
- *       404:
- *         description: Contexto de sesión no encontrado (no hay sesión activa en caché)
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
- */
+
+// 📄 Swagger: src/docs/swagger/auth.yaml -> GET /session-context
 router.get('/session-context', authenticate, async (req, res, next) => {
     try {
         const userId = req.user.userId;

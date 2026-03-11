@@ -5,58 +5,8 @@ import logger from '../../utils/logger.js';
 const router = express.Router();
 const countriesLogger = logger.child({ component: 'countries' });
 
-/**
- * @swagger
- * /api/v1/countries:
- *   get:
- *     summary: Listar países activos con traducciones
- *     description: Obtiene lista de países activos con nombres traducidos. Respeta el idioma del usuario y permite override con query param lang.
- *     tags: [Countries]
- *     parameters:
- *       - in: query
- *         name: lang
- *         description: Código de idioma para traducciones (es, en). Si no se proporciona, usa el idioma del request (req.language)
- *         schema:
- *           type: string
- *           enum: [es, en]
- *           example: "es"
- *     responses:
- *       200:
- *         description: Lista de países obtenida exitosamente
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 ok:
- *                   type: boolean
- *                   example: true
- *                 data:
- *                   type: array
- *                   items:
- *                     type: object
- *                     properties:
- *                       id:
- *                         type: integer
- *                         example: 276
- *                       isoAlpha2:
- *                         type: string
- *                         example: "AR"
- *                       isoAlpha3:
- *                         type: string
- *                         example: "ARG"
- *                       phoneCode:
- *                         type: string
- *                         example: "+54"
- *                       name:
- *                         type: string
- *                         example: "Argentina"
- *                 lang:
- *                   type: string
- *                   example: "es"
- *       500:
- *         description: Error interno del servidor
- */
+
+// 📄 Swagger: src/docs/swagger/countries.yaml -> GET /
 router.get('/', async (req, res) => {
     try {
         // Determinar idioma: query param > req.language (del middleware i18n) > default 'es'

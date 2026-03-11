@@ -27,6 +27,7 @@ const userLogger = pino({ name: 'users-routes' });
  * - org-manager: Usuarios de su org + hijos directos
  * - otros: Denegado (403)
  */
+// 📄 Swagger: src/docs/swagger/users.yaml -> GET /
 router.get('/', authenticate, requireRole(['system-admin', 'org-admin', 'org-manager']), async (req, res, next) => {
     try {
         const { page, limit = 20, offset = 0, search, role, organization_id, is_active } = req.query;
@@ -79,124 +80,8 @@ router.get('/', authenticate, requireRole(['system-admin', 'org-admin', 'org-man
     }
 });
 
-/**
- * @swagger
- * /api/v1/users:
- *   post:
- *     summary: Crear nuevo usuario
- *     description: Crea un nuevo usuario en el sistema. system-admin puede asignar a cualquier organización, org-admin solo a su organización. Soporta multi-organización mediante organization_memberships[].
- *     tags: [Users]
- *     security:
- *       - bearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - email
- *               - first_name
- *               - last_name
- *               - password
- *               - role
- *             properties:
- *               email:
- *                 type: string
- *                 format: email
- *                 description: Email del usuario (debe ser único)
- *                 example: "usuario@ejemplo.com"
- *               first_name:
- *                 type: string
- *                 minLength: 1
- *                 maxLength: 100
- *                 description: Nombre del usuario
- *                 example: "Juan"
- *               last_name:
- *                 type: string
- *                 minLength: 1
- *                 maxLength: 100
- *                 description: Apellido del usuario
- *                 example: "Pérez"
- *               password:
- *                 type: string
- *                 minLength: 8
- *                 description: Contraseña del usuario
- *                 example: "password123"
- *               role:
- *                 type: string
- *                 description: Slug del rol del usuario
- *                 example: "user"
- *                 enum: [system-admin, org-admin, org-manager, user, viewer, guest, demo]
- *               organization_id:
- *                 type: string
- *                 description: Public code de la organización primaria (solo system-admin)
- *                 example: "ORG-7K9D2-X"
- *               phone:
- *                 type: string
- *                 maxLength: 50
- *                 description: Número de teléfono del usuario
- *                 example: "+54 11 1234-5678"
- *               language:
- *                 type: string
- *                 enum: [es, en]
- *                 default: es
- *                 description: Idioma preferido del usuario
- *                 example: "es"
- *               timezone:
- *                 type: string
- *                 maxLength: 100
- *                 default: "America/Argentina/Buenos_Aires"
- *                 description: Zona horaria IANA del usuario
- *                 example: "America/Argentina/Buenos_Aires"
- *               avatar_url:
- *                 type: string
- *                 format: uri
- *                 description: URL del avatar del usuario
- *                 example: "https://ejemplo.com/avatar.jpg"
- *               organization_memberships:
- *                 type: array
- *                 description: Array de organizaciones a las que pertenecerá el usuario (multi-organización)
- *                 items:
- *                   type: object
- *                   required:
- *                     - organization_id
- *                   properties:
- *                     organization_id:
- *                       type: string
- *                       description: Public code de la organización
- *                       example: "ORG-ABC12-Y"
- *                     is_primary:
- *                       type: boolean
- *                       default: false
- *                       description: Marcar como organización primaria
- *                       example: false
- *               send_invite:
- *                 type: boolean
- *                 default: false
- *                 description: Enviar email de invitación al usuario
- *                 example: false
- *     responses:
- *       201:
- *         description: Usuario creado exitosamente
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 ok:
- *                   type: boolean
- *                   example: true
- *                 data:
- *                   type: object
- *                   description: Datos del usuario creado
- *       400:
- *         description: Datos inválidos
- *       403:
- *         description: Sin permisos para crear usuario o asignar rol
- *       409:
- *         description: Email ya existe
- */
+
+// 📄 Swagger: src/docs/swagger/users.yaml -> POST /
 router.post('/', authenticate, requireRole(['system-admin', 'org-admin']), async (req, res, next) => {
     try {
         const validatedData = validateCreateUser(req.body);
@@ -217,56 +102,8 @@ router.post('/', authenticate, requireRole(['system-admin', 'org-admin']), async
     }
 });
 
-/**
- * @swagger
- * /api/v1/users/validate-email:
- *   post:
- *     summary: Validar disponibilidad de email de usuario
- *     description: Verifica si el email ya está en uso. Útil para validación en tiempo real en formularios. No requiere autenticación.
- *     tags: [Users]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - email
- *             properties:
- *               email:
- *                 type: string
- *                 format: email
- *                 description: Email a validar
- *                 example: "usuario@ejemplo.com"
- *               exclude_id:
- *                 type: string
- *                 description: Public code del usuario a excluir de la validación (útil al editar un usuario existente)
- *                 example: "USR-7K9D2-X"
- *     responses:
- *       200:
- *         description: Resultado de validación
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 ok:
- *                   type: boolean
- *                   example: true
- *                 data:
- *                   type: object
- *                   properties:
- *                     valid:
- *                       type: boolean
- *                       description: true si el email está disponible, false si ya está en uso
- *                       example: true
- *                     conflict:
- *                       type: boolean
- *                       description: true si el email ya existe, false si está disponible
- *                       example: false
- *       400:
- *         description: Datos de validación inválidos
- */
+
+// 📄 Swagger: src/docs/swagger/users.yaml -> POST /validate-email
 router.post('/validate-email', async (req, res, next) => {
     try {
         // Validar datos del request
@@ -304,6 +141,7 @@ router.post('/validate-email', async (req, res, next) => {
  * Obtener perfil del usuario autenticado
  * NOTA: Debe ir ANTES de GET /:id
  */
+// 📄 Swagger: src/docs/swagger/users.yaml -> GET /me
 router.get('/me', authenticate, async (req, res, next) => {
     try {
         const user = await userRepository.findUserById(req.user.userId, true, true);
@@ -323,6 +161,7 @@ router.get('/me', authenticate, async (req, res, next) => {
  * PUT /api/v1/users/me
  * Actualizar perfil propio
  */
+// 📄 Swagger: src/docs/swagger/users.yaml -> PUT /me
 router.put('/me', authenticate, async (req, res, next) => {
     try {
         const validatedData = validateUpdateMe(req.body);
@@ -349,6 +188,7 @@ router.put('/me', authenticate, async (req, res, next) => {
  * PATCH /api/v1/users/me/password
  * Cambiar contraseña propia
  */
+// 📄 Swagger: src/docs/swagger/users.yaml -> PATCH /me/password
 router.patch('/me/password', authenticate, async (req, res, next) => {
     try {
         const validatedData = validateChangePassword(req.body);
@@ -372,6 +212,7 @@ router.patch('/me/password', authenticate, async (req, res, next) => {
  * GET /api/v1/users/:id
  * Ver detalle de un usuario específico
  */
+// 📄 Swagger: src/docs/swagger/users.yaml -> GET /:id
 router.get('/:id', authenticate, async (req, res, next) => {
     try {
         const { id } = req.params;
@@ -406,6 +247,7 @@ router.get('/:id', authenticate, async (req, res, next) => {
  * PUT /api/v1/users/:id
  * Actualizar usuario existente
  */
+// 📄 Swagger: src/docs/swagger/users.yaml -> PUT /:id
 router.put('/:id', authenticate, requireRole(['system-admin', 'org-admin']), async (req, res, next) => {
     try {
         const { id } = req.params;
@@ -427,6 +269,7 @@ router.put('/:id', authenticate, requireRole(['system-admin', 'org-admin']), asy
  * DELETE /api/v1/users/:id
  * Eliminar usuario (soft delete)
  */
+// 📄 Swagger: src/docs/swagger/users.yaml -> DELETE /:id
 router.delete('/:id', authenticate, requireRole(['system-admin', 'org-admin']), async (req, res, next) => {
     try {
         const { id } = req.params;
@@ -447,6 +290,7 @@ router.delete('/:id', authenticate, requireRole(['system-admin', 'org-admin']), 
  * GET /api/v1/users/:id/organizations
  * Obtener todas las organizaciones del usuario con is_primary
  */
+// 📄 Swagger: src/docs/swagger/users.yaml -> GET /:id/organizations
 router.get('/:id/organizations', authenticate, async (req, res, next) => {
     try {
         const { id } = req.params;
@@ -503,62 +347,8 @@ router.get('/:id/organizations', authenticate, async (req, res, next) => {
     }
 });
 
-/**
- * @swagger
- * /api/v1/users/{id}/organizations:
- *   post:
- *     summary: Agregar usuario a una organización adicional
- *     description: Agrega un usuario existente a una organización adicional. Permite multi-organización. Requiere rol system-admin u org-admin.
- *     tags: [Users]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: Public code del usuario
- *         example: "USR-7K9D2-X"
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - organization_id
- *             properties:
- *               organization_id:
- *                 type: string
- *                 description: Public code de la organización
- *                 example: "ORG-ABC12-Y"
- *               is_primary:
- *                 type: boolean
- *                 description: Marcar como organización primaria del usuario
- *                 example: false
- *                 default: false
- *     responses:
- *       201:
- *         description: Usuario agregado a la organización exitosamente
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 ok:
- *                   type: boolean
- *                   example: true
- *                 message:
- *                   type: string
- *                   example: "User added to organization successfully"
- *       400:
- *         description: Datos inválidos o el usuario ya pertenece a la organización
- *       403:
- *         description: Sin permisos para acceder a este usuario u organización
- *       404:
- *         description: Usuario u organización no encontrados
- */
+
+// 📄 Swagger: src/docs/swagger/users.yaml -> POST /:id/organizations
 router.post('/:id/organizations', authenticate, requireRole(['system-admin', 'org-admin']), async (req, res, next) => {
     try {
         const { id } = req.params;
@@ -622,51 +412,8 @@ router.post('/:id/organizations', authenticate, requireRole(['system-admin', 'or
     }
 });
 
-/**
- * @swagger
- * /api/v1/users/{id}/organizations/{orgId}:
- *   delete:
- *     summary: Remover usuario de una organización
- *     description: Elimina la membresía de un usuario en una organización específica. No permite eliminar la única organización primaria del usuario. Requiere rol system-admin u org-admin.
- *     tags: [Users]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: Public code del usuario
- *         example: "USR-7K9D2-X"
- *       - in: path
- *         name: orgId
- *         required: true
- *         schema:
- *           type: string
- *         description: Public code de la organización
- *         example: "ORG-ABC12-Y"
- *     responses:
- *       200:
- *         description: Usuario removido de la organización exitosamente
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 ok:
- *                   type: boolean
- *                   example: true
- *                 message:
- *                   type: string
- *                   example: "User removed from organization successfully"
- *       400:
- *         description: No se puede remover la única organización primaria del usuario
- *       403:
- *         description: Sin permisos para acceder a este usuario u organización
- *       404:
- *         description: Usuario u organización no encontrados
- */
+
+// 📄 Swagger: src/docs/swagger/users.yaml -> DELETE /:id/organizations/:orgId
 router.delete('/:id/organizations/:orgId', authenticate, requireRole(['system-admin', 'org-admin']), async (req, res, next) => {
     try {
         const { id, orgId } = req.params;
@@ -725,6 +472,7 @@ router.delete('/:id/organizations/:orgId', authenticate, requireRole(['system-ad
  * GET /api/v1/users/:id/audit-logs
  * Obtener historial de auditoría del usuario (acciones realizadas por él)
  */
+// 📄 Swagger: src/docs/swagger/users.yaml -> GET /:id/audit-logs
 router.get('/:id/audit-logs', authenticate, async (req, res, next) => {
     try {
         const { id } = req.params;
@@ -811,6 +559,7 @@ router.get('/:id/audit-logs', authenticate, async (req, res, next) => {
  * Activar/desactivar usuario
  * Requiere rol org-admin o superior
  */
+// 📄 Swagger: src/docs/swagger/users.yaml -> PATCH /:id/status
 router.patch('/:id/status', authenticate, requireRole(['system-admin', 'org-admin']), async (req, res, next) => {
     try {
         const { id } = req.params;
