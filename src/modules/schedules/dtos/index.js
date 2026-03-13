@@ -55,7 +55,7 @@ export const listSchedulesSchema = z.object({
     query: z.object({
         limit:  z.coerce.number().int().min(1).max(100).default(20),
         offset: z.coerce.number().int().min(0).default(0),
-        include: z.enum(['validities']).optional()
+        include: z.enum(['validities', 'full']).optional()
     }).optional()
 });
 

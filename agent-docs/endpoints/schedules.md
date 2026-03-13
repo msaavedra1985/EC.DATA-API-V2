@@ -142,7 +142,7 @@ Listar schedules de la organización activa.
 |-------|------|---------|-------------|
 | limit | int | 20 | Máx 100 |
 | offset | int | 0 | Offset para paginación |
-| include | string | - | `validities` para incluir validities activas |
+| include | string | - | `validities` \| `full`. Nivel de detalle a incluir |
 
 **Response 200 (sin include)**:
 ```json
@@ -178,11 +178,44 @@ Listar schedules de la organización activa.
           "validTo": null,
           "rangesCount": 10,
           "weekCoveragePercent": 45.83,
+          "exceptionsCount": 2
+        }
+      ]
+    }
+  ],
+  "meta": { "total": 1, "limit": 20, "offset": 0 }
+}
+```
+
+**Response 200 (con ?include=full)**:
+```json
+{
+  "ok": true,
+  "data": [
+    {
+      "id": "SCH-4X9-R2T",
+      "name": "Horario Comercial",
+      "validitiesCount": 3,
+      "validities": [
+        {
+          "id": 1,
+          "validFrom": "2026-01-01",
+          "validTo": null,
+          "rangesCount": 10,
+          "weekCoveragePercent": 45.83,
           "exceptionsCount": 2,
           "exceptions": [
             {"date": "2026-01-01", "name": "Año Nuevo", "type": "closed", "repeatYearly": true}
           ],
-          "timeProfiles": [...]
+          "timeProfiles": [
+            {
+              "id": 1,
+              "name": "Turno Mañana",
+              "grid": {
+                "1": [{ "id": 101, "from": "08:00", "to": "12:00" }]
+              }
+            }
+          ]
         }
       ]
     }
@@ -192,8 +225,9 @@ Listar schedules de la organización activa.
 ```
 
 **Notas**:
-- Por defecto devuelve solo info básica (id, name, description, validitiesCount)
-- Con `?include=validities` incluye validities completas con métricas
+- **Sin `include`** (default): Solo info básica (id, name, description, validitiesCount). Ideal para listados.
+- **`?include=validities`**: Agrega validities con solo métricas (rangesCount, weekCoveragePercent, exceptionsCount). Sin exceptions[] ni timeProfiles[]. Ideal para vistas de resumen.
+- **`?include=full`**: Árbol completo con exceptions, timeProfiles y grid de rangos (incluyendo IDs). Ideal para edición.
 - Audit log: No (solo lectura)
 
 ---

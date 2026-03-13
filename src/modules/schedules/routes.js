@@ -82,9 +82,9 @@ router.get(
             const orgId  = canAccessAll ? null : req.organizationContext.id;
             const limit  = req.query?.limit  ?? 20;
             const offset = req.query?.offset ?? 0;
-            const includeValidities = req.query?.include === 'validities';
+            const includeMode = req.query?.include ?? 'none';
 
-            const result = await services.listSchedules(orgId, { limit, offset, includeValidities });
+            const result = await services.listSchedules(orgId, { limit, offset, includeMode });
 
             return res.json({
                 ok: true,

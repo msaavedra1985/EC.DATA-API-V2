@@ -18,7 +18,16 @@ const orgInclude = {
     attributes: ['publicCode', 'name', 'slug']
 };
 
-// Include ligero: validities + timeProfiles (sin rangos) + excepciones por validity
+// Include ligero: solo validities con métricas (sin exceptions ni timeProfiles)
+const validitiesLightInclude = [
+    {
+        model: Validity,
+        as: 'validities',
+        attributes: ['id', 'validFrom', 'validTo', 'rangesCount', 'weekCoveragePercent', 'exceptionsCount']
+    }
+];
+
+// Include medio: validities + excepciones + timeProfiles (sin rangos)
 const validitiesOnlyInclude = [
     {
         model: Validity,
@@ -100,18 +109,32 @@ export const findScheduleByPublicCodeInternal = async (publicCode) => {
  * @param {Object} options
  * @param {number} options.limit
  * @param {number} options.offset
- * @param {boolean} options.includeValidities - Si incluir validities (default: false)
+ * @param {'none'|'validities'|'full'} options.includeMode - Nivel de detalle (default: 'none')
  * @returns {Promise<{items: Object[], total: number}>}
  */
-export const listSchedules = async (organizationId, { limit = 20, offset = 0, includeValidities = false } = {}) => {
+export const listSchedules = async (organizationId, { limit = 20, offset = 0, includeMode = 'none' } = {}) => {
     const where = organizationId ? { organizationId } : {};
     const includeOrg = !organizationId;   // include org data when querying all
+
+    const includeMap = {
+        'none':       [],
+        'validities': validitiesLightInclude,
+        'full':       fullInclude
+    };
+    const modeInclude = includeMap[includeMode] ?? [];
+
+    const dtoModeMap = {
+        'none':       'none',
+        'validities': 'validities-light',
+        'full':       'full'
+    };
+    const dtoMode = dtoModeMap[includeMode] ?? 'none';
 
     const { rows, count } = await Schedule.findAndCountAll({
         where,
         include: [
             ...(includeOrg ? [orgInclude] : []),
-            ...(includeValidities ? fullInclude : [])
+            ...modeInclude
         ],
         limit,
         offset,
@@ -120,7 +143,7 @@ export const listSchedules = async (organizationId, { limit = 20, offset = 0, in
     });
 
     return {
-        items: rows.map(s => toScheduleDto(s, includeValidities ? 'full' : 'none')),
+        items: rows.map(s => toScheduleDto(s, dtoMode)),
         total: count
     };
 };

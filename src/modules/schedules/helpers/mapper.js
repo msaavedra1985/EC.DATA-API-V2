@@ -70,7 +70,16 @@ export const toScheduleDto = (schedule, includeMode = 'none') => {
         };
     }
 
-    if (includeMode === 'validities' || includeMode === 'full') {
+    if (includeMode === 'validities-light') {
+        dto.validities = (s.validities || []).map(v => ({
+            id:                  v.id,
+            validFrom:           v.validFrom           ?? null,
+            validTo:             v.validTo             ?? null,
+            rangesCount:         v.rangesCount         ?? 0,
+            weekCoveragePercent: v.weekCoveragePercent ?? 0.00,
+            exceptionsCount:     v.exceptionsCount     ?? 0
+        }));
+    } else if (includeMode === 'validities' || includeMode === 'full') {
         dto.validities = (s.validities || []).map(v => ({
             id:                  v.id,
             validFrom:           v.validFrom           ?? null,
