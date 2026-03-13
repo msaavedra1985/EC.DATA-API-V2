@@ -1,5 +1,6 @@
 import { DataTypes } from 'sequelize';
 import sequelize from '../../../db/sql/sequelize.js';
+import Validity from './Validity.js';
 
 const ScheduleException = sequelize.define('ScheduleException', {
     id: {
@@ -8,10 +9,10 @@ const ScheduleException = sequelize.define('ScheduleException', {
         autoIncrement: true,
         allowNull: false
     },
-    scheduleId: {
-        type: DataTypes.UUID,
+    validityId: {
+        type: DataTypes.INTEGER,
         allowNull: false,
-        comment: 'FK a schedules.id'
+        comment: 'FK a schedule_validities.id'
     },
     name: {
         type: DataTypes.STRING(200),
@@ -41,9 +42,41 @@ const ScheduleException = sequelize.define('ScheduleException', {
     underscored: true,
     paranoid: false,
     indexes: [
-        { fields: ['schedule_id'], name: 'schedule_exceptions_schedule_id_idx' },
+        { fields: ['validity_id'], name: 'schedule_exceptions_validity_id_idx' },
         { fields: ['date'], name: 'schedule_exceptions_date_idx' }
-    ]
+    ],
+    hooks: {
+        async afterCreate(exception, options) {
+            const validityId = exception.validityId;
+            const count = await ScheduleException.count({
+                where: { validityId },
+                transaction: options.transaction
+            });
+            await Validity.update(
+                { exceptionsCount: count },
+                { 
+                    where: { id: validityId },
+                    transaction: options.transaction,
+                    hooks: false
+                }
+            );
+        },
+        async afterDestroy(exception, options) {
+            const validityId = exception.validityId;
+            const count = await ScheduleException.count({
+                where: { validityId },
+                transaction: options.transaction
+            });
+            await Validity.update(
+                { exceptionsCount: count },
+                { 
+                    where: { id: validityId },
+                    transaction: options.transaction,
+                    hooks: false
+                }
+            );
+        }
+    }
 });
 
 export default ScheduleException;

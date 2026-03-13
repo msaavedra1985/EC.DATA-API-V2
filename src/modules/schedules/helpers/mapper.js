@@ -35,40 +35,64 @@ export const rowsToGrid = (rows) => {
     for (const row of rows) {
         const key = String(row.dayOfWeek);
         if (!grid[key]) grid[key] = [];
-        grid[key].push({ from: row.startTime, to: row.endTime });
+        const entry = { from: row.startTime, to: row.endTime };
+        if (row.id != null) entry.id = row.id;
+        grid[key].push(entry);
     }
     return grid;
 };
 
 /**
- * Serializa un Schedule completo (con sus asociaciones Sequelize) al formato
- * que espera el frontend — idéntico al payload de entrada.
+ * Serializa un Schedule (con sus asociaciones Sequelize) al formato público.
  *
- * @param {Object} schedule - Instancia Sequelize de Schedule con includes completos
+ * @param {Object} schedule   - Instancia Sequelize de Schedule
+ * @param {'none'|'validities'|'full'} includeMode - Nivel de detalle a incluir (default: 'none')
  * @returns {Object} DTO público del schedule
  */
-export const toScheduleDto = (schedule) => {
+export const toScheduleDto = (schedule, includeMode = 'none') => {
     const s = schedule.toJSON ? schedule.toJSON() : schedule;
 
-    return {
-        id:          s.publicCode,
-        name:        s.name,
-        description: s.description ?? null,
-        createdAt:   s.createdAt,
-        updatedAt:   s.updatedAt,
-        validities: (s.validities || []).map(v => ({
-            validFrom:    v.validFrom   ?? null,
-            validTo:      v.validTo     ?? null,
-            timeProfiles: (v.timeProfiles || []).map(tp => ({
-                name: tp.name,
-                grid: rowsToGrid(tp.timeRanges || [])
-            }))
-        })),
-        exceptions: (s.exceptions || []).map(ex => ({
-            date:         ex.date,
-            name:         ex.name,
-            type:         ex.type,
-            repeatYearly: ex.repeatYearly
-        }))
+    const dto = {
+        id:              s.publicCode,
+        name:            s.name,
+        description:     s.description ?? null,
+        validitiesCount: s.validitiesCount ?? 0,
+        createdAt:       s.createdAt,
+        updatedAt:       s.updatedAt
     };
+
+    // Incluir organización cuando está disponible (vista de system-admin)
+    if (s.organization) {
+        dto.organization = {
+            id:   s.organization.publicCode,
+            name: s.organization.name,
+            slug: s.organization.slug
+        };
+    }
+
+    if (includeMode === 'validities' || includeMode === 'full') {
+        dto.validities = (s.validities || []).map(v => ({
+            id:                  v.id,
+            validFrom:           v.validFrom           ?? null,
+            validTo:             v.validTo             ?? null,
+            rangesCount:         v.rangesCount         ?? 0,
+            weekCoveragePercent: v.weekCoveragePercent ?? 0.00,
+            exceptionsCount:     v.exceptionsCount     ?? 0,
+            exceptions: (v.exceptions || []).map(ex => ({
+                date:         ex.date,
+                name:         ex.name,
+                type:         ex.type,
+                repeatYearly: ex.repeatYearly
+            })),
+            timeProfiles: (v.timeProfiles || []).map(tp => {
+                const profile = { id: tp.id, name: tp.name };
+                if (includeMode === 'full') {
+                    profile.grid = rowsToGrid(tp.timeRanges || []);
+                }
+                return profile;
+            })
+        }));
+    }
+
+    return dto;
 };

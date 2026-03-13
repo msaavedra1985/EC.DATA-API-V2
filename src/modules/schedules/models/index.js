@@ -3,14 +3,19 @@ import ScheduleException from './ScheduleException.js';
 import Validity from './Validity.js';
 import TimeProfile from './TimeProfile.js';
 import TimeRange from './TimeRange.js';
+import Organization from '../../organizations/models/Organization.js';
 
-// Schedule → ScheduleException (1:N)
-Schedule.hasMany(ScheduleException, { foreignKey: 'scheduleId', as: 'exceptions', onDelete: 'CASCADE' });
-ScheduleException.belongsTo(Schedule, { foreignKey: 'scheduleId', as: 'schedule' });
+// Schedule → Organization (N:1)
+Schedule.belongsTo(Organization, { foreignKey: 'organizationId', as: 'organization' });
+Organization.hasMany(Schedule, { foreignKey: 'organizationId', as: 'schedules' });
 
 // Schedule → Validity (1:N)
 Schedule.hasMany(Validity, { foreignKey: 'scheduleId', as: 'validities', onDelete: 'CASCADE' });
 Validity.belongsTo(Schedule, { foreignKey: 'scheduleId', as: 'schedule' });
+
+// Validity → ScheduleException (1:N)
+Validity.hasMany(ScheduleException, { foreignKey: 'validityId', as: 'exceptions', onDelete: 'CASCADE' });
+ScheduleException.belongsTo(Validity, { foreignKey: 'validityId', as: 'validity' });
 
 // Validity → TimeProfile (1:N)
 Validity.hasMany(TimeProfile, { foreignKey: 'validityId', as: 'timeProfiles', onDelete: 'CASCADE' });

@@ -1,5 +1,7 @@
 import { DataTypes } from 'sequelize';
 import sequelize from '../../../db/sql/sequelize.js';
+import { recalculateValidityMetrics } from '../helpers/metrics.js';
+import TimeProfile from './TimeProfile.js';
 
 const TimeRange = sequelize.define('TimeRange', {
     id: {
@@ -36,7 +38,44 @@ const TimeRange = sequelize.define('TimeRange', {
     indexes: [
         { fields: ['time_profile_id'], name: 'schedule_time_ranges_profile_id_idx' },
         { fields: ['day_of_week'], name: 'schedule_time_ranges_day_idx' }
-    ]
+    ],
+    hooks: {
+        // Hook: Después de crear un TimeRange, recalcular métricas de la validity
+        afterCreate: async (timeRange, options) => {
+            const profile = await TimeProfile.findByPk(timeRange.timeProfileId, {
+                attributes: ['validityId'],
+                transaction: options.transaction
+            });
+            if (profile) {
+                await recalculateValidityMetrics(profile.validityId, options.transaction);
+            }
+        },
+
+        // Hook: Después de actualizar un TimeRange, recalcular si cambió startTime o endTime
+        afterUpdate: async (timeRange, options) => {
+            const changed = timeRange.changed();
+            if (changed && (changed.includes('startTime') || changed.includes('endTime'))) {
+                const profile = await TimeProfile.findByPk(timeRange.timeProfileId, {
+                    attributes: ['validityId'],
+                    transaction: options.transaction
+                });
+                if (profile) {
+                    await recalculateValidityMetrics(profile.validityId, options.transaction);
+                }
+            }
+        },
+
+        // Hook: Después de eliminar un TimeRange, recalcular métricas de la validity
+        afterDestroy: async (timeRange, options) => {
+            const profile = await TimeProfile.findByPk(timeRange.timeProfileId, {
+                attributes: ['validityId'],
+                transaction: options.transaction
+            });
+            if (profile) {
+                await recalculateValidityMetrics(profile.validityId, options.transaction);
+            }
+        }
+    }
 });
 
 export default TimeRange;

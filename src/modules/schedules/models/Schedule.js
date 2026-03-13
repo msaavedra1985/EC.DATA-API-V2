@@ -26,6 +26,12 @@ const Schedule = sequelize.define('Schedule', {
     description: {
         type: DataTypes.TEXT,
         allowNull: true
+    },
+    validitiesCount: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        defaultValue: 0,
+        comment: 'Contador de vigencias totales (cache)'
     }
 }, {
     tableName: 'schedules',
