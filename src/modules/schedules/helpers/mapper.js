@@ -46,7 +46,7 @@ export const rowsToGrid = (rows) => {
  * Serializa un Schedule (con sus asociaciones Sequelize) al formato público.
  *
  * @param {Object} schedule   - Instancia Sequelize de Schedule
- * @param {'none'|'validities'|'full'} includeMode - Nivel de detalle a incluir (default: 'none')
+ * @param {'none'|'validities'|'validities-light'|'full'} includeMode - Nivel de detalle a incluir (default: 'none'). 'validities-light' = solo métricas (usado por listSchedules)
  * @returns {Object} DTO público del schedule
  */
 export const toScheduleDto = (schedule, includeMode = 'none') => {
