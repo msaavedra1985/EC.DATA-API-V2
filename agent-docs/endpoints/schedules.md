@@ -134,6 +134,7 @@ Crear un schedule completo.
 ### GET /api/v1/schedules
 
 Listar schedules de la organización activa.
+Si el caller es **system-admin sin impersonar**, devuelve todos los schedules con el campo `organization` incluido.
 
 **Auth**: Bearer token.
 
@@ -228,6 +229,7 @@ Listar schedules de la organización activa.
 - **Sin `include`** (default): Solo info básica (id, name, description, validitiesCount). Ideal para listados.
 - **`?include=validities`**: Agrega validities con solo métricas (rangesCount, weekCoveragePercent, exceptionsCount). Sin exceptions[] ni timeProfiles[]. Ideal para vistas de resumen.
 - **`?include=full`**: Árbol completo con exceptions, timeProfiles y grid de rangos (incluyendo IDs). Ideal para edición.
+- **System-admin sin impersonar**: Cada schedule incluye `organization: { id, name, slug }` para identificar a qué organización pertenece. Este campo NO aparece cuando el caller es org-admin o está impersonando una organización.
 - Audit log: No (solo lectura)
 
 ---
@@ -236,6 +238,7 @@ Listar schedules de la organización activa.
 
 Obtener un schedule por `publicCode` (ej: `SCH-4X9-R2T`).  
 Soporta 3 niveles de granularidad mediante query param `?include=` para optimizar performance según el caso de uso.
+Si el caller es **system-admin sin impersonar**, incluye `organization: { id, name, slug }` en la respuesta.
 
 **Auth**: Bearer token.
 
@@ -337,6 +340,7 @@ Soporta 3 niveles de granularidad mediante query param `?include=` para optimiza
 - **Sin `include`** (default): Solo datos básicos del schedule + contadores. Ideal para listados.
 - **`?include=validities`**: Agrega exceptions + validities con métricas y timeProfiles (solo id/name). Ideal para vistas de resumen.
 - **`?include=full`**: Árbol completo con grid de rangos (incluyendo IDs de time_ranges). Ideal para edición completa.
+- **System-admin sin impersonar**: Incluye `organization: { id, name, slug }` en la respuesta. No aparece cuando el caller es org-admin o está impersonando.
 - Audit log: No (solo lectura)
 
 ---

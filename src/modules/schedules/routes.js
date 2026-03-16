@@ -107,11 +107,14 @@ router.get(
 router.get(
     '/:id',
     authenticate,
+    enforceActiveOrganization,
     validate(getScheduleSchema),
     async (req, res, next) => {
         try {
             const includeMode = req.query?.include ?? 'none';
-            const schedule = await services.getSchedule(req.params.id, includeMode);
+            const canAccessAll = req.organizationContext?.canAccessAll ?? false;
+            const orgId = canAccessAll ? null : req.organizationContext.id;
+            const schedule = await services.getSchedule(req.params.id, includeMode, { includeOrg: canAccessAll, organizationId: orgId });
 
             return res.json({
                 ok: true,

@@ -64,8 +64,8 @@ export const createSchedule = async (payload, userId, orgId, ipAddress, userAgen
  * @param {'none'|'validities'|'full'} include - Nivel de detalle (default: 'none')
  * @returns {Promise<Object>} DTO del schedule
  */
-export const getSchedule = async (publicCode, include = 'none') => {
-    const schedule = await repository.findScheduleByPublicCode(publicCode, include);
+export const getSchedule = async (publicCode, include = 'none', { includeOrg = false, organizationId = null } = {}) => {
+    const schedule = await repository.findScheduleByPublicCode(publicCode, include, { includeOrg, organizationId });
     if (!schedule) {
         const err = new Error('Schedule no encontrado');
         err.status = 404;

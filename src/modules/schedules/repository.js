@@ -82,14 +82,20 @@ const fullInclude = [
  * @param {'none'|'validities'|'full'} includeMode - Nivel de detalle a incluir (default: 'none')
  * @returns {Promise<Object|null>}
  */
-export const findScheduleByPublicCode = async (publicCode, includeMode = 'none') => {
+export const findScheduleByPublicCode = async (publicCode, includeMode = 'none', { includeOrg = false, organizationId = null } = {}) => {
     const includeMap = {
         'none':       [],
         'validities': validitiesOnlyInclude,
         'full':       fullInclude
     };
-    const include = includeMap[includeMode] ?? [];
-    const schedule = await Schedule.findOne({ where: { publicCode }, include });
+    const modeInclude = includeMap[includeMode] ?? [];
+    const include = [
+        ...(includeOrg ? [orgInclude] : []),
+        ...modeInclude
+    ];
+    const where = { publicCode };
+    if (organizationId) where.organizationId = organizationId;
+    const schedule = await Schedule.findOne({ where, include });
     if (!schedule) return null;
     return toScheduleDto(schedule, includeMode);
 };
