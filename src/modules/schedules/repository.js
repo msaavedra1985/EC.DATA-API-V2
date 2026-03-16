@@ -10,6 +10,7 @@ import TimeProfile from './models/TimeProfile.js';
 import TimeRange from './models/TimeRange.js';
 import Organization from '../organizations/models/Organization.js';
 import { gridToRows, toScheduleDto } from './helpers/mapper.js';
+import { recalculateValidityMetrics, recalculateExceptionsCount } from './helpers/metrics.js';
 
 // Include de organización (para system-admin viendo todos los schedules)
 const orgInclude = {
@@ -208,6 +209,7 @@ export const createSchedule = async ({
                 })),
                 { transaction: t }
             );
+            await recalculateExceptionsCount(validity.id, t);
         }
 
         // 2.2. Crear TimeProfiles y TimeRanges
@@ -225,6 +227,8 @@ export const createSchedule = async ({
                 );
             }
         }
+
+        await recalculateValidityMetrics(validity.id, t);
     }
 
     // 4. Recargar con todas las asociaciones para construir el DTO
@@ -384,6 +388,8 @@ export const addValidity = async (scheduleId, validityPayload, transaction) => {
             );
         }
     }
+
+    await recalculateValidityMetrics(validity.id, t);
 
     return findValidityById(validity.id, true);
 };
@@ -579,6 +585,8 @@ export const syncValidityFull = async (validityId, payload, transaction) => {
         }
     }
 
+    await recalculateValidityMetrics(validityId, t);
+
     return changes;
 };
 
@@ -697,6 +705,8 @@ export const syncTimeRanges = async (validityId, timeProfilesPayload, transactio
         });
         changes.deleted += rangesCount;
     }
+
+    await recalculateValidityMetrics(validityId, t);
 
     return changes;
 };

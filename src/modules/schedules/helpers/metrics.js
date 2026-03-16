@@ -86,6 +86,26 @@ export const calculateWeekCoverage = (timeRanges) => {
 };
 
 /**
+ * Recalcula el contador de excepciones de una Validity específica.
+ * Actualiza exceptionsCount.
+ *
+ * @param {number} validityId - ID de la validity
+ * @param {Object} transaction - Transacción Sequelize (opcional)
+ * @returns {Promise<void>}
+ */
+export const recalculateExceptionsCount = async (validityId, transaction = null) => {
+    const options = transaction ? { transaction } : {};
+    const count = await ScheduleException.count({
+        where: { validityId },
+        ...options
+    });
+    await Validity.update(
+        { exceptionsCount: count },
+        { where: { id: validityId }, ...options }
+    );
+};
+
+/**
  * Recalcula las métricas de una Validity específica.
  * Actualiza rangesCount y weekCoveragePercent.
  * 

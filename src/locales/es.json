@@ -124,5 +124,6 @@
     "column Dashboard.page_count does not exist": "column Dashboard.page_count does not exist",
     "notNull Violation: Dashboard.organizationId cannot be null": "notNull Violation: Dashboard.organizationId cannot be null",
     "connect ETIMEDOUT 192.168.0.20:5432": "connect ETIMEDOUT 192.168.0.20:5432",
-    "notNull Violation: Schedule.organizationId cannot be null": "notNull Violation: Schedule.organizationId cannot be null"
+    "notNull Violation: Schedule.organizationId cannot be null": "notNull Violation: Schedule.organizationId cannot be null",
+    "Invalid enum value. Expected 'closed' | 'special', received 'no_service'": "Invalid enum value. Expected 'closed' | 'special', received 'no_service'"
 }
