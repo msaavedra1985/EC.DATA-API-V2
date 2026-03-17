@@ -57,3 +57,7 @@ AZURE_STORAGE_CONTAINER_PRIVATE = "ecdatav2-private"
 CASSANDRA_KEYSPACE = "sensores"
 
 [userenv.development]
+
+[postMerge]
+path = "scripts/post-merge.sh"
+timeoutMs = 120000
