@@ -287,6 +287,35 @@ export const findValiditiesByScheduleId = async (scheduleId, includeRanges = fal
 };
 
 /**
+ * Obtener una validity específica por ID con timeProfiles (rangos) y excepciones.
+ * Usado para construir la respuesta completa del PUT /validities/:validityId.
+ * @param {number} validityId - ID de la validity
+ * @returns {Promise<Object|null>}
+ */
+export const findValidityByIdFull = async (validityId) => {
+    return Validity.findByPk(validityId, {
+        attributes: ['id', 'scheduleId', 'validFrom', 'validTo', 'rangesCount', 'weekCoveragePercent', 'exceptionsCount'],
+        include: [
+            {
+                model: ScheduleException,
+                as: 'exceptions',
+                attributes: ['date', 'name', 'type', 'repeatYearly']
+            },
+            {
+                model: TimeProfile,
+                as: 'timeProfiles',
+                attributes: ['id', 'name'],
+                include: [{
+                    model: TimeRange,
+                    as: 'timeRanges',
+                    attributes: ['id', 'dayOfWeek', 'startTime', 'endTime']
+                }]
+            }
+        ]
+    });
+};
+
+/**
  * Obtener una validity específica por ID
  * @param {number} validityId - ID de la validity
  * @param {boolean} includeRanges - Si incluir rangos completos (default: true)
@@ -471,15 +500,16 @@ export const syncExceptions = async (validityId, exceptionsPayload, transaction 
 };
 
 /**
- * Update completo de una validity: fechas + timeProfiles con diff por ID.
+ * Update completo de una validity: fechas + timeProfiles con diff por ID + excepciones opcionales.
  * - Profile con id → match por ID, actualizar name si cambió, sincronizar rangos
  * - Profile sin id → crear nuevo
  * - Profiles existentes no referenciados → eliminar (cascade a ranges)
+ * - Si payload.exceptions está definido → reemplaza excepciones de forma atómica
  *
  * @param {number} validityId - ID de la validity
- * @param {Object} payload - { validFrom, validTo, timeProfiles }
+ * @param {Object} payload - { validFrom, validTo, timeProfiles, exceptions? }
  * @param {Object} transaction - Transacción Sequelize
- * @returns {Promise<Object>} { profilesCreated, profilesDeleted, rangesCreated, rangesDeleted }
+ * @returns {Promise<Object>} { profilesCreated, profilesDeleted, rangesCreated, rangesDeleted, exceptionsChanges? }
  */
 export const syncValidityFull = async (validityId, payload, transaction) => {
     const t = transaction;
@@ -583,6 +613,12 @@ export const syncValidityFull = async (validityId, payload, transaction) => {
             changes.profilesDeleted++;
             changes.rangesDeleted += rangesCount;
         }
+    }
+
+    // 5. Sincronizar excepciones si fueron proporcionadas en el payload
+    if (payload.exceptions !== undefined) {
+        const exceptionsChanges = await syncExceptions(validityId, payload.exceptions, t);
+        changes.exceptionsChanges = exceptionsChanges;
     }
 
     await recalculateValidityMetrics(validityId, t);

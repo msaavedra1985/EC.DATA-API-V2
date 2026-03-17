@@ -154,6 +154,7 @@ export const updateValidityFullSchema = z.object({
     body: z.object({
         validFrom:    z.string().date().nullable().optional().default(null),
         validTo:      z.string().date().nullable().optional().default(null),
-        timeProfiles: z.array(timeProfileUpdateSchema).min(1)
+        timeProfiles: z.array(timeProfileUpdateSchema).min(1),
+        exceptions:   z.array(exceptionSchema).optional()
     })
 });

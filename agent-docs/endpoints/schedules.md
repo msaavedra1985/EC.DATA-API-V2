@@ -691,7 +691,7 @@ Update completo de una validity: fechas + timeProfiles con detección inteligent
 | id | string | Public code del schedule |
 | validityId | int | ID de la validity |
 
-**Request Body** (similar al de creación, pero `timeProfiles` acepta `id` opcional):
+**Request Body** (similar al de creación, pero `timeProfiles` acepta `id` opcional y `exceptions` es opcional):
 ```json
 {
   "validFrom": "2026-01-01",
@@ -710,15 +710,33 @@ Update completo de una validity: fechas + timeProfiles con detección inteligent
         "2": [{"from": "09:00", "to": "17:00"}]
       }
     }
+  ],
+  "exceptions": [
+    {"date": "2026-01-01", "name": "Año Nuevo", "type": "closed", "repeatYearly": true},
+    {"date": "2026-12-25", "name": "Navidad", "type": "closed", "repeatYearly": true}
   ]
 }
 ```
 
-**Lógica de diff por `id`**:
+**Campos del body**:
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| `validFrom` | string (date) \| null | Opcional. Fecha de inicio de la vigencia |
+| `validTo` | string (date) \| null | Opcional. Fecha de fin de la vigencia |
+| `timeProfiles` | array | Requerido. Al menos un perfil horario |
+| `exceptions` | array | Opcional. Si presente, reemplaza todas las excepciones de la validity de forma atómica. Si ausente, las excepciones existentes no se modifican. Array vacío elimina todas las excepciones. |
+
+**Lógica de diff por `id`** (timeProfiles):
 - `id` presente y encontrado → match por ID, actualiza `name` si cambió, sincroniza rangos
 - Sin `id` → perfil nuevo (se crea)
 - Perfil existente no referenciado por ningún `id` en el payload → se elimina (cascade a rangos)
 - Rangos: diff por clave `dayOfWeek-startTime-endTime` (mismo que PUT /ranges)
+
+**Lógica de sincronización de excepciones** (cuando `exceptions` está presente — diff por `date`):
+- `date` en payload no existe en DB → crear
+- `date` en DB no está en payload → eliminar
+- Misma `date` en ambos → comparar `name`/`type`/`repeatYearly` y actualizar si cambió
+- El resultado neto es equivalente a un reemplazo completo, con detección inteligente de cambios
 
 **Response 200**:
 ```json
@@ -730,6 +748,11 @@ Update completo de una validity: fechas + timeProfiles con detección inteligent
     "validTo": "2026-12-31",
     "rangesCount": 2,
     "weekCoveragePercent": 10.42,
+    "exceptionsCount": 2,
+    "exceptions": [
+      {"date": "2026-01-01", "name": "Año Nuevo", "type": "closed", "repeatYearly": true},
+      {"date": "2026-12-25", "name": "Navidad", "type": "closed", "repeatYearly": true}
+    ],
     "timeProfiles": [
       { "id": 1, "name": "Turno Mañana (renombrado)", "grid": { "1": [{"from": "08:00", "to": "13:00"}] } },
       { "id": 11, "name": "Turno Nuevo", "grid": { "2": [{"from": "09:00", "to": "17:00"}] } }
@@ -738,20 +761,28 @@ Update completo de una validity: fechas + timeProfiles con detección inteligent
       "profilesCreated": 1,
       "profilesDeleted": 0,
       "rangesCreated": 1,
-      "rangesDeleted": 1
+      "rangesDeleted": 1,
+      "exceptionsChanges": {
+        "created": 2,
+        "updated": 0,
+        "deleted": 0
+      }
     }
   },
   "meta": { "timestamp": "..." }
 }
 ```
 
+**Nota**: El campo `exceptionsChanges` dentro de `changes` solo aparece cuando `exceptions` fue incluido en el body del request.
+
 **Response 404**: `SCHEDULE_NOT_FOUND` o `VALIDITY_NOT_FOUND`
 
 **Response 422**: Solapamiento de vigencias (Regla A) o rangos (Regla B)
 
 **Notas**:
-- Operación atómica en transacción
-- Actualiza métricas automáticamente
+- Operación atómica en transacción (fechas + timeProfiles + excepciones se sincronizan juntos)
+- Si `exceptions` no se incluye en el body, las excepciones existentes no se modifican
+- Actualiza métricas automáticamente (`rangesCount`, `weekCoveragePercent`, `exceptionsCount`)
 - Audit log: Sí (UPDATE con stats de cambios)
 
 ---

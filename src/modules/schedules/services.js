@@ -556,8 +556,8 @@ export const updateValidityFull = async (publicCode, validityId, payload, userId
         return repository.syncValidityFull(validityId, payload, t);
     });
 
-    // Recargar validity con métricas actualizadas
-    const updated = await repository.findValidityById(validityId, true);
+    // Recargar validity con métricas actualizadas (incluyendo excepciones si fueron procesadas)
+    const updated = await repository.findValidityByIdFull(validityId);
     const v = updated.toJSON ? updated.toJSON() : updated;
 
     await logAuditAction({
@@ -573,12 +573,19 @@ export const updateValidityFull = async (publicCode, validityId, payload, userId
 
     scheduleLogger.info({ scheduleId: publicCode, validityId, userId, changes }, 'Validity actualizada (full)');
 
-    return {
+    const result = {
         validityId:          v.id,
         validFrom:           v.validFrom ?? null,
         validTo:             v.validTo   ?? null,
         rangesCount:         v.rangesCount ?? 0,
         weekCoveragePercent: v.weekCoveragePercent ?? 0.00,
+        exceptionsCount:     v.exceptionsCount ?? 0,
+        exceptions: (v.exceptions || []).map(ex => ({
+            date:         ex.date,
+            name:         ex.name,
+            type:         ex.type,
+            repeatYearly: ex.repeatYearly
+        })),
         timeProfiles: (v.timeProfiles || []).map(tp => ({
             id:   tp.id,
             name: tp.name,
@@ -586,4 +593,6 @@ export const updateValidityFull = async (publicCode, validityId, payload, userId
         })),
         changes
     };
+
+    return result;
 };
