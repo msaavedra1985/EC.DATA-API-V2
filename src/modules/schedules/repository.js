@@ -280,8 +280,15 @@ export const findValiditiesByScheduleId = async (scheduleId, includeRanges = fal
 
     return Validity.findAll({
         where: { scheduleId },
-        attributes: ['id', 'validFrom', 'validTo', 'rangesCount', 'weekCoveragePercent'],
-        include,
+        attributes: ['id', 'validFrom', 'validTo', 'rangesCount', 'weekCoveragePercent', 'exceptionsCount'],
+        include: [
+            ...include,
+            {
+                model: ScheduleException,
+                as: 'exceptions',
+                attributes: ['date', 'name', 'type', 'repeatYearly']
+            }
+        ],
         order: [['validFrom', 'ASC NULLS FIRST']]
     });
 };

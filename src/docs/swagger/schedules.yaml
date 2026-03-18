@@ -509,6 +509,15 @@ components:
           format: float
           example: 45.83
           description: Porcentaje de cobertura semanal (0.00-100.00)
+        exceptionsCount:
+          type: integer
+          example: 2
+          description: Contador total de excepciones de esta vigencia
+        exceptions:
+          type: array
+          description: Excepciones asociadas a esta vigencia
+          items:
+            $ref: '#/components/schemas/ExceptionInput'
         timeProfiles:
           type: array
           items:

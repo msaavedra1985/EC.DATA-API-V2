@@ -142,6 +142,13 @@ export const getScheduleValidities = async (publicCode) => {
             validTo: validity.validTo ?? null,
             rangesCount: validity.rangesCount ?? 0,
             weekCoveragePercent: validity.weekCoveragePercent ?? 0.00,
+            exceptionsCount: validity.exceptionsCount ?? 0,
+            exceptions: (validity.exceptions || []).map(ex => ({
+                date: ex.date,
+                name: ex.name,
+                type: ex.type,
+                repeatYearly: ex.repeatYearly
+            })),
             timeProfiles: (validity.timeProfiles || []).map(tp => ({
                 id: tp.id,
                 name: tp.name,
