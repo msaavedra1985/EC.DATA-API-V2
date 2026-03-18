@@ -467,15 +467,19 @@ Obtener los rangos horarios completos de una validity específica.
 
 ### PATCH /api/v1/schedules/:id/validities/:validityId
 
-Actualizar las fechas de una validity (validFrom, validTo).
+Actualizar las fechas de una validity (validFrom, validTo). Opcionalmente puede crear una vigencia sucesora de forma atómica en la misma transacción.
 
 **Auth**: Bearer token (requiere org-admin o system-admin).
 
 **Path Params**:
 | Param | Tipo | Descripción |
 |-------|------|-------------|
-| id | string | Public code del schedule |
-| validityId | int | ID de la validity |
+| id | string | Public code del schedule (ej: `SCH-4X9-R2T`) |
+| validityId | int | ID numérico de la validity |
+
+---
+
+#### Caso 1 — Solo actualizar fechas (comportamiento original)
 
 **Request Body**:
 ```json
@@ -485,7 +489,13 @@ Actualizar las fechas de una validity (validFrom, validTo).
 }
 ```
 
-**Campos opcionales**: `validFrom`, `validTo` (al menos uno requerido)
+**Campos del body**:
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| `validFrom` | string (date) \| null | Opcional. Nueva fecha de inicio |
+| `validTo` | string (date) \| null | Opcional. Nueva fecha de cierre |
+
+> Al menos uno de `validFrom` o `validTo` es requerido.
 
 **Response 200**:
 ```json
@@ -502,14 +512,111 @@ Actualizar las fechas de una validity (validFrom, validTo).
 }
 ```
 
-**Response 404**: `SCHEDULE_NOT_FOUND` o `VALIDITY_NOT_FOUND`
+---
 
-**Response 422**: Solapamiento con otras validities (Regla A)
+#### Caso 2 — Cierre atómico con creación de vigencia sucesora
+
+Cierra la vigencia actual (establece `validTo`) y crea la vigencia sucesora en **una sola transacción atómica**. Si cualquier paso falla, se hace rollback de todo.
+
+**Request Body**:
+```json
+{
+  "validTo": "2026-03-18",
+  "nextValidity": {
+    "validFrom": "2026-03-19",
+    "validTo": null,
+    "timeProfiles": [
+      {
+        "name": "Turno Mañana",
+        "grid": {
+          "1": [{"from": "08:00", "to": "12:00"}],
+          "2": [{"from": "08:00", "to": "12:00"}],
+          "3": [{"from": "08:00", "to": "12:00"}],
+          "4": [{"from": "08:00", "to": "12:00"}],
+          "5": [{"from": "08:00", "to": "12:00"}]
+        }
+      }
+    ],
+    "exceptions": [
+      {"date": "2026-01-01", "name": "Año Nuevo", "type": "closed", "repeatYearly": true}
+    ]
+  }
+}
+```
+
+**Campos del body**:
+| Campo | Tipo | Obligatorio | Descripción |
+|-------|------|-------------|-------------|
+| `validFrom` | string (date) \| null | No | Nueva fecha de inicio de la vigencia actual |
+| `validTo` | string (date) \| null | **Sí si `nextValidity` está presente** | Fecha de cierre de la vigencia actual |
+| `nextValidity` | object | No | Vigencia sucesora a crear. Misma estructura que `POST /validities` |
+| `nextValidity.validFrom` | string (date) \| null | No | Fecha de inicio de la nueva vigencia |
+| `nextValidity.validTo` | string (date) \| null | No | Fecha de fin de la nueva vigencia (null = indefinida) |
+| `nextValidity.timeProfiles` | array | **Sí** | Al menos un perfil horario con grid |
+| `nextValidity.exceptions` | array | No | Excepciones de la nueva vigencia. Misma estructura que `PUT /exceptions` |
+
+**Response 200**:
+```json
+{
+  "ok": true,
+  "data": {
+    "closed": {
+      "id": 1,
+      "validFrom": "2026-01-01",
+      "validTo": "2026-03-18",
+      "rangesCount": 10,
+      "weekCoveragePercent": 45.83
+    },
+    "created": {
+      "id": 5,
+      "validFrom": "2026-03-19",
+      "validTo": null,
+      "rangesCount": 5,
+      "weekCoveragePercent": 29.76,
+      "exceptionsCount": 1,
+      "exceptions": [
+        {"date": "2026-01-01", "name": "Año Nuevo", "type": "closed", "repeatYearly": true}
+      ],
+      "timeProfiles": [
+        {
+          "id": 15,
+          "name": "Turno Mañana",
+          "grid": {
+            "1": [{"id": 201, "from": "08:00", "to": "12:00"}],
+            "2": [{"id": 202, "from": "08:00", "to": "12:00"}],
+            "3": [{"id": 203, "from": "08:00", "to": "12:00"}],
+            "4": [{"id": 204, "from": "08:00", "to": "12:00"}],
+            "5": [{"id": 205, "from": "08:00", "to": "12:00"}]
+          }
+        }
+      ]
+    }
+  },
+  "meta": { "timestamp": "..." }
+}
+```
+
+> **Importante**: El `id` en `data.created.id` es el ID numérico de la nueva vigencia. El frontend lo usa para redirigir al usuario al formulario de edición de la vigencia recién creada.
+
+---
+
+#### Validaciones (ambos casos)
+
+| Código | Condición |
+|--------|-----------|
+| `SCHEDULE_NOT_FOUND` (404) | El schedule no existe |
+| `VALIDITY_NOT_FOUND` (404) | La validity no pertenece al schedule |
+| `VALIDITY_VALIDATION_ERROR` (422) | El nuevo `validFrom`/`validTo` se solapa con otra vigencia existente (Regla A) |
+| `SCHEDULE_VALIDATION_ERROR` (422) | `nextValidity` se solapa con alguna vigencia existente (Regla A), o sus rangos internos se pisan (Regla B) |
+
+Cuando se usa `nextValidity`:
+- La `nextValidity` se valida contra **todas las vigencias existentes del schedule** incluyendo la vigencia que se cierra **con su nuevo `validTo`**
+- Si la validación de `nextValidity` falla, **también se revierte el cierre** de la vigencia actual (todo o nada)
 
 **Notas**:
-- Valida que no se solape con otras validities del schedule
-- Audit log: Sí (UPDATE)
-- Incluye métricas en response
+- Audit log: Sí (UPDATE — registra el patch y el nextValidity si está presente)
+- Sin `nextValidity` → response shape simple (igual que siempre)
+- Con `nextValidity` → response shape `{ closed, created }` con árbol completo de la vigencia creada
 
 ---
 

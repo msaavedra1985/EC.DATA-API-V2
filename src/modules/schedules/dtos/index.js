@@ -84,10 +84,18 @@ export const updateValiditySchema = z.object({
         validityId: z.coerce.number().int().positive()
     }),
     body: z.object({
-        validFrom: z.string().date().nullable().optional(),
-        validTo: z.string().date().nullable().optional()
-    }).refine(data => data.validFrom !== undefined || data.validTo !== undefined, {
+        validFrom:    z.string().date().nullable().optional(),
+        validTo:      z.string().date().nullable().optional(),
+        nextValidity: validitySchema.optional()
+    })
+    .refine(data => data.validFrom !== undefined || data.validTo !== undefined, {
         message: 'Debe proporcionar al menos validFrom o validTo'
+    })
+    .refine(data => !data.nextValidity || data.validTo !== undefined, {
+        message: 'validTo es requerido cuando se provee nextValidity'
+    })
+    .refine(data => !data.nextValidity || (data.validTo !== null), {
+        message: 'validTo no puede ser nulo cuando se provee nextValidity — una vigencia sin fecha de cierre no puede tener sucesora'
     })
 });
 

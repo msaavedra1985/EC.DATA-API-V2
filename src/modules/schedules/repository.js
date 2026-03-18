@@ -357,17 +357,20 @@ export const findValidityById = async (validityId, includeRanges = true) => {
  */
 export const updateValidity = async (validityId, data, transaction = null) => {
     const options = transaction ? { transaction } : {};
-    
+
     const updateData = {};
     if (data.validFrom !== undefined) updateData.validFrom = data.validFrom;
     if (data.validTo !== undefined) updateData.validTo = data.validTo;
 
-    await Validity.update(updateData, {
-        where: { id: validityId },
+    // `returning: true` (PostgreSQL) devuelve el row actualizado en la misma
+    // conexión, evitando leer datos stale cuando se ejecuta dentro de una transacción.
+    const [, updatedRows] = await Validity.update(updateData, {
+        where:     { id: validityId },
+        returning: true,
         ...options
     });
 
-    return findValidityById(validityId, false);
+    return updatedRows[0];
 };
 
 /**
@@ -410,6 +413,21 @@ export const addValidity = async (scheduleId, validityPayload, transaction) => {
         { transaction: t }
     );
 
+    // Crear excepciones si vienen en el payload
+    if (validityPayload.exceptions && validityPayload.exceptions.length > 0) {
+        await ScheduleException.bulkCreate(
+            validityPayload.exceptions.map(ex => ({
+                validityId:   validity.id,
+                name:         ex.name,
+                type:         ex.type,
+                date:         ex.date,
+                repeatYearly: ex.repeatYearly ?? false
+            })),
+            { transaction: t }
+        );
+        await recalculateExceptionsCount(validity.id, t);
+    }
+
     for (const profilePayload of validityPayload.timeProfiles) {
         const profile = await TimeProfile.create(
             { validityId: validity.id, name: profilePayload.name },
@@ -427,7 +445,7 @@ export const addValidity = async (scheduleId, validityPayload, transaction) => {
 
     await recalculateValidityMetrics(validity.id, t);
 
-    return findValidityById(validity.id, true);
+    return validity.id;
 };
 
 /**

@@ -217,39 +217,93 @@ export const updateValidity = async (publicCode, validityId, data, userId, ipAdd
         throw err;
     }
 
+    // Separar nextValidity del resto del patch
+    const { nextValidity, ...patchData } = data;
+
     // Obtener todas las validities para validar solapamiento
     const allValidities = await repository.findValiditiesByScheduleId(schedule.id, false);
     const allValiditiesPlain = allValidities.map(v => v.toJSON ? v.toJSON() : v);
 
-    // Validar que no se solape con otras validities
-    validateValidityUpdate(allValiditiesPlain, validityId, data);
+    // Validar que el patch no se solape con otras validities
+    validateValidityUpdate(allValiditiesPlain, validityId, patchData);
 
-    // Actualizar validity en transacción
-    const updated = await sequelize.transaction(async (t) => {
-        return repository.updateValidity(validityId, data, t);
+    // Si viene nextValidity: validarla contra todas las vigencias existentes
+    // (incluyendo la que se cierra con su nuevo validTo)
+    if (nextValidity) {
+        const currentValidity = allValiditiesPlain.find(v => v.id === validityId);
+        const closedState = {
+            id:        currentValidity.id,
+            validFrom: patchData.validFrom !== undefined ? patchData.validFrom : currentValidity.validFrom,
+            validTo:   patchData.validTo
+        };
+        const existingForNext = allValiditiesPlain
+            .filter(v => v.id !== validityId)
+            .concat([closedState]);
+
+        validateSingleValidity(existingForNext, nextValidity);
+    }
+
+    // Transacción única: cerrar + (opcionalmente) crear sucesora
+    const { updatedValidity, createdValidityId } = await sequelize.transaction(async (t) => {
+        const updatedValidity = await repository.updateValidity(validityId, patchData, t);
+        let createdValidityId = null;
+        if (nextValidity) {
+            createdValidityId = await repository.addValidity(schedule.id, nextValidity, t);
+        }
+        return { updatedValidity, createdValidityId };
     });
 
     // Audit log
     await logAuditAction({
-        entityType: 'schedule_validity',
-        entityId: `${publicCode}/validity/${validityId}`,
-        action: 'update',
+        entityType:  'schedule_validity',
+        entityId:    `${publicCode}/validity/${validityId}`,
+        action:      'update',
         performedBy: userId,
-        changes: { new: data },
-        metadata: { scheduleId: publicCode, validityId },
+        changes:     { new: patchData, nextValidity: nextValidity ? { validFrom: nextValidity.validFrom, validTo: nextValidity.validTo } : null },
+        metadata:    { scheduleId: publicCode, validityId },
         ipAddress,
         userAgent
     });
 
-    scheduleLogger.info({ scheduleId: publicCode, validityId, userId }, 'Validity actualizada');
+    scheduleLogger.info({ scheduleId: publicCode, validityId, userId, hasNextValidity: !!nextValidity }, 'Validity actualizada');
 
-    const v = updated.toJSON ? updated.toJSON() : updated;
-    return {
-        id: v.id,
-        validFrom: v.validFrom ?? null,
-        validTo: v.validTo ?? null,
-        rangesCount: v.rangesCount ?? 0,
+    const v = updatedValidity.toJSON ? updatedValidity.toJSON() : updatedValidity;
+    const closed = {
+        id:                  v.id,
+        validFrom:           v.validFrom ?? null,
+        validTo:             v.validTo   ?? null,
+        rangesCount:         v.rangesCount ?? 0,
         weekCoveragePercent: v.weekCoveragePercent ?? 0.00
+    };
+
+    // Sin nextValidity: respuesta igual que antes
+    if (!nextValidity) return closed;
+
+    // Con nextValidity: recargar la vigencia creada y devolver { closed, created }
+    const createdFull = await repository.findValidityByIdFull(createdValidityId);
+    const c = createdFull.toJSON ? createdFull.toJSON() : createdFull;
+
+    return {
+        closed,
+        created: {
+            id:                  c.id,
+            validFrom:           c.validFrom  ?? null,
+            validTo:             c.validTo    ?? null,
+            rangesCount:         c.rangesCount ?? 0,
+            weekCoveragePercent: c.weekCoveragePercent ?? 0.00,
+            exceptionsCount:     c.exceptionsCount ?? 0,
+            exceptions: (c.exceptions || []).map(ex => ({
+                date:         ex.date,
+                name:         ex.name,
+                type:         ex.type,
+                repeatYearly: ex.repeatYearly
+            })),
+            timeProfiles: (c.timeProfiles || []).map(tp => ({
+                id:   tp.id,
+                name: tp.name,
+                grid: rowsToGrid(tp.timeRanges || [])
+            }))
+        }
     };
 };
 
@@ -392,7 +446,7 @@ export const addValidity = async (publicCode, validityPayload, userId, ipAddress
     // Regla A + Regla B
     validateSingleValidity(existingPlain, validityPayload);
 
-    const validity = await sequelize.transaction(async (t) => {
+    const newValidityId = await sequelize.transaction(async (t) => {
         return repository.addValidity(schedule.id, validityPayload, t);
     });
 
@@ -409,13 +463,21 @@ export const addValidity = async (publicCode, validityPayload, userId, ipAddress
 
     scheduleLogger.info({ scheduleId: publicCode, userId }, 'Validity agregada');
 
+    const validity = await repository.findValidityByIdFull(newValidityId);
     const v = validity.toJSON ? validity.toJSON() : validity;
     return {
-        id:                 v.id,
-        validFrom:          v.validFrom ?? null,
-        validTo:            v.validTo   ?? null,
-        rangesCount:        v.rangesCount ?? 0,
+        id:                  v.id,
+        validFrom:           v.validFrom  ?? null,
+        validTo:             v.validTo    ?? null,
+        rangesCount:         v.rangesCount ?? 0,
         weekCoveragePercent: v.weekCoveragePercent ?? 0.00,
+        exceptionsCount:     v.exceptionsCount ?? 0,
+        exceptions: (v.exceptions || []).map(ex => ({
+            date:         ex.date,
+            name:         ex.name,
+            type:         ex.type,
+            repeatYearly: ex.repeatYearly
+        })),
         timeProfiles: (v.timeProfiles || []).map(tp => ({
             id:   tp.id,
             name: tp.name,
