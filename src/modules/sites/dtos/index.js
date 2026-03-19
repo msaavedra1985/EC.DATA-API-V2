@@ -10,10 +10,9 @@ import { z } from 'zod';
 export const createSiteSchema = z.object({
     body: z.object({
         organizationId: z
-            .string({
-                required_error: 'organizationId es requerido'
-            })
-            .min(1, 'organizationId no puede estar vacío'),
+            .string()
+            .min(1, 'organizationId no puede estar vacío')
+            .optional(),
         name: z
             .string({
                 required_error: 'name es requerido'

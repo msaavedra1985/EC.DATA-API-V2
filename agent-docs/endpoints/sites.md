@@ -133,9 +133,22 @@
 
 ## POST /api/v1/sites
 
-**Propósito**: Crear nuevo sitio en la organización activa
+**Propósito**: Crear nuevo sitio
 
-**Autenticación**: Bearer JWT (requiere rol admin)
+**Autenticación**: Bearer JWT (requiere rol `system-admin` u `org-admin`)
+
+### Resolución de organización
+
+El comportamiento de `organizationId` varía según el contexto del usuario:
+
+| Contexto | `organizationId` en body | Resultado |
+|----------|--------------------------|-----------|
+| `system-admin` **sin** organización activa (modo global) | **Requerido** | Usa la organización del body |
+| `system-admin` **impersonando** una organización | Ignorado | Siempre usa la org impersonada |
+| `org-admin` (o cualquier usuario con org activa) | Opcional | Si se omite, usa la org activa del contexto; si se envía, verifica acceso |
+
+> Si el `system-admin` está en modo global y no envía `organizationId`, la API responde `400 ORGANIZATION_REQUIRED`.  
+> Si envía un `organizationId` mientras impersona una org distinta, se ignora silenciosamente y se usa la org del contexto.
 
 **Body**:
 ```json
@@ -166,7 +179,7 @@
 **Campos**:
 | Campo | Tipo | Requerido | Descripción |
 |-------|------|-----------|-------------|
-| organizationId | string | Sí | Public code de la organización a la que pertenece el sitio |
+| organizationId | string | Condicional* | Public code de la organización. Ver tabla de resolución arriba |
 | name | string | Sí | Nombre del sitio (máx 200 chars) |
 | countryCode | string (2 chars) | Sí | Código de país ISO 3166-1 alpha-2 (ej: `"PE"`, `"AR"`) |
 | description | string | No | Descripción (máx 5000 chars) |
@@ -223,7 +236,8 @@
 
 **Notas**:
 - Audit log: CREATE
-- `organizationId` en el body indica la organización a la que pertenece el sitio
+- Resolución de `organizationId` explicada en la tabla de resolución de organización arriba
+- Un site no puede existir sin organización padre — siempre se asigna una
 
 ---
 
