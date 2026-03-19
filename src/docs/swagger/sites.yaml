@@ -15,21 +15,21 @@ paths:
             schema:
               type: object
               required:
-                - organization_id
+                - organizationId
                 - name
-                - country_id
+                - countryCode
               properties:
-                organization_id:
+                organizationId:
                   type: string
-                  description: Public code de la organización (ej SITE-abc123-1)
+                  description: Public code de la organización a la que pertenece el sitio
                   example: ORG-yOM9ewfqOeWa-4
                 name:
                   type: string
-                  description: Nombre del site
+                  description: Nombre del site (máx 200 caracteres)
                   example: Sucursal Centro
                 description:
                   type: string
-                  description: Descripción del site
+                  description: Descripción del site (máx 5000 caracteres)
                   example: Oficina central en el microcentro
                 latitude:
                   type: number
@@ -41,33 +41,35 @@ paths:
                   example: -58.3815704
                 address:
                   type: string
-                  description: Dirección completa
+                  description: Dirección completa (máx 500 caracteres)
                   example: Av. Corrientes 1234
-                street_number:
+                streetNumber:
                   type: string
-                  description: Número de calle
+                  description: Número de calle (máx 20 caracteres)
                   example: "1234"
                 city:
                   type: string
-                  description: Ciudad
+                  description: Ciudad (máx 100 caracteres)
                   example: Buenos Aires
-                state_province:
+                stateProvince:
                   type: string
-                  description: Provincia/Estado
+                  description: Provincia/Estado (máx 100 caracteres)
                   example: Ciudad Autónoma de Buenos Aires
-                postal_code:
+                postalCode:
                   type: string
-                  description: Código postal
+                  description: Código postal (máx 20 caracteres)
                   example: C1043
-                country_id:
-                  type: integer
-                  description: ID del país (tabla countries)
-                  example: 10
+                countryCode:
+                  type: string
+                  minLength: 2
+                  maxLength: 2
+                  description: Código de país ISO 3166-1 alpha-2
+                  example: AR
                 timezone:
                   type: string
-                  description: Zona horaria
+                  description: Zona horaria (máx 100 caracteres)
                   example: America/Argentina/Buenos_Aires
-                building_type:
+                buildingType:
                   type: string
                   enum:
                     - office
@@ -84,39 +86,39 @@ paths:
                     - other
                   description: Tipo de edificio
                   example: office
-                area_m2:
+                areaM2:
                   type: number
-                  description: Área en metros cuadrados
+                  description: Área en metros cuadrados (positivo)
                   example: 2500.5
                 floors:
                   type: integer
-                  description: Número de pisos
+                  description: Número de pisos (entero positivo)
                   example: 12
-                operating_hours:
+                operatingHours:
                   type: string
-                  description: Horario de operación
+                  description: Horario de operación (máx 200 caracteres)
                   example: Lun-Vie 9:00-18:00
-                image_url:
+                imageUrl:
                   type: string
                   format: uri
-                  description: URL de imagen del site
+                  description: URL de imagen del site (máx 500 caracteres)
                   example: https://example.com/site.jpg
-                contact_name:
+                contactName:
                   type: string
-                  description: Nombre del contacto
+                  description: Nombre del contacto (máx 100 caracteres)
                   example: Juan Pérez
-                contact_phone:
+                contactPhone:
                   type: string
-                  description: Teléfono del contacto
+                  description: Teléfono del contacto (máx 50 caracteres)
                   example: +54-11-5555-0300
-                contact_email:
+                contactEmail:
                   type: string
                   format: email
-                  description: Email del contacto
+                  description: Email del contacto (máx 100 caracteres)
                   example: contacto@site.com
-                is_active:
+                isActive:
                   type: boolean
-                  description: Si el site está activo
+                  description: Estado activo del site
                   default: true
       responses:
         "201":
@@ -130,50 +132,16 @@ paths:
                     type: boolean
                     example: true
                   data:
+                    $ref: "#/components/schemas/Site"
+                  meta:
                     type: object
                     properties:
-                      id:
+                      timestamp:
                         type: string
-                        example: SITE-abc123xyz-1
-                      name:
+                        format: date-time
+                      locale:
                         type: string
-                        example: Sucursal Centro
-                      description:
-                        type: string
-                        example: Oficina central
-                      latitude:
-                        type: number
-                        example: -34.6037389
-                      longitude:
-                        type: number
-                        example: -58.3815704
-                      address:
-                        type: string
-                        example: Av. Corrientes 1234
-                      city:
-                        type: string
-                        example: Buenos Aires
-                      is_active:
-                        type: boolean
-                        example: true
-                      organization:
-                        type: object
-                        properties:
-                          id:
-                            type: string
-                            example: ORG-yOM9ewfqOeWa-4
-                          name:
-                            type: string
-                            example: EC.DATA
-                      country:
-                        type: object
-                        properties:
-                          id:
-                            type: integer
-                            example: 10
-                          iso_alpha2:
-                            type: string
-                            example: AR
+                        example: es
         "400":
           description: Error de validación
         "401":
@@ -192,7 +160,7 @@ paths:
 
         - Sin filtro: Usa automáticamente la organización activa del usuario (del JWT)
 
-        - Con `organization_id`: Filtra por esa organización específica (si tiene acceso)
+        - Con `organizationId`: Filtra por esa organización específica (si tiene acceso)
 
         - Con `all=true`: Solo admins (system-admin, org-admin), muestra todos los sites accesibles
       tags:
@@ -201,8 +169,8 @@ paths:
         - bearerAuth: []
       parameters:
         - in: query
-          name: organization_id
-          description: Filtrar por organización específica (public_code). Si no se
+          name: organizationId
+          description: Filtrar por organización específica (public code). Si no se
             especifica, usa la organización activa del usuario.
           schema:
             type: string
@@ -218,17 +186,22 @@ paths:
               - "false"
             example: "true"
         - in: query
-          name: country_id
-          description: Filtrar por país
+          name: countryCode
+          description: Filtrar por país (ISO 3166-1 alpha-2)
           schema:
-            type: integer
-            example: 10
+            type: string
+            minLength: 2
+            maxLength: 2
+            example: AR
         - in: query
-          name: is_active
+          name: isActive
           description: Filtrar por estado activo
           schema:
-            type: boolean
-            default: true
+            type: string
+            enum:
+              - "true"
+              - "false"
+            example: "true"
         - in: query
           name: city
           description: Filtrar por ciudad
@@ -236,7 +209,7 @@ paths:
             type: string
             example: Buenos Aires
         - in: query
-          name: not_in_hierarchy
+          name: notInHierarchy
           description: Si es "true", muestra solo sites que NO están en ninguna jerarquía
             de recursos. Útil para evitar duplicados al agregar a la jerarquía.
           schema:
@@ -245,6 +218,13 @@ paths:
               - "true"
               - "false"
             example: "true"
+        - in: query
+          name: page
+          description: Número de página (≥1). Si se usa, calcula el offset automáticamente.
+          schema:
+            type: integer
+            minimum: 1
+            example: 1
         - in: query
           name: limit
           description: Número máximo de resultados
@@ -291,6 +271,9 @@ paths:
                       timestamp:
                         type: string
                         format: date-time
+                      locale:
+                        type: string
+                        example: es
                       organizationFilter:
                         type: object
         "401":
@@ -298,7 +281,7 @@ paths:
   "/api/v1/sites/{id}":
     get:
       summary: Obtener un site por ID
-      description: Obtiene los detalles de un site específico por su public_code
+      description: Obtiene los detalles de un site específico por su public code
       tags:
         - Sites
       security:
@@ -307,7 +290,7 @@ paths:
         - in: path
           name: id
           required: true
-          description: Public code del site (ej SITE-abc123-1)
+          description: Public code del site
           schema:
             type: string
             example: SITE-abc123xyz-1
@@ -323,7 +306,16 @@ paths:
                     type: boolean
                     example: true
                   data:
+                    $ref: "#/components/schemas/Site"
+                  meta:
                     type: object
+                    properties:
+                      timestamp:
+                        type: string
+                        format: date-time
+                      locale:
+                        type: string
+                        example: es
         "401":
           description: No autenticado
         "404":
@@ -362,21 +354,77 @@ paths:
                   type: number
                 address:
                   type: string
+                streetNumber:
+                  type: string
                 city:
                   type: string
-                state_province:
+                stateProvince:
                   type: string
-                postal_code:
+                postalCode:
                   type: string
-                country_id:
-                  type: integer
+                countryCode:
+                  type: string
+                  minLength: 2
+                  maxLength: 2
+                  description: Código de país ISO 3166-1 alpha-2
+                  example: AR
                 timezone:
                   type: string
-                is_active:
+                buildingType:
+                  type: string
+                  enum:
+                    - office
+                    - warehouse
+                    - factory
+                    - retail
+                    - hospital
+                    - school
+                    - datacenter
+                    - hotel
+                    - restaurant
+                    - residential
+                    - mixed
+                    - other
+                areaM2:
+                  type: number
+                floors:
+                  type: integer
+                operatingHours:
+                  type: string
+                imageUrl:
+                  type: string
+                  format: uri
+                contactName:
+                  type: string
+                contactPhone:
+                  type: string
+                contactEmail:
+                  type: string
+                  format: email
+                isActive:
                   type: boolean
       responses:
         "200":
           description: Site actualizado exitosamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: "#/components/schemas/Site"
+                  meta:
+                    type: object
+                    properties:
+                      timestamp:
+                        type: string
+                        format: date-time
+                      locale:
+                        type: string
+                        example: es
         "400":
           description: Error de validación
         "401":
@@ -423,3 +471,112 @@ paths:
           description: Sin permisos
         "404":
           description: Site no encontrado
+components:
+  schemas:
+    Site:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Public code del site
+          example: SITE-abc123xyz-1
+        name:
+          type: string
+          example: Sucursal Centro
+        description:
+          type: string
+          example: Oficina central en el microcentro
+        latitude:
+          type: number
+          example: -34.6037389
+        longitude:
+          type: number
+          example: -58.3815704
+        address:
+          type: string
+          example: Av. Corrientes 1234
+        streetNumber:
+          type: string
+          example: "1234"
+        city:
+          type: string
+          example: Buenos Aires
+        stateProvince:
+          type: string
+          example: Ciudad Autónoma de Buenos Aires
+        postalCode:
+          type: string
+          example: C1043
+        timezone:
+          type: string
+          example: America/Argentina/Buenos_Aires
+        buildingType:
+          type: string
+          example: office
+        areaM2:
+          type: number
+          example: 2500.5
+        floors:
+          type: integer
+          example: 12
+        operatingHours:
+          type: string
+          example: Lun-Vie 9:00-18:00
+        imageUrl:
+          type: string
+          format: uri
+          example: https://example.com/site.jpg
+        contactName:
+          type: string
+          example: Juan Pérez
+        contactPhone:
+          type: string
+          example: +54-11-5555-0300
+        contactEmail:
+          type: string
+          format: email
+          example: contacto@site.com
+        isActive:
+          type: boolean
+          example: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        organization:
+          type: object
+          description: Organización a la que pertenece el site (presente cuando se carga la relación)
+          properties:
+            id:
+              type: string
+              description: Public code de la organización
+              example: ORG-yOM9ewfqOeWa-4
+            slug:
+              type: string
+              example: mi-organizacion
+            name:
+              type: string
+              example: Mi Organización
+            logoUrl:
+              type: string
+              format: uri
+              nullable: true
+              example: null
+        country:
+          type: object
+          description: País del site (presente cuando se carga la relación)
+          properties:
+            id:
+              type: integer
+              example: 10
+            isoAlpha2:
+              type: string
+              example: AR
+            isoAlpha3:
+              type: string
+              example: ARG
+            phoneCode:
+              type: string
+              example: "54"
