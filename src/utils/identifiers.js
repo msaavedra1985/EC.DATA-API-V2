@@ -14,7 +14,8 @@ export const generateUuidV7 = () => {
 export const generateHumanId = async (model, scopeField, scopeValue, options = {}) => {
     const findOptions = {
         attributes: [[model.sequelize.fn('MAX', model.sequelize.col('human_id')), 'max_id']],
-        raw: true
+        raw: true,
+        paranoid: false
     };
 
     if (options.transaction) {
