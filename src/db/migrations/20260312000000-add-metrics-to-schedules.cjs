@@ -3,43 +3,41 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
     async up(queryInterface, Sequelize) {
-        // Agregar validities_count a schedules
-        await queryInterface.addColumn('schedules', 'validities_count', {
-            type: Sequelize.INTEGER,
-            allowNull: false,
-            defaultValue: 0,
-            comment: 'Contador de vigencias totales (cache)'
-        });
+        // Agregar validities_count a schedules (si no existe)
+        await queryInterface.sequelize.query(`
+            ALTER TABLE schedules ADD COLUMN IF NOT EXISTS validities_count INTEGER NOT NULL DEFAULT 0;
+        `);
 
-        // Agregar exceptions_count a schedules
-        await queryInterface.addColumn('schedules', 'exceptions_count', {
-            type: Sequelize.INTEGER,
-            allowNull: false,
-            defaultValue: 0,
-            comment: 'Contador de excepciones totales (cache)'
-        });
+        // Agregar exceptions_count a schedules (si no existe)
+        // Note: migration 20260313000000 will later remove this column from schedules.
+        // If already removed (i.e., this table is in the final state), this is a no-op.
+        await queryInterface.sequelize.query(`
+            ALTER TABLE schedules ADD COLUMN IF NOT EXISTS exceptions_count INTEGER NOT NULL DEFAULT 0;
+        `);
 
-        // Agregar ranges_count a schedule_validities
-        await queryInterface.addColumn('schedule_validities', 'ranges_count', {
-            type: Sequelize.INTEGER,
-            allowNull: false,
-            defaultValue: 0,
-            comment: 'Contador de rangos horarios totales (cache)'
-        });
+        // Agregar ranges_count a schedule_validities (si no existe)
+        await queryInterface.sequelize.query(`
+            ALTER TABLE schedule_validities ADD COLUMN IF NOT EXISTS ranges_count INTEGER NOT NULL DEFAULT 0;
+        `);
 
-        // Agregar week_coverage_percent a schedule_validities
-        await queryInterface.addColumn('schedule_validities', 'week_coverage_percent', {
-            type: Sequelize.DECIMAL(5, 2),
-            allowNull: false,
-            defaultValue: 0.00,
-            comment: 'Porcentaje de cobertura semanal (0.00-100.00)'
-        });
+        // Agregar week_coverage_percent a schedule_validities (si no existe)
+        await queryInterface.sequelize.query(`
+            ALTER TABLE schedule_validities ADD COLUMN IF NOT EXISTS week_coverage_percent DECIMAL(5,2) NOT NULL DEFAULT 0.00;
+        `);
     },
 
     async down(queryInterface, Sequelize) {
-        await queryInterface.removeColumn('schedule_validities', 'week_coverage_percent');
-        await queryInterface.removeColumn('schedule_validities', 'ranges_count');
-        await queryInterface.removeColumn('schedules', 'exceptions_count');
-        await queryInterface.removeColumn('schedules', 'validities_count');
+        await queryInterface.sequelize.query(`
+            ALTER TABLE schedule_validities DROP COLUMN IF EXISTS week_coverage_percent;
+        `);
+        await queryInterface.sequelize.query(`
+            ALTER TABLE schedule_validities DROP COLUMN IF EXISTS ranges_count;
+        `);
+        await queryInterface.sequelize.query(`
+            ALTER TABLE schedules DROP COLUMN IF EXISTS exceptions_count;
+        `);
+        await queryInterface.sequelize.query(`
+            ALTER TABLE schedules DROP COLUMN IF EXISTS validities_count;
+        `);
     }
 };

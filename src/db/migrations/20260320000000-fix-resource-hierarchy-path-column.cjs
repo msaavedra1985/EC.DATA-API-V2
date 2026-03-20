@@ -8,7 +8,7 @@
  * en la tabla, indicando que la migración original se ejecutó de forma incompleta.
  *
  * Esta migración:
- * 1. Verifica si la columna path existe; si no, la añade.
+ * 1. Verifica si la columna path existe; si no, la añade. Si existe como TEXT, la convierte a ltree.
  * 2. Verifica si el índice GiST existe; si no, lo crea.
  * 3. Recrea (CREATE OR REPLACE) la función generate_resource_path y el trigger.
  * 4. Rellena path en los registros existentes.
@@ -23,9 +23,15 @@ module.exports = {
     `);
     console.log('✅ Extensión ltree verificada');
 
-    // 2. Añadir columna path si no existe
-    const tableDescription = await queryInterface.describeTable('resource_hierarchy');
-    if (!tableDescription.path) {
+    // 2. Verificar estado actual de la columna path
+    const [pathColRows] = await queryInterface.sequelize.query(`
+      SELECT column_name, data_type, udt_name
+      FROM information_schema.columns
+      WHERE table_name = 'resource_hierarchy' AND column_name = 'path';
+    `);
+
+    if (pathColRows.length === 0) {
+      // Columna no existe: añadirla como ltree
       await queryInterface.sequelize.query(`
         ALTER TABLE resource_hierarchy ADD COLUMN path ltree;
       `);
@@ -35,7 +41,31 @@ module.exports = {
       `);
       console.log('✅ Columna path ltree añadida');
     } else {
-      console.log('ℹ️  Columna path ya existe, se omite ALTER TABLE');
+      const col = pathColRows[0];
+      const isLtree = col.udt_name === 'ltree' || col.data_type === 'ltree';
+      if (!isLtree) {
+        // Existe como TEXT u otro tipo: Drop trigger/index if any, then convert
+        console.log(`ℹ️  Columna path existe como ${col.data_type}/${col.udt_name}, convirtiendo a ltree`);
+        // Drop GiST index if it exists (may not work on non-ltree column)
+        await queryInterface.sequelize.query(`
+          DROP INDEX IF EXISTS resource_hierarchy_path_gist_idx;
+        `);
+        // Drop trigger if exists
+        await queryInterface.sequelize.query(`
+          DROP TRIGGER IF EXISTS resource_hierarchy_path_trigger ON resource_hierarchy;
+        `);
+        // Convert column type to ltree
+        await queryInterface.sequelize.query(`
+          ALTER TABLE resource_hierarchy ALTER COLUMN path TYPE ltree USING NULL;
+        `);
+        await queryInterface.sequelize.query(`
+          COMMENT ON COLUMN resource_hierarchy.path IS
+            'Path materializado como ltree para queries rápidas de ancestros/descendientes. Formato: n<UUID sin guiones>.n<UUID sin guiones>';
+        `);
+        console.log('✅ Columna path convertida a ltree');
+      } else {
+        console.log('ℹ️  Columna path ya es ltree, se omite ALTER TABLE');
+      }
     }
 
     // 3. Crear índice GiST si no existe

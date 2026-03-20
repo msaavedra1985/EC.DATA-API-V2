@@ -34,7 +34,7 @@ module.exports = {
             created_at: { type: Sequelize.DATE, allowNull: false, defaultValue: Sequelize.fn('NOW') },
             updated_at: { type: Sequelize.DATE, allowNull: false, defaultValue: Sequelize.fn('NOW') },
             deleted_at: { type: Sequelize.DATE, allowNull: true }
-        });
+        }, { ifNotExists: true });
 
         await queryInterface.sequelize.query(
             `CREATE UNIQUE INDEX IF NOT EXISTS schedules_public_code_idx ON schedules (public_code)`
@@ -44,35 +44,35 @@ module.exports = {
         );
 
         // 2. schedule_exceptions
-        await queryInterface.createTable('schedule_exceptions', {
-            id: {
-                type: Sequelize.INTEGER,
-                primaryKey: true,
-                autoIncrement: true,
-                allowNull: false
-            },
-            schedule_id: {
-                type: Sequelize.UUID,
-                allowNull: false,
-                references: { model: 'schedules', key: 'id' },
-                onUpdate: 'CASCADE',
-                onDelete: 'CASCADE'
-            },
-            name: { type: Sequelize.STRING(200), allowNull: false },
-            type: {
-                type: Sequelize.ENUM('closed', 'special'),
-                allowNull: false,
-                defaultValue: 'closed'
-            },
-            date:          { type: Sequelize.DATEONLY, allowNull: false },
-            repeat_yearly: { type: Sequelize.BOOLEAN, allowNull: false, defaultValue: false },
-            created_at: { type: Sequelize.DATE, allowNull: false, defaultValue: Sequelize.fn('NOW') },
-            updated_at: { type: Sequelize.DATE, allowNull: false, defaultValue: Sequelize.fn('NOW') }
-        });
+        // Note: this table was originally created with schedule_id, but after
+        // migration 20260313000000 it has validity_id instead.
+        // We create it with validity_id directly so that if it doesn't exist yet,
+        // it starts in the correct final state.
+        await queryInterface.sequelize.query(`
+            DO $$
+            BEGIN
+                IF NOT EXISTS (
+                    SELECT 1 FROM information_schema.tables
+                    WHERE table_schema = 'public' AND table_name = 'schedule_exceptions'
+                ) THEN
+                    -- Create ENUM type if it doesn't exist
+                    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'enum_schedule_exceptions_type') THEN
+                        CREATE TYPE enum_schedule_exceptions_type AS ENUM ('closed', 'special');
+                    END IF;
+                    CREATE TABLE schedule_exceptions (
+                        id SERIAL PRIMARY KEY,
+                        validity_id INTEGER NOT NULL,
+                        name VARCHAR(200) NOT NULL,
+                        type enum_schedule_exceptions_type NOT NULL DEFAULT 'closed',
+                        date DATE NOT NULL,
+                        repeat_yearly BOOLEAN NOT NULL DEFAULT false,
+                        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                    );
+                END IF;
+            END $$;
+        `);
 
-        await queryInterface.sequelize.query(
-            `CREATE INDEX IF NOT EXISTS schedule_exceptions_schedule_id_idx ON schedule_exceptions (schedule_id)`
-        );
         await queryInterface.sequelize.query(
             `CREATE INDEX IF NOT EXISTS schedule_exceptions_date_idx ON schedule_exceptions (date)`
         );
@@ -96,7 +96,7 @@ module.exports = {
             valid_to:   { type: Sequelize.DATEONLY, allowNull: true },
             created_at: { type: Sequelize.DATE, allowNull: false, defaultValue: Sequelize.fn('NOW') },
             updated_at: { type: Sequelize.DATE, allowNull: false, defaultValue: Sequelize.fn('NOW') }
-        });
+        }, { ifNotExists: true });
 
         await queryInterface.sequelize.query(
             `CREATE INDEX IF NOT EXISTS schedule_validities_schedule_id_idx ON schedule_validities (schedule_id)`
@@ -120,7 +120,7 @@ module.exports = {
             name: { type: Sequelize.STRING(200), allowNull: false },
             created_at: { type: Sequelize.DATE, allowNull: false, defaultValue: Sequelize.fn('NOW') },
             updated_at: { type: Sequelize.DATE, allowNull: false, defaultValue: Sequelize.fn('NOW') }
-        });
+        }, { ifNotExists: true });
 
         await queryInterface.sequelize.query(
             `CREATE INDEX IF NOT EXISTS schedule_time_profiles_validity_id_idx ON schedule_time_profiles (validity_id)`
@@ -158,7 +158,7 @@ module.exports = {
             },
             created_at: { type: Sequelize.DATE, allowNull: false, defaultValue: Sequelize.fn('NOW') },
             updated_at: { type: Sequelize.DATE, allowNull: false, defaultValue: Sequelize.fn('NOW') }
-        });
+        }, { ifNotExists: true });
 
         await queryInterface.sequelize.query(
             `CREATE INDEX IF NOT EXISTS schedule_time_ranges_profile_id_idx ON schedule_time_ranges (time_profile_id)`
