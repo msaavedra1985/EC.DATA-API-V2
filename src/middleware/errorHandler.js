@@ -67,13 +67,15 @@ export const errorHandler = (err, req, res, next) => {
     // Mensaje de error (en producción no exponer detalles internos)
     const message = err.message || 'Internal server error';
 
-    // Detalles adicionales (solo en desarrollo)
-    const details =
-        process.env.NODE_ENV === 'development'
-            ? {
-                  stack: err.stack,
-                  ...(err.details && { details: err.details }),
-              }
+    // Detalles de negocio (siempre incluidos si existen)
+    // Detalles de debug (solo en desarrollo)
+    const details = err.details
+        ? {
+              ...err.details,
+              ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
+          }
+        : process.env.NODE_ENV === 'development'
+            ? { stack: err.stack }
             : null;
 
     // ========================================

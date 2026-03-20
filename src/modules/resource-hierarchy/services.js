@@ -3,6 +3,8 @@
 
 import * as repository from './repository.js';
 import { findOrganizationByPublicCodeInternal } from '../organizations/repository.js';
+import { findSiteByPublicCodeInternal } from '../sites/repository.js';
+import { findChannelByPublicCodeInternal } from '../channels/repository.js';
 import { logAuditAction } from '../../helpers/auditLog.js';
 import logger from '../../utils/logger.js';
 import * as cache from './cache.js';
@@ -53,12 +55,22 @@ export const createNode = async (nodeData, userId, ipAddress, userAgent) => {
     
     validateNodeTypeRules(nodeData.nodeType, parentNode);
     
-    if (nodeData.referenceId && (nodeData.nodeType === 'site' || nodeData.nodeType === 'channel')) {
-        const existingNode = await repository.findNodeByReferenceId(nodeData.referenceId, organizationUuid);
+    let enrichedNodeData = { ...nodeData };
+    
+    if (nodeData.nodeType === 'site') {
+        enrichedNodeData = await enrichSiteNode(nodeData, organizationUuid);
+    } else if (nodeData.nodeType === 'channel') {
+        enrichedNodeData = await enrichChannelNode(nodeData, organizationUuid);
+    }
+    
+    if (enrichedNodeData.referenceId && (enrichedNodeData.nodeType === 'site' || enrichedNodeData.nodeType === 'channel')) {
+        const existingNode = await repository.findNodeByReferenceId(enrichedNodeData.referenceId, organizationUuid);
         if (existingNode) {
-            const error = new Error(`Este recurso (${nodeData.referenceId}) ya existe en la jerarquía de la organización`);
+            const duplicatePublicCode = existingNode.public_code || existingNode.publicCode;
+            const error = new Error(`Este recurso (${enrichedNodeData.referenceId}) ya existe en la jerarquía de la organización`);
             error.status = 409;
             error.code = 'REFERENCE_ALREADY_IN_HIERARCHY';
+            error.details = { duplicateNodePublicCode: duplicatePublicCode };
             throw error;
         }
     }
@@ -66,13 +78,14 @@ export const createNode = async (nodeData, userId, ipAddress, userAgent) => {
     const node = await repository.createNode({
         organizationId: organizationUuid,
         parentId: parentUuid,
-        nodeType: nodeData.nodeType,
-        referenceId: nodeData.referenceId || null,
-        name: nodeData.name,
-        description: nodeData.description || null,
-        icon: nodeData.icon || getDefaultIcon(nodeData.nodeType),
-        displayOrder: nodeData.displayOrder || 0,
-        metadata: nodeData.metadata || {}
+        nodeType: enrichedNodeData.nodeType,
+        referenceId: enrichedNodeData.referenceId || null,
+        name: enrichedNodeData.name,
+        description: enrichedNodeData.description || null,
+        icon: enrichedNodeData.icon || getDefaultIcon(enrichedNodeData.nodeType),
+        displayOrder: enrichedNodeData.displayOrder || 0,
+        metadata: enrichedNodeData.metadata || {},
+        assetCategoryId: enrichedNodeData.assetCategoryId || null
     });
     
     await logAuditAction({
@@ -908,6 +921,75 @@ const getDefaultIcon = (nodeType) => {
 };
 
 /**
+ * Mapear buildingType de site a icono
+ */
+const getIconFromBuildingType = (buildingType) => {
+    const iconMap = {
+        office: 'building',
+        factory: 'factory',
+        warehouse: 'warehouse'
+    };
+    return iconMap[buildingType] || 'building';
+};
+
+/**
+ * Obtener icono para channel a partir de measurementTypeId
+ */
+const getIconFromMeasurementType = (measurementTypeId) => {
+    return measurementTypeId ? 'sensor' : 'activity';
+};
+
+/**
+ * Enriquecer datos de nodo tipo 'site' desde la entidad site referenciada
+ * Valida que el site exista y pertenezca a la organización
+ * 
+ * @param {Object} nodeData - Datos del nodo a enriquecer
+ * @param {string} organizationUuid - UUID de la organización
+ * @returns {Promise<Object>} - Datos enriquecidos
+ */
+const enrichSiteNode = async (nodeData, organizationUuid) => {
+    const site = await findSiteByPublicCodeInternal(nodeData.referenceId);
+    
+    if (!site || site.organizationId !== organizationUuid) {
+        const error = new Error(`Site no encontrado o no pertenece a esta organización: ${nodeData.referenceId}`);
+        error.status = 404;
+        error.code = 'REFERENCE_NOT_FOUND';
+        throw error;
+    }
+    
+    return {
+        ...nodeData,
+        name: nodeData.name || site.name,
+        icon: nodeData.icon || getIconFromBuildingType(site.buildingType)
+    };
+};
+
+/**
+ * Enriquecer datos de nodo tipo 'channel' desde la entidad channel referenciada
+ * Valida que el channel exista y pertenezca a la organización
+ * 
+ * @param {Object} nodeData - Datos del nodo a enriquecer
+ * @param {string} organizationUuid - UUID de la organización
+ * @returns {Promise<Object>} - Datos enriquecidos
+ */
+const enrichChannelNode = async (nodeData, organizationUuid) => {
+    const channel = await findChannelByPublicCodeInternal(nodeData.referenceId);
+    
+    if (!channel || channel.organizationId !== organizationUuid) {
+        const error = new Error(`Canal no encontrado o no pertenece a esta organización: ${nodeData.referenceId}`);
+        error.status = 404;
+        error.code = 'REFERENCE_NOT_FOUND';
+        throw error;
+    }
+    
+    return {
+        ...nodeData,
+        name: nodeData.name || channel.name,
+        icon: nodeData.icon || getIconFromMeasurementType(channel.measurementTypeId)
+    };
+};
+
+/**
  * Sanitizar nodo para respuesta API (remover campos internos)
  */
 const sanitizeNode = (node) => {
@@ -1018,25 +1100,34 @@ export const batchCreateNodes = async (batchData, organizationId, userId, ipAddr
         try {
             validateNodeTypeRules(nodeData.nodeType, parentNode);
             
-            if (nodeData.referenceId && (nodeData.nodeType === 'site' || nodeData.nodeType === 'channel')) {
-                if (seenReferenceIds.has(nodeData.referenceId)) {
+            let enrichedNodeData = { ...nodeData };
+            
+            if (nodeData.nodeType === 'site') {
+                enrichedNodeData = await enrichSiteNode(nodeData, organizationUuid);
+            } else if (nodeData.nodeType === 'channel') {
+                enrichedNodeData = await enrichChannelNode(nodeData, organizationUuid);
+            }
+            
+            if (enrichedNodeData.referenceId && (enrichedNodeData.nodeType === 'site' || enrichedNodeData.nodeType === 'channel')) {
+                if (seenReferenceIds.has(enrichedNodeData.referenceId)) {
                     failed.push({
-                        referenceId: nodeData.referenceId,
-                        name: nodeData.name,
+                        referenceId: enrichedNodeData.referenceId,
+                        name: enrichedNodeData.name,
                         reasonCode: 'DUPLICATE_IN_BATCH',
                         message: 'Este recurso está duplicado dentro del mismo batch'
                     });
                     continue;
                 }
-                seenReferenceIds.add(nodeData.referenceId);
+                seenReferenceIds.add(enrichedNodeData.referenceId);
                 
-                const existingNode = await repository.findNodeByReferenceId(nodeData.referenceId, organizationUuid);
+                const existingNode = await repository.findNodeByReferenceId(enrichedNodeData.referenceId, organizationUuid);
                 if (existingNode) {
                     failed.push({
-                        referenceId: nodeData.referenceId,
-                        name: nodeData.name,
+                        referenceId: enrichedNodeData.referenceId,
+                        name: enrichedNodeData.name,
                         reasonCode: 'ALREADY_IN_HIERARCHY',
-                        message: 'Este recurso ya existe en la jerarquía'
+                        message: 'Este recurso ya existe en la jerarquía',
+                        duplicateNodePublicCode: existingNode.public_code || existingNode.publicCode
                     });
                     continue;
                 }
@@ -1045,13 +1136,14 @@ export const batchCreateNodes = async (batchData, organizationId, userId, ipAddr
             const node = await repository.createNode({
                 organizationId: organizationUuid,
                 parentId: parentUuid,
-                nodeType: nodeData.nodeType,
-                referenceId: nodeData.referenceId || null,
-                name: nodeData.name,
-                description: nodeData.description || null,
-                icon: nodeData.icon || getDefaultIcon(nodeData.nodeType),
-                displayOrder: nodeData.displayOrder || 0,
-                metadata: nodeData.metadata || {}
+                nodeType: enrichedNodeData.nodeType,
+                referenceId: enrichedNodeData.referenceId || null,
+                name: enrichedNodeData.name,
+                description: enrichedNodeData.description || null,
+                icon: enrichedNodeData.icon || getDefaultIcon(enrichedNodeData.nodeType),
+                displayOrder: enrichedNodeData.displayOrder || 0,
+                metadata: enrichedNodeData.metadata || {},
+                assetCategoryId: enrichedNodeData.assetCategoryId || null
             });
             
             await logAuditAction({
