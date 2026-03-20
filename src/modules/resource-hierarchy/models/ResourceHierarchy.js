@@ -101,6 +101,11 @@ const ResourceHierarchy = sequelize.define('ResourceHierarchy', {
         },
         comment: 'FK a asset_categories - tag asignado al nodo (principalmente para node_type=channel)'
     },
+    path: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+        comment: 'Path ltree materializado para queries rápidas de ancestros/descendientes. Actualizado automáticamente por trigger.'
+    },
     depth: {
         type: DataTypes.INTEGER,
         allowNull: false,
