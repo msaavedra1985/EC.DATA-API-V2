@@ -1037,6 +1037,7 @@ function toNodeDto(node, includeCounts = true) {
         name: data.name,
         description: data.description,
         nodeType: data.nodeType ?? data.node_type,
+        referenceId: data.referenceId ?? data.reference_id ?? null,
         icon: data.icon,
         displayOrder: data.displayOrder ?? data.display_order,
         depth: data.depth,

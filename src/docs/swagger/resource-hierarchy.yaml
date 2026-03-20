@@ -2,9 +2,31 @@ paths:
   /api/v1/resource-hierarchy/nodes:
     post:
       summary: Crear un nuevo nodo en la jerarquía
-      description: Crea un nodo (carpeta, site o channel) en la jerarquía de recursos
-        de una organización. Los nodos permiten organizar recursos en estructura
-        de árbol con profundidad ilimitada.
+      description: >
+        Crea un nodo (folder, site o channel) en la jerarquía de recursos de una organización.
+
+        Los nodos permiten organizar recursos en estructura de árbol con profundidad ilimitada.
+
+
+        **Reglas de tipo de nodo:**
+
+        - `folder` — Nodo contenedor de organización. No requiere `referenceId`. Puede estar en cualquier nivel.
+
+        - `site` — Representa un site físico o lógico. El `referenceId` es el public code del site (ej: `SIT-xxx`). Detecta duplicados: si el site ya está en la jerarquía de la organización, retorna 409. El nombre y el ícono se auto-enriquecen desde el site referenciado si no se envían.
+
+        - `channel` — Representa un canal de datos. El `referenceId` es el public code del channel (ej: `CHN-xxx`). Detecta duplicados igual que `site`. El nombre y el ícono se auto-enriquecen desde el channel referenciado si no se envían.
+
+
+        **Campos permitidos por tipo:**
+
+        | Campo | folder | site | channel |
+        |---|---|---|---|
+        | `name` | ✓ | ✓ (auto si no se envía) | ✓ (auto si no se envía) |
+        | `description` | ✓ | ✓ | ✓ |
+        | `referenceId` | — | ✓ | ✓ |
+        | `icon` | ✓ | ✓ (auto) | ✓ (auto) |
+        | `displayOrder` | ✓ | ✓ | ✓ |
+        | `metadata` | ✓ | ✓ | ✓ |
       tags:
         - Resource Hierarchy
       security:
@@ -16,52 +38,120 @@ paths:
             schema:
               type: object
               required:
-                - node_type
-                - name
+                - nodeType
+              discriminator:
+                propertyName: nodeType
+              description: >
+                El body usa discriminated union por `nodeType`:
+
+                - `folder`: `name` es **requerido**, `referenceId` no aplica.
+
+                - `site`: `referenceId` es **requerido**, `name` es **opcional** (se auto-enriquece desde el site referenciado).
+
+                - `channel`: `referenceId` es **requerido**, `name` es **opcional** (se auto-enriquece desde el channel referenciado).
               properties:
-                organization_id:
+                organizationId:
                   type: string
-                  description: Public code de la organización (opcional, usa la org activa del
-                    usuario si no se especifica)
+                  description: Public code de la organización (opcional, usa la org activa del usuario si no se especifica)
                   example: ORG-abc123xyz-1
-                parent_id:
+                parentId:
                   type: string
                   nullable: true
-                  description: Public code del nodo padre (null para nodo raíz)
+                  description: Public code del nodo padre (null para crear nodo raíz)
                   example: RES-def456ghi-2
-                node_type:
+                nodeType:
                   type: string
                   enum:
                     - folder
                     - site
                     - channel
-                  description: Tipo de nodo
+                  description: Tipo de nodo (discriminante del schema de validación)
                   example: folder
                 name:
                   type: string
-                  description: Nombre del nodo
+                  minLength: 1
+                  maxLength: 255
+                  description: >
+                    Nombre del nodo.
+                    **Requerido para `folder`**. Opcional para `site`/`channel` (se auto-enriquece desde el recurso referenciado si no se envía).
                   example: Sensores de Temperatura
                 description:
                   type: string
                   nullable: true
+                  maxLength: 2000
                   description: Descripción del nodo
                   example: Carpeta para agrupar sensores de temperatura
-                reference_id:
+                referenceId:
                   type: string
-                  format: uuid
-                  nullable: true
-                  description: UUID del recurso referenciado (site o channel existente)
+                  maxLength: 100
+                  description: >
+                    Public code del recurso referenciado.
+                    **Requerido para `site`** (ej: `SIT-XXXXX-1`) y **`channel`** (ej: `CHN-XXXXX-1`).
+                    No aplica para `folder`.
+                  example: CHN-5LYJX-4
                 icon:
                   type: string
-                  description: Nombre del ícono (ej. folder, building, activity)
+                  maxLength: 50
+                  description: >
+                    Nombre del ícono. Opcional para todos los tipos.
+                    Si no se envía, se auto-asigna: folder → 'folder', site → 'building', channel → 'activity'.
+                    Para `site`/`channel`, también se auto-enriquece desde el recurso referenciado.
                   example: folder
-                display_order:
+                displayOrder:
                   type: integer
-                  description: Orden de visualización
+                  minimum: 0
+                  description: Orden de visualización entre hermanos (0 = primero). Los nodos se ordenan por displayOrder ASC, luego por nombre ASC.
                   default: 0
+                  example: 0
                 metadata:
                   type: object
-                  description: Metadatos adicionales en formato JSON
+                  description: Metadatos adicionales en formato JSON (sin restricción de estructura)
+                  example: { "zona": "norte", "prioridad": "alta" }
+            examples:
+              crear_folder:
+                summary: Crear una carpeta (name requerido)
+                value:
+                  nodeType: folder
+                  name: Sensores de Temperatura
+                  description: Carpeta para agrupar sensores de temperatura
+                  parentId: RES-def456ghi-2
+                  icon: folder
+                  displayOrder: 0
+              crear_site_con_nombre:
+                summary: Crear site con nombre explícito
+                value:
+                  nodeType: site
+                  name: Planta Norte
+                  description: Site de la planta norte
+                  parentId: RES-def456ghi-2
+                  referenceId: SIT-ABCDE-1
+                  icon: building
+                  displayOrder: 1
+              crear_site_auto_enriquecido:
+                summary: Crear site sin nombre (auto-enriquece desde el site referenciado)
+                value:
+                  nodeType: site
+                  parentId: RES-def456ghi-2
+                  referenceId: SIT-ABCDE-1
+              crear_channel_con_nombre:
+                summary: Crear channel con nombre y metadata
+                value:
+                  nodeType: channel
+                  name: Medidor de Energía Principal
+                  description: Canal de medición de energía
+                  parentId: RES-def456ghi-2
+                  referenceId: CHN-5LYJX-4
+                  icon: activity
+                  displayOrder: 0
+                  metadata:
+                    unidad: kWh
+                    categoria: energia
+              crear_channel_auto_enriquecido:
+                summary: Crear channel sin nombre ni ícono (auto-enriquece desde el channel referenciado)
+                value:
+                  nodeType: channel
+                  parentId: RES-def456ghi-2
+                  referenceId: CHN-5LYJX-4
       responses:
         "201":
           description: Nodo creado exitosamente
@@ -75,37 +165,157 @@ paths:
                     example: true
                   data:
                     $ref: "#/components/schemas/ResourceNode"
+              examples:
+                response_folder:
+                  summary: Respuesta al crear folder
+                  value:
+                    ok: true
+                    data:
+                      id: RES-new001abc-3
+                      name: Sensores de Temperatura
+                      description: Carpeta para agrupar sensores de temperatura
+                      nodeType: folder
+                      referenceId: null
+                      icon: folder
+                      displayOrder: 0
+                      depth: 1
+                      parentId: RES-def456ghi-2
+                      hasChildren: false
+                      childrenCount: 0
+                      metadata: {}
+                      isActive: true
+                      createdAt: "2026-03-20T10:00:00.000Z"
+                      updatedAt: "2026-03-20T10:00:00.000Z"
+                response_site:
+                  summary: Respuesta al crear site (auto-enriquecido)
+                  value:
+                    ok: true
+                    data:
+                      id: RES-new002def-3
+                      name: Planta Norte
+                      description: null
+                      nodeType: site
+                      referenceId: SIT-ABCDE-1
+                      icon: building
+                      displayOrder: 1
+                      depth: 1
+                      parentId: RES-def456ghi-2
+                      hasChildren: false
+                      childrenCount: 0
+                      metadata: {}
+                      isActive: true
+                      createdAt: "2026-03-20T10:00:00.000Z"
+                      updatedAt: "2026-03-20T10:00:00.000Z"
+                response_channel:
+                  summary: Respuesta al crear channel con metadata
+                  value:
+                    ok: true
+                    data:
+                      id: RES-new003ghi-4
+                      name: Medidor de Energía Principal
+                      description: Canal de medición de energía
+                      nodeType: channel
+                      referenceId: CHN-5LYJX-4
+                      icon: activity
+                      displayOrder: 0
+                      depth: 2
+                      parentId: RES-def456ghi-2
+                      hasChildren: false
+                      childrenCount: 0
+                      metadata: { unidad: kWh, categoria: energia }
+                      isActive: true
+                      createdAt: "2026-03-20T10:00:00.000Z"
+                      updatedAt: "2026-03-20T10:00:00.000Z"
         "400":
-          description: Error de validación
+          description: Error de validación del request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                validacion_general:
+                  summary: Campo requerido faltante
+                  value:
+                    ok: false
+                    error:
+                      code: VALIDATION_ERROR
+                      message: nodeType es requerido
+                padre_org_diferente:
+                  summary: El nodo padre pertenece a otra organización
+                  value:
+                    ok: false
+                    error:
+                      code: PARENT_ORG_MISMATCH
+                      message: El nodo padre debe pertenecer a la misma organización
         "401":
           description: No autenticado
         "403":
-          description: Sin permisos suficientes
+          description: Sin permisos suficientes (requiere rol org-admin, org-manager o system-admin)
         "404":
-          description: Organización o nodo padre no encontrado
+          description: Organización, nodo padre o recurso referenciado no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                padre_no_encontrado:
+                  summary: Nodo padre no encontrado
+                  value:
+                    ok: false
+                    error:
+                      code: PARENT_NODE_NOT_FOUND
+                      message: Nodo padre no encontrado
+                org_no_encontrada:
+                  summary: Organización no encontrada
+                  value:
+                    ok: false
+                    error:
+                      code: ORGANIZATION_NOT_FOUND
+                      message: Organización no encontrada
+                referencia_no_encontrada:
+                  summary: El recurso referenciado (site/channel) no existe o no pertenece a la org
+                  value:
+                    ok: false
+                    error:
+                      code: REFERENCE_NOT_FOUND
+                      message: "Canal no encontrado o no pertenece a esta organización: CHN-5LYJX-4"
+        "409":
+          description: El recurso referenciado ya existe en la jerarquía de la organización
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                ok: false
+                error:
+                  code: REFERENCE_ALREADY_IN_HIERARCHY
+                  message: "Este recurso (CHN-5LYJX-4) ya existe en la jerarquía de la organización"
     get:
       summary: Listar nodos de una organización
-      description: Obtiene lista paginada de nodos con filtros opcionales por tipo,
-        padre, búsqueda y estado.
+      description: >
+        Obtiene lista paginada de nodos con filtros opcionales por tipo, padre, búsqueda y estado.
+
+        Soporta paginación por `limit`/`offset` o por `page`.
+
+        Incluye por defecto el conteo de hijos directos de cada nodo (`childrenCount`).
       tags:
         - Resource Hierarchy
       security:
         - bearerAuth: []
       parameters:
         - in: query
-          name: organization_id
+          name: organizationId
           required: false
           schema:
             type: string
-          description: Public code de la organización (opcional, usa la org activa del
-            usuario si no se especifica)
+          description: Public code de la organización (opcional, usa la org activa del usuario si no se especifica)
         - in: query
-          name: parent_id
+          name: parentId
           schema:
             type: string
           description: Filtrar por nodo padre (usar 'root' para nodos raíz)
         - in: query
-          name: node_type
+          name: nodeType
           schema:
             type: string
             enum:
@@ -117,28 +327,43 @@ paths:
           name: search
           schema:
             type: string
-          description: Buscar por nombre o descripción
+            maxLength: 100
+          description: Buscar por nombre o descripción (búsqueda parcial, case-insensitive)
         - in: query
-          name: is_active
+          name: isActive
           schema:
             type: boolean
           description: Filtrar por estado activo/inactivo
+        - in: query
+          name: includeCounts
+          schema:
+            type: boolean
+            default: true
+          description: Incluir conteo de hijos directos en cada nodo
         - in: query
           name: limit
           schema:
             type: integer
             default: 50
+            minimum: 1
             maximum: 500
-          description: Límite de resultados
+          description: Límite de resultados por página
         - in: query
           name: offset
           schema:
             type: integer
             default: 0
+            minimum: 0
           description: Offset para paginación
+        - in: query
+          name: page
+          schema:
+            type: integer
+            minimum: 1
+          description: Número de página (alternativa a offset; se convierte a offset automáticamente)
       responses:
         "200":
-          description: Lista de nodos
+          description: Lista de nodos paginada
           content:
             application/json:
               schema:
@@ -152,18 +377,11 @@ paths:
                     items:
                       $ref: "#/components/schemas/ResourceNode"
                   meta:
-                    type: object
-                    properties:
-                      total:
-                        type: integer
-                      limit:
-                        type: integer
-                      offset:
-                        type: integer
+                    $ref: "#/components/schemas/PaginationMeta"
   "/api/v1/resource-hierarchy/nodes/{id}":
     get:
       summary: Obtener un nodo por ID
-      description: Obtiene los detalles de un nodo específico.
+      description: Obtiene los detalles completos de un nodo específico por su public code.
       tags:
         - Resource Hierarchy
       security:
@@ -174,7 +392,8 @@ paths:
           required: true
           schema:
             type: string
-          description: Public code del nodo
+          description: Public code del nodo (ej. RES-abc123xyz-1)
+          example: RES-abc123xyz-1
       responses:
         "200":
           description: Nodo encontrado
@@ -188,12 +407,43 @@ paths:
                     example: true
                   data:
                     $ref: "#/components/schemas/ResourceNode"
+        "401":
+          description: No autenticado
         "404":
           description: Nodo no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                ok: false
+                error:
+                  code: NODE_NOT_FOUND
+                  message: Nodo no encontrado
     put:
       summary: Actualizar un nodo
-      description: Actualiza los campos editables de un nodo (nombre, descripción,
-        ícono, orden, metadatos).
+      description: >
+        Actualiza los campos editables de un nodo.
+
+        **Campos editables (todos los tipos de nodo):**
+
+        | Campo | Descripción |
+        |---|---|
+        | `name` | Nombre visible del nodo (1-255 caracteres) |
+        | `description` | Descripción opcional (hasta 2000 caracteres) |
+        | `icon` | Nombre del ícono (hasta 50 caracteres) |
+        | `displayOrder` | Orden de visualización entre nodos hermanos (entero ≥ 0) |
+        | `metadata` | Objeto JSON libre con metadatos adicionales |
+        | `isActive` | Activar/desactivar el nodo (soft disable) |
+
+
+        **Campos NO editables vía este endpoint:**
+
+        - `nodeType` — inmutable tras la creación.
+
+        - `referenceId` — inmutable tras la creación.
+
+        - `parentId` — usar `PATCH /nodes/:id/move` para cambiar el padre.
       tags:
         - Resource Hierarchy
       security:
@@ -205,6 +455,7 @@ paths:
           schema:
             type: string
           description: Public code del nodo
+          example: RES-abc123xyz-1
       requestBody:
         required: true
         content:
@@ -214,19 +465,50 @@ paths:
               properties:
                 name:
                   type: string
+                  minLength: 1
+                  maxLength: 255
+                  description: Nuevo nombre del nodo
+                  example: Nuevo Nombre de Carpeta
                 description:
                   type: string
+                  nullable: true
+                  maxLength: 2000
+                  description: Nueva descripción del nodo
+                  example: Descripción actualizada
                 icon:
                   type: string
-                display_order:
+                  maxLength: 50
+                  description: Nuevo nombre del ícono
+                  example: building
+                displayOrder:
                   type: integer
+                  minimum: 0
+                  description: Nuevo orden de visualización entre hermanos
+                  example: 2
                 metadata:
                   type: object
-                is_active:
+                  description: Nuevos metadatos (reemplaza el objeto completo)
+                  example: { "zona": "sur", "prioridad": "media" }
+                isActive:
                   type: boolean
+                  description: Activar (true) o desactivar (false) el nodo
+                  example: true
+            examples:
+              actualizar_nombre:
+                summary: Renombrar el nodo
+                value:
+                  name: Sensores de Humedad
+              actualizar_orden:
+                summary: Cambiar posición entre hermanos
+                value:
+                  displayOrder: 3
+              desactivar_nodo:
+                summary: Desactivar un nodo
+                value:
+                  isActive: false
       responses:
         "200":
-          description: Nodo actualizado
+          description: Nodo actualizado exitosamente
           content:
             application/json:
               schema:
@@ -237,24 +519,52 @@ paths:
                     example: true
                   data:
                     $ref: "#/components/schemas/ResourceNode"
+        "400":
+          description: Error de validación del request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                ok: false
+                error:
+                  code: VALIDATION_ERROR
+                  message: name no puede exceder 255 caracteres
+        "401":
+          description: No autenticado
+        "403":
+          description: Sin permisos suficientes (requiere org-admin, org-manager o system-admin)
         "404":
           description: Nodo no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                ok: false
+                error:
+                  code: NODE_NOT_FOUND
+                  message: Nodo no encontrado
     delete:
       summary: Eliminar un nodo
       description: >
-        Elimina un nodo (soft delete). Si el nodo tiene hijos y no se envía
-        cascade=true,
-
-        retorna error 409 con la lista de nodos que serían afectados para que el usuario confirme.
+        Elimina un nodo (soft delete — marca `isActive = false` y `deletedAt` en la DB).
 
 
-        **Flujo recomendado:**
+        **Comportamiento según `cascade`:**
 
-        1. Intentar DELETE sin cascade
+        - `cascade=false` (por defecto): Si el nodo tiene hijos directos o descendientes activos, **no lo elimina** y retorna 409 `HAS_CHILDREN` con la lista de nodos afectados. Esto permite al frontend mostrar una confirmación al usuario.
 
-        2. Si responde 409 (HAS_CHILDREN), mostrar al usuario los nodos afectados
+        - `cascade=true`: Elimina el nodo **y todos sus descendientes** de forma recursiva. La respuesta incluye todos los nodos eliminados con su información básica.
 
-        3. Si el usuario confirma, reintentar con cascade=true
+
+        **Flujo recomendado en el frontend:**
+
+        1. Llamar `DELETE /nodes/:id` sin `cascade`.
+
+        2. Si la respuesta es 409 (`HAS_CHILDREN`), mostrar al usuario los nodos afectados del campo `data.affectedNodes`.
+
+        3. Si el usuario confirma, reintentar con `cascade=true`.
       tags:
         - Resource Hierarchy
       security:
@@ -265,14 +575,16 @@ paths:
           required: true
           schema:
             type: string
-          description: Public code del nodo
+          description: Public code del nodo a eliminar
+          example: RES-abc123xyz-1
         - in: query
           name: cascade
           schema:
             type: boolean
             default: false
-          description: Si true, elimina el nodo y todos sus descendientes. Si false y
-            tiene hijos, retorna error 409.
+          description: >
+            Si `true`, elimina el nodo y todos sus descendientes en cascada.
+            Si `false` (por defecto) y el nodo tiene hijos, retorna 409 con la lista de nodos afectados.
       responses:
         "200":
           description: Nodo(s) eliminado(s) exitosamente
@@ -287,23 +599,23 @@ paths:
                   data:
                     type: object
                     properties:
-                      deleted_count:
+                      deletedCount:
                         type: integer
-                        description: Cantidad de nodos eliminados
+                        description: Cantidad total de nodos eliminados
                         example: 5
-                      deleted_nodes:
+                      deletedNodes:
                         type: array
-                        description: Lista de nodos eliminados con su info básica
+                        description: Lista de todos los nodos eliminados con información básica
                         items:
                           type: object
                           properties:
-                            public_code:
+                            publicCode:
                               type: string
                               example: RES-abc123-1
                             name:
                               type: string
                               example: Sensor de Temperatura
-                            node_type:
+                            nodeType:
                               type: string
                               enum:
                                 - folder
@@ -311,11 +623,59 @@ paths:
                                 - channel
                       cascade:
                         type: boolean
-                        description: Si se usó eliminación en cascada
+                        description: Indica si se usó eliminación en cascada
+              examples:
+                sin_cascade:
+                  summary: Eliminación sin cascade (nodo hoja)
+                  value:
+                    ok: true
+                    data:
+                      deletedCount: 1
+                      deletedNodes:
+                        - publicCode: RES-abc123-1
+                          name: Sensor de Temperatura
+                          nodeType: channel
+                      cascade: false
+                con_cascade:
+                  summary: Eliminación con cascade (árbol completo)
+                  value:
+                    ok: true
+                    data:
+                      deletedCount: 5
+                      deletedNodes:
+                        - publicCode: RES-abc123-1
+                          name: Carpeta Principal
+                          nodeType: folder
+                        - publicCode: RES-def456-2
+                          name: Planta Norte
+                          nodeType: site
+                        - publicCode: RES-ghi789-3
+                          name: Medidor A
+                          nodeType: channel
+                        - publicCode: RES-jkl012-4
+                          name: Medidor B
+                          nodeType: channel
+                        - publicCode: RES-mno345-5
+                          name: Medidor C
+                          nodeType: channel
+                      cascade: true
+        "401":
+          description: No autenticado
+        "403":
+          description: Sin permisos suficientes (requiere org-admin o system-admin)
         "404":
           description: Nodo no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                ok: false
+                error:
+                  code: NODE_NOT_FOUND
+                  message: Nodo no encontrado
         "409":
-          description: El nodo tiene hijos y no se confirmó cascade
+          description: El nodo tiene hijos activos y no se confirmó cascade
           content:
             application/json:
               schema:
@@ -336,33 +696,56 @@ paths:
                   data:
                     type: object
                     properties:
-                      affected_nodes:
+                      affectedNodes:
                         type: array
-                        description: Lista de nodos hijos que serían eliminados
+                        description: Lista de todos los nodos que serían eliminados
                         items:
                           type: object
                           properties:
-                            public_code:
+                            publicCode:
                               type: string
+                              example: RES-def456-2
                             name:
                               type: string
-                            node_type:
+                              example: Planta Norte
+                            nodeType:
                               type: string
-                      total_affected:
+                              enum:
+                                - folder
+                                - site
+                                - channel
+                      totalAffected:
                         type: integer
-                        description: Total de nodos que serían eliminados (incluyendo el nodo padre)
+                        description: Total de nodos que serían eliminados (incluye el nodo raíz)
+                        example: 4
+              example:
+                ok: false
+                error:
+                  code: HAS_CHILDREN
+                  message: El nodo tiene hijos. Debe confirmar la eliminación en cascada.
+                data:
+                  affectedNodes:
+                    - publicCode: RES-def456-2
+                      name: Planta Norte
+                      nodeType: site
+                    - publicCode: RES-ghi789-3
+                      name: Medidor A
+                      nodeType: channel
+                  totalAffected: 3
   /api/v1/resource-hierarchy/nodes/batch:
     post:
       summary: Obtener múltiples nodos por IDs
       description: >
-        Obtiene los detalles de múltiples nodos en una sola llamada. 
+        Obtiene los detalles de múltiples nodos en una sola llamada.
 
-        Útil para cargar breadcrumbs o selecciones múltiples.
+        Útil para cargar breadcrumbs, selecciones múltiples o resolver referencias en paralelo.
 
 
-        **Nota de seguridad:** Solo retorna nodos que pertenezcan a la organización activa del usuario.
+        **Seguridad multi-tenant:** Solo retorna nodos que pertenezcan a la organización activa del usuario.
+        Nodos de otras organizaciones son filtrados automáticamente (no retorna error, simplemente no los incluye).
 
-        Nodos de otras organizaciones son filtrados automáticamente.
+
+        **Límite:** Máximo 100 IDs por request.
       tags:
         - Resource Hierarchy
       security:
@@ -380,14 +763,22 @@ paths:
                   type: array
                   items:
                     type: string
+                  minItems: 1
+                  maxItems: 100
                   description: Array de public codes de nodos (máximo 100)
                   example:
                     - RES-abc123-1
                     - RES-def456-2
-                include_counts:
+                    - RES-ghi789-3
+                includeCounts:
                   type: boolean
                   default: true
-                  description: Incluir conteo de hijos
+                  description: Incluir conteo de hijos directos en cada nodo
+            example:
+              ids:
+                - RES-abc123-1
+                - RES-def456-2
+              includeCounts: true
       responses:
         "200":
           description: Lista de nodos encontrados (filtrados por organización activa)
@@ -409,41 +800,88 @@ paths:
                       requested:
                         type: integer
                         description: Cantidad de IDs solicitados
+                        example: 3
                       found:
                         type: integer
-                        description: Cantidad de nodos encontrados (puede ser menor si hay nodos de
-                          otras orgs)
+                        description: Cantidad de nodos encontrados y retornados
+                        example: 2
+              example:
+                ok: true
+                data:
+                  - id: RES-abc123-1
+                    name: Carpeta Principal
+                    nodeType: folder
+                    referenceId: null
+                    icon: folder
+                    displayOrder: 0
+                    depth: 0
+                    parentId: null
+                    hasChildren: true
+                    childrenCount: 3
+                    isActive: true
+                    createdAt: "2026-01-01T00:00:00.000Z"
+                    updatedAt: "2026-01-01T00:00:00.000Z"
+                  - id: RES-def456-2
+                    name: Planta Norte
+                    nodeType: site
+                    referenceId: SIT-ABCDE-1
+                    icon: building
+                    displayOrder: 1
+                    depth: 1
+                    parentId: RES-abc123-1
+                    hasChildren: false
+                    childrenCount: 0
+                    isActive: true
+                    createdAt: "2026-01-02T00:00:00.000Z"
+                    updatedAt: "2026-01-02T00:00:00.000Z"
+                meta:
+                  requested: 3
+                  found: 2
+        "400":
+          description: Error de validación (ej. se superó el límite de 100 IDs)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                ok: false
+                error:
+                  code: VALIDATION_ERROR
+                  message: No puede solicitar más de 100 nodos a la vez
+        "401":
+          description: No autenticado
   /api/v1/resource-hierarchy/nodes/batch-create:
     post:
-      summary: Crear múltiples nodos en lote (soporta éxito parcial)
+      summary: Crear múltiples nodos en lote
       description: >
         Crea múltiples nodos bajo el mismo padre y organización.
+
+        Soporta **éxito parcial**: si algunos nodos fallan (ej. duplicados), los demás se insertan correctamente.
 
 
         **Comportamiento de éxito parcial:**
 
-        - Si algunos nodos fallan (ej: duplicados), los demás se insertan correctamente
+        - Si algunos nodos fallan y otros tienen éxito → retorna HTTP 200 con arrays `inserted` y `failed`.
 
-        - Solo falla completamente (409) si TODOS los nodos fallan
+        - Si todos los nodos tienen éxito → retorna HTTP 201.
 
-        - Retorna arrays separados de `inserted` y `failed` para que el frontend pueda mostrar qué funcionó y qué no
-
-
-        **Códigos de fallo por nodo:**
-
-        - `DUPLICATE_IN_BATCH`: El mismo reference_id aparece más de una vez en el batch
-
-        - `ALREADY_IN_HIERARCHY`: El recurso (site/channel) ya existe en la jerarquía
-
-        - `INVALID_NODE_TYPE`: Tipo de nodo no permitido para este padre
+        - Si **todos** los nodos fallan → retorna HTTP 409 con código `ALL_NODES_FAILED`.
 
 
-        **Límites:**
+        **Códigos de fallo por nodo individual:**
 
-        - Máximo 50 nodos por request
+        | Código | Descripción |
+        |---|---|
+        | `DUPLICATE_IN_BATCH` | El mismo `referenceId` aparece más de una vez en el batch |
+        | `ALREADY_IN_HIERARCHY` | El recurso (site/channel) ya existe en la jerarquía de la organización |
+        | `INVALID_NODE_TYPE` | Tipo de nodo no permitido |
+        | `UNKNOWN_ERROR` | Error inesperado al insertar el nodo |
 
 
-        **Audit:** Se registra un audit log solo por cada nodo insertado exitosamente.
+        **Límite:** Máximo 50 nodos por request.
+
+
+        **Audit:** Se registra un audit log por cada nodo insertado exitosamente.
       tags:
         - Resource Hierarchy
       security:
@@ -457,81 +895,174 @@ paths:
               required:
                 - nodes
               properties:
-                parent_id:
+                parentId:
                   type: string
                   nullable: true
-                  description: Public code del nodo padre (null para nodos raíz)
+                  description: Public code del nodo padre para todos los nodos del batch (null para crear como nodos raíz)
                   example: RES-abc123xyz-1
                 nodes:
                   type: array
                   minItems: 1
                   maxItems: 50
-                  description: Array de nodos a crear
+                  description: Array de nodos a crear (todos bajo el mismo padre)
                   items:
                     type: object
                     required:
-                      - node_type
-                      - name
+                      - nodeType
+                    description: >
+                      Usa discriminated union por `nodeType` (igual que POST /nodes):
+                      - `folder`: `name` es **requerido**, `referenceId` no aplica.
+                      - `site`: `referenceId` es **requerido**, `name` es **opcional** (auto-enriquecido).
+                      - `channel`: `referenceId` es **requerido**, `name` es **opcional** (auto-enriquecido).
                     properties:
-                      node_type:
+                      nodeType:
                         type: string
                         enum:
                           - folder
                           - site
                           - channel
-                        description: Tipo de nodo
+                        description: Tipo de nodo (discriminante)
                       name:
                         type: string
-                        description: Nombre del nodo (1-255 caracteres)
-                        example: Sensor de Temperatura
+                        minLength: 1
+                        maxLength: 255
+                        description: >
+                          Nombre del nodo. **Requerido para `folder`**.
+                          Opcional para `site`/`channel` (auto-enriquecido desde el recurso referenciado).
+                        example: Medidor Principal
                       description:
                         type: string
                         nullable: true
-                        description: Descripción del nodo
-                      reference_id:
+                        maxLength: 2000
+                        description: Descripción del nodo (opcional para todos los tipos)
+                      referenceId:
                         type: string
-                        nullable: true
-                        description: Public code del recurso referenciado (ej CHN-xxx, SIT-xxx)
+                        maxLength: 100
+                        description: >
+                          Public code del recurso referenciado.
+                          **Requerido para `site`** (ej: `SIT-xxx`) y **`channel`** (ej: `CHN-xxx`).
+                          No aplica para `folder`.
                         example: CHN-5LYJX-4
                       icon:
                         type: string
                         nullable: true
-                        description: Nombre del ícono
-                      color:
-                        type: string
-                        nullable: true
-                        pattern: ^#[0-9A-Fa-f]{6}$
-                        description: Color en formato hexadecimal (#RRGGBB)
-                        example: "#3B82F6"
-                      display_order:
+                        maxLength: 50
+                        description: Nombre del ícono (opcional, auto-asignado si no se envía)
+                      displayOrder:
                         type: integer
+                        minimum: 0
                         description: Orden de visualización (auto-asignado si no se especifica)
+                        default: 0
                       metadata:
                         type: object
-                        description: Metadatos adicionales
+                        description: Metadatos adicionales (opcional para todos los tipos)
+            example:
+              parentId: RES-abc123xyz-1
+              nodes:
+                - nodeType: channel
+                  name: Medidor de Energía A
+                  referenceId: CHN-AAA01-1
+                  icon: activity
+                  displayOrder: 0
+                - nodeType: channel
+                  name: Medidor de Energía B
+                  referenceId: CHN-BBB02-1
+                  icon: activity
+                  displayOrder: 1
+                - nodeType: channel
+                  name: Medidor Duplicado
+                  referenceId: CHN-AAA01-1
+                  icon: activity
+                  displayOrder: 2
       responses:
-        "200":
-          description: Éxito parcial - algunos nodos insertados, otros fallaron
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/BatchCreateNodesResponse"
         "201":
           description: Todos los nodos creados exitosamente
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/BatchCreateNodesResponse"
-        "400":
-          description: Error de validación del request
+              example:
+                ok: true
+                data:
+                  inserted:
+                    - publicCode: RES-new001-1
+                      referenceId: CHN-AAA01-1
+                      nodeType: channel
+                      name: Medidor de Energía A
+                    - publicCode: RES-new002-1
+                      referenceId: CHN-BBB02-1
+                      nodeType: channel
+                      name: Medidor de Energía B
+                  failed: []
+                  meta:
+                    requested: 2
+                    inserted: 2
+                    failed: 0
+        "200":
+          description: Éxito parcial — algunos nodos insertados, otros fallaron
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BatchCreateNodesResponse"
+              example:
+                ok: true
+                data:
+                  inserted:
+                    - publicCode: RES-new001-1
+                      referenceId: CHN-AAA01-1
+                      nodeType: channel
+                      name: Medidor de Energía A
+                    - publicCode: RES-new002-1
+                      referenceId: CHN-BBB02-1
+                      nodeType: channel
+                      name: Medidor de Energía B
+                  failed:
+                    - referenceId: CHN-AAA01-1
+                      name: Medidor Duplicado
+                      reasonCode: DUPLICATE_IN_BATCH
+                      message: Este recurso está duplicado dentro del mismo batch
+                  meta:
+                    requested: 3
+                    inserted: 2
+                    failed: 1
         "401":
           description: No autenticado
         "403":
-          description: Sin permisos suficientes
+          description: Sin permisos suficientes (requiere org-admin, org-manager o system-admin)
+        "400":
+          description: Error de validación o padre de otra organización
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                validacion:
+                  summary: Error de validación del request
+                  value:
+                    ok: false
+                    error:
+                      code: VALIDATION_ERROR
+                      message: No puede crear más de 50 nodos a la vez
+                padre_org_diferente:
+                  summary: El nodo padre pertenece a otra organización
+                  value:
+                    ok: false
+                    error:
+                      code: PARENT_ORG_MISMATCH
+                      message: El nodo padre debe pertenecer a la misma organización
         "404":
           description: Nodo padre no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                ok: false
+                error:
+                  code: PARENT_NODE_NOT_FOUND
+                  message: Nodo padre no encontrado
         "409":
-          description: Todos los nodos fallaron (ninguno insertado)
+          description: Todos los nodos fallaron (ninguno fue insertado)
           content:
             application/json:
               schema:
@@ -551,38 +1082,55 @@ paths:
                         example: Todos los nodos fallaron al insertarse
                   data:
                     $ref: "#/components/schemas/BatchCreateNodesResult"
+              example:
+                ok: false
+                error:
+                  code: ALL_NODES_FAILED
+                  message: Todos los nodos fallaron al insertarse
+                data:
+                  inserted: []
+                  failed:
+                    - referenceId: CHN-AAA01-1
+                      name: Medidor de Energía A
+                      reasonCode: ALREADY_IN_HIERARCHY
+                      message: Este recurso ya existe en la jerarquía
+                    - referenceId: CHN-AAA01-1
+                      name: Medidor Duplicado
+                      reasonCode: DUPLICATE_IN_BATCH
+                      message: Este recurso está duplicado dentro del mismo batch
+                  meta:
+                    requested: 2
+                    inserted: 0
+                    failed: 2
   "/api/v1/resource-hierarchy/nodes/{id}/move":
     patch:
       summary: Mover un nodo a un nuevo padre y/o cambiar su orden
       description: >
-        Mueve un nodo y todos sus descendientes a una nueva ubicación en la
-        jerarquía.
+        Mueve un nodo **y todos sus descendientes** a una nueva ubicación en la jerarquía.
 
-        Opcionalmente permite cambiar el orden de visualización (display_order) en la misma operación.
+        Opcionalmente permite cambiar el `displayOrder` en la misma operación.
 
 
-        **Caso de uso:** Cuando el usuario arrastra un nodo a otro padre, naturalmente quiere 
+        **Comportamiento:**
 
-        especificar en qué posición dentro de los hermanos quedará. Este endpoint permite 
+        - Mover un nodo mueve automáticamente todo su subárbol completo (hijos, nietos, etc.).
 
-        hacer ambas cosas en un solo paso.
+        - El `displayOrder` controla la posición relativa entre nodos hermanos en el destino (0 = primero).
+
+        - Es posible cambiar solo el `displayOrder` sin cambiar de padre (pasando el mismo padre en `newParentId`).
 
 
         **Validaciones:**
 
-        - El nodo y nuevo padre deben existir
+        - El nodo y nuevo padre deben existir.
 
-        - Deben pertenecer a la misma organización
+        - Deben pertenecer a la misma organización (no se permiten movimientos entre orgs).
 
-        - No se puede mover un nodo a uno de sus descendientes (prevención de ciclos)
+        - No se puede mover un nodo a uno de sus propios descendientes (`CYCLE_DETECTED`).
 
-        - No se puede mover un nodo a sí mismo
+        - No se puede mover un nodo a sí mismo (`SELF_REFERENCE`).
 
-        - El usuario debe tener permisos 'edit' tanto en origen como en destino (excepto admins)
-
-        - Solo folders pueden moverse a la raíz (new_parent_id: null)
-
-        - Channels no pueden tener hijos; sites solo aceptan channels
+        - El usuario debe tener permisos `edit` tanto en el nodo origen como en el nodo destino (excepto org-admin y system-admin).
       tags:
         - Resource Hierarchy
       security:
@@ -594,6 +1142,7 @@ paths:
           schema:
             type: string
           description: Public code del nodo a mover
+          example: RES-abc123xyz-1
       requestBody:
         required: true
         content:
@@ -601,18 +1150,33 @@ paths:
             schema:
               type: object
               required:
-                - new_parent_id
+                - newParentId
               properties:
-                new_parent_id:
+                newParentId:
                   type: string
                   nullable: true
-                  description: Public code del nuevo padre (null para mover a raíz, solo permitido
-                    para folders)
-                display_order:
+                  description: Public code del nuevo nodo padre. Usar `null` para mover el nodo a nivel raíz.
+                  example: RES-newparent-2
+                displayOrder:
                   type: integer
                   minimum: 0
-                  description: Nuevo orden de visualización entre hermanos (opcional)
+                  description: Nuevo orden de visualización entre los nodos hermanos en el destino (opcional)
                   example: 2
+            examples:
+              mover_a_otro_padre:
+                summary: Mover nodo a otro padre
+                value:
+                  newParentId: RES-newparent-2
+                  displayOrder: 0
+              mover_a_raiz:
+                summary: Mover nodo a nivel raíz
+                value:
+                  newParentId: null
+              solo_reordenar:
+                summary: Cambiar orden sin cambiar padre
+                value:
+                  newParentId: RES-currentparent-1
+                  displayOrder: 3
       responses:
         "200":
           description: Nodo movido exitosamente
@@ -631,50 +1195,78 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  ok:
-                    type: boolean
-                    example: false
-                  error:
-                    type: object
-                    properties:
-                      code:
-                        type: string
-                        enum:
-                          - CYCLE_DETECTED
-                          - SELF_REFERENCE
-                          - CROSS_ORG_MOVE_NOT_ALLOWED
-                          - INVALID_MOVE_TO_ROOT
-                          - INVALID_PARENT_TYPE
-                      message:
-                        type: string
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                ciclo_detectado:
+                  summary: Intentando mover a un descendiente (ciclo)
+                  value:
+                    ok: false
+                    error:
+                      code: CYCLE_DETECTED
+                      message: No se puede mover un nodo a uno de sus descendientes
+                auto_referencia:
+                  summary: Intentando mover el nodo a sí mismo
+                  value:
+                    ok: false
+                    error:
+                      code: SELF_REFERENCE
+                      message: No se puede mover un nodo a sí mismo
+                org_diferente:
+                  summary: Intentando mover a otra organización
+                  value:
+                    ok: false
+                    error:
+                      code: CROSS_ORG_MOVE_NOT_ALLOWED
+                      message: No se puede mover a una organización diferente
+        "401":
+          description: No autenticado
         "403":
-          description: Permisos insuficientes
+          description: Permisos insuficientes sobre el nodo origen o destino
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  ok:
-                    type: boolean
-                    example: false
-                  error:
-                    type: object
-                    properties:
-                      code:
-                        type: string
-                        enum:
-                          - INSUFFICIENT_SOURCE_PERMISSIONS
-                          - INSUFFICIENT_DESTINATION_PERMISSIONS
-                      message:
-                        type: string
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                sin_permiso_origen:
+                  value:
+                    ok: false
+                    error:
+                      code: INSUFFICIENT_SOURCE_PERMISSIONS
+                      message: No tiene permisos para mover este nodo
+                sin_permiso_destino:
+                  value:
+                    ok: false
+                    error:
+                      code: INSUFFICIENT_DESTINATION_PERMISSIONS
+                      message: No tiene permisos sobre el nodo destino
         "404":
-          description: Nodo no encontrado
+          description: Nodo o nuevo padre no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                nodo_no_encontrado:
+                  value:
+                    ok: false
+                    error:
+                      code: NODE_NOT_FOUND
+                      message: Nodo no encontrado
+                nuevo_padre_no_encontrado:
+                  value:
+                    ok: false
+                    error:
+                      code: NEW_PARENT_NOT_FOUND
+                      message: Nuevo nodo padre no encontrado
   "/api/v1/resource-hierarchy/nodes/{id}/children":
     get:
       summary: Obtener hijos directos de un nodo
-      description: Obtiene los nodos hijos inmediatos de un nodo específico.
+      description: >
+        Obtiene los nodos hijos inmediatos de un nodo específico (un solo nivel de profundidad).
+
+        Los nodos se ordenan por `displayOrder` ASC, luego por nombre ASC.
+
+        Para obtener los nodos de nivel raíz, usar `GET /roots` o pasar `id = root`.
       tags:
         - Resource Hierarchy
       security:
@@ -685,39 +1277,119 @@ paths:
           required: true
           schema:
             type: string
-          description: Public code del nodo padre (usar 'root' para nodos raíz)
+          description: Public code del nodo padre. Usar el literal `root` para obtener nodos raíz.
+          example: RES-abc123xyz-1
         - in: query
-          name: organization_id
-          required: true
-          schema:
-            type: string
-          description: Public code de la organización (requerido si id es 'root')
-        - in: query
-          name: node_type
+          name: nodeType
           schema:
             type: string
             enum:
               - folder
               - site
               - channel
+          description: Filtrar hijos por tipo de nodo
+        - in: query
+          name: includeCounts
+          schema:
+            type: boolean
+            default: true
+          description: Incluir el campo `childrenCount` en cada nodo retornado
         - in: query
           name: limit
           schema:
             type: integer
             default: 100
+            minimum: 1
+            maximum: 500
+          description: Límite de resultados
         - in: query
           name: offset
           schema:
             type: integer
             default: 0
+            minimum: 0
+          description: Offset para paginación
       responses:
         "200":
-          description: Lista de nodos hijos
+          description: Lista de hijos directos del nodo
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ResourceNode"
+                  meta:
+                    $ref: "#/components/schemas/PaginationMeta"
+              example:
+                ok: true
+                data:
+                  - id: RES-child001-1
+                    name: Carpeta Interna
+                    nodeType: folder
+                    referenceId: null
+                    icon: folder
+                    displayOrder: 0
+                    depth: 1
+                    parentId: RES-abc123xyz-1
+                    hasChildren: true
+                    childrenCount: 5
+                    isActive: true
+                    createdAt: "2026-01-01T00:00:00.000Z"
+                    updatedAt: "2026-01-01T00:00:00.000Z"
+                  - id: RES-child002-1
+                    name: Medidor Principal
+                    nodeType: channel
+                    referenceId: CHN-5LYJX-4
+                    icon: activity
+                    displayOrder: 1
+                    depth: 1
+                    parentId: RES-abc123xyz-1
+                    hasChildren: false
+                    childrenCount: 0
+                    isActive: true
+                    createdAt: "2026-01-02T00:00:00.000Z"
+                    updatedAt: "2026-01-02T00:00:00.000Z"
+                meta:
+                  total: 2
+                  limit: 100
+                  offset: 0
+        "401":
+          description: No autenticado
+        "404":
+          description: Nodo padre no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                ok: false
+                error:
+                  code: NODE_NOT_FOUND
+                  message: Nodo padre no encontrado
   "/api/v1/resource-hierarchy/nodes/{id}/descendants":
     get:
       summary: Obtener todos los descendientes de un nodo
-      description: Obtiene todos los nodos descendientes de un nodo usando ltree para
-        consultas eficientes.
+      description: >
+        Obtiene **todos** los nodos descendientes (hijos, nietos, bisnietos, etc.) de un nodo dado.
+
+        Usa consultas ltree para eficiencia incluso en árboles grandes.
+
+        Los resultados se retornan como una lista plana (no como árbol anidado). Usar `GET /tree` para estructura anidada.
+
+
+        **Parámetro `maxDepth`:**
+
+        Limita la profundidad relativa de la búsqueda. Por ejemplo, `maxDepth=1` retorna solo los hijos directos,
+        `maxDepth=2` hijos y nietos, etc. Si no se especifica, retorna todos los descendientes.
+
+
+        Los resultados se ordenan por profundidad ASC y luego por `displayOrder` ASC.
       tags:
         - Resource Hierarchy
       security:
@@ -729,39 +1401,102 @@ paths:
           schema:
             type: string
           description: Public code del nodo ancestro
+          example: RES-abc123xyz-1
         - in: query
-          name: node_type
+          name: nodeType
           schema:
             type: string
             enum:
               - folder
               - site
               - channel
+          description: Filtrar descendientes por tipo de nodo
         - in: query
-          name: max_depth
+          name: maxDepth
           schema:
             type: integer
             minimum: 1
             maximum: 50
-          description: Profundidad máxima relativa
+          description: Profundidad máxima relativa al nodo raíz (1 = solo hijos directos, 2 = hijos y nietos, etc.)
         - in: query
           name: limit
           schema:
             type: integer
             default: 500
+            minimum: 1
+            maximum: 500
+          description: Límite de resultados
         - in: query
           name: offset
           schema:
             type: integer
             default: 0
+            minimum: 0
+          description: Offset para paginación
       responses:
         "200":
-          description: Lista de nodos descendientes
+          description: Lista plana de todos los descendientes del nodo
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ResourceNode"
+                  meta:
+                    $ref: "#/components/schemas/PaginationMeta"
+              example:
+                ok: true
+                data:
+                  - id: RES-child001-1
+                    name: Carpeta Interna
+                    nodeType: folder
+                    referenceId: null
+                    depth: 1
+                    parentId: RES-abc123xyz-1
+                    hasChildren: true
+                    isActive: true
+                  - id: RES-grandchild001-1
+                    name: Medidor A
+                    nodeType: channel
+                    referenceId: CHN-AAA01-1
+                    depth: 2
+                    parentId: RES-child001-1
+                    hasChildren: false
+                    isActive: true
+                meta:
+                  total: 2
+                  limit: 500
+                  offset: 0
+        "401":
+          description: No autenticado
+        "404":
+          description: Nodo no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                ok: false
+                error:
+                  code: NODE_NOT_FOUND
+                  message: Nodo no encontrado
   "/api/v1/resource-hierarchy/nodes/{id}/ancestors":
     get:
-      summary: Obtener ancestros de un nodo
-      description: Obtiene la cadena de ancestros desde la raíz hasta el padre directo
-        (breadcrumb).
+      summary: Obtener ancestros de un nodo (breadcrumb)
+      description: >
+        Obtiene la cadena completa de ancestros desde la raíz hasta el padre directo del nodo.
+
+        Útil para construir breadcrumbs de navegación.
+
+        La lista está ordenada desde el nodo raíz (depth=0) hasta el padre inmediato del nodo consultado.
+
+        El nodo consultado en sí **no** se incluye en la respuesta.
       tags:
         - Resource Hierarchy
       security:
@@ -772,41 +1507,114 @@ paths:
           required: true
           schema:
             type: string
-          description: Public code del nodo
+          description: Public code del nodo del que se desean obtener los ancestros
+          example: RES-abc123xyz-1
       responses:
         "200":
-          description: Lista de ancestros ordenada desde raíz
+          description: Lista de ancestros ordenada desde raíz hasta padre directo
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    description: Lista de ancestros ordenada desde el nodo raíz (depth=0) hasta el padre directo. Vacía si el nodo es raíz.
+                    items:
+                      $ref: "#/components/schemas/ResourceNode"
+              example:
+                ok: true
+                data:
+                  - id: RES-root001-1
+                    name: Organización Principal
+                    nodeType: folder
+                    referenceId: null
+                    depth: 0
+                    parentId: null
+                    hasChildren: true
+                    isActive: true
+                  - id: RES-mid001-1
+                    name: Zona Norte
+                    nodeType: folder
+                    referenceId: null
+                    depth: 1
+                    parentId: RES-root001-1
+                    hasChildren: true
+                    isActive: true
+        "401":
+          description: No autenticado
+        "404":
+          description: Nodo no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                ok: false
+                error:
+                  code: NODE_NOT_FOUND
+                  message: Nodo no encontrado
   /api/v1/resource-hierarchy/tree:
     get:
       summary: Obtener árbol completo de una organización
-      description: Obtiene la estructura de árbol completa o desde un nodo raíz específico.
+      description: >
+        Obtiene la estructura de árbol completa de una organización, o un subárbol a partir de un nodo específico.
+
+        Los nodos se retornan en formato anidado con el campo `children` conteniendo sus hijos.
+
+        Los nodos se ordenan por `displayOrder` ASC, luego por nombre ASC en cada nivel.
+
+
+        **Parámetro `maxDepth`:**
+
+        Limita la profundidad máxima del árbol retornado. Por ejemplo, `maxDepth=2` retorna solo los primeros 2 niveles.
+        Si no se especifica, retorna el árbol completo sin límite de profundidad.
+
+
+        **Parámetro `rootId`:**
+
+        Si se especifica, retorna el subárbol a partir de ese nodo (el nodo especificado se convierte en la raíz del resultado).
+        Si no se especifica, retorna el árbol completo de la organización desde los nodos raíz.
+
+
+        **Nota de rendimiento:** Para organizaciones con árboles muy grandes, usar `maxDepth` limita la cantidad de datos retornados.
       tags:
         - Resource Hierarchy
       security:
         - bearerAuth: []
       parameters:
         - in: query
-          name: organization_id
+          name: organizationId
           required: false
           schema:
             type: string
-          description: Public code de la organización (opcional, usa la org activa del
-            usuario si no se especifica)
+          description: Public code de la organización (opcional, usa la org activa del usuario)
         - in: query
-          name: root_id
+          name: rootId
           schema:
             type: string
-          description: Public code del nodo raíz para subárbol
+          description: Public code del nodo raíz para retornar solo su subárbol
+          example: RES-abc123xyz-1
         - in: query
-          name: max_depth
+          name: maxDepth
           schema:
             type: integer
             minimum: 1
             maximum: 50
-          description: Profundidad máxima del árbol
+          description: Profundidad máxima del árbol a retornar (sin límite si no se especifica)
+          example: 3
+        - in: query
+          name: includeCounts
+          schema:
+            type: boolean
+            default: true
+          description: Incluir el campo `childrenCount` en cada nodo
       responses:
         "200":
-          description: Árbol estructurado
+          description: Árbol estructurado de la organización
           content:
             application/json:
               schema:
@@ -814,48 +1622,115 @@ paths:
                 properties:
                   ok:
                     type: boolean
+                    example: true
                   data:
                     type: array
+                    description: Array de nodos raíz, cada uno con su subárbol anidado en `children`
                     items:
                       $ref: "#/components/schemas/ResourceNodeWithChildren"
+              example:
+                ok: true
+                data:
+                  - id: RES-root001-1
+                    name: Organización Principal
+                    nodeType: folder
+                    referenceId: null
+                    depth: 0
+                    parentId: null
+                    hasChildren: true
+                    childrenCount: 2
+                    isActive: true
+                    children:
+                      - id: RES-mid001-1
+                        name: Zona Norte
+                        nodeType: folder
+                        referenceId: null
+                        depth: 1
+                        parentId: RES-root001-1
+                        hasChildren: true
+                        childrenCount: 1
+                        isActive: true
+                        children:
+                          - id: RES-leaf001-1
+                            name: Medidor A
+                            nodeType: channel
+                            referenceId: CHN-AAA01-1
+                            depth: 2
+                            parentId: RES-mid001-1
+                            hasChildren: false
+                            childrenCount: 0
+                            isActive: true
+                            children: []
+                      - id: RES-mid002-1
+                        name: Zona Sur
+                        nodeType: folder
+                        referenceId: null
+                        depth: 1
+                        parentId: RES-root001-1
+                        hasChildren: false
+                        childrenCount: 0
+                        isActive: true
+                        children: []
+        "401":
+          description: No autenticado
+        "404":
+          description: Nodo raíz (`rootId`) no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                ok: false
+                error:
+                  code: NODE_NOT_FOUND
+                  message: Nodo raíz no encontrado
   /api/v1/resource-hierarchy/tree/filter:
     get:
       summary: Obtener árbol filtrado por categoría de asset
       description: >
-        Retorna solo las ramas del árbol que contienen nodos con el
-        tag/categoría especificado.
+        Retorna solo las ramas del árbol que contienen nodos con la categoría de asset especificada.
 
         Los nodos padres (carpetas, sites) se incluyen para mantener la estructura del árbol,
+        pero solo aquellos que tienen al menos un descendiente que coincide con el filtro.
 
-        pero solo aquellos que tienen descendientes con el tag.
+        Cada nodo del resultado incluye el campo `matchesFilter: true` si el nodo mismo coincide
+        directamente con el filtro (por oposición a nodos que se incluyen solo por contener descendientes que coinciden).
 
 
-        Cada nodo incluye `matches_filter: true` si coincide directamente con el filtro.
+        **Parámetro `includeSubcategories`:**
+
+        Si es `true` (por defecto), incluye también canales con subcategorías de la categoría especificada.
+        Si es `false`, solo incluye canales con la categoría exacta.
+
+
+        **Uso típico:** Mostrar al usuario solo los canales de tipo "Aire Acondicionado" dentro del árbol completo,
+        manteniendo la estructura jerárquica para contexto visual.
       tags:
         - Resource Hierarchy
       security:
         - bearerAuth: []
       parameters:
         - in: query
-          name: organization_id
+          name: organizationId
           schema:
             type: string
           description: Public code de la organización (opcional, usa la org activa)
         - in: query
-          name: category_id
+          name: categoryId
           required: true
           schema:
             type: integer
-          description: ID de la categoría de asset a filtrar
+          description: ID de la categoría de asset a filtrar (asset_category.id)
+          example: 42
         - in: query
-          name: include_subcategories
+          name: includeSubcategories
           schema:
             type: boolean
             default: true
-          description: Si incluir subcategorías del tag en el filtro
+          description: Si `true`, incluye también subcategorías de la categoría especificada
       responses:
         "200":
-          description: Árbol filtrado
+          description: Árbol filtrado mostrando solo ramas con la categoría especificada
           content:
             application/json:
               schema:
@@ -863,17 +1738,54 @@ paths:
                 properties:
                   ok:
                     type: boolean
+                    example: true
                   data:
                     type: array
                     items:
                       $ref: "#/components/schemas/ResourceNodeWithChildren"
+              example:
+                ok: true
+                data:
+                  - id: RES-root001-1
+                    name: Organización Principal
+                    nodeType: folder
+                    depth: 0
+                    matchesFilter: false
+                    children:
+                      - id: RES-mid001-1
+                        name: Zona Norte
+                        nodeType: folder
+                        depth: 1
+                        matchesFilter: false
+                        children:
+                          - id: RES-leaf001-1
+                            name: Medidor Aire Acondicionado
+                            nodeType: channel
+                            referenceId: CHN-AAA01-1
+                            depth: 2
+                            matchesFilter: true
+                            children: []
+        "400":
+          description: Parámetro `categoryId` faltante o inválido
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                ok: false
+                error:
+                  code: VALIDATION_ERROR
+                  message: categoryId debe ser un entero positivo
+        "401":
+          description: No autenticado
   "/api/v1/resource-hierarchy/nodes/{id}/has-category-descendants":
     get:
       summary: Verificar si un nodo tiene descendientes con cierta categoría
       description: >
-        Útil para lazy loading en frontend. Permite saber si al expandir un nodo
+        Verifica si un nodo tiene al menos un descendiente con la categoría de asset especificada.
 
-        habrá resultados con el filtro aplicado, sin cargar todos los descendientes.
+        Útil para lazy loading en frontend: permite saber si al expandir un nodo habrá resultados
+        con el filtro aplicado, sin necesidad de cargar todos los descendientes.
       tags:
         - Resource Hierarchy
       security:
@@ -885,18 +1797,20 @@ paths:
           schema:
             type: string
           description: Public code del nodo a verificar
+          example: RES-abc123xyz-1
         - in: query
-          name: category_id
+          name: categoryId
           required: true
           schema:
             type: integer
           description: ID de la categoría de asset
+          example: 42
         - in: query
-          name: include_subcategories
+          name: includeSubcategories
           schema:
             type: boolean
             default: true
-          description: Si incluir subcategorías del tag
+          description: Si incluir subcategorías del tag en la búsqueda
       responses:
         "200":
           description: Resultado de la verificación
@@ -907,45 +1821,129 @@ paths:
                 properties:
                   ok:
                     type: boolean
-                  has_descendants:
+                    example: true
+                  hasDescendants:
                     type: boolean
+                    description: true si el nodo tiene al menos un descendiente con la categoría especificada
+                    example: true
+              example:
+                ok: true
+                hasDescendants: true
+        "401":
+          description: No autenticado
+        "404":
+          description: Nodo no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                ok: false
+                error:
+                  code: NODE_NOT_FOUND
+                  message: Nodo no encontrado
   /api/v1/resource-hierarchy/roots:
     get:
       summary: Obtener nodos raíz de una organización
-      description: Obtiene los nodos de nivel superior (sin padre) de una organización.
+      description: >
+        Obtiene los nodos de nivel superior (sin padre) de una organización.
+
+        Equivalente a llamar `GET /nodes/:id/children` con `id=root`.
+
+        Los nodos se ordenan por `displayOrder` ASC, luego por nombre ASC.
       tags:
         - Resource Hierarchy
       security:
         - bearerAuth: []
       parameters:
         - in: query
-          name: organization_id
+          name: organizationId
           required: false
           schema:
             type: string
-          description: Public code de la organización (opcional, usa la org activa del
-            usuario si no se especifica)
+          description: Public code de la organización (opcional, usa la org activa del usuario)
         - in: query
-          name: node_type
+          name: nodeType
           schema:
             type: string
             enum:
               - folder
               - site
               - channel
+          description: Filtrar por tipo de nodo
+        - in: query
+          name: includeCounts
+          schema:
+            type: boolean
+            default: true
+          description: Incluir el campo `childrenCount` en cada nodo
         - in: query
           name: limit
           schema:
             type: integer
             default: 50
+            minimum: 1
+            maximum: 500
+          description: Límite de resultados
         - in: query
           name: offset
           schema:
             type: integer
             default: 0
+            minimum: 0
+          description: Offset para paginación
       responses:
         "200":
-          description: Lista de nodos raíz
+          description: Lista de nodos raíz de la organización
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ResourceNode"
+                  meta:
+                    $ref: "#/components/schemas/PaginationMeta"
+              example:
+                ok: true
+                data:
+                  - id: RES-root001-1
+                    name: Organización Principal
+                    nodeType: folder
+                    referenceId: null
+                    icon: folder
+                    displayOrder: 0
+                    depth: 0
+                    parentId: null
+                    hasChildren: true
+                    childrenCount: 5
+                    isActive: true
+                    createdAt: "2026-01-01T00:00:00.000Z"
+                    updatedAt: "2026-01-01T00:00:00.000Z"
+                  - id: RES-root002-1
+                    name: Planta Central
+                    nodeType: site
+                    referenceId: SIT-XYZ99-1
+                    icon: building
+                    displayOrder: 1
+                    depth: 0
+                    parentId: null
+                    hasChildren: false
+                    childrenCount: 0
+                    isActive: true
+                    createdAt: "2026-01-05T00:00:00.000Z"
+                    updatedAt: "2026-01-05T00:00:00.000Z"
+                meta:
+                  total: 2
+                  limit: 50
+                  offset: 0
+        "401":
+          description: No autenticado
   /api/v1/resource-hierarchy/access:
     post:
       summary: Otorgar acceso a un usuario sobre un nodo
@@ -962,28 +1960,28 @@ paths:
             schema:
               type: object
               required:
-                - user_id
-                - node_id
+                - userId
+                - nodeId
               properties:
-                user_id:
+                userId:
                   type: string
                   format: uuid
                   description: UUID del usuario
-                node_id:
+                nodeId:
                   type: string
                   description: Public code del nodo
-                access_type:
+                accessType:
                   type: string
                   enum:
                     - view
                     - edit
                     - admin
                   default: view
-                include_descendants:
+                includeDescendants:
                   type: boolean
                   default: true
                   description: Si el acceso aplica también a descendientes
-                expires_at:
+                expiresAt:
                   type: string
                   format: date-time
                   nullable: true
@@ -1010,13 +2008,13 @@ paths:
             schema:
               type: object
               required:
-                - user_id
-                - node_id
+                - userId
+                - nodeId
               properties:
-                user_id:
+                userId:
                   type: string
                   format: uuid
-                node_id:
+                nodeId:
                   type: string
       responses:
         "200":
@@ -1032,18 +2030,18 @@ paths:
         - bearerAuth: []
       parameters:
         - in: query
-          name: user_id
+          name: userId
           required: true
           schema:
             type: string
             format: uuid
         - in: query
-          name: node_id
+          name: nodeId
           required: true
           schema:
             type: string
         - in: query
-          name: access_type
+          name: accessType
           schema:
             type: string
             enum:
@@ -1064,12 +2062,13 @@ paths:
                   data:
                     type: object
                     properties:
-                      has_access:
+                      hasAccess:
                         type: boolean
 components:
   schemas:
     ResourceNode:
       type: object
+      description: Nodo de la jerarquía de recursos
       properties:
         id:
           type: string
@@ -1077,38 +2076,69 @@ components:
           example: RES-abc123xyz-1
         name:
           type: string
+          description: Nombre del nodo
           example: Sensores de Temperatura
         description:
           type: string
           nullable: true
-        node_type:
+          description: Descripción del nodo
+          example: Carpeta para agrupar sensores de temperatura
+        nodeType:
           type: string
           enum:
             - folder
             - site
             - channel
-        icon:
-          type: string
-        display_order:
-          type: integer
-        depth:
-          type: integer
-          description: Profundidad en el árbol (0 = raíz)
-        parent_id:
+          description: Tipo de nodo
+          example: channel
+        referenceId:
           type: string
           nullable: true
-        has_children:
+          description: Public code del recurso referenciado (ej. CHN-xxx para channels, SIT-xxx para sites). Null para folders.
+          example: CHN-5LYJX-4
+        icon:
+          type: string
+          description: "Nombre del ícono. Valores por defecto: folder → 'folder', site → 'building', channel → 'activity'"
+          example: activity
+        displayOrder:
+          type: integer
+          description: Orden de visualización entre nodos hermanos (0 = primero). Los nodos se ordenan por displayOrder ASC, luego nombre ASC.
+          example: 0
+        depth:
+          type: integer
+          description: Profundidad del nodo en el árbol (0 = nodo raíz, 1 = hijo de raíz, etc.)
+          example: 2
+        parentId:
+          type: string
+          nullable: true
+          description: Public code del nodo padre. Null si es nodo raíz.
+          example: RES-def456ghi-2
+        hasChildren:
           type: boolean
+          description: Indica si el nodo tiene al menos un hijo activo
+          example: false
+        childrenCount:
+          type: integer
+          description: Cantidad de hijos directos activos. Solo incluido si `includeCounts=true` (por defecto).
+          example: 0
         metadata:
           type: object
-        is_active:
+          description: Metadatos adicionales en formato JSON libre
+          example: { "unidad": "kWh", "categoria": "energia" }
+        isActive:
           type: boolean
-        created_at:
+          description: Estado del nodo (false indica soft delete)
+          example: true
+        createdAt:
           type: string
           format: date-time
-        updated_at:
+          description: Fecha y hora de creación (ISO 8601)
+          example: "2026-03-20T10:00:00.000Z"
+        updatedAt:
           type: string
           format: date-time
+          description: Fecha y hora de última actualización (ISO 8601)
+          example: "2026-03-20T10:00:00.000Z"
     ResourceNodeWithChildren:
       allOf:
         - $ref: "#/components/schemas/ResourceNode"
@@ -1116,35 +2146,72 @@ components:
           properties:
             children:
               type: array
+              description: Hijos directos del nodo, cada uno recursivamente con su propio `children`
               items:
                 $ref: "#/components/schemas/ResourceNodeWithChildren"
+    PaginationMeta:
+      type: object
+      description: Metadatos de paginación
+      properties:
+        total:
+          type: integer
+          description: Total de elementos disponibles (sin aplicar paginación)
+          example: 42
+        limit:
+          type: integer
+          description: Límite aplicado en la consulta
+          example: 50
+        offset:
+          type: integer
+          description: Offset aplicado en la consulta
+          example: 0
+    ErrorResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+          example: false
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              description: Código de error interno
+              example: NODE_NOT_FOUND
+            message:
+              type: string
+              description: Descripción legible del error
+              example: Nodo no encontrado
     BatchCreateNodeInserted:
       type: object
-      description: Nodo insertado exitosamente
+      description: Información básica de un nodo creado exitosamente en un batch
       properties:
-        public_code:
+        publicCode:
           type: string
-          description: Código público del nodo creado
+          description: Public code del nodo recién creado
           example: RES-abc123xyz-1
-        reference_id:
+        referenceId:
           type: string
           nullable: true
           description: Public code del recurso referenciado
           example: CHN-5LYJX-4
-        node_type:
+        nodeType:
           type: string
           enum:
             - folder
             - site
             - channel
+          description: Tipo del nodo creado
+          example: channel
         name:
           type: string
+          description: Nombre del nodo creado
           example: Medidor Principal
     BatchCreateNodeFailed:
       type: object
-      description: Nodo que falló al insertarse
+      description: Información de un nodo que falló al insertarse en el batch
       properties:
-        reference_id:
+        referenceId:
           type: string
           nullable: true
           description: Public code del recurso que se intentó insertar
@@ -1153,9 +2220,9 @@ components:
           type: string
           description: Nombre del nodo que se intentó crear
           example: Sensor de Humedad
-        reason_code:
+        reasonCode:
           type: string
-          description: Código del error
+          description: Código del motivo del fallo
           enum:
             - DUPLICATE_IN_BATCH
             - ALREADY_IN_HIERARCHY
@@ -1164,11 +2231,11 @@ components:
           example: ALREADY_IN_HIERARCHY
         message:
           type: string
-          description: Mensaje descriptivo del error
+          description: Descripción legible del motivo del fallo
           example: Este recurso ya existe en la jerarquía
     BatchCreateNodesResult:
       type: object
-      description: Resultado del batch create
+      description: Resultado detallado de una operación batch-create
       properties:
         inserted:
           type: array
@@ -1177,7 +2244,7 @@ components:
             $ref: "#/components/schemas/BatchCreateNodeInserted"
         failed:
           type: array
-          description: Nodos que fallaron
+          description: Nodos que fallaron al insertarse con su motivo de fallo
           items:
             $ref: "#/components/schemas/BatchCreateNodeFailed"
         meta:
@@ -1185,15 +2252,15 @@ components:
           properties:
             requested:
               type: integer
-              description: Total de nodos solicitados
+              description: Total de nodos solicitados en el batch
               example: 5
             inserted:
               type: integer
-              description: Nodos insertados exitosamente
+              description: Cantidad de nodos insertados exitosamente
               example: 3
             failed:
               type: integer
-              description: Nodos que fallaron
+              description: Cantidad de nodos que fallaron
               example: 2
     BatchCreateNodesResponse:
       type: object

@@ -54,6 +54,21 @@ const commonNodeFields = {
         .default(0)
 };
 
+const optionalDescriptionField = z
+    .string()
+    .max(2000, 'description no puede exceder 2000 caracteres')
+    .optional()
+    .nullable();
+
+const optionalIconField = z
+    .string()
+    .max(50, 'icon no puede exceder 50 caracteres')
+    .optional();
+
+const optionalMetadataField = z
+    .record(z.any())
+    .optional();
+
 export const createNodeSchema = z.object({
     body: z.discriminatedUnion('nodeType', [
         z.object({
@@ -67,7 +82,10 @@ export const createNodeSchema = z.object({
                 .string()
                 .min(1, 'name no puede estar vacío')
                 .max(255, 'name no puede exceder 255 caracteres')
-                .optional()
+                .optional(),
+            description: optionalDescriptionField,
+            icon: optionalIconField,
+            metadata: optionalMetadataField
         }),
         z.object({
             ...commonNodeFields,
@@ -85,7 +103,10 @@ export const createNodeSchema = z.object({
                 .number()
                 .int('assetCategoryId debe ser un número entero')
                 .positive('assetCategoryId debe ser positivo')
-                .optional()
+                .optional(),
+            description: optionalDescriptionField,
+            icon: optionalIconField,
+            metadata: optionalMetadataField
         }),
         z.object({
             ...commonNodeFields,
@@ -96,18 +117,9 @@ export const createNodeSchema = z.object({
                 })
                 .min(1, 'name no puede estar vacío')
                 .max(255, 'name no puede exceder 255 caracteres'),
-            description: z
-                .string()
-                .max(2000, 'description no puede exceder 2000 caracteres')
-                .optional()
-                .nullable(),
-            icon: z
-                .string()
-                .max(50, 'icon no puede exceder 50 caracteres')
-                .optional(),
-            metadata: z
-                .record(z.any())
-                .optional()
+            description: optionalDescriptionField,
+            icon: optionalIconField,
+            metadata: optionalMetadataField
         })
     ])
 });
@@ -172,7 +184,7 @@ export const deleteNodeSchema = z.object({
             .string()
             .optional()
             .transform(val => val === 'true' || val === '1')
-            .default('true')
+            .default('false')
     })
 });
 
@@ -411,6 +423,13 @@ export const batchGetNodesSchema = z.object({
     })
 });
 
+const batchDisplayOrderField = z
+    .number()
+    .int('displayOrder debe ser un número entero')
+    .min(0, 'displayOrder debe ser mayor o igual a 0')
+    .optional()
+    .default(0);
+
 const batchNodeItemSchema = z.discriminatedUnion('nodeType', [
     z.object({
         nodeType: z.literal('site'),
@@ -423,12 +442,10 @@ const batchNodeItemSchema = z.discriminatedUnion('nodeType', [
             .min(1, 'name no puede estar vacío')
             .max(255, 'name no puede exceder 255 caracteres')
             .optional(),
-        displayOrder: z
-            .number()
-            .int('displayOrder debe ser un número entero')
-            .min(0, 'displayOrder debe ser mayor o igual a 0')
-            .optional()
-            .default(0)
+        description: optionalDescriptionField,
+        icon: optionalIconField,
+        metadata: optionalMetadataField,
+        displayOrder: batchDisplayOrderField
     }),
     z.object({
         nodeType: z.literal('channel'),
@@ -446,12 +463,10 @@ const batchNodeItemSchema = z.discriminatedUnion('nodeType', [
             .int('assetCategoryId debe ser un número entero')
             .positive('assetCategoryId debe ser positivo')
             .optional(),
-        displayOrder: z
-            .number()
-            .int('displayOrder debe ser un número entero')
-            .min(0, 'displayOrder debe ser mayor o igual a 0')
-            .optional()
-            .default(0)
+        description: optionalDescriptionField,
+        icon: optionalIconField,
+        metadata: optionalMetadataField,
+        displayOrder: batchDisplayOrderField
     }),
     z.object({
         nodeType: z.literal('folder'),
@@ -461,24 +476,10 @@ const batchNodeItemSchema = z.discriminatedUnion('nodeType', [
             })
             .min(1, 'name no puede estar vacío')
             .max(255, 'name no puede exceder 255 caracteres'),
-        description: z
-            .string()
-            .max(2000, 'description no puede exceder 2000 caracteres')
-            .optional()
-            .nullable(),
-        icon: z
-            .string()
-            .max(50, 'icon no puede exceder 50 caracteres')
-            .optional(),
-        displayOrder: z
-            .number()
-            .int('displayOrder debe ser un número entero')
-            .min(0, 'displayOrder debe ser mayor o igual a 0')
-            .optional()
-            .default(0),
-        metadata: z
-            .record(z.any())
-            .optional()
+        description: optionalDescriptionField,
+        icon: optionalIconField,
+        metadata: optionalMetadataField,
+        displayOrder: batchDisplayOrderField
     })
 ]);
 
