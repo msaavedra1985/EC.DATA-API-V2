@@ -1,0 +1,786 @@
+{
+	"info": {
+		"_postman_id": "ecdata-api-v2",
+		"name": "EC.DATA API",
+		"description": "EC.DATA REST API — Query params usan snake_case en URL; body params usan camelCase.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:5000",
+			"type": "string"
+		},
+		{
+			"key": "token",
+			"value": "",
+			"type": "string"
+		}
+	],
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{token}}",
+				"type": "string"
+			}
+		]
+	},
+	"item": [
+		{
+			"name": "Auth",
+			"item": [
+				{
+					"name": "Login",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"admin@example.com\",\n  \"password\": \"password\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/auth/login",
+							"host": ["{{baseUrl}}"],
+							"path": ["auth", "login"]
+						}
+					}
+				},
+				{
+					"name": "Refresh Token",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/auth/refresh",
+							"host": ["{{baseUrl}}"],
+							"path": ["auth", "refresh"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Channels",
+			"item": [
+				{
+					"name": "List Channels",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/channels?device_id=&measurement_type_id=&not_in_hierarchy=false&status=active&search=&limit=20&offset=0",
+							"host": ["{{baseUrl}}"],
+							"path": ["channels"],
+							"query": [
+								{"key": "device_id", "value": "", "description": "public_code del device (snake_case)"},
+								{"key": "measurement_type_id", "value": "", "description": "ID del tipo de medición (snake_case)"},
+								{"key": "not_in_hierarchy", "value": "false", "description": "Solo channels fuera de jerarquía (snake_case)"},
+								{"key": "status", "value": "active"},
+								{"key": "search", "value": ""},
+								{"key": "limit", "value": "20"},
+								{"key": "offset", "value": "0"}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Channel by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/channels/:id",
+							"host": ["{{baseUrl}}"],
+							"path": ["channels", ":id"],
+							"variable": [{"key": "id", "value": ""}]
+						}
+					}
+				},
+				{
+					"name": "Create Channel",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"deviceId\": \"\",\n  \"name\": \"\",\n  \"description\": \"\",\n  \"measurementTypeId\": null\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/channels",
+							"host": ["{{baseUrl}}"],
+							"path": ["channels"]
+						}
+					}
+				},
+				{
+					"name": "Update Channel",
+					"request": {
+						"method": "PUT",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"\",\n  \"description\": \"\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/channels/:id",
+							"host": ["{{baseUrl}}"],
+							"path": ["channels", ":id"],
+							"variable": [{"key": "id", "value": ""}]
+						}
+					}
+				},
+				{
+					"name": "Delete Channel",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/channels/:id",
+							"host": ["{{baseUrl}}"],
+							"path": ["channels", ":id"],
+							"variable": [{"key": "id", "value": ""}]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Devices",
+			"item": [
+				{
+					"name": "List Devices",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/devices?site_id=&device_type_id=&is_active=true&include_channels=false&status=active&search=&limit=20&offset=0",
+							"host": ["{{baseUrl}}"],
+							"path": ["devices"],
+							"query": [
+								{"key": "site_id", "value": "", "description": "public_code del site (snake_case)"},
+								{"key": "device_type_id", "value": "", "description": "ID del tipo de dispositivo (snake_case)"},
+								{"key": "is_active", "value": "true", "description": "Filtrar por activo (snake_case)"},
+								{"key": "include_channels", "value": "false", "description": "Incluir canales en respuesta (snake_case)"},
+								{"key": "status", "value": "active"},
+								{"key": "search", "value": ""},
+								{"key": "limit", "value": "20"},
+								{"key": "offset", "value": "0"}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Device by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/devices/:id",
+							"host": ["{{baseUrl}}"],
+							"path": ["devices", ":id"],
+							"variable": [{"key": "id", "value": ""}]
+						}
+					}
+				},
+				{
+					"name": "Create Device",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"\",\n  \"siteId\": null,\n  \"deviceTypeId\": null,\n  \"status\": \"active\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/devices",
+							"host": ["{{baseUrl}}"],
+							"path": ["devices"]
+						}
+					}
+				},
+				{
+					"name": "Update Device",
+					"request": {
+						"method": "PUT",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/devices/:id",
+							"host": ["{{baseUrl}}"],
+							"path": ["devices", ":id"],
+							"variable": [{"key": "id", "value": ""}]
+						}
+					}
+				},
+				{
+					"name": "Delete Device",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/devices/:id",
+							"host": ["{{baseUrl}}"],
+							"path": ["devices", ":id"],
+							"variable": [{"key": "id", "value": ""}]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Sites",
+			"item": [
+				{
+					"name": "List Sites",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/sites?country_code=&is_active=true&not_in_hierarchy=false&city=&limit=20&offset=0",
+							"host": ["{{baseUrl}}"],
+							"path": ["sites"],
+							"query": [
+								{"key": "country_code", "value": "", "description": "Código ISO 3166-1 alpha-2 del país (snake_case)"},
+								{"key": "is_active", "value": "true", "description": "Filtrar por activo (snake_case)"},
+								{"key": "not_in_hierarchy", "value": "false", "description": "Solo sites fuera de jerarquía (snake_case)"},
+								{"key": "city", "value": ""},
+								{"key": "limit", "value": "20"},
+								{"key": "offset", "value": "0"}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Site by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/sites/:id",
+							"host": ["{{baseUrl}}"],
+							"path": ["sites", ":id"],
+							"variable": [{"key": "id", "value": ""}]
+						}
+					}
+				},
+				{
+					"name": "Create Site",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"\",\n  \"countryCode\": \"CL\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/sites",
+							"host": ["{{baseUrl}}"],
+							"path": ["sites"]
+						}
+					}
+				},
+				{
+					"name": "Update Site",
+					"request": {
+						"method": "PUT",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/sites/:id",
+							"host": ["{{baseUrl}}"],
+							"path": ["sites", ":id"],
+							"variable": [{"key": "id", "value": ""}]
+						}
+					}
+				},
+				{
+					"name": "Delete Site",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/sites/:id",
+							"host": ["{{baseUrl}}"],
+							"path": ["sites", ":id"],
+							"variable": [{"key": "id", "value": ""}]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Resource Hierarchy",
+			"item": [
+				{
+					"name": "List Nodes",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/hierarchy/nodes?node_type=&parent_id=&is_active=true&include_counts=true&search=&limit=50&offset=0",
+							"host": ["{{baseUrl}}"],
+							"path": ["hierarchy", "nodes"],
+							"query": [
+								{"key": "node_type", "value": "", "description": "Tipo de nodo: folder, site, channel (snake_case)"},
+								{"key": "parent_id", "value": "", "description": "public_code del nodo padre (snake_case)"},
+								{"key": "is_active", "value": "true", "description": "Filtrar por activo (snake_case)"},
+								{"key": "include_counts", "value": "true", "description": "Incluir conteos de hijos (snake_case)"},
+								{"key": "search", "value": ""},
+								{"key": "limit", "value": "50"},
+								{"key": "offset", "value": "0"}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Node by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/hierarchy/nodes/:id",
+							"host": ["{{baseUrl}}"],
+							"path": ["hierarchy", "nodes", ":id"],
+							"variable": [{"key": "id", "value": ""}]
+						}
+					}
+				},
+				{
+					"name": "Get Node Children",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/hierarchy/nodes/:id/children?node_type=&include_counts=true&limit=50&offset=0",
+							"host": ["{{baseUrl}}"],
+							"path": ["hierarchy", "nodes", ":id", "children"],
+							"variable": [{"key": "id", "value": ""}],
+							"query": [
+								{"key": "node_type", "value": "", "description": "Tipo de nodo (snake_case)"},
+								{"key": "include_counts", "value": "true", "description": "Incluir conteos (snake_case)"},
+								{"key": "limit", "value": "50"},
+								{"key": "offset", "value": "0"}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Node Descendants",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/hierarchy/nodes/:id/descendants?node_type=&max_depth=&limit=50&offset=0",
+							"host": ["{{baseUrl}}"],
+							"path": ["hierarchy", "nodes", ":id", "descendants"],
+							"variable": [{"key": "id", "value": ""}],
+							"query": [
+								{"key": "node_type", "value": "", "description": "Tipo de nodo (snake_case)"},
+								{"key": "max_depth", "value": "", "description": "Profundidad máxima (snake_case)"},
+								{"key": "limit", "value": "50"},
+								{"key": "offset", "value": "0"}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Node Ancestors",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/hierarchy/nodes/:id/ancestors",
+							"host": ["{{baseUrl}}"],
+							"path": ["hierarchy", "nodes", ":id", "ancestors"],
+							"variable": [{"key": "id", "value": ""}]
+						}
+					}
+				},
+				{
+					"name": "Get Tree",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/hierarchy/tree?root_id=&max_depth=&include_counts=true",
+							"host": ["{{baseUrl}}"],
+							"path": ["hierarchy", "tree"],
+							"query": [
+								{"key": "root_id", "value": "", "description": "public_code del nodo raíz (snake_case)"},
+								{"key": "max_depth", "value": "", "description": "Profundidad máxima (snake_case)"},
+								{"key": "include_counts", "value": "true", "description": "Incluir conteos (snake_case)"}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Filtered Tree",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/hierarchy/tree/filter?category_id=1&include_subcategories=true",
+							"host": ["{{baseUrl}}"],
+							"path": ["hierarchy", "tree", "filter"],
+							"query": [
+								{"key": "category_id", "value": "1", "description": "ID de la categoría a filtrar (snake_case)"},
+								{"key": "include_subcategories", "value": "true", "description": "Incluir subcategorías (snake_case)"}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Roots",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/hierarchy/roots?node_type=&limit=50&offset=0",
+							"host": ["{{baseUrl}}"],
+							"path": ["hierarchy", "roots"],
+							"query": [
+								{"key": "node_type", "value": "", "description": "Tipo de nodo (snake_case)"},
+								{"key": "limit", "value": "50"},
+								{"key": "offset", "value": "0"}
+							]
+						}
+					}
+				},
+				{
+					"name": "Check Access",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/hierarchy/access/check?user_id=&node_id=&access_type=view",
+							"host": ["{{baseUrl}}"],
+							"path": ["hierarchy", "access", "check"],
+							"query": [
+								{"key": "user_id", "value": "", "description": "UUID del usuario (snake_case)"},
+								{"key": "node_id", "value": "", "description": "public_code del nodo (snake_case)"},
+								{"key": "access_type", "value": "view", "description": "Tipo de acceso: view, edit, admin (snake_case)"}
+							]
+						}
+					}
+				},
+				{
+					"name": "Grant Access",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"userId\": \"\",\n  \"nodeId\": \"\",\n  \"accessType\": \"view\",\n  \"includeDescendants\": true\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/hierarchy/access",
+							"host": ["{{baseUrl}}"],
+							"path": ["hierarchy", "access"]
+						}
+					}
+				},
+				{
+					"name": "Revoke Access",
+					"request": {
+						"method": "DELETE",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"userId\": \"\",\n  \"nodeId\": \"\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/hierarchy/access",
+							"host": ["{{baseUrl}}"],
+							"path": ["hierarchy", "access"]
+						}
+					}
+				},
+				{
+					"name": "Check Category Descendants",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/hierarchy/nodes/:id/has-category-descendants?category_id=1&include_subcategories=true",
+							"host": ["{{baseUrl}}"],
+							"path": ["hierarchy", "nodes", ":id", "has-category-descendants"],
+							"variable": [{"key": "id", "value": ""}],
+							"query": [
+								{"key": "category_id", "value": "1", "description": "ID de la categoría (snake_case)"},
+								{"key": "include_subcategories", "value": "true", "description": "Incluir subcategorías (snake_case)"}
+							]
+						}
+					}
+				},
+				{
+					"name": "Create Node",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"nodeType\": \"folder\",\n  \"name\": \"\",\n  \"parentId\": null\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/hierarchy/nodes",
+							"host": ["{{baseUrl}}"],
+							"path": ["hierarchy", "nodes"]
+						}
+					}
+				},
+				{
+					"name": "Update Node",
+					"request": {
+						"method": "PUT",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/hierarchy/nodes/:id",
+							"host": ["{{baseUrl}}"],
+							"path": ["hierarchy", "nodes", ":id"],
+							"variable": [{"key": "id", "value": ""}]
+						}
+					}
+				},
+				{
+					"name": "Delete Node",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/hierarchy/nodes/:id?cascade=false",
+							"host": ["{{baseUrl}}"],
+							"path": ["hierarchy", "nodes", ":id"],
+							"variable": [{"key": "id", "value": ""}],
+							"query": [{"key": "cascade", "value": "false"}]
+						}
+					}
+				},
+				{
+					"name": "Move Node",
+					"request": {
+						"method": "PATCH",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"newParentId\": null,\n  \"displayOrder\": 0\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/hierarchy/nodes/:id/move",
+							"host": ["{{baseUrl}}"],
+							"path": ["hierarchy", "nodes", ":id", "move"],
+							"variable": [{"key": "id", "value": ""}]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Dashboards",
+			"item": [
+				{
+					"name": "List Dashboards",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/dashboards?include_widgets=false&search=&limit=20&offset=0",
+							"host": ["{{baseUrl}}"],
+							"path": ["dashboards"],
+							"query": [
+								{"key": "include_widgets", "value": "false", "description": "Incluir widgets en respuesta (snake_case)"},
+								{"key": "search", "value": ""},
+								{"key": "limit", "value": "20"},
+								{"key": "offset", "value": "0"}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Dashboard by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/dashboards/:id",
+							"host": ["{{baseUrl}}"],
+							"path": ["dashboards", ":id"],
+							"variable": [{"key": "id", "value": ""}]
+						}
+					}
+				},
+				{
+					"name": "Create Dashboard",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"\",\n  \"isPublic\": false\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/dashboards",
+							"host": ["{{baseUrl}}"],
+							"path": ["dashboards"]
+						}
+					}
+				},
+				{
+					"name": "Update Dashboard",
+					"request": {
+						"method": "PATCH",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/dashboards/:id",
+							"host": ["{{baseUrl}}"],
+							"path": ["dashboards", ":id"],
+							"variable": [{"key": "id", "value": ""}]
+						}
+					}
+				},
+				{
+					"name": "Delete Dashboard",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/dashboards/:id",
+							"host": ["{{baseUrl}}"],
+							"path": ["dashboards", ":id"],
+							"variable": [{"key": "id", "value": ""}]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Asset Categories",
+			"item": [
+				{
+					"name": "List Categories",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/asset-categories?scope=all&parent_id=&roots_only=false",
+							"host": ["{{baseUrl}}"],
+							"path": ["asset-categories"],
+							"query": [
+								{"key": "scope", "value": "all", "description": "Scope: organization, user, all"},
+								{"key": "parent_id", "value": "", "description": "ID del padre para filtrar hijos (snake_case)"},
+								{"key": "roots_only", "value": "false", "description": "Solo categorías raíz (snake_case)"}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Category by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/asset-categories/:id",
+							"host": ["{{baseUrl}}"],
+							"path": ["asset-categories", ":id"],
+							"variable": [{"key": "id", "value": ""}]
+						}
+					}
+				},
+				{
+					"name": "Get Category Tree",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/asset-categories/:id/tree",
+							"host": ["{{baseUrl}}"],
+							"path": ["asset-categories", ":id", "tree"],
+							"variable": [{"key": "id", "value": ""}]
+						}
+					}
+				},
+				{
+					"name": "Create Organization Category",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"\",\n  \"color\": \"#6B7280\",\n  \"parentId\": null\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/asset-categories/organization",
+							"host": ["{{baseUrl}}"],
+							"path": ["asset-categories", "organization"]
+						}
+					}
+				},
+				{
+					"name": "Create User Category",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"\",\n  \"color\": \"#6B7280\",\n  \"parentId\": null\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/asset-categories/user",
+							"host": ["{{baseUrl}}"],
+							"path": ["asset-categories", "user"]
+						}
+					}
+				},
+				{
+					"name": "Update Category",
+					"request": {
+						"method": "PUT",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/asset-categories/:id",
+							"host": ["{{baseUrl}}"],
+							"path": ["asset-categories", ":id"],
+							"variable": [{"key": "id", "value": ""}]
+						}
+					}
+				},
+				{
+					"name": "Delete (Deactivate) Category",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/asset-categories/:id",
+							"host": ["{{baseUrl}}"],
+							"path": ["asset-categories", ":id"],
+							"variable": [{"key": "id", "value": ""}]
+						}
+					}
+				}
+			]
+		}
+	]
+}

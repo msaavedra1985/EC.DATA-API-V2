@@ -244,17 +244,23 @@ export const getDashboardsSchema = z.object({
             })
             .optional()
             .default('0'),
-        includeWidgets: z
+        include_widgets: z
             .string()
             .transform((val) => val === 'true')
             .optional()
             .default('false')
     }).transform((data) => {
-        if (data.page !== undefined && data.page >= 1) {
-            const limit = data.limit || 20;
-            return { ...data, offset: (data.page - 1) * limit };
+        const normalized = {
+            ...data,
+            includeWidgets: data.include_widgets
+        };
+        delete normalized.include_widgets;
+
+        if (normalized.page !== undefined && normalized.page >= 1) {
+            const limit = normalized.limit || 20;
+            return { ...normalized, offset: (normalized.page - 1) * limit };
         }
-        return data;
+        return normalized;
     })
 });
 

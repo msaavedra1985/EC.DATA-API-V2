@@ -67,6 +67,7 @@ agent-docs/
 6. **Actualizar docs de endpoints** al modificarlos → `agent-docs/endpoints/{modulo}.md`
 7. **camelCase end-to-end**: Todo el código JS usa camelCase (modelos, DTOs, serializers, services, repos, routes). Sequelize `underscored: true` mapea automáticamente a columnas snake_case en la DB. El middleware caseTransform fue eliminado — el frontend envía/recibe camelCase directo.
 8. **Excepciones snake_case**: Nombres de tabla, valores ENUM, i18n keys, raw SQL queries, y acceso a resultados de `raw: true` queries mantienen snake_case (son columnas DB directas).
+9. **Query params de URL usan snake_case**: Los query params en la URL deben usar snake_case (ej: `device_id`, `not_in_hierarchy`, `include_channels`). Los DTOs (Zod) se encargan de validarlos con los nombres snake_case y transformarlos al nombre camelCase interno antes de que lleguen al servicio/repositorio. Los body params de POST/PUT siguen en camelCase. El módulo organizations ya usaba snake_case correctamente.
 
 ## Exports (mantener actualizados)
 

@@ -214,19 +214,19 @@ export const listNodesSchema = z.object({
             .string()
             .min(1, 'organizationId no puede estar vacío')
             .optional(),
-        parentId: z
+        parent_id: z
             .string()
             .optional(),
-        nodeType: z
+        node_type: z
             .enum(nodeTypes, {
-                errorMap: () => ({ message: 'nodeType debe ser: folder, site, o channel' })
+                errorMap: () => ({ message: 'node_type debe ser: folder, site, o channel' })
             })
             .optional(),
         search: z
             .string()
             .max(100, 'search no puede exceder 100 caracteres')
             .optional(),
-        isActive: z
+        is_active: z
             .string()
             .optional()
             .transform(val => {
@@ -234,12 +234,22 @@ export const listNodesSchema = z.object({
                 if (val === 'false' || val === '0') return false;
                 return undefined;
             }),
-        includeCounts: z
+        include_counts: z
             .string()
             .optional()
             .transform(val => val !== 'false' && val !== '0')
             .default('true')
-    }).transform(pageToOffsetTransform)
+    }).transform((data) => {
+        const normalized = pageToOffsetTransform(data);
+        const { parent_id, node_type, is_active, include_counts, ...rest } = normalized;
+        return {
+            ...rest,
+            parentId: parent_id,
+            nodeType: node_type,
+            isActive: is_active,
+            includeCounts: include_counts
+        };
+    })
 });
 
 export const getChildrenSchema = z.object({
@@ -251,17 +261,25 @@ export const getChildrenSchema = z.object({
             .min(1, 'ID del nodo no puede estar vacío')
     }),
     query: paginationBaseSchema.extend({
-        nodeType: z
+        node_type: z
             .enum(nodeTypes, {
-                errorMap: () => ({ message: 'nodeType debe ser: folder, site, o channel' })
+                errorMap: () => ({ message: 'node_type debe ser: folder, site, o channel' })
             })
             .optional(),
-        includeCounts: z
+        include_counts: z
             .string()
             .optional()
             .transform(val => val !== 'false' && val !== '0')
             .default('true')
-    }).transform(pageToOffsetTransform)
+    }).transform((data) => {
+        const normalized = pageToOffsetTransform(data);
+        const { node_type, include_counts, ...rest } = normalized;
+        return {
+            ...rest,
+            nodeType: node_type,
+            includeCounts: include_counts
+        };
+    })
 });
 
 export const getDescendantsSchema = z.object({
@@ -273,17 +291,25 @@ export const getDescendantsSchema = z.object({
             .min(1, 'ID del nodo no puede estar vacío')
     }),
     query: paginationBaseSchema.extend({
-        nodeType: z
+        node_type: z
             .enum(nodeTypes, {
-                errorMap: () => ({ message: 'nodeType debe ser: folder, site, o channel' })
+                errorMap: () => ({ message: 'node_type debe ser: folder, site, o channel' })
             })
             .optional(),
-        maxDepth: z
+        max_depth: z
             .string()
             .optional()
             .transform(val => val ? parseInt(val, 10) : null)
             .pipe(z.number().int().min(1).max(50).nullable())
-    }).transform(pageToOffsetTransform)
+    }).transform((data) => {
+        const normalized = pageToOffsetTransform(data);
+        const { node_type, max_depth, ...rest } = normalized;
+        return {
+            ...rest,
+            nodeType: node_type,
+            maxDepth: max_depth
+        };
+    })
 });
 
 export const getAncestorsSchema = z.object({
@@ -302,19 +328,27 @@ export const getTreeSchema = z.object({
             .string()
             .min(1, 'organizationId no puede estar vacío')
             .optional(),
-        rootId: z
+        root_id: z
             .string()
             .optional(),
-        maxDepth: z
+        max_depth: z
             .string()
             .optional()
             .transform(val => val ? parseInt(val, 10) : null)
             .pipe(z.number().int().min(1).max(50).nullable()),
-        includeCounts: z
+        include_counts: z
             .string()
             .optional()
             .transform(val => val !== 'false' && val !== '0')
             .default('true')
+    }).transform((data) => {
+        const { root_id, max_depth, include_counts, ...rest } = data;
+        return {
+            ...rest,
+            rootId: root_id,
+            maxDepth: max_depth,
+            includeCounts: include_counts
+        };
     })
 });
 
@@ -324,12 +358,19 @@ export const getRootsSchema = z.object({
             .string()
             .min(1, 'organizationId no puede estar vacío')
             .optional(),
-        nodeType: z
+        node_type: z
             .enum(nodeTypes, {
-                errorMap: () => ({ message: 'nodeType debe ser: folder, site, o channel' })
+                errorMap: () => ({ message: 'node_type debe ser: folder, site, o channel' })
             })
             .optional()
-    }).transform(pageToOffsetTransform)
+    }).transform((data) => {
+        const normalized = pageToOffsetTransform(data);
+        const { node_type, ...rest } = normalized;
+        return {
+            ...rest,
+            nodeType: node_type
+        };
+    })
 });
 
 // ============ SCHEMAS DE ACCESO ============
@@ -388,23 +429,31 @@ export const revokeAccessSchema = z.object({
 
 export const checkAccessSchema = z.object({
     query: z.object({
-        userId: z
+        user_id: z
             .string({
-                required_error: 'userId es requerido'
+                required_error: 'user_id es requerido'
             })
             .refine(val => uuidRegex.test(val), {
-                message: 'userId debe ser un UUID válido'
+                message: 'user_id debe ser un UUID válido'
             }),
-        nodeId: z
+        node_id: z
             .string({
-                required_error: 'nodeId es requerido'
+                required_error: 'node_id es requerido'
             })
-            .min(1, 'nodeId no puede estar vacío'),
-        accessType: z
+            .min(1, 'node_id no puede estar vacío'),
+        access_type: z
             .enum(accessTypes, {
-                errorMap: () => ({ message: 'accessType debe ser: view, edit, o admin' })
+                errorMap: () => ({ message: 'access_type debe ser: view, edit, o admin' })
             })
             .default('view')
+    }).transform((data) => {
+        const { user_id, node_id, access_type, ...rest } = data;
+        return {
+            ...rest,
+            userId: user_id,
+            nodeId: node_id,
+            accessType: access_type
+        };
     })
 });
 
@@ -505,14 +554,21 @@ export const getFilteredTreeSchema = z.object({
             .string()
             .min(1, 'organizationId no puede estar vacío')
             .optional(),
-        categoryId: z
+        category_id: z
             .string()
             .transform(val => parseInt(val, 10))
-            .pipe(z.number().int().positive('categoryId debe ser un entero positivo')),
-        includeSubcategories: z
+            .pipe(z.number().int().positive('category_id debe ser un entero positivo')),
+        include_subcategories: z
             .string()
             .optional()
             .transform(val => val !== 'false')
+    }).transform((data) => {
+        const { category_id, include_subcategories, ...rest } = data;
+        return {
+            ...rest,
+            categoryId: category_id,
+            includeSubcategories: include_subcategories
+        };
     })
 });
 
@@ -521,14 +577,21 @@ export const checkCategoryDescendantsSchema = z.object({
         id: z.string().min(1, 'id es requerido')
     }),
     query: z.object({
-        categoryId: z
+        category_id: z
             .string()
             .transform(val => parseInt(val, 10))
-            .pipe(z.number().int().positive('categoryId debe ser un entero positivo')),
-        includeSubcategories: z
+            .pipe(z.number().int().positive('category_id debe ser un entero positivo')),
+        include_subcategories: z
             .string()
             .optional()
             .transform(val => val !== 'false')
+    }).transform((data) => {
+        const { category_id, include_subcategories, ...rest } = data;
+        return {
+            ...rest,
+            categoryId: category_id,
+            includeSubcategories: include_subcategories
+        };
     })
 });
 

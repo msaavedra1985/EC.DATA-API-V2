@@ -126,18 +126,22 @@ export const getCategoriesSchema = z.object({
       .enum(['organization', 'user', 'all'])
       .optional()
       .default('all'),
-    parentId: z
+    parent_id: z
       .string()
-      .regex(/^\d+$/, 'parentId debe ser un número')
+      .regex(/^\d+$/, 'parent_id debe ser un número')
       .transform(val => parseInt(val, 10))
       .optional()
       .nullable(),
-    rootsOnly: z
+    roots_only: z
       .enum(['true', 'false'])
       .transform(val => val === 'true')
       .optional()
       .default('false')
-  })
+  }).transform((data) => ({
+    scope: data.scope,
+    parentId: data.parent_id,
+    rootsOnly: data.roots_only
+  }))
 });
 
 /**
