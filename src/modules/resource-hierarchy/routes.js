@@ -31,6 +31,51 @@ import logger from '../../utils/logger.js';
 const router = express.Router();
 const hierarchyLogger = logger.child({ component: 'resource-hierarchy-routes' });
 
+/**
+ * Resuelve el organizationId para operaciones de escritura en el módulo resource-hierarchy.
+ *
+ * Lógica:
+ * - Si el usuario tiene org en contexto (enforced o impersonando, canAccessAll=false):
+ *   se usa req.organizationContext.id y se ignora cualquier organizationId del body.
+ * - Si es system-admin en modo global (canAccessAll=true y sin org en contexto):
+ *   se lee organizationId del body; si no lo provee, se lanza un error descriptivo.
+ *
+ * @param {Object} req - Express request
+ * @returns {string} UUID de la organización a usar
+ * @throws {Error} Si es system-admin global y no provee organizationId en el body
+ */
+const resolveRequestOrganizationId = (req) => {
+    const ctx = req.organizationContext;
+
+    if (!ctx.canAccessAll) {
+        if (ctx.id) {
+            return ctx.id;
+        }
+        const bodyOrgId = req.body.organizationId;
+        if (!bodyOrgId) {
+            const error = new Error(
+                'Debes proporcionar organizationId en el body de la petición para crear nodos en modo multi-organización'
+            );
+            error.status = 400;
+            error.code = 'ORGANIZATION_ID_REQUIRED_FOR_SCOPED_ADMIN';
+            throw error;
+        }
+        return bodyOrgId;
+    }
+
+    const bodyOrgId = req.body.organizationId;
+    if (!bodyOrgId) {
+        const error = new Error(
+            'Como system-admin en modo global debes proporcionar organizationId en el body de la petición'
+        );
+        error.status = 400;
+        error.code = 'ORGANIZATION_ID_REQUIRED_FOR_GLOBAL_ADMIN';
+        throw error;
+    }
+
+    return bodyOrgId;
+};
+
 // ============ ENDPOINTS DE NODOS ============
 
 
@@ -42,9 +87,11 @@ router.post('/nodes',
     validate(createNodeSchema),
     async (req, res, next) => {
         try {
+            const organizationId = resolveRequestOrganizationId(req);
+            
             const nodeData = {
                 ...req.body,
-                organizationId: req.body.organizationId || req.organizationContext.id
+                organizationId
             };
             
             const node = await hierarchyServices.createNode(
@@ -161,6 +208,8 @@ router.post('/nodes/batch-create',
     validate(batchCreateNodesSchema),
     async (req, res, next) => {
         try {
+            const organizationId = resolveRequestOrganizationId(req);
+            
             // Extraer datos de auditoría
             const userId = req.user.userId;
             const ipAddress = req.ip || req.connection?.remoteAddress || 'unknown';
@@ -169,7 +218,7 @@ router.post('/nodes/batch-create',
             // Llamar al servicio de creación batch
             const result = await hierarchyServices.batchCreateNodes(
                 req.body,
-                req.organizationContext.id,
+                organizationId,
                 userId,
                 ipAddress,
                 userAgent
@@ -211,6 +260,7 @@ router.post('/nodes/batch-create',
 router.put('/nodes/:id',
     authenticate,
     requireRole(['system-admin', 'org-admin', 'org-manager']),
+    enforceActiveOrganization,
     validate(updateNodeSchema),
     async (req, res, next) => {
         try {
@@ -219,7 +269,8 @@ router.put('/nodes/:id',
                 req.body,
                 req.user.userId,
                 req.ip,
-                req.headers['user-agent']
+                req.headers['user-agent'],
+                req.organizationContext
             );
             
             hierarchyLogger.info({ nodeId: req.params.id, userId: req.user.userId }, 'Node updated via API');
@@ -239,6 +290,7 @@ router.put('/nodes/:id',
 router.delete('/nodes/:id',
     authenticate,
     requireRole(['system-admin', 'org-admin']),
+    enforceActiveOrganization,
     validate(deleteNodeSchema),
     async (req, res, next) => {
         try {
@@ -250,7 +302,8 @@ router.delete('/nodes/:id',
                 cascade,
                 req.user.userId,
                 req.ip,
-                req.headers['user-agent']
+                req.headers['user-agent'],
+                req.organizationContext
             );
             
             hierarchyLogger.info({ nodeId: req.params.id, userId: req.user.userId, ...result }, 'Node deleted via API');
@@ -281,6 +334,7 @@ router.delete('/nodes/:id',
 router.patch('/nodes/:id/move',
     authenticate,
     requireRole(['system-admin', 'org-admin', 'org-manager']),
+    enforceActiveOrganization,
     validate(moveNodeSchema),
     async (req, res, next) => {
         try {
@@ -294,7 +348,8 @@ router.patch('/nodes/:id/move',
                 req.ip,
                 req.headers['user-agent'],
                 isAdmin,
-                req.body.displayOrder
+                req.body.displayOrder,
+                req.organizationContext
             );
             
             hierarchyLogger.info({ 

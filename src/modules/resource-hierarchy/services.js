@@ -366,7 +366,7 @@ export const hasDescendantsWithCategory = async (nodePublicCode, categoryId, inc
  * @param {number|undefined} displayOrder - Nuevo orden de visualización (opcional)
  * @returns {Promise<Object>} - Nodo actualizado
  */
-export const moveNode = async (nodePublicCode, newParentPublicCode, userId, ipAddress, userAgent, skipPermissionCheck = false, displayOrder = undefined) => {
+export const moveNode = async (nodePublicCode, newParentPublicCode, userId, ipAddress, userAgent, skipPermissionCheck = false, displayOrder = undefined, organizationContext = null) => {
     const node = await repository.findNodeByPublicCodeInternal(nodePublicCode);
     
     if (!node) {
@@ -374,6 +374,24 @@ export const moveNode = async (nodePublicCode, newParentPublicCode, userId, ipAd
         error.status = 404;
         error.code = 'NODE_NOT_FOUND';
         throw error;
+    }
+    
+    if (organizationContext && !organizationContext.canAccessAll) {
+        if (organizationContext.id) {
+            if (node.organizationId !== organizationContext.id) {
+                const error = new Error('No tienes permiso para mover nodos de otra organización');
+                error.status = 403;
+                error.code = 'NODE_ORG_MISMATCH';
+                throw error;
+            }
+        } else if (organizationContext.allowedIds && organizationContext.allowedIds.length > 0) {
+            if (!organizationContext.allowedIds.includes(node.organizationId)) {
+                const error = new Error('No tienes permiso para mover nodos de otra organización');
+                error.status = 403;
+                error.code = 'NODE_ORG_MISMATCH';
+                throw error;
+            }
+        }
     }
     
     const oldParentId = node.parentId;
@@ -499,7 +517,7 @@ export const moveNode = async (nodePublicCode, newParentPublicCode, userId, ipAd
  * @param {string} userAgent - User agent
  * @returns {Promise<Object>} - Nodo actualizado
  */
-export const updateNode = async (nodePublicCode, updates, userId, ipAddress, userAgent) => {
+export const updateNode = async (nodePublicCode, updates, userId, ipAddress, userAgent, organizationContext = null) => {
     const node = await repository.findNodeByPublicCodeInternal(nodePublicCode);
     
     if (!node) {
@@ -507,6 +525,24 @@ export const updateNode = async (nodePublicCode, updates, userId, ipAddress, use
         error.status = 404;
         error.code = 'NODE_NOT_FOUND';
         throw error;
+    }
+    
+    if (organizationContext && !organizationContext.canAccessAll) {
+        if (organizationContext.id) {
+            if (node.organizationId !== organizationContext.id) {
+                const error = new Error('No tienes permiso para modificar nodos de otra organización');
+                error.status = 403;
+                error.code = 'NODE_ORG_MISMATCH';
+                throw error;
+            }
+        } else if (organizationContext.allowedIds && organizationContext.allowedIds.length > 0) {
+            if (!organizationContext.allowedIds.includes(node.organizationId)) {
+                const error = new Error('No tienes permiso para modificar nodos de otra organización');
+                error.status = 403;
+                error.code = 'NODE_ORG_MISMATCH';
+                throw error;
+            }
+        }
     }
     
     const oldValues = {
@@ -567,7 +603,7 @@ export const updateNode = async (nodePublicCode, updates, userId, ipAddress, use
  * @param {string} userAgent - User agent
  * @returns {Promise<Object>} - Resultado de la eliminación con lista de nodos eliminados
  */
-export const deleteNode = async (nodePublicCode, cascade = false, userId, ipAddress, userAgent) => {
+export const deleteNode = async (nodePublicCode, cascade = false, userId, ipAddress, userAgent, organizationContext = null) => {
     const node = await repository.findNodeByPublicCodeInternal(nodePublicCode);
     
     if (!node) {
@@ -575,6 +611,24 @@ export const deleteNode = async (nodePublicCode, cascade = false, userId, ipAddr
         error.status = 404;
         error.code = 'NODE_NOT_FOUND';
         throw error;
+    }
+    
+    if (organizationContext && !organizationContext.canAccessAll) {
+        if (organizationContext.id) {
+            if (node.organizationId !== organizationContext.id) {
+                const error = new Error('No tienes permiso para eliminar nodos de otra organización');
+                error.status = 403;
+                error.code = 'NODE_ORG_MISMATCH';
+                throw error;
+            }
+        } else if (organizationContext.allowedIds && organizationContext.allowedIds.length > 0) {
+            if (!organizationContext.allowedIds.includes(node.organizationId)) {
+                const error = new Error('No tienes permiso para eliminar nodos de otra organización');
+                error.status = 403;
+                error.code = 'NODE_ORG_MISMATCH';
+                throw error;
+            }
+        }
     }
     
     let result;
