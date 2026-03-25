@@ -8,6 +8,7 @@ import { findChannelByPublicCodeInternal } from '../channels/repository.js';
 import { logAuditAction } from '../../helpers/auditLog.js';
 import logger from '../../utils/logger.js';
 import * as cache from './cache.js';
+import { invalidateChannelCache } from '../channels/cache.js';
 
 const hierarchyLogger = logger.child({ component: 'resource-hierarchy' });
 
@@ -104,6 +105,10 @@ export const createNode = async (nodeData, userId, ipAddress, userAgent) => {
     });
     
     await cache.invalidateNodeAndRelated(node.id, organizationUuid, parentNode?.publicCode || null);
+    
+    if (nodeData.nodeType === 'channel') {
+        await invalidateChannelCache();
+    }
     
     hierarchyLogger.info({ nodeId: node.id, nodeType: nodeData.nodeType, userId }, 'Node created successfully');
     
@@ -679,6 +684,8 @@ export const deleteNode = async (nodePublicCode, cascade = false, userId, ipAddr
         hierarchyLogger.warn({ err: err.message, nodePublicCode }, 'Cache invalidation failed or timed out, continuing');
     }
     
+    await invalidateChannelCache();
+    
     hierarchyLogger.info({ 
         nodeId: nodePublicCode, 
         deletedCount: result.deletedCount, 
@@ -1243,6 +1250,11 @@ export const batchCreateNodes = async (batchData, organizationId, userId, ipAddr
     // Invalidar cache si hubo al menos un nodo insertado
     if (inserted.length > 0) {
         await cache.invalidateNodeAndRelated(null, organizationUuid, parentNode?.publicCode || null);
+        
+        const hasChannelNodes = nodes.some(n => n.nodeType === 'channel');
+        if (hasChannelNodes) {
+            await invalidateChannelCache();
+        }
     }
     
     hierarchyLogger.info({ 
