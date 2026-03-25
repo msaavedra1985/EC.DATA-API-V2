@@ -504,7 +504,7 @@ export const isDescendantOf = async (potentialDescendantId, ancestorId) => {
             FROM resource_hierarchy descendant, resource_hierarchy ancestor
             WHERE descendant.id = $1
               AND ancestor.id = $2
-              AND descendant.path <@ ancestor.path
+              AND descendant.path::ltree <@ ancestor.path::ltree
               AND descendant.id != ancestor.id
               AND descendant.deleted_at IS NULL
               AND ancestor.deleted_at IS NULL
