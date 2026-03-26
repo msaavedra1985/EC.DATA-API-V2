@@ -33,6 +33,7 @@ import '../../modules/error-logs/models/ErrorLog.js';
 import '../../modules/files/models/FileUpload.js';
 import '../../modules/locations/models/index.js';
 import '../../modules/organizations/models/OrganizationCountry.js';
+import '../../modules/resource-hierarchy/models/OrganizationResourceCounter.js';
 import '../../modules/resource-hierarchy/models/ResourceHierarchy.js';
 import '../../modules/resource-hierarchy/models/UserResourceAccess.js';
 import '../../modules/telemetry/models/index.js';
@@ -112,9 +113,72 @@ async function setupFreshDatabase() {
         }
         console.log('✅ Base de datos vacía, procediendo con el setup');
 
+        console.log('\n📐 Creando extensión ltree...');
+        await sequelize.query(`CREATE EXTENSION IF NOT EXISTS ltree;`);
+        console.log('✅ Extensión ltree habilitada');
+
         console.log('\n📐 Creando tablas desde modelos Sequelize...');
         await sequelize.sync({ alter: false });
         console.log('✅ Todas las tablas creadas correctamente');
+
+        console.log('\n📐 Creando funciones y triggers para resource_hierarchy...');
+        await sequelize.query(`
+            CREATE OR REPLACE FUNCTION generate_resource_path(node_id UUID)
+            RETURNS ltree AS $$
+            DECLARE
+                result ltree;
+                current_id UUID;
+                current_path TEXT;
+                node_label TEXT;
+            BEGIN
+                current_path := '';
+                current_id := node_id;
+                WHILE current_id IS NOT NULL LOOP
+                    node_label := 'n' || replace(current_id::text, '-', '');
+                    current_path := node_label ||
+                                    CASE WHEN current_path = '' THEN '' ELSE '.' || current_path END;
+                    SELECT parent_id INTO current_id
+                    FROM resource_hierarchy
+                    WHERE id = current_id;
+                END LOOP;
+                RETURN current_path::ltree;
+            END;
+            $$ LANGUAGE plpgsql;
+        `);
+        await sequelize.query(`
+            CREATE OR REPLACE FUNCTION update_resource_hierarchy_path()
+            RETURNS TRIGGER AS $$
+            DECLARE
+                old_path ltree;
+                new_path ltree;
+            BEGIN
+                NEW.path := generate_resource_path(NEW.id);
+                IF NEW.parent_id IS NULL THEN
+                    NEW.depth := 0;
+                ELSE
+                    SELECT depth + 1 INTO NEW.depth
+                    FROM resource_hierarchy
+                    WHERE id = NEW.parent_id;
+                END IF;
+                IF TG_OP = 'UPDATE' AND OLD.parent_id IS DISTINCT FROM NEW.parent_id THEN
+                    old_path := OLD.path;
+                    new_path := NEW.path;
+                    UPDATE resource_hierarchy
+                    SET path = new_path || subpath(path, nlevel(old_path)),
+                        depth = nlevel(new_path || subpath(path, nlevel(old_path))) - 1
+                    WHERE path <@ old_path AND id != NEW.id;
+                END IF;
+                RETURN NEW;
+            END;
+            $$ LANGUAGE plpgsql;
+
+            DROP TRIGGER IF EXISTS resource_hierarchy_path_trigger ON resource_hierarchy;
+            CREATE TRIGGER resource_hierarchy_path_trigger
+            BEFORE INSERT OR UPDATE ON resource_hierarchy
+            FOR EACH ROW
+            EXECUTE FUNCTION update_resource_hierarchy_path();
+        `);
+        console.log('✅ Funciones y triggers creados correctamente');
 
         console.log('\n📋 Registrando migraciones históricas en SequelizeMeta...');
         await sequelize.query(`

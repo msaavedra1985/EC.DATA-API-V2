@@ -1,6 +1,6 @@
 -- =============================================================================
 -- Sirenis Seed Script
--- Genera: 1 organización, 2 sites, 43 devices, 319 channels
+-- Genera: 43 devices, 319 channels (org creada manualmente, sin sites)
 -- Idempotente: usa ON CONFLICT DO NOTHING / ON CONFLICT (...) DO NOTHING
 -- human_id: secuencia alta (9_000_000+) para evitar colisión con datos existentes
 -- Generado: 2026-03-26
@@ -9,229 +9,173 @@
 BEGIN;
 
 -- =============================================================================
--- 1. Organización Sirenis
--- =============================================================================
-INSERT INTO organizations
-  (id, human_id, public_code, slug, name, is_active, created_at, updated_at)
-VALUES (
-  gen_random_uuid(),
-  9000001,
-  'ORG-SIRENIS-001',
-  'sirenis',
-  'Sirenis Hotels & Resorts',
-  true,
-  NOW(),
-  NOW()
-)
-ON CONFLICT (slug) DO NOTHING;
-
--- =============================================================================
--- 2. Sites
--- Riviera Maya: climaId 1061 | Punta Cana: climaId 1064
--- =============================================================================
-WITH org AS (
-  SELECT id FROM organizations WHERE slug = 'sirenis'
-)
-INSERT INTO sites
-  (id, human_id, public_code, organization_id, name, country_code, timezone, latitude, longitude, is_active, created_at, updated_at)
-SELECT
-  gen_random_uuid(), 9000002, 'SITE-SIRENIS-001',
-  org.id, 'Grand Sirenis Riviera Maya', 'MX', 'America/Cancun',
-  20.428599, -87.2958929, true, NOW(), NOW()
-FROM org
-ON CONFLICT (public_code) DO NOTHING;
-
-WITH org AS (
-  SELECT id FROM organizations WHERE slug = 'sirenis'
-)
-INSERT INTO sites
-  (id, human_id, public_code, organization_id, name, country_code, timezone, latitude, longitude, is_active, created_at, updated_at)
-SELECT
-  gen_random_uuid(), 9000003, 'SITE-SIRENIS-002',
-  org.id, 'Sirenis Punta Cana', 'DO', 'America/Santo_Domingo',
-  18.8175274, -68.5909027, true, NOW(), NOW()
-FROM org
-ON CONFLICT (public_code) DO NOTHING;
-
--- =============================================================================
 -- 3. Devices (43 equipos)
--- Resolución de site_id via CTE usando slug de org + nombre de site
+-- site_id = NULL (usuario crea sites manualmente)
 -- ON CONFLICT (uuid) DO NOTHING para idempotencia
 -- =============================================================================
 -- Device 1/43: Sirenis - Maleta Doble - EN1 (legacy id=1368, climaId=1061)
 WITH
-  org AS (SELECT id FROM organizations WHERE slug = 'sirenis'),
-  site AS (SELECT s.id FROM sites s JOIN organizations o ON s.organization_id = o.id WHERE o.slug = 'sirenis' AND s.name = 'Grand Sirenis Riviera Maya')
+  org AS (SELECT id FROM organizations WHERE slug = 'sirenis')
 INSERT INTO devices
   (id, human_id, public_code, uuid, organization_id, site_id, name, mac_address, topic, latitude, longitude, timezone, status, is_active, created_at, updated_at)
 SELECT
   gen_random_uuid(), 9001000, 'DEV-SIRENIS-001', 'cf41be89-b498-4cf6-bea5-1b03d0e2be11',
-  org.id, site.id,
+  org.id, NULL,
   'Sirenis - Maleta Doble - EN1', '80:1F:12:5A:6B:7E', NULL,
   20.428765, -87.29419,
   'America/Cancun', 'active', true,
   NOW(), NOW()
-FROM org, site
+FROM org
 ON CONFLICT (uuid) DO NOTHING;
 
 -- Device 2/43: SIRENIS MEX - Poblado Hidro -A1 (legacy id=1663, climaId=1061)
 WITH
-  org AS (SELECT id FROM organizations WHERE slug = 'sirenis'),
-  site AS (SELECT s.id FROM sites s JOIN organizations o ON s.organization_id = o.id WHERE o.slug = 'sirenis' AND s.name = 'Grand Sirenis Riviera Maya')
+  org AS (SELECT id FROM organizations WHERE slug = 'sirenis')
 INSERT INTO devices
   (id, human_id, public_code, uuid, organization_id, site_id, name, mac_address, topic, latitude, longitude, timezone, status, is_active, created_at, updated_at)
 SELECT
   gen_random_uuid(), 9001001, 'DEV-SIRENIS-002', '948ca6a5-3a00-4591-a409-1115ce1fc686',
-  org.id, site.id,
+  org.id, NULL,
   'SIRENIS MEX - Poblado Hidro -A1', 'EC:C3:8A:60:2F:B1', NULL,
   20.428599, -87.2958929,
   'America/Cancun', 'active', true,
   NOW(), NOW()
-FROM org, site
+FROM org
 ON CONFLICT (uuid) DO NOTHING;
 
 -- Device 3/43: SIRENIS MEX - Poblado Hidro -A2 (legacy id=1665, climaId=1061)
 WITH
-  org AS (SELECT id FROM organizations WHERE slug = 'sirenis'),
-  site AS (SELECT s.id FROM sites s JOIN organizations o ON s.organization_id = o.id WHERE o.slug = 'sirenis' AND s.name = 'Grand Sirenis Riviera Maya')
+  org AS (SELECT id FROM organizations WHERE slug = 'sirenis')
 INSERT INTO devices
   (id, human_id, public_code, uuid, organization_id, site_id, name, mac_address, topic, latitude, longitude, timezone, status, is_active, created_at, updated_at)
 SELECT
   gen_random_uuid(), 9001002, 'DEV-SIRENIS-003', '1a45a2a2-b727-4c2a-b037-37d9c917105c',
-  org.id, site.id,
+  org.id, NULL,
   'SIRENIS MEX - Poblado Hidro -A2', 'EC:C3:8A:60:2F:0B', NULL,
   20.428599, -87.2958929,
   'America/Cancun', 'active', true,
   NOW(), NOW()
-FROM org, site
+FROM org
 ON CONFLICT (uuid) DO NOTHING;
 
 -- Device 4/43: SIRENIS MEX - Oficina RRHH (legacy id=1666, climaId=1061)
 WITH
-  org AS (SELECT id FROM organizations WHERE slug = 'sirenis'),
-  site AS (SELECT s.id FROM sites s JOIN organizations o ON s.organization_id = o.id WHERE o.slug = 'sirenis' AND s.name = 'Grand Sirenis Riviera Maya')
+  org AS (SELECT id FROM organizations WHERE slug = 'sirenis')
 INSERT INTO devices
   (id, human_id, public_code, uuid, organization_id, site_id, name, mac_address, topic, latitude, longitude, timezone, status, is_active, created_at, updated_at)
 SELECT
   gen_random_uuid(), 9001003, 'DEV-SIRENIS-004', '79f15e01-a61a-44a8-847e-29ef7c349e23',
-  org.id, site.id,
+  org.id, NULL,
   'SIRENIS MEX - Oficina RRHH', 'EC:C3:8A:60:2F:01', NULL,
   20.428599, -87.2958929,
   'America/Cancun', 'active', true,
   NOW(), NOW()
-FROM org, site
+FROM org
 ON CONFLICT (uuid) DO NOTHING;
 
 -- Device 5/43: SIRENIS MEX - Lavanderia Motores (legacy id=1667, climaId=1061)
 WITH
-  org AS (SELECT id FROM organizations WHERE slug = 'sirenis'),
-  site AS (SELECT s.id FROM sites s JOIN organizations o ON s.organization_id = o.id WHERE o.slug = 'sirenis' AND s.name = 'Grand Sirenis Riviera Maya')
+  org AS (SELECT id FROM organizations WHERE slug = 'sirenis')
 INSERT INTO devices
   (id, human_id, public_code, uuid, organization_id, site_id, name, mac_address, topic, latitude, longitude, timezone, status, is_active, created_at, updated_at)
 SELECT
   gen_random_uuid(), 9001004, 'DEV-SIRENIS-005', '2d85da94-9a4f-4e81-a36c-fe655526fcf4',
-  org.id, site.id,
+  org.id, NULL,
   'SIRENIS MEX - Lavanderia Motores', 'EC:C3:8A:60:2F:AF', NULL,
   20.428599, -87.2958929,
   'America/Cancun', 'active', true,
   NOW(), NOW()
-FROM org, site
+FROM org
 ON CONFLICT (uuid) DO NOTHING;
 
 -- Device 6/43: SIRENIS MEX - TEMATICOS I-A (legacy id=1670, climaId=1061)
 WITH
-  org AS (SELECT id FROM organizations WHERE slug = 'sirenis'),
-  site AS (SELECT s.id FROM sites s JOIN organizations o ON s.organization_id = o.id WHERE o.slug = 'sirenis' AND s.name = 'Grand Sirenis Riviera Maya')
+  org AS (SELECT id FROM organizations WHERE slug = 'sirenis')
 INSERT INTO devices
   (id, human_id, public_code, uuid, organization_id, site_id, name, mac_address, topic, latitude, longitude, timezone, status, is_active, created_at, updated_at)
 SELECT
   gen_random_uuid(), 9001005, 'DEV-SIRENIS-006', 'a9561285-6c75-4444-a6e7-deac45a19acb',
-  org.id, site.id,
+  org.id, NULL,
   'SIRENIS MEX - TEMATICOS I-A', 'EC:C3:8A:60:2F:15', NULL,
   20.428599, -87.2958929,
   'America/Cancun', 'active', true,
   NOW(), NOW()
-FROM org, site
+FROM org
 ON CONFLICT (uuid) DO NOTHING;
 
 -- Device 7/43: SIRENIS MEX - TEMATICOS I-B (legacy id=1675, climaId=1061)
 WITH
-  org AS (SELECT id FROM organizations WHERE slug = 'sirenis'),
-  site AS (SELECT s.id FROM sites s JOIN organizations o ON s.organization_id = o.id WHERE o.slug = 'sirenis' AND s.name = 'Grand Sirenis Riviera Maya')
+  org AS (SELECT id FROM organizations WHERE slug = 'sirenis')
 INSERT INTO devices
   (id, human_id, public_code, uuid, organization_id, site_id, name, mac_address, topic, latitude, longitude, timezone, status, is_active, created_at, updated_at)
 SELECT
   gen_random_uuid(), 9001006, 'DEV-SIRENIS-007', '42434aa0-7c0b-4763-9980-097728054583',
-  org.id, site.id,
+  org.id, NULL,
   'SIRENIS MEX - TEMATICOS I-B', 'EC:C3:8A:60:2F:17', NULL,
   20.428599, -87.2958929,
   'America/Cancun', 'active', true,
   NOW(), NOW()
-FROM org, site
+FROM org
 ON CONFLICT (uuid) DO NOTHING;
 
 -- Device 8/43: SIRENIS MEX - TEMATICOS II (legacy id=1676, climaId=1061)
 WITH
-  org AS (SELECT id FROM organizations WHERE slug = 'sirenis'),
-  site AS (SELECT s.id FROM sites s JOIN organizations o ON s.organization_id = o.id WHERE o.slug = 'sirenis' AND s.name = 'Grand Sirenis Riviera Maya')
+  org AS (SELECT id FROM organizations WHERE slug = 'sirenis')
 INSERT INTO devices
   (id, human_id, public_code, uuid, organization_id, site_id, name, mac_address, topic, latitude, longitude, timezone, status, is_active, created_at, updated_at)
 SELECT
   gen_random_uuid(), 9001007, 'DEV-SIRENIS-008', 'ad82451c-5348-40d2-bbcb-2fbf502e04a5',
-  org.id, site.id,
+  org.id, NULL,
   'SIRENIS MEX - TEMATICOS II', 'EC:C3:8A:60:2F:4F', NULL,
   20.428599, -87.2958929,
   'America/Cancun', 'active', true,
   NOW(), NOW()
-FROM org, site
+FROM org
 ON CONFLICT (uuid) DO NOTHING;
 
 -- Device 9/43: SIRENIS MEX - BAYUM2 (legacy id=1677, climaId=1061)
 WITH
-  org AS (SELECT id FROM organizations WHERE slug = 'sirenis'),
-  site AS (SELECT s.id FROM sites s JOIN organizations o ON s.organization_id = o.id WHERE o.slug = 'sirenis' AND s.name = 'Grand Sirenis Riviera Maya')
+  org AS (SELECT id FROM organizations WHERE slug = 'sirenis')
 INSERT INTO devices
   (id, human_id, public_code, uuid, organization_id, site_id, name, mac_address, topic, latitude, longitude, timezone, status, is_active, created_at, updated_at)
 SELECT
   gen_random_uuid(), 9001008, 'DEV-SIRENIS-009', '02686a85-9b14-46b2-800a-64aab64eaa00',
-  org.id, site.id,
+  org.id, NULL,
   'SIRENIS MEX - BAYUM2', 'EC:C3:8A:60:2E:39', NULL,
   20.428599, -87.2958929,
   'America/Cancun', 'active', true,
   NOW(), NOW()
-FROM org, site
+FROM org
 ON CONFLICT (uuid) DO NOTHING;
 
 -- Device 10/43: SIRENIS MEX - Steak House (legacy id=1679, climaId=1061)
 WITH
-  org AS (SELECT id FROM organizations WHERE slug = 'sirenis'),
-  site AS (SELECT s.id FROM sites s JOIN organizations o ON s.organization_id = o.id WHERE o.slug = 'sirenis' AND s.name = 'Grand Sirenis Riviera Maya')
+  org AS (SELECT id FROM organizations WHERE slug = 'sirenis')
 INSERT INTO devices
   (id, human_id, public_code, uuid, organization_id, site_id, name, mac_address, topic, latitude, longitude, timezone, status, is_active, created_at, updated_at)
 SELECT
   gen_random_uuid(), 9001009, 'DEV-SIRENIS-010', '89f592e3-2b07-4218-b0b4-f771d3b6d531',
-  org.id, site.id,
+  org.id, NULL,
   'SIRENIS MEX - Steak House', 'EC:C3:8A:60:2E:53', NULL,
   20.428599, -87.2958929,
   'America/Cancun', 'active', true,
   NOW(), NOW()
-FROM org, site
+FROM org
 ON CONFLICT (uuid) DO NOTHING;
 
 -- Device 11/43: SIRENIS MEX - EJECUTIVOS (legacy id=1681, climaId=1061)
 WITH
-  org AS (SELECT id FROM organizations WHERE slug = 'sirenis'),
-  site AS (SELECT s.id FROM sites s JOIN organizations o ON s.organization_id = o.id WHERE o.slug = 'sirenis' AND s.name = 'Grand Sirenis Riviera Maya')
+  org AS (SELECT id FROM organizations WHERE slug = 'sirenis')
 INSERT INTO devices
   (id, human_id, public_code, uuid, organization_id, site_id, name, mac_address, topic, latitude, longitude, timezone, status, is_active, created_at, updated_at)
 SELECT
   gen_random_uuid(), 9001010, 'DEV-SIRENIS-011', '67182edf-ee4b-4eb2-8e27-6978f6d0ca5e',
-  org.id, site.id,
+  org.id, NULL,
   'SIRENIS MEX - EJECUTIVOS', 'EC:C3:8A:60:2E:A3', NULL,
   20.428599, -87.2958929,
   'America/Cancun', 'active', true,
   NOW(), NOW()
-FROM org, site
+FROM org
 ON CONFLICT (uuid) DO NOTHING;
 
 -- Device 12/43: Facil de Configurar (legacy id=1701, climaId=1)
@@ -250,498 +194,467 @@ ON CONFLICT (uuid) DO NOTHING;
 
 -- Device 13/43: SIRENIS MEX - BMS - CHILLER 1 (legacy id=1777, climaId=1061)
 WITH
-  org AS (SELECT id FROM organizations WHERE slug = 'sirenis'),
-  site AS (SELECT s.id FROM sites s JOIN organizations o ON s.organization_id = o.id WHERE o.slug = 'sirenis' AND s.name = 'Grand Sirenis Riviera Maya')
+  org AS (SELECT id FROM organizations WHERE slug = 'sirenis')
 INSERT INTO devices
   (id, human_id, public_code, uuid, organization_id, site_id, name, mac_address, topic, latitude, longitude, timezone, status, is_active, created_at, updated_at)
 SELECT
   gen_random_uuid(), 9001012, 'DEV-SIRENIS-013', '56268e0c-8ecc-4d4c-a2e9-56c41f96bb0d',
-  org.id, site.id,
+  org.id, NULL,
   'SIRENIS MEX - BMS - CHILLER 1', NULL, NULL,
   20.4287539, -87.2954779,
   'America/Cancun', 'active', true,
   NOW(), NOW()
-FROM org, site
+FROM org
 ON CONFLICT (uuid) DO NOTHING;
 
 -- Device 14/43: SIRENIS MEX - BMS - CHILLER 2 (legacy id=1778, climaId=1061)
 WITH
-  org AS (SELECT id FROM organizations WHERE slug = 'sirenis'),
-  site AS (SELECT s.id FROM sites s JOIN organizations o ON s.organization_id = o.id WHERE o.slug = 'sirenis' AND s.name = 'Grand Sirenis Riviera Maya')
+  org AS (SELECT id FROM organizations WHERE slug = 'sirenis')
 INSERT INTO devices
   (id, human_id, public_code, uuid, organization_id, site_id, name, mac_address, topic, latitude, longitude, timezone, status, is_active, created_at, updated_at)
 SELECT
   gen_random_uuid(), 9001013, 'DEV-SIRENIS-014', '2b0f32eb-351a-4171-86a0-d5510a1f19a4',
-  org.id, site.id,
+  org.id, NULL,
   'SIRENIS MEX - BMS - CHILLER 2', NULL, NULL,
   20.4287539, -87.2954779,
   'America/Cancun', 'active', true,
   NOW(), NOW()
-FROM org, site
+FROM org
 ON CONFLICT (uuid) DO NOTHING;
 
 -- Device 15/43: SIRENIS MEX - BMS - CHILLER 3 (legacy id=1779, climaId=1061)
 WITH
-  org AS (SELECT id FROM organizations WHERE slug = 'sirenis'),
-  site AS (SELECT s.id FROM sites s JOIN organizations o ON s.organization_id = o.id WHERE o.slug = 'sirenis' AND s.name = 'Grand Sirenis Riviera Maya')
+  org AS (SELECT id FROM organizations WHERE slug = 'sirenis')
 INSERT INTO devices
   (id, human_id, public_code, uuid, organization_id, site_id, name, mac_address, topic, latitude, longitude, timezone, status, is_active, created_at, updated_at)
 SELECT
   gen_random_uuid(), 9001014, 'DEV-SIRENIS-015', 'b776b651-ce8f-4a98-970e-36ff0f6f0593',
-  org.id, site.id,
+  org.id, NULL,
   'SIRENIS MEX - BMS - CHILLER 3', NULL, NULL,
   20.4287539, -87.2954779,
   'America/Cancun', 'active', true,
   NOW(), NOW()
-FROM org, site
+FROM org
 ON CONFLICT (uuid) DO NOTHING;
 
 -- Device 16/43: SIRENIS MEX - BMS - CHILLER 4 (legacy id=1780, climaId=1061)
 WITH
-  org AS (SELECT id FROM organizations WHERE slug = 'sirenis'),
-  site AS (SELECT s.id FROM sites s JOIN organizations o ON s.organization_id = o.id WHERE o.slug = 'sirenis' AND s.name = 'Grand Sirenis Riviera Maya')
+  org AS (SELECT id FROM organizations WHERE slug = 'sirenis')
 INSERT INTO devices
   (id, human_id, public_code, uuid, organization_id, site_id, name, mac_address, topic, latitude, longitude, timezone, status, is_active, created_at, updated_at)
 SELECT
   gen_random_uuid(), 9001015, 'DEV-SIRENIS-016', 'c5ab23f8-cc76-4f3a-8770-f05d697b4e39',
-  org.id, site.id,
+  org.id, NULL,
   'SIRENIS MEX - BMS - CHILLER 4', NULL, NULL,
   20.4287539, -87.2954779,
   'America/Cancun', 'active', true,
   NOW(), NOW()
-FROM org, site
+FROM org
 ON CONFLICT (uuid) DO NOTHING;
 
 -- Device 17/43: SIRENIS-PC-PARQUE ACUATICO-ACU1 (legacy id=1802, climaId=1064)
 WITH
-  org AS (SELECT id FROM organizations WHERE slug = 'sirenis'),
-  site AS (SELECT s.id FROM sites s JOIN organizations o ON s.organization_id = o.id WHERE o.slug = 'sirenis' AND s.name = 'Sirenis Punta Cana')
+  org AS (SELECT id FROM organizations WHERE slug = 'sirenis')
 INSERT INTO devices
   (id, human_id, public_code, uuid, organization_id, site_id, name, mac_address, topic, latitude, longitude, timezone, status, is_active, created_at, updated_at)
 SELECT
   gen_random_uuid(), 9001016, 'DEV-SIRENIS-017', '0e5f4ee9-42d3-4ef1-93c3-846243393c66',
-  org.id, site.id,
+  org.id, NULL,
   'SIRENIS-PC-PARQUE ACUATICO-ACU1', NULL, 'Solution/EC/SIRENIS/',
   18.8175274, -68.5909027,
   'America/Santo_Domingo', 'active', true,
   NOW(), NOW()
-FROM org, site
+FROM org
 ON CONFLICT (uuid) DO NOTHING;
 
 -- Device 18/43: SIRENIS-PC-LAVANDERIA-ACU1 (legacy id=1803, climaId=1064)
 WITH
-  org AS (SELECT id FROM organizations WHERE slug = 'sirenis'),
-  site AS (SELECT s.id FROM sites s JOIN organizations o ON s.organization_id = o.id WHERE o.slug = 'sirenis' AND s.name = 'Sirenis Punta Cana')
+  org AS (SELECT id FROM organizations WHERE slug = 'sirenis')
 INSERT INTO devices
   (id, human_id, public_code, uuid, organization_id, site_id, name, mac_address, topic, latitude, longitude, timezone, status, is_active, created_at, updated_at)
 SELECT
   gen_random_uuid(), 9001017, 'DEV-SIRENIS-018', '2a7f495d-cdb4-474e-8a44-e9dc98eb5337',
-  org.id, site.id,
+  org.id, NULL,
   'SIRENIS-PC-LAVANDERIA-ACU1', NULL, 'Solution/EC/SIRENIS/',
   18.8175274, -68.5909027,
   'America/Santo_Domingo', 'active', true,
   NOW(), NOW()
-FROM org, site
+FROM org
 ON CONFLICT (uuid) DO NOTHING;
 
 -- Device 19/43: SIRENIS-PC-CHILLERS-ACU1 (legacy id=1805, climaId=1064)
 WITH
-  org AS (SELECT id FROM organizations WHERE slug = 'sirenis'),
-  site AS (SELECT s.id FROM sites s JOIN organizations o ON s.organization_id = o.id WHERE o.slug = 'sirenis' AND s.name = 'Sirenis Punta Cana')
+  org AS (SELECT id FROM organizations WHERE slug = 'sirenis')
 INSERT INTO devices
   (id, human_id, public_code, uuid, organization_id, site_id, name, mac_address, topic, latitude, longitude, timezone, status, is_active, created_at, updated_at)
 SELECT
   gen_random_uuid(), 9001018, 'DEV-SIRENIS-019', '948759d7-6b76-4037-8504-a8e6ba508e62',
-  org.id, site.id,
+  org.id, NULL,
   'SIRENIS-PC-CHILLERS-ACU1', NULL, 'Solution/EC/SIRENIS/',
   18.8175274, -68.5909027,
   'America/Santo_Domingo', 'active', true,
   NOW(), NOW()
-FROM org, site
+FROM org
 ON CONFLICT (uuid) DO NOTHING;
 
 -- Device 20/43: SIRENIS-PC-TEX MEX-ACU1 (legacy id=1807, climaId=1064)
 WITH
-  org AS (SELECT id FROM organizations WHERE slug = 'sirenis'),
-  site AS (SELECT s.id FROM sites s JOIN organizations o ON s.organization_id = o.id WHERE o.slug = 'sirenis' AND s.name = 'Sirenis Punta Cana')
+  org AS (SELECT id FROM organizations WHERE slug = 'sirenis')
 INSERT INTO devices
   (id, human_id, public_code, uuid, organization_id, site_id, name, mac_address, topic, latitude, longitude, timezone, status, is_active, created_at, updated_at)
 SELECT
   gen_random_uuid(), 9001019, 'DEV-SIRENIS-020', '1bba1670-9bbb-449c-b81e-905e762a7385',
-  org.id, site.id,
+  org.id, NULL,
   'SIRENIS-PC-TEX MEX-ACU1', NULL, 'Solution/EC/SIRENIS/',
   18.8175274, -68.5909027,
   'America/Santo_Domingo', 'active', true,
   NOW(), NOW()
-FROM org, site
+FROM org
 ON CONFLICT (uuid) DO NOTHING;
 
 -- Device 21/43: SIRENIS-PC-TEMATICOS-ACU1 (legacy id=1808, climaId=1064)
 WITH
-  org AS (SELECT id FROM organizations WHERE slug = 'sirenis'),
-  site AS (SELECT s.id FROM sites s JOIN organizations o ON s.organization_id = o.id WHERE o.slug = 'sirenis' AND s.name = 'Sirenis Punta Cana')
+  org AS (SELECT id FROM organizations WHERE slug = 'sirenis')
 INSERT INTO devices
   (id, human_id, public_code, uuid, organization_id, site_id, name, mac_address, topic, latitude, longitude, timezone, status, is_active, created_at, updated_at)
 SELECT
   gen_random_uuid(), 9001020, 'DEV-SIRENIS-021', 'bb9eca17-8fbc-44d8-b3f2-9587e20bd979',
-  org.id, site.id,
+  org.id, NULL,
   'SIRENIS-PC-TEMATICOS-ACU1', NULL, 'Solution/EC/SIRENIS/',
   18.8175274, -68.5909027,
   'America/Santo_Domingo', 'active', true,
   NOW(), NOW()
-FROM org, site
+FROM org
 ON CONFLICT (uuid) DO NOTHING;
 
 -- Device 22/43: SIRENIS-PC-SE COCOTAL-ACU1 (legacy id=1809, climaId=1064)
 WITH
-  org AS (SELECT id FROM organizations WHERE slug = 'sirenis'),
-  site AS (SELECT s.id FROM sites s JOIN organizations o ON s.organization_id = o.id WHERE o.slug = 'sirenis' AND s.name = 'Sirenis Punta Cana')
+  org AS (SELECT id FROM organizations WHERE slug = 'sirenis')
 INSERT INTO devices
   (id, human_id, public_code, uuid, organization_id, site_id, name, mac_address, topic, latitude, longitude, timezone, status, is_active, created_at, updated_at)
 SELECT
   gen_random_uuid(), 9001021, 'DEV-SIRENIS-022', 'eca28267-d2c5-4ad0-9c60-b734655bc2f9',
-  org.id, site.id,
+  org.id, NULL,
   'SIRENIS-PC-SE COCOTAL-ACU1', NULL, 'Solution/EC/SIRENIS/',
   18.8175274, -68.5909027,
   'America/Santo_Domingo', 'active', true,
   NOW(), NOW()
-FROM org, site
+FROM org
 ON CONFLICT (uuid) DO NOTHING;
 
 -- Device 23/43: SIRENIS-PC-SE COCOTAL-ACU2 (legacy id=1810, climaId=1064)
 WITH
-  org AS (SELECT id FROM organizations WHERE slug = 'sirenis'),
-  site AS (SELECT s.id FROM sites s JOIN organizations o ON s.organization_id = o.id WHERE o.slug = 'sirenis' AND s.name = 'Sirenis Punta Cana')
+  org AS (SELECT id FROM organizations WHERE slug = 'sirenis')
 INSERT INTO devices
   (id, human_id, public_code, uuid, organization_id, site_id, name, mac_address, topic, latitude, longitude, timezone, status, is_active, created_at, updated_at)
 SELECT
   gen_random_uuid(), 9001022, 'DEV-SIRENIS-023', '0cb251b2-af55-4cdf-99cf-0a1d16fd2733',
-  org.id, site.id,
+  org.id, NULL,
   'SIRENIS-PC-SE COCOTAL-ACU2', NULL, 'Solution/EC/SIRENIS/',
   18.8175274, -68.5909027,
   'America/Santo_Domingo', 'active', true,
   NOW(), NOW()
-FROM org, site
+FROM org
 ON CONFLICT (uuid) DO NOTHING;
 
 -- Device 24/43: SIRENIS-PC-SE TROPICAL-ACU1 (legacy id=1811, climaId=1064)
 WITH
-  org AS (SELECT id FROM organizations WHERE slug = 'sirenis'),
-  site AS (SELECT s.id FROM sites s JOIN organizations o ON s.organization_id = o.id WHERE o.slug = 'sirenis' AND s.name = 'Sirenis Punta Cana')
+  org AS (SELECT id FROM organizations WHERE slug = 'sirenis')
 INSERT INTO devices
   (id, human_id, public_code, uuid, organization_id, site_id, name, mac_address, topic, latitude, longitude, timezone, status, is_active, created_at, updated_at)
 SELECT
   gen_random_uuid(), 9001023, 'DEV-SIRENIS-024', '089b07cd-66fa-4ace-906b-17ae21e60e80',
-  org.id, site.id,
+  org.id, NULL,
   'SIRENIS-PC-SE TROPICAL-ACU1', NULL, 'Solution/EC/SIRENIS/',
   18.8175274, -68.5909027,
   'America/Santo_Domingo', 'active', true,
   NOW(), NOW()
-FROM org, site
+FROM org
 ON CONFLICT (uuid) DO NOTHING;
 
 -- Device 25/43: SIRENIS-PC-SE TROPICAL-ACU2 (legacy id=1812, climaId=1064)
 WITH
-  org AS (SELECT id FROM organizations WHERE slug = 'sirenis'),
-  site AS (SELECT s.id FROM sites s JOIN organizations o ON s.organization_id = o.id WHERE o.slug = 'sirenis' AND s.name = 'Sirenis Punta Cana')
+  org AS (SELECT id FROM organizations WHERE slug = 'sirenis')
 INSERT INTO devices
   (id, human_id, public_code, uuid, organization_id, site_id, name, mac_address, topic, latitude, longitude, timezone, status, is_active, created_at, updated_at)
 SELECT
   gen_random_uuid(), 9001024, 'DEV-SIRENIS-025', 'f58e5ffc-75ec-41cf-b60c-6bec6b9b80b2',
-  org.id, site.id,
+  org.id, NULL,
   'SIRENIS-PC-SE TROPICAL-ACU2', NULL, 'Solution/EC/SIRENIS/',
   18.8175274, -68.5909027,
   'America/Santo_Domingo', 'active', true,
   NOW(), NOW()
-FROM org, site
+FROM org
 ON CONFLICT (uuid) DO NOTHING;
 
 -- Device 26/43: SIRENIS-PC-REFRIGERACION ECONOMATO-ACU1 (legacy id=1813, climaId=1064)
 WITH
-  org AS (SELECT id FROM organizations WHERE slug = 'sirenis'),
-  site AS (SELECT s.id FROM sites s JOIN organizations o ON s.organization_id = o.id WHERE o.slug = 'sirenis' AND s.name = 'Sirenis Punta Cana')
+  org AS (SELECT id FROM organizations WHERE slug = 'sirenis')
 INSERT INTO devices
   (id, human_id, public_code, uuid, organization_id, site_id, name, mac_address, topic, latitude, longitude, timezone, status, is_active, created_at, updated_at)
 SELECT
   gen_random_uuid(), 9001025, 'DEV-SIRENIS-026', '044e3c7d-516c-4345-a217-e6d13549c8bf',
-  org.id, site.id,
+  org.id, NULL,
   'SIRENIS-PC-REFRIGERACION ECONOMATO-ACU1', NULL, 'Solution/EC/SIRENIS/',
   18.8175274, -68.5909027,
   'America/Santo_Domingo', 'active', true,
   NOW(), NOW()
-FROM org, site
+FROM org
 ON CONFLICT (uuid) DO NOTHING;
 
 -- Device 27/43: SIRENIS-PC-CHILLERS-ACU2 (legacy id=1814, climaId=1064)
 WITH
-  org AS (SELECT id FROM organizations WHERE slug = 'sirenis'),
-  site AS (SELECT s.id FROM sites s JOIN organizations o ON s.organization_id = o.id WHERE o.slug = 'sirenis' AND s.name = 'Sirenis Punta Cana')
+  org AS (SELECT id FROM organizations WHERE slug = 'sirenis')
 INSERT INTO devices
   (id, human_id, public_code, uuid, organization_id, site_id, name, mac_address, topic, latitude, longitude, timezone, status, is_active, created_at, updated_at)
 SELECT
   gen_random_uuid(), 9001026, 'DEV-SIRENIS-027', 'ec903e09-64a2-4948-b8c6-8d45cfb2d5c1',
-  org.id, site.id,
+  org.id, NULL,
   'SIRENIS-PC-CHILLERS-ACU2', NULL, 'Solution/EC/SIRENIS/',
   18.8175274, -68.5909027,
   'America/Santo_Domingo', 'active', true,
   NOW(), NOW()
-FROM org, site
+FROM org
 ON CONFLICT (uuid) DO NOTHING;
 
 -- Device 28/43: SIRENIS-PC-SE PRINCIPAL-NODO1 (legacy id=1804, climaId=1064)
 WITH
-  org AS (SELECT id FROM organizations WHERE slug = 'sirenis'),
-  site AS (SELECT s.id FROM sites s JOIN organizations o ON s.organization_id = o.id WHERE o.slug = 'sirenis' AND s.name = 'Sirenis Punta Cana')
+  org AS (SELECT id FROM organizations WHERE slug = 'sirenis')
 INSERT INTO devices
   (id, human_id, public_code, uuid, organization_id, site_id, name, mac_address, topic, latitude, longitude, timezone, status, is_active, created_at, updated_at)
 SELECT
   gen_random_uuid(), 9001027, 'DEV-SIRENIS-028', 'da516fb7-eefa-4553-90fd-434844303afc',
-  org.id, site.id,
+  org.id, NULL,
   'SIRENIS-PC-SE PRINCIPAL-NODO1', NULL, 'Solution/EC/SIRENIS/',
   18.8175274, -68.5909027,
   'America/Santo_Domingo', 'active', true,
   NOW(), NOW()
-FROM org, site
+FROM org
 ON CONFLICT (uuid) DO NOTHING;
 
 -- Device 29/43: SIRENIS MEX - VFD XAAC1 (legacy id=1889, climaId=1061)
 WITH
-  org AS (SELECT id FROM organizations WHERE slug = 'sirenis'),
-  site AS (SELECT s.id FROM sites s JOIN organizations o ON s.organization_id = o.id WHERE o.slug = 'sirenis' AND s.name = 'Grand Sirenis Riviera Maya')
+  org AS (SELECT id FROM organizations WHERE slug = 'sirenis')
 INSERT INTO devices
   (id, human_id, public_code, uuid, organization_id, site_id, name, mac_address, topic, latitude, longitude, timezone, status, is_active, created_at, updated_at)
 SELECT
   gen_random_uuid(), 9001028, 'DEV-SIRENIS-029', '24d8b4a7-c380-49d9-af99-cf379a722d60',
-  org.id, site.id,
+  org.id, NULL,
   'SIRENIS MEX - VFD XAAC1', NULL, NULL,
   20.428599, -87.2958929,
   'America/Cancun', 'active', true,
   NOW(), NOW()
-FROM org, site
+FROM org
 ON CONFLICT (uuid) DO NOTHING;
 
 -- Device 30/43: SIRENIS MEX - VFD XAAC2 (legacy id=1890, climaId=1061)
 WITH
-  org AS (SELECT id FROM organizations WHERE slug = 'sirenis'),
-  site AS (SELECT s.id FROM sites s JOIN organizations o ON s.organization_id = o.id WHERE o.slug = 'sirenis' AND s.name = 'Grand Sirenis Riviera Maya')
+  org AS (SELECT id FROM organizations WHERE slug = 'sirenis')
 INSERT INTO devices
   (id, human_id, public_code, uuid, organization_id, site_id, name, mac_address, topic, latitude, longitude, timezone, status, is_active, created_at, updated_at)
 SELECT
   gen_random_uuid(), 9001029, 'DEV-SIRENIS-030', '2a9efbbd-2503-4f54-bb5a-a5e290ad0bd4',
-  org.id, site.id,
+  org.id, NULL,
   'SIRENIS MEX - VFD XAAC2', NULL, NULL,
   20.428599, -87.2958929,
   'America/Cancun', 'active', true,
   NOW(), NOW()
-FROM org, site
+FROM org
 ON CONFLICT (uuid) DO NOTHING;
 
 -- Device 31/43: SIRENIS MEX - VFD LOBBY (legacy id=1891, climaId=1061)
 WITH
-  org AS (SELECT id FROM organizations WHERE slug = 'sirenis'),
-  site AS (SELECT s.id FROM sites s JOIN organizations o ON s.organization_id = o.id WHERE o.slug = 'sirenis' AND s.name = 'Grand Sirenis Riviera Maya')
+  org AS (SELECT id FROM organizations WHERE slug = 'sirenis')
 INSERT INTO devices
   (id, human_id, public_code, uuid, organization_id, site_id, name, mac_address, topic, latitude, longitude, timezone, status, is_active, created_at, updated_at)
 SELECT
   gen_random_uuid(), 9001030, 'DEV-SIRENIS-031', '766ae888-6fd8-4197-adc2-f82844aca6cd',
-  org.id, site.id,
+  org.id, NULL,
   'SIRENIS MEX - VFD LOBBY', '6', NULL,
   20.428599, -87.2958929,
   'America/Cancun', 'active', true,
   NOW(), NOW()
-FROM org, site
+FROM org
 ON CONFLICT (uuid) DO NOTHING;
 
 -- Device 32/43: SIRENIS MEX - 5c3a346055 - BTU  (legacy id=3863, climaId=1061)
 WITH
-  org AS (SELECT id FROM organizations WHERE slug = 'sirenis'),
-  site AS (SELECT s.id FROM sites s JOIN organizations o ON s.organization_id = o.id WHERE o.slug = 'sirenis' AND s.name = 'Grand Sirenis Riviera Maya')
+  org AS (SELECT id FROM organizations WHERE slug = 'sirenis')
 INSERT INTO devices
   (id, human_id, public_code, uuid, organization_id, site_id, name, mac_address, topic, latitude, longitude, timezone, status, is_active, created_at, updated_at)
 SELECT
   gen_random_uuid(), 9001031, 'DEV-SIRENIS-032', 'b0ad4ea4-0b0e-4380-8c67-de7286d15b5e',
-  org.id, site.id,
+  org.id, NULL,
   'SIRENIS MEX - 5c3a346055 - BTU ', NULL, NULL,
   20.4282721, -87.2953194,
   'America/Cancun', 'active', true,
   NOW(), NOW()
-FROM org, site
+FROM org
 ON CONFLICT (uuid) DO NOTHING;
 
 -- Device 33/43: SIRENIS MEX - Lobby - A1 (legacy id=1668, climaId=1061)
 WITH
-  org AS (SELECT id FROM organizations WHERE slug = 'sirenis'),
-  site AS (SELECT s.id FROM sites s JOIN organizations o ON s.organization_id = o.id WHERE o.slug = 'sirenis' AND s.name = 'Grand Sirenis Riviera Maya')
+  org AS (SELECT id FROM organizations WHERE slug = 'sirenis')
 INSERT INTO devices
   (id, human_id, public_code, uuid, organization_id, site_id, name, mac_address, topic, latitude, longitude, timezone, status, is_active, created_at, updated_at)
 SELECT
   gen_random_uuid(), 9001032, 'DEV-SIRENIS-033', 'c155c8b9-a2ae-4018-86aa-6b25a8570160',
-  org.id, site.id,
+  org.id, NULL,
   'SIRENIS MEX - Lobby - A1', 'EC:C3:8A:60:2F:23', NULL,
   20.428599, -87.2958929,
   'America/Cancun', 'active', true,
   NOW(), NOW()
-FROM org, site
+FROM org
 ON CONFLICT (uuid) DO NOTHING;
 
 -- Device 34/43: SIRENIS MEX - COCINA 2 (legacy id=1669, climaId=1061)
 WITH
-  org AS (SELECT id FROM organizations WHERE slug = 'sirenis'),
-  site AS (SELECT s.id FROM sites s JOIN organizations o ON s.organization_id = o.id WHERE o.slug = 'sirenis' AND s.name = 'Grand Sirenis Riviera Maya')
+  org AS (SELECT id FROM organizations WHERE slug = 'sirenis')
 INSERT INTO devices
   (id, human_id, public_code, uuid, organization_id, site_id, name, mac_address, topic, latitude, longitude, timezone, status, is_active, created_at, updated_at)
 SELECT
   gen_random_uuid(), 9001033, 'DEV-SIRENIS-034', 'c2016124-531b-429f-afd9-2f574a88508c',
-  org.id, site.id,
+  org.id, NULL,
   'SIRENIS MEX - COCINA 2', 'EC:C3:8A:60:2F:A7', NULL,
   20.428599, -87.2958929,
   'America/Cancun', 'active', true,
   NOW(), NOW()
-FROM org, site
+FROM org
 ON CONFLICT (uuid) DO NOTHING;
 
 -- Device 35/43: SIRENIS MEX - CASA DE PLAYA (legacy id=1671, climaId=1061)
 WITH
-  org AS (SELECT id FROM organizations WHERE slug = 'sirenis'),
-  site AS (SELECT s.id FROM sites s JOIN organizations o ON s.organization_id = o.id WHERE o.slug = 'sirenis' AND s.name = 'Grand Sirenis Riviera Maya')
+  org AS (SELECT id FROM organizations WHERE slug = 'sirenis')
 INSERT INTO devices
   (id, human_id, public_code, uuid, organization_id, site_id, name, mac_address, topic, latitude, longitude, timezone, status, is_active, created_at, updated_at)
 SELECT
   gen_random_uuid(), 9001034, 'DEV-SIRENIS-035', 'ac82b508-cab1-452c-adcb-589a2b7cd99f',
-  org.id, site.id,
+  org.id, NULL,
   'SIRENIS MEX - CASA DE PLAYA', 'EC:C3:8A:60:2E:45', NULL,
   20.428599, -87.2958929,
   'America/Cancun', 'active', true,
   NOW(), NOW()
-FROM org, site
+FROM org
 ON CONFLICT (uuid) DO NOTHING;
 
 -- Device 36/43: SIRENIS MEX - SPA (legacy id=1672, climaId=1061)
 WITH
-  org AS (SELECT id FROM organizations WHERE slug = 'sirenis'),
-  site AS (SELECT s.id FROM sites s JOIN organizations o ON s.organization_id = o.id WHERE o.slug = 'sirenis' AND s.name = 'Grand Sirenis Riviera Maya')
+  org AS (SELECT id FROM organizations WHERE slug = 'sirenis')
 INSERT INTO devices
   (id, human_id, public_code, uuid, organization_id, site_id, name, mac_address, topic, latitude, longitude, timezone, status, is_active, created_at, updated_at)
 SELECT
   gen_random_uuid(), 9001035, 'DEV-SIRENIS-036', '85fc19a4-19f1-498a-a337-6aa599a2b7cd',
-  org.id, site.id,
+  org.id, NULL,
   'SIRENIS MEX - SPA', 'EC:C3:8A:60:2E:67', NULL,
   20.428599, -87.2958929,
   'America/Cancun', 'active', true,
   NOW(), NOW()
-FROM org, site
+FROM org
 ON CONFLICT (uuid) DO NOTHING;
 
 -- Device 37/43: SIRENIS MEX - Lobby - A3 (legacy id=1673, climaId=1061)
 WITH
-  org AS (SELECT id FROM organizations WHERE slug = 'sirenis'),
-  site AS (SELECT s.id FROM sites s JOIN organizations o ON s.organization_id = o.id WHERE o.slug = 'sirenis' AND s.name = 'Grand Sirenis Riviera Maya')
+  org AS (SELECT id FROM organizations WHERE slug = 'sirenis')
 INSERT INTO devices
   (id, human_id, public_code, uuid, organization_id, site_id, name, mac_address, topic, latitude, longitude, timezone, status, is_active, created_at, updated_at)
 SELECT
   gen_random_uuid(), 9001036, 'DEV-SIRENIS-037', '41e419f7-8ca3-42f0-b473-0971107183ec',
-  org.id, site.id,
+  org.id, NULL,
   'SIRENIS MEX - Lobby - A3', 'EC:C3:8A:60:2E:8D', NULL,
   20.428599, -87.2958929,
   'America/Cancun', 'active', true,
   NOW(), NOW()
-FROM org, site
+FROM org
 ON CONFLICT (uuid) DO NOTHING;
 
 -- Device 38/43: SIRENIS MEX - COCINA 1 (legacy id=1674, climaId=1061)
 WITH
-  org AS (SELECT id FROM organizations WHERE slug = 'sirenis'),
-  site AS (SELECT s.id FROM sites s JOIN organizations o ON s.organization_id = o.id WHERE o.slug = 'sirenis' AND s.name = 'Grand Sirenis Riviera Maya')
+  org AS (SELECT id FROM organizations WHERE slug = 'sirenis')
 INSERT INTO devices
   (id, human_id, public_code, uuid, organization_id, site_id, name, mac_address, topic, latitude, longitude, timezone, status, is_active, created_at, updated_at)
 SELECT
   gen_random_uuid(), 9001037, 'DEV-SIRENIS-038', 'e091e43a-7177-4f1b-9482-eaa3f929dfc1',
-  org.id, site.id,
+  org.id, NULL,
   'SIRENIS MEX - COCINA 1', 'EC:C3:8A:60:2F:61', NULL,
   20.428599, -87.2958929,
   'America/Cancun', 'active', true,
   NOW(), NOW()
-FROM org, site
+FROM org
 ON CONFLICT (uuid) DO NOTHING;
 
 -- Device 39/43: SIRENIS MEX - CHILLERS (legacy id=1678, climaId=1061)
 WITH
-  org AS (SELECT id FROM organizations WHERE slug = 'sirenis'),
-  site AS (SELECT s.id FROM sites s JOIN organizations o ON s.organization_id = o.id WHERE o.slug = 'sirenis' AND s.name = 'Grand Sirenis Riviera Maya')
+  org AS (SELECT id FROM organizations WHERE slug = 'sirenis')
 INSERT INTO devices
   (id, human_id, public_code, uuid, organization_id, site_id, name, mac_address, topic, latitude, longitude, timezone, status, is_active, created_at, updated_at)
 SELECT
   gen_random_uuid(), 9001038, 'DEV-SIRENIS-039', '89879a96-8f0a-4d99-857b-c2428395f4a1',
-  org.id, site.id,
+  org.id, NULL,
   'SIRENIS MEX - CHILLERS', 'EC:C3:8A:60:2E:6D', NULL,
   20.428599, -87.2958929,
   'America/Cancun', 'active', true,
   NOW(), NOW()
-FROM org, site
+FROM org
 ON CONFLICT (uuid) DO NOTHING;
 
 -- Device 40/43: SIRENIS MEX - Lobby - A2 - Área de servicio (legacy id=1680, climaId=1061)
 WITH
-  org AS (SELECT id FROM organizations WHERE slug = 'sirenis'),
-  site AS (SELECT s.id FROM sites s JOIN organizations o ON s.organization_id = o.id WHERE o.slug = 'sirenis' AND s.name = 'Grand Sirenis Riviera Maya')
+  org AS (SELECT id FROM organizations WHERE slug = 'sirenis')
 INSERT INTO devices
   (id, human_id, public_code, uuid, organization_id, site_id, name, mac_address, topic, latitude, longitude, timezone, status, is_active, created_at, updated_at)
 SELECT
   gen_random_uuid(), 9001039, 'DEV-SIRENIS-040', 'e8c21d30-f3d5-4789-bf8f-8374cccbbd62',
-  org.id, site.id,
+  org.id, NULL,
   'SIRENIS MEX - Lobby - A2 - Área de servicio', 'EC:C3:8A:60:2C:9B', NULL,
   20.428599, -87.2958929,
   'America/Cancun', 'active', true,
   NOW(), NOW()
-FROM org, site
+FROM org
 ON CONFLICT (uuid) DO NOTHING;
 
 -- Device 41/43: SIRENIS MEX - SUB PRINCIPAL MT (legacy id=1703, climaId=1061)
 WITH
-  org AS (SELECT id FROM organizations WHERE slug = 'sirenis'),
-  site AS (SELECT s.id FROM sites s JOIN organizations o ON s.organization_id = o.id WHERE o.slug = 'sirenis' AND s.name = 'Grand Sirenis Riviera Maya')
+  org AS (SELECT id FROM organizations WHERE slug = 'sirenis')
 INSERT INTO devices
   (id, human_id, public_code, uuid, organization_id, site_id, name, mac_address, topic, latitude, longitude, timezone, status, is_active, created_at, updated_at)
 SELECT
   gen_random_uuid(), 9001040, 'DEV-SIRENIS-041', 'f6436441-2ee2-4e85-86f4-ec5fe57186bc',
-  org.id, site.id,
+  org.id, NULL,
   'SIRENIS MEX - SUB PRINCIPAL MT', '00:26:45:01:2F:76', NULL,
   20.428599, -87.2958929,
   'America/Cancun', 'active', true,
   NOW(), NOW()
-FROM org, site
+FROM org
 ON CONFLICT (uuid) DO NOTHING;
 
 -- Device 42/43: SIRENIS-PC-CLUB PREMIUM-ACU1 (legacy id=1806, climaId=1064)
 WITH
-  org AS (SELECT id FROM organizations WHERE slug = 'sirenis'),
-  site AS (SELECT s.id FROM sites s JOIN organizations o ON s.organization_id = o.id WHERE o.slug = 'sirenis' AND s.name = 'Sirenis Punta Cana')
+  org AS (SELECT id FROM organizations WHERE slug = 'sirenis')
 INSERT INTO devices
   (id, human_id, public_code, uuid, organization_id, site_id, name, mac_address, topic, latitude, longitude, timezone, status, is_active, created_at, updated_at)
 SELECT
   gen_random_uuid(), 9001041, 'DEV-SIRENIS-042', 'aeda62af-d04d-40b2-b21e-cc06777cadf1',
-  org.id, site.id,
+  org.id, NULL,
   'SIRENIS-PC-CLUB PREMIUM-ACU1', NULL, 'Solution/EC/SIRENIS/',
   18.8175274, -68.5909027,
   'America/Santo_Domingo', 'active', true,
   NOW(), NOW()
-FROM org, site
+FROM org
 ON CONFLICT (uuid) DO NOTHING;
 
 -- Device 43/43: Sirenis - Cocina Central - Pasteleria (legacy id=1929, climaId=1061)
 WITH
-  org AS (SELECT id FROM organizations WHERE slug = 'sirenis'),
-  site AS (SELECT s.id FROM sites s JOIN organizations o ON s.organization_id = o.id WHERE o.slug = 'sirenis' AND s.name = 'Grand Sirenis Riviera Maya')
+  org AS (SELECT id FROM organizations WHERE slug = 'sirenis')
 INSERT INTO devices
   (id, human_id, public_code, uuid, organization_id, site_id, name, mac_address, topic, latitude, longitude, timezone, status, is_active, created_at, updated_at)
 SELECT
   gen_random_uuid(), 9001042, 'DEV-SIRENIS-043', 'f5c2eb16-eca8-4c69-a5e5-f3e55e4f741f',
-  org.id, site.id,
+  org.id, NULL,
   'Sirenis - Cocina Central - Pasteleria', 'C45BBE6AD679', 'shellies/shellyuni/C45BBE6AD679',
   20.428599, -87.2958929,
   'America/Cancun', 'inactive', false,
   NOW(), NOW()
-FROM org, site
+FROM org
 ON CONFLICT (uuid) DO NOTHING;
 
 -- =============================================================================
@@ -758,7 +671,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002000, 'CH-SIRENIS-001',
   dev.device_id, dev.organization_id,
-  'Canal 1', 1, 3, NULL, 1,
+  'Canal 1', 1, 3, NULL, NULL,
   false, 'inactive', false,
   NOW(), NOW()
 FROM dev
@@ -772,7 +685,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002001, 'CH-SIRENIS-002',
   dev.device_id, dev.organization_id,
-  'Edificio 1 - Lado Derecho', 1, 3, NULL, 1,
+  'Edificio 1 - Lado Derecho', 1, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -786,7 +699,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002002, 'CH-SIRENIS-003',
   dev.device_id, dev.organization_id,
-  'Edificio 1 - Lado Izquierdo', 2, 3, NULL, 1,
+  'Edificio 1 - Lado Izquierdo', 2, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -800,7 +713,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002003, 'CH-SIRENIS-004',
   dev.device_id, dev.organization_id,
-  'Edificio 3 - Lado Derecho', 3, 3, NULL, 1,
+  'Edificio 3 - Lado Derecho', 3, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -814,7 +727,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002004, 'CH-SIRENIS-005',
   dev.device_id, dev.organization_id,
-  'Bombas de agua', 4, 3, NULL, 1,
+  'Bombas de agua', 4, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -828,7 +741,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002005, 'CH-SIRENIS-006',
   dev.device_id, dev.organization_id,
-  'Edificio 2 - Lado Derecho', 5, 3, NULL, 1,
+  'Edificio 2 - Lado Derecho', 5, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -842,7 +755,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002006, 'CH-SIRENIS-007',
   dev.device_id, dev.organization_id,
-  'Edificio 2 - Lado Izquierdo', 6, 3, NULL, 1,
+  'Edificio 2 - Lado Izquierdo', 6, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -856,7 +769,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002007, 'CH-SIRENIS-008',
   dev.device_id, dev.organization_id,
-  'Edificio 3 - Lado Izquierdo', 1, 3, NULL, 1,
+  'Edificio 3 - Lado Izquierdo', 1, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -870,7 +783,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002008, 'CH-SIRENIS-009',
   dev.device_id, dev.organization_id,
-  'IG - Poblado', 2, 3, NULL, 1,
+  'IG - Poblado', 2, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -884,7 +797,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002009, 'CH-SIRENIS-010',
   dev.device_id, dev.organization_id,
-  'IG - Hidro Bombeo', 3, 3, NULL, 1,
+  'IG - Hidro Bombeo', 3, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -898,7 +811,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002010, 'CH-SIRENIS-011',
   dev.device_id, dev.organization_id,
-  'Bombas Grandes', 4, 3, NULL, 1,
+  'Bombas Grandes', 4, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -912,7 +825,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002011, 'CH-SIRENIS-012',
   dev.device_id, dev.organization_id,
-  'Bomba Electrica Contra Incendio', 5, 3, NULL, 1,
+  'Bomba Electrica Contra Incendio', 5, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -926,7 +839,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002012, 'CH-SIRENIS-013',
   dev.device_id, dev.organization_id,
-  'IG - Osmosis', 6, 3, NULL, 1,
+  'IG - Osmosis', 6, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -940,7 +853,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002013, 'CH-SIRENIS-014',
   dev.device_id, dev.organization_id,
-  'Otras Cargas Poblado (V)', 900, 3, NULL, 1,
+  'Otras Cargas Poblado (V)', 900, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -954,7 +867,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002014, 'CH-SIRENIS-015',
   dev.device_id, dev.organization_id,
-  'SUBTOTAL- SIRENIS (V)', 901, 3, NULL, 1,
+  'SUBTOTAL- SIRENIS (V)', 901, 3, NULL, NULL,
   false, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -968,7 +881,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002015, 'CH-SIRENIS-016',
   dev.device_id, dev.organization_id,
-  'IG Oficina RRHH', 1, 3, NULL, 1,
+  'IG Oficina RRHH', 1, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -982,7 +895,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002016, 'CH-SIRENIS-017',
   dev.device_id, dev.organization_id,
-  'Fuerza Cafeteria', 2, 3, NULL, 1,
+  'Fuerza Cafeteria', 2, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -996,7 +909,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002017, 'CH-SIRENIS-018',
   dev.device_id, dev.organization_id,
-  'Subtablero de Aires 1', 3, 3, NULL, 1,
+  'Subtablero de Aires 1', 3, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -1010,7 +923,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002018, 'CH-SIRENIS-019',
   dev.device_id, dev.organization_id,
-  'Subtablero de Aires 2', 4, 3, NULL, 1,
+  'Subtablero de Aires 2', 4, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -1024,7 +937,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002019, 'CH-SIRENIS-020',
   dev.device_id, dev.organization_id,
-  'Oficina Sistemas', 5, 3, NULL, 1,
+  'Oficina Sistemas', 5, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -1066,7 +979,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002022, 'CH-SIRENIS-023',
   dev.device_id, dev.organization_id,
-  'Otras Cargas RRHH (Iluminacion) (V)', 900, 3, NULL, 1,
+  'Otras Cargas RRHH (Iluminacion) (V)', 900, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -1080,7 +993,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002023, 'CH-SIRENIS-024',
   dev.device_id, dev.organization_id,
-  'Compresores', 1, 3, NULL, 1,
+  'Compresores', 1, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -1094,7 +1007,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002024, 'CH-SIRENIS-025',
   dev.device_id, dev.organization_id,
-  'Dobladora 2', 2, 3, NULL, 1,
+  'Dobladora 2', 2, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -1108,7 +1021,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002025, 'CH-SIRENIS-026',
   dev.device_id, dev.organization_id,
-  'Dobladora 1', 3, 3, NULL, 1,
+  'Dobladora 1', 3, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -1122,7 +1035,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002026, 'CH-SIRENIS-027',
   dev.device_id, dev.organization_id,
-  'Planchadora 1', 4, 3, NULL, 1,
+  'Planchadora 1', 4, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -1136,7 +1049,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002027, 'CH-SIRENIS-028',
   dev.device_id, dev.organization_id,
-  'Planchadora 2', 5, 3, NULL, 1,
+  'Planchadora 2', 5, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -1150,7 +1063,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002028, 'CH-SIRENIS-029',
   dev.device_id, dev.organization_id,
-  'IG Motores lavanderia', 6, 3, NULL, 1,
+  'IG Motores lavanderia', 6, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -1164,7 +1077,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002029, 'CH-SIRENIS-030',
   dev.device_id, dev.organization_id,
-  'Otras Maquinas Lavanderia (V)', 900, 3, NULL, 1,
+  'Otras Maquinas Lavanderia (V)', 900, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -1178,7 +1091,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002030, 'CH-SIRENIS-031',
   dev.device_id, dev.organization_id,
-  'IG Temáticos', 1, 3, NULL, 1,
+  'IG Temáticos', 1, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -1192,7 +1105,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002031, 'CH-SIRENIS-032',
   dev.device_id, dev.organization_id,
-  'Tablero Frances', 2, 3, NULL, 1,
+  'Tablero Frances', 2, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -1206,7 +1119,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002032, 'CH-SIRENIS-033',
   dev.device_id, dev.organization_id,
-  'Coffe Shop', 3, 3, NULL, 1,
+  'Coffe Shop', 3, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -1220,7 +1133,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002033, 'CH-SIRENIS-034',
   dev.device_id, dev.organization_id,
-  'Tab Fuerza Mexicano', 5, 3, NULL, 1,
+  'Tab Fuerza Mexicano', 5, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -1234,7 +1147,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002034, 'CH-SIRENIS-035',
   dev.device_id, dev.organization_id,
-  'Horno central', 6, 3, NULL, 1,
+  'Horno central', 6, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -1248,7 +1161,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002035, 'CH-SIRENIS-036',
   dev.device_id, dev.organization_id,
-  'Tab Luces y contactos Mexicano', 4, 3, NULL, 1,
+  'Tab Luces y contactos Mexicano', 4, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -1262,7 +1175,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002036, 'CH-SIRENIS-037',
   dev.device_id, dev.organization_id,
-  'Otras Cargas (V)', 900, 3, NULL, 1,
+  'Otras Cargas (V)', 900, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -1276,7 +1189,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002037, 'CH-SIRENIS-038',
   dev.device_id, dev.organization_id,
-  'IG Cocina Central', 1, 3, NULL, 1,
+  'IG Cocina Central', 1, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -1290,7 +1203,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002038, 'CH-SIRENIS-039',
   dev.device_id, dev.organization_id,
-  'Tab Japones', 2, 3, NULL, 1,
+  'Tab Japones', 2, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -1304,7 +1217,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002039, 'CH-SIRENIS-040',
   dev.device_id, dev.organization_id,
-  'Luces pasillo Peruano', 3, 3, NULL, 1,
+  'Luces pasillo Peruano', 3, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -1318,7 +1231,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002040, 'CH-SIRENIS-041',
   dev.device_id, dev.organization_id,
-  'Chiringos Bar Playa', 4, 3, NULL, 1,
+  'Chiringos Bar Playa', 4, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -1332,7 +1245,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002041, 'CH-SIRENIS-042',
   dev.device_id, dev.organization_id,
-  'Tab Meditarraneo', 5, 3, NULL, 1,
+  'Tab Meditarraneo', 5, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -1346,7 +1259,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002042, 'CH-SIRENIS-043',
   dev.device_id, dev.organization_id,
-  'UMAS Mexicano', 6, 3, NULL, 1,
+  'UMAS Mexicano', 6, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -1360,7 +1273,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002043, 'CH-SIRENIS-044',
   dev.device_id, dev.organization_id,
-  'Lavavajillas', 1, 3, NULL, 1,
+  'Lavavajillas', 1, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -1374,7 +1287,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002044, 'CH-SIRENIS-045',
   dev.device_id, dev.organization_id,
-  'Lava Utencilios', 2, 3, NULL, 1,
+  'Lava Utencilios', 2, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -1388,7 +1301,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002045, 'CH-SIRENIS-046',
   dev.device_id, dev.organization_id,
-  'Cuarto Frio #3', 3, 3, NULL, 1,
+  'Cuarto Frio #3', 3, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -1402,7 +1315,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002046, 'CH-SIRENIS-047',
   dev.device_id, dev.organization_id,
-  'Extractor Cocina Central', 5, 3, NULL, 1,
+  'Extractor Cocina Central', 5, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -1416,7 +1329,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002047, 'CH-SIRENIS-048',
   dev.device_id, dev.organization_id,
-  'Alumbrado Cocina Central ', 6, 3, NULL, 1,
+  'Alumbrado Cocina Central ', 6, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -1430,7 +1343,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002048, 'CH-SIRENIS-049',
   dev.device_id, dev.organization_id,
-  'Camara de Conservacion #2', 4, 3, NULL, 1,
+  'Camara de Conservacion #2', 4, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -1444,7 +1357,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002049, 'CH-SIRENIS-050',
   dev.device_id, dev.organization_id,
-  'Subtotalizador', 1, 3, NULL, 1,
+  'Subtotalizador', 1, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -1458,7 +1371,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002050, 'CH-SIRENIS-051',
   dev.device_id, dev.organization_id,
-  'Sala de maquinas', 2, 3, NULL, 1,
+  'Sala de maquinas', 2, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -1472,7 +1385,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002051, 'CH-SIRENIS-052',
   dev.device_id, dev.organization_id,
-  'Cocina', 3, 3, NULL, 1,
+  'Cocina', 3, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -1486,7 +1399,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002052, 'CH-SIRENIS-053',
   dev.device_id, dev.organization_id,
-  'Aires Acondicinoados', 5, 3, NULL, 1,
+  'Aires Acondicinoados', 5, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -1500,7 +1413,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002053, 'CH-SIRENIS-054',
   dev.device_id, dev.organization_id,
-  'Comedor', 4, 3, NULL, 1,
+  'Comedor', 4, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -1514,7 +1427,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002054, 'CH-SIRENIS-055',
   dev.device_id, dev.organization_id,
-  'Camaras de frio', 6, 3, NULL, 1,
+  'Camaras de frio', 6, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -1528,7 +1441,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002055, 'CH-SIRENIS-056',
   dev.device_id, dev.organization_id,
-  'Totalizador Bayou (V)', 900, 3, NULL, 1,
+  'Totalizador Bayou (V)', 900, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -1542,7 +1455,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002056, 'CH-SIRENIS-057',
   dev.device_id, dev.organization_id,
-  'Otras Cargas Bayou (V)', 901, 3, NULL, 1,
+  'Otras Cargas Bayou (V)', 901, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -1556,7 +1469,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002057, 'CH-SIRENIS-058',
   dev.device_id, dev.organization_id,
-  'Otras Cargas Steak House (V)', 900, 3, NULL, 1,
+  'Otras Cargas Steak House (V)', 900, 3, NULL, NULL,
   false, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -1570,7 +1483,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002058, 'CH-SIRENIS-059',
   dev.device_id, dev.organization_id,
-  'Iluminación exterior', 1, 3, NULL, 1,
+  'Iluminación exterior', 1, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -1584,7 +1497,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002059, 'CH-SIRENIS-060',
   dev.device_id, dev.organization_id,
-  'AA Comedor', 2, 3, NULL, 1,
+  'AA Comedor', 2, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -1598,7 +1511,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002060, 'CH-SIRENIS-061',
   dev.device_id, dev.organization_id,
-  'Bar Alberca', 3, 3, NULL, 1,
+  'Bar Alberca', 3, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -1612,7 +1525,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002061, 'CH-SIRENIS-062',
   dev.device_id, dev.organization_id,
-  'Sub Cuadro Cocina', 4, 3, NULL, 1,
+  'Sub Cuadro Cocina', 4, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -1626,7 +1539,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002062, 'CH-SIRENIS-063',
   dev.device_id, dev.organization_id,
-  'Sub Cuadro Teatro', 5, 3, NULL, 1,
+  'Sub Cuadro Teatro', 5, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -1640,7 +1553,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002063, 'CH-SIRENIS-064',
   dev.device_id, dev.organization_id,
-  'IG Steak House', 6, 3, NULL, 1,
+  'IG Steak House', 6, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -1654,7 +1567,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002064, 'CH-SIRENIS-065',
   dev.device_id, dev.organization_id,
-  'IG Ejecutivos', 1, 3, NULL, 1,
+  'IG Ejecutivos', 1, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -1668,7 +1581,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002065, 'CH-SIRENIS-066',
   dev.device_id, dev.organization_id,
-  'IG Edificio Ejecutivos', 2, 3, NULL, 1,
+  'IG Edificio Ejecutivos', 2, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -1682,7 +1595,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002066, 'CH-SIRENIS-067',
   dev.device_id, dev.organization_id,
-  'No identificado 1', 3, 3, NULL, 1,
+  'No identificado 1', 3, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -1696,7 +1609,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002067, 'CH-SIRENIS-068',
   dev.device_id, dev.organization_id,
-  'No identificado 2', 4, 3, NULL, 1,
+  'No identificado 2', 4, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -1710,7 +1623,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002068, 'CH-SIRENIS-069',
   dev.device_id, dev.organization_id,
-  'No identificado 3', 5, 3, NULL, 1,
+  'No identificado 3', 5, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -1724,7 +1637,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002069, 'CH-SIRENIS-070',
   dev.device_id, dev.organization_id,
-  'Iluminacion y Tomacorrientes', 6, 3, NULL, 1,
+  'Iluminacion y Tomacorrientes', 6, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -1738,7 +1651,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002070, 'CH-SIRENIS-071',
   dev.device_id, dev.organization_id,
-  'Otras Cargas (V)', 900, 3, NULL, 1,
+  'Otras Cargas (V)', 900, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -1752,7 +1665,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002071, 'CH-SIRENIS-072',
   dev.device_id, dev.organization_id,
-  'Demo #1', 1, 3, NULL, 1,
+  'Demo #1', 1, 3, NULL, NULL,
   true, 'inactive', false,
   NOW(), NOW()
 FROM dev
@@ -1766,7 +1679,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002072, 'CH-SIRENIS-073',
   dev.device_id, dev.organization_id,
-  'Energia', 1, 3, NULL, 1,
+  'Energia', 1, 3, NULL, NULL,
   false, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -1780,7 +1693,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002073, 'CH-SIRENIS-074',
   dev.device_id, dev.organization_id,
-  'Temperatura consgina', 1, 3, NULL, 4,
+  'Temperatura consgina', 1, 3, NULL, NULL,
   false, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -1794,7 +1707,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002074, 'CH-SIRENIS-075',
   dev.device_id, dev.organization_id,
-  'Temperatura del refrigerante en el evaporador', 2, 3, NULL, 4,
+  'Temperatura del refrigerante en el evaporador', 2, 3, NULL, NULL,
   false, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -1808,7 +1721,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002075, 'CH-SIRENIS-076',
   dev.device_id, dev.organization_id,
-  'Temperatura del refrigerante en el condensador', 3, 3, NULL, 4,
+  'Temperatura del refrigerante en el condensador', 3, 3, NULL, NULL,
   false, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -1822,7 +1735,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002076, 'CH-SIRENIS-077',
   dev.device_id, dev.organization_id,
-  'Temperatura entrada agua evaporador', 4, 3, NULL, 4,
+  'Temperatura entrada agua evaporador', 4, 3, NULL, NULL,
   false, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -1836,7 +1749,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002077, 'CH-SIRENIS-078',
   dev.device_id, dev.organization_id,
-  'Temperatura entrada agua condensador', 5, 3, NULL, 4,
+  'Temperatura entrada agua condensador', 5, 3, NULL, NULL,
   false, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -1850,7 +1763,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002078, 'CH-SIRENIS-079',
   dev.device_id, dev.organization_id,
-  'Temperatura salida agua evaporador', 6, 3, NULL, 4,
+  'Temperatura salida agua evaporador', 6, 3, NULL, NULL,
   false, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -1864,7 +1777,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002079, 'CH-SIRENIS-080',
   dev.device_id, dev.organization_id,
-  'Temperatura salida agua condensador', 7, 3, NULL, 4,
+  'Temperatura salida agua condensador', 7, 3, NULL, NULL,
   false, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -1878,7 +1791,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002080, 'CH-SIRENIS-081',
   dev.device_id, dev.organization_id,
-  'Temperatura del aceite en el compresor', 8, 3, NULL, 4,
+  'Temperatura del aceite en el compresor', 8, 3, NULL, NULL,
   false, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -1892,7 +1805,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002081, 'CH-SIRENIS-082',
   dev.device_id, dev.organization_id,
-  'Carga del chiller', 9, 3, NULL, 4,
+  'Carga del chiller', 9, 3, NULL, NULL,
   false, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -1906,7 +1819,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002082, 'CH-SIRENIS-083',
   dev.device_id, dev.organization_id,
-  'Encendidos desde commissioning', 10, 3, NULL, 4,
+  'Encendidos desde commissioning', 10, 3, NULL, NULL,
   false, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -1920,7 +1833,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002083, 'CH-SIRENIS-084',
   dev.device_id, dev.organization_id,
-  'Presión del refrigerante en el condensador', 11, 3, NULL, 4,
+  'Presión del refrigerante en el condensador', 11, 3, NULL, NULL,
   false, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -1934,7 +1847,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002084, 'CH-SIRENIS-085',
   dev.device_id, dev.organization_id,
-  'Presión del aceite del compresor', 12, 3, NULL, 4,
+  'Presión del aceite del compresor', 12, 3, NULL, NULL,
   false, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -1948,7 +1861,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002085, 'CH-SIRENIS-086',
   dev.device_id, dev.organization_id,
-  'Tiempo que lleva encendido', 13, 3, NULL, 4,
+  'Tiempo que lleva encendido', 13, 3, NULL, NULL,
   false, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -1962,7 +1875,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002086, 'CH-SIRENIS-087',
   dev.device_id, dev.organization_id,
-  'Consumo de Amperios relativo de la fase R con respecto al nominal', 14, 3, NULL, 4,
+  'Consumo de Amperios relativo de la fase R con respecto al nominal', 14, 3, NULL, NULL,
   false, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -1976,7 +1889,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002087, 'CH-SIRENIS-088',
   dev.device_id, dev.organization_id,
-  'Consumo de Amperios relativo de la fase S del chiller 4', 15, 3, NULL, 4,
+  'Consumo de Amperios relativo de la fase S del chiller 4', 15, 3, NULL, NULL,
   false, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -1990,7 +1903,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002088, 'CH-SIRENIS-089',
   dev.device_id, dev.organization_id,
-  'Consumo de Amperios relativo de la fase T con respecto al nominal del chiller 4', 16, 3, NULL, 4,
+  'Consumo de Amperios relativo de la fase T con respecto al nominal del chiller 4', 16, 3, NULL, NULL,
   false, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -2004,7 +1917,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002089, 'CH-SIRENIS-090',
   dev.device_id, dev.organization_id,
-  'Energia', 1, 3, NULL, 1,
+  'Energia', 1, 3, NULL, NULL,
   false, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -2018,7 +1931,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002090, 'CH-SIRENIS-091',
   dev.device_id, dev.organization_id,
-  'Temperatura consgina', 1, 3, NULL, 4,
+  'Temperatura consgina', 1, 3, NULL, NULL,
   false, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -2032,7 +1945,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002091, 'CH-SIRENIS-092',
   dev.device_id, dev.organization_id,
-  'Temperatura del refrigerante en el evaporador', 2, 3, NULL, 4,
+  'Temperatura del refrigerante en el evaporador', 2, 3, NULL, NULL,
   false, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -2046,7 +1959,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002092, 'CH-SIRENIS-093',
   dev.device_id, dev.organization_id,
-  'Temperatura del refrigerante en el condensador', 3, 3, NULL, 4,
+  'Temperatura del refrigerante en el condensador', 3, 3, NULL, NULL,
   false, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -2060,7 +1973,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002093, 'CH-SIRENIS-094',
   dev.device_id, dev.organization_id,
-  'Temperatura entrada agua evaporador', 4, 3, NULL, 4,
+  'Temperatura entrada agua evaporador', 4, 3, NULL, NULL,
   false, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -2074,7 +1987,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002094, 'CH-SIRENIS-095',
   dev.device_id, dev.organization_id,
-  'Temperatura entrada agua condensador', 5, 3, NULL, 4,
+  'Temperatura entrada agua condensador', 5, 3, NULL, NULL,
   false, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -2088,7 +2001,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002095, 'CH-SIRENIS-096',
   dev.device_id, dev.organization_id,
-  'Temperatura salida agua evaporador', 6, 3, NULL, 4,
+  'Temperatura salida agua evaporador', 6, 3, NULL, NULL,
   false, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -2102,7 +2015,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002096, 'CH-SIRENIS-097',
   dev.device_id, dev.organization_id,
-  'Temperatura salida agua condensador', 7, 3, NULL, 4,
+  'Temperatura salida agua condensador', 7, 3, NULL, NULL,
   false, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -2116,7 +2029,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002097, 'CH-SIRENIS-098',
   dev.device_id, dev.organization_id,
-  'Temperatura del aceite en el compresor', 8, 3, NULL, 4,
+  'Temperatura del aceite en el compresor', 8, 3, NULL, NULL,
   false, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -2130,7 +2043,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002098, 'CH-SIRENIS-099',
   dev.device_id, dev.organization_id,
-  'Carga del chiller', 9, 3, NULL, 4,
+  'Carga del chiller', 9, 3, NULL, NULL,
   false, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -2144,7 +2057,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002099, 'CH-SIRENIS-100',
   dev.device_id, dev.organization_id,
-  'Encendidos desde commissioning', 10, 3, NULL, 4,
+  'Encendidos desde commissioning', 10, 3, NULL, NULL,
   false, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -2158,7 +2071,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002100, 'CH-SIRENIS-101',
   dev.device_id, dev.organization_id,
-  'Presión del refrigerante en el condensador', 11, 3, NULL, 4,
+  'Presión del refrigerante en el condensador', 11, 3, NULL, NULL,
   false, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -2172,7 +2085,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002101, 'CH-SIRENIS-102',
   dev.device_id, dev.organization_id,
-  'Presión del aceite del compresor', 12, 3, NULL, 4,
+  'Presión del aceite del compresor', 12, 3, NULL, NULL,
   false, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -2186,7 +2099,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002102, 'CH-SIRENIS-103',
   dev.device_id, dev.organization_id,
-  'Tiempo que lleva encendido', 13, 3, NULL, 4,
+  'Tiempo que lleva encendido', 13, 3, NULL, NULL,
   false, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -2200,7 +2113,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002103, 'CH-SIRENIS-104',
   dev.device_id, dev.organization_id,
-  'Consumo de Amperios relativo de la fase R con respecto al nominal', 14, 3, NULL, 4,
+  'Consumo de Amperios relativo de la fase R con respecto al nominal', 14, 3, NULL, NULL,
   false, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -2214,7 +2127,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002104, 'CH-SIRENIS-105',
   dev.device_id, dev.organization_id,
-  'Consumo de Amperios relativo de la fase S del chiller 4', 15, 3, NULL, 4,
+  'Consumo de Amperios relativo de la fase S del chiller 4', 15, 3, NULL, NULL,
   false, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -2228,7 +2141,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002105, 'CH-SIRENIS-106',
   dev.device_id, dev.organization_id,
-  'Consumo de Amperios relativo de la fase T con respecto al nominal del chiller 4', 16, 3, NULL, 4,
+  'Consumo de Amperios relativo de la fase T con respecto al nominal del chiller 4', 16, 3, NULL, NULL,
   false, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -2242,7 +2155,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002106, 'CH-SIRENIS-107',
   dev.device_id, dev.organization_id,
-  'Energia', 1, 3, NULL, 1,
+  'Energia', 1, 3, NULL, NULL,
   false, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -2256,7 +2169,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002107, 'CH-SIRENIS-108',
   dev.device_id, dev.organization_id,
-  'Temperatura consgina', 1, 3, NULL, 4,
+  'Temperatura consgina', 1, 3, NULL, NULL,
   false, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -2270,7 +2183,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002108, 'CH-SIRENIS-109',
   dev.device_id, dev.organization_id,
-  'Temperatura del refrigerante en el evaporador', 2, 3, NULL, 4,
+  'Temperatura del refrigerante en el evaporador', 2, 3, NULL, NULL,
   false, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -2284,7 +2197,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002109, 'CH-SIRENIS-110',
   dev.device_id, dev.organization_id,
-  'Temperatura del refrigerante en el condensador', 3, 3, NULL, 4,
+  'Temperatura del refrigerante en el condensador', 3, 3, NULL, NULL,
   false, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -2298,7 +2211,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002110, 'CH-SIRENIS-111',
   dev.device_id, dev.organization_id,
-  'Temperatura entrada agua evaporador', 4, 3, NULL, 4,
+  'Temperatura entrada agua evaporador', 4, 3, NULL, NULL,
   false, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -2312,7 +2225,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002111, 'CH-SIRENIS-112',
   dev.device_id, dev.organization_id,
-  'Temperatura entrada agua condensador', 5, 3, NULL, 4,
+  'Temperatura entrada agua condensador', 5, 3, NULL, NULL,
   false, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -2326,7 +2239,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002112, 'CH-SIRENIS-113',
   dev.device_id, dev.organization_id,
-  'Temperatura salida agua evaporador', 6, 3, NULL, 4,
+  'Temperatura salida agua evaporador', 6, 3, NULL, NULL,
   false, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -2340,7 +2253,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002113, 'CH-SIRENIS-114',
   dev.device_id, dev.organization_id,
-  'Temperatura salida agua condensador', 7, 3, NULL, 4,
+  'Temperatura salida agua condensador', 7, 3, NULL, NULL,
   false, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -2354,7 +2267,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002114, 'CH-SIRENIS-115',
   dev.device_id, dev.organization_id,
-  'Temperatura del aceite en el compresor', 8, 3, NULL, 4,
+  'Temperatura del aceite en el compresor', 8, 3, NULL, NULL,
   false, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -2368,7 +2281,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002115, 'CH-SIRENIS-116',
   dev.device_id, dev.organization_id,
-  'Carga del chiller', 9, 3, NULL, 4,
+  'Carga del chiller', 9, 3, NULL, NULL,
   false, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -2382,7 +2295,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002116, 'CH-SIRENIS-117',
   dev.device_id, dev.organization_id,
-  'Encendidos desde commissioning', 10, 3, NULL, 4,
+  'Encendidos desde commissioning', 10, 3, NULL, NULL,
   false, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -2396,7 +2309,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002117, 'CH-SIRENIS-118',
   dev.device_id, dev.organization_id,
-  'Presión del refrigerante en el condensador', 11, 3, NULL, 4,
+  'Presión del refrigerante en el condensador', 11, 3, NULL, NULL,
   false, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -2410,7 +2323,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002118, 'CH-SIRENIS-119',
   dev.device_id, dev.organization_id,
-  'Presión del aceite del compresor', 12, 3, NULL, 4,
+  'Presión del aceite del compresor', 12, 3, NULL, NULL,
   false, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -2424,7 +2337,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002119, 'CH-SIRENIS-120',
   dev.device_id, dev.organization_id,
-  'Tiempo que lleva encendido', 13, 3, NULL, 4,
+  'Tiempo que lleva encendido', 13, 3, NULL, NULL,
   false, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -2438,7 +2351,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002120, 'CH-SIRENIS-121',
   dev.device_id, dev.organization_id,
-  'Consumo de Amperios relativo de la fase R con respecto al nominal', 14, 3, NULL, 4,
+  'Consumo de Amperios relativo de la fase R con respecto al nominal', 14, 3, NULL, NULL,
   false, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -2452,7 +2365,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002121, 'CH-SIRENIS-122',
   dev.device_id, dev.organization_id,
-  'Consumo de Amperios relativo de la fase S del chiller 4', 15, 3, NULL, 4,
+  'Consumo de Amperios relativo de la fase S del chiller 4', 15, 3, NULL, NULL,
   false, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -2466,7 +2379,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002122, 'CH-SIRENIS-123',
   dev.device_id, dev.organization_id,
-  'Consumo de Amperios relativo de la fase T con respecto al nominal del chiller 4', 16, 3, NULL, 4,
+  'Consumo de Amperios relativo de la fase T con respecto al nominal del chiller 4', 16, 3, NULL, NULL,
   false, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -2480,7 +2393,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002123, 'CH-SIRENIS-124',
   dev.device_id, dev.organization_id,
-  'Energia', 1, 3, NULL, 1,
+  'Energia', 1, 3, NULL, NULL,
   false, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -2494,7 +2407,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002124, 'CH-SIRENIS-125',
   dev.device_id, dev.organization_id,
-  'Temperatura consgina', 1, 3, NULL, 4,
+  'Temperatura consgina', 1, 3, NULL, NULL,
   false, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -2508,7 +2421,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002125, 'CH-SIRENIS-126',
   dev.device_id, dev.organization_id,
-  'Temperatura del refrigerante en el evaporador', 2, 3, NULL, 4,
+  'Temperatura del refrigerante en el evaporador', 2, 3, NULL, NULL,
   false, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -2522,7 +2435,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002126, 'CH-SIRENIS-127',
   dev.device_id, dev.organization_id,
-  'Temperatura del refrigerante en el condensador', 3, 3, NULL, 4,
+  'Temperatura del refrigerante en el condensador', 3, 3, NULL, NULL,
   false, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -2536,7 +2449,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002127, 'CH-SIRENIS-128',
   dev.device_id, dev.organization_id,
-  'Temperatura entrada agua evaporador', 4, 3, NULL, 4,
+  'Temperatura entrada agua evaporador', 4, 3, NULL, NULL,
   false, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -2550,7 +2463,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002128, 'CH-SIRENIS-129',
   dev.device_id, dev.organization_id,
-  'Temperatura entrada agua condensador', 5, 3, NULL, 4,
+  'Temperatura entrada agua condensador', 5, 3, NULL, NULL,
   false, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -2564,7 +2477,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002129, 'CH-SIRENIS-130',
   dev.device_id, dev.organization_id,
-  'Temperatura salida agua evaporador', 6, 3, NULL, 4,
+  'Temperatura salida agua evaporador', 6, 3, NULL, NULL,
   false, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -2578,7 +2491,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002130, 'CH-SIRENIS-131',
   dev.device_id, dev.organization_id,
-  'Temperatura salida agua condensador', 7, 3, NULL, 4,
+  'Temperatura salida agua condensador', 7, 3, NULL, NULL,
   false, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -2592,7 +2505,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002131, 'CH-SIRENIS-132',
   dev.device_id, dev.organization_id,
-  'Temperatura del aceite en el compresor', 8, 3, NULL, 4,
+  'Temperatura del aceite en el compresor', 8, 3, NULL, NULL,
   false, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -2606,7 +2519,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002132, 'CH-SIRENIS-133',
   dev.device_id, dev.organization_id,
-  'Carga del chiller', 9, 3, NULL, 4,
+  'Carga del chiller', 9, 3, NULL, NULL,
   false, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -2620,7 +2533,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002133, 'CH-SIRENIS-134',
   dev.device_id, dev.organization_id,
-  'Encendidos desde commissioning', 10, 3, NULL, 4,
+  'Encendidos desde commissioning', 10, 3, NULL, NULL,
   false, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -2634,7 +2547,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002134, 'CH-SIRENIS-135',
   dev.device_id, dev.organization_id,
-  'Presión del refrigerante en el condensador', 11, 3, NULL, 4,
+  'Presión del refrigerante en el condensador', 11, 3, NULL, NULL,
   false, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -2648,7 +2561,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002135, 'CH-SIRENIS-136',
   dev.device_id, dev.organization_id,
-  'Presión del aceite del compresor', 12, 3, NULL, 4,
+  'Presión del aceite del compresor', 12, 3, NULL, NULL,
   false, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -2662,7 +2575,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002136, 'CH-SIRENIS-137',
   dev.device_id, dev.organization_id,
-  'Tiempo que lleva encendido', 13, 3, NULL, 4,
+  'Tiempo que lleva encendido', 13, 3, NULL, NULL,
   false, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -2676,7 +2589,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002137, 'CH-SIRENIS-138',
   dev.device_id, dev.organization_id,
-  'Consumo de Amperios relativo de la fase R con respecto al nominal', 14, 3, NULL, 4,
+  'Consumo de Amperios relativo de la fase R con respecto al nominal', 14, 3, NULL, NULL,
   false, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -2690,7 +2603,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002138, 'CH-SIRENIS-139',
   dev.device_id, dev.organization_id,
-  'Consumo de Amperios relativo de la fase S del chiller 4', 15, 3, NULL, 4,
+  'Consumo de Amperios relativo de la fase S del chiller 4', 15, 3, NULL, NULL,
   false, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -2704,7 +2617,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002139, 'CH-SIRENIS-140',
   dev.device_id, dev.organization_id,
-  'Consumo de Amperios relativo de la fase T con respecto al nominal del chiller 4', 16, 3, NULL, 4,
+  'Consumo de Amperios relativo de la fase T con respecto al nominal del chiller 4', 16, 3, NULL, NULL,
   false, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -2718,7 +2631,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002140, 'CH-SIRENIS-141',
   dev.device_id, dev.organization_id,
-  'sirenis1', 1, 3, NULL, 1,
+  'sirenis1', 1, 3, NULL, NULL,
   false, 'inactive', false,
   NOW(), NOW()
 FROM dev
@@ -2732,7 +2645,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002141, 'CH-SIRENIS-142',
   dev.device_id, dev.organization_id,
-  'Piscina Familiar Parque Acuático', 1, 3, NULL, 1,
+  'Piscina Familiar Parque Acuático', 1, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -2746,7 +2659,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002142, 'CH-SIRENIS-143',
   dev.device_id, dev.organization_id,
-  'Cocina Parque Acuático', 2, 3, NULL, 1,
+  'Cocina Parque Acuático', 2, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -2760,7 +2673,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002143, 'CH-SIRENIS-144',
   dev.device_id, dev.organization_id,
-  'Coffe Shop y Sport Bar', 3, 3, NULL, 1,
+  'Coffe Shop y Sport Bar', 3, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -2774,7 +2687,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002144, 'CH-SIRENIS-145',
   dev.device_id, dev.organization_id,
-  'Totalizador PARQUE ACUÁTICO', 4, 3, NULL, 1,
+  'Totalizador PARQUE ACUÁTICO', 4, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -2788,7 +2701,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002145, 'CH-SIRENIS-146',
   dev.device_id, dev.organization_id,
-  'Kids Club, Tiendas, Consultorio Medico y GYM', 5, 3, NULL, 1,
+  'Kids Club, Tiendas, Consultorio Medico y GYM', 5, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -2802,7 +2715,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002146, 'CH-SIRENIS-147',
   dev.device_id, dev.organization_id,
-  'Plaza Eventos', 6, 3, NULL, 1,
+  'Plaza Eventos', 6, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -2816,7 +2729,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002147, 'CH-SIRENIS-148',
   dev.device_id, dev.organization_id,
-  'Otras Cargas-Bombas Piscinas, Farolas Avenida de ingreso (Virtual)', 900, 3, NULL, 1,
+  'Otras Cargas-Bombas Piscinas, Farolas Avenida de ingreso (Virtual)', 900, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -2830,7 +2743,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002148, 'CH-SIRENIS-149',
   dev.device_id, dev.organization_id,
-  'sirenis1', 1, 3, NULL, 1,
+  'sirenis1', 1, 3, NULL, NULL,
   false, 'inactive', false,
   NOW(), NOW()
 FROM dev
@@ -2844,7 +2757,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002149, 'CH-SIRENIS-150',
   dev.device_id, dev.organization_id,
-  'Otras Cargas-SSGG poco consumo (Virtual)', 900, 3, NULL, 1,
+  'Otras Cargas-SSGG poco consumo (Virtual)', 900, 3, NULL, NULL,
   false, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -2858,7 +2771,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002150, 'CH-SIRENIS-151',
   dev.device_id, dev.organization_id,
-  'Ejecutivos', 1, 3, NULL, 1,
+  'Ejecutivos', 1, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -2872,7 +2785,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002151, 'CH-SIRENIS-152',
   dev.device_id, dev.organization_id,
-  'Equipos Lavandería', 2, 3, NULL, 1,
+  'Equipos Lavandería', 2, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -2886,7 +2799,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002152, 'CH-SIRENIS-153',
   dev.device_id, dev.organization_id,
-  'Servicios Generales para Operaciones', 3, 3, NULL, 1,
+  'Servicios Generales para Operaciones', 3, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -2900,7 +2813,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002153, 'CH-SIRENIS-154',
   dev.device_id, dev.organization_id,
-  'Grupo Presión', 4, 3, NULL, 1,
+  'Grupo Presión', 4, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -2914,7 +2827,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002154, 'CH-SIRENIS-155',
   dev.device_id, dev.organization_id,
-  'Alojamientos y Zona Puerta Principal (Per.Trop)', 5, 3, NULL, 1,
+  'Alojamientos y Zona Puerta Principal (Per.Trop)', 5, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -2928,7 +2841,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002155, 'CH-SIRENIS-156',
   dev.device_id, dev.organization_id,
-  'Totalizador Lavandería', 6, 3, NULL, 1,
+  'Totalizador Lavandería', 6, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -2942,7 +2855,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002156, 'CH-SIRENIS-157',
   dev.device_id, dev.organization_id,
-  'sirenis1', 1, 3, NULL, 1,
+  'sirenis1', 1, 3, NULL, NULL,
   false, 'inactive', false,
   NOW(), NOW()
 FROM dev
@@ -2956,7 +2869,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002157, 'CH-SIRENIS-158',
   dev.device_id, dev.organization_id,
-  'Iluminación Planta industrial', 1, 3, NULL, 1,
+  'Iluminación Planta industrial', 1, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -2970,7 +2883,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002158, 'CH-SIRENIS-159',
   dev.device_id, dev.organization_id,
-  'Bombas de recirculación primaria caldera', 2, 3, NULL, 1,
+  'Bombas de recirculación primaria caldera', 2, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -2984,7 +2897,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002159, 'CH-SIRENIS-160',
   dev.device_id, dev.organization_id,
-  'TOTALIZADOR TABLERO 2 (208V)', 3, 3, NULL, 1,
+  'TOTALIZADOR TABLERO 2 (208V)', 3, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -2998,7 +2911,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002160, 'CH-SIRENIS-161',
   dev.device_id, dev.organization_id,
-  'Alojamiento edificio 3 y SSGG Empleados', 4, 3, NULL, 1,
+  'Alojamiento edificio 3 y SSGG Empleados', 4, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -3012,7 +2925,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002161, 'CH-SIRENIS-162',
   dev.device_id, dev.organization_id,
-  'Bombas de recirculación secundaria agua caliente', 5, 3, NULL, 1,
+  'Bombas de recirculación secundaria agua caliente', 5, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -3026,7 +2939,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002162, 'CH-SIRENIS-163',
   dev.device_id, dev.organization_id,
-  'Osmosis Planta', 6, 3, NULL, 1,
+  'Osmosis Planta', 6, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -3040,7 +2953,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002163, 'CH-SIRENIS-164',
   dev.device_id, dev.organization_id,
-  'Otras Cargas-SSGG, control Grupo Electrógeno (Virtual)', 900, 3, NULL, 1,
+  'Otras Cargas-SSGG, control Grupo Electrógeno (Virtual)', 900, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -3054,7 +2967,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002164, 'CH-SIRENIS-165',
   dev.device_id, dev.organization_id,
-  'sirenis1', 1, 3, NULL, 1,
+  'sirenis1', 1, 3, NULL, NULL,
   false, 'inactive', false,
   NOW(), NOW()
 FROM dev
@@ -3068,7 +2981,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002165, 'CH-SIRENIS-166',
   dev.device_id, dev.organization_id,
-  'Roof Top 1 Steak House', 1, 3, NULL, 1,
+  'Roof Top 1 Steak House', 1, 3, NULL, NULL,
   false, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -3082,7 +2995,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002166, 'CH-SIRENIS-167',
   dev.device_id, dev.organization_id,
-  'Roof Top 2 Steak House', 2, 3, NULL, 1,
+  'Roof Top 2 Steak House', 2, 3, NULL, NULL,
   false, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -3096,7 +3009,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002167, 'CH-SIRENIS-168',
   dev.device_id, dev.organization_id,
-  'Roof Top 3 Steak House', 3, 3, NULL, 1,
+  'Roof Top 3 Steak House', 3, 3, NULL, NULL,
   false, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -3110,7 +3023,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002168, 'CH-SIRENIS-169',
   dev.device_id, dev.organization_id,
-  'Cámara de Refrigeración Steak House', 4, 3, NULL, 1,
+  'Cámara de Refrigeración Steak House', 4, 3, NULL, NULL,
   false, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -3124,7 +3037,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002169, 'CH-SIRENIS-170',
   dev.device_id, dev.organization_id,
-  'Cocina, Restaurant y Bar Steak House', 5, 3, NULL, 1,
+  'Cocina, Restaurant y Bar Steak House', 5, 3, NULL, NULL,
   false, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -3138,7 +3051,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002170, 'CH-SIRENIS-171',
   dev.device_id, dev.organization_id,
-  'Totalizador Steak House', 6, 3, NULL, 1,
+  'Totalizador Steak House', 6, 3, NULL, NULL,
   false, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -3152,7 +3065,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002171, 'CH-SIRENIS-172',
   dev.device_id, dev.organization_id,
-  'Otras Cargas-Edificios (03), Bombas Piscina Playa (Virtual)', 900, 3, NULL, 1,
+  'Otras Cargas-Edificios (03), Bombas Piscina Playa (Virtual)', 900, 3, NULL, NULL,
   false, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -3166,7 +3079,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002172, 'CH-SIRENIS-173',
   dev.device_id, dev.organization_id,
-  'sirenis1', 1, 3, NULL, 1,
+  'sirenis1', 1, 3, NULL, NULL,
   false, 'inactive', false,
   NOW(), NOW()
 FROM dev
@@ -3180,7 +3093,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002173, 'CH-SIRENIS-174',
   dev.device_id, dev.organization_id,
-  'Roof Top 1 y 2 Japonés', 1, 3, NULL, 1,
+  'Roof Top 1 y 2 Japonés', 1, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -3194,7 +3107,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002174, 'CH-SIRENIS-175',
   dev.device_id, dev.organization_id,
-  'Roof Top 1 Italiano', 2, 3, NULL, 1,
+  'Roof Top 1 Italiano', 2, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -3208,7 +3121,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002175, 'CH-SIRENIS-176',
   dev.device_id, dev.organization_id,
-  'Roof Top 2 Italiano', 3, 3, NULL, 1,
+  'Roof Top 2 Italiano', 3, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -3222,7 +3135,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002176, 'CH-SIRENIS-177',
   dev.device_id, dev.organization_id,
-  'Equipos de refrigeración', 4, 3, NULL, 1,
+  'Equipos de refrigeración', 4, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -3236,7 +3149,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002177, 'CH-SIRENIS-178',
   dev.device_id, dev.organization_id,
-  'Totalizador Temáticos ', 5, 3, NULL, 1,
+  'Totalizador Temáticos ', 5, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -3250,7 +3163,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002178, 'CH-SIRENIS-179',
   dev.device_id, dev.organization_id,
-  'Totalizador SPA', 6, 3, NULL, 1,
+  'Totalizador SPA', 6, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -3264,7 +3177,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002179, 'CH-SIRENIS-180',
   dev.device_id, dev.organization_id,
-  'Otras Cargas-Cocina Japonés e Italiano, SSGG (Virtual)', 900, 3, NULL, 1,
+  'Otras Cargas-Cocina Japonés e Italiano, SSGG (Virtual)', 900, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -3278,7 +3191,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002180, 'CH-SIRENIS-181',
   dev.device_id, dev.organization_id,
-  'sirenis1', 1, 3, NULL, 1,
+  'sirenis1', 1, 3, NULL, NULL,
   false, 'inactive', false,
   NOW(), NOW()
 FROM dev
@@ -3292,7 +3205,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002181, 'CH-SIRENIS-182',
   dev.device_id, dev.organization_id,
-  'Cocina 1 Macao', 1, 3, NULL, 1,
+  'Cocina 1 Macao', 1, 3, NULL, NULL,
   false, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -3306,7 +3219,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002182, 'CH-SIRENIS-183',
   dev.device_id, dev.organization_id,
-  'Cocina 2 Macao', 2, 3, NULL, 1,
+  'Cocina 2 Macao', 2, 3, NULL, NULL,
   false, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -3320,7 +3233,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002183, 'CH-SIRENIS-184',
   dev.device_id, dev.organization_id,
-  'Discoteca', 3, 3, NULL, 1,
+  'Discoteca', 3, 3, NULL, NULL,
   false, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -3334,7 +3247,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002184, 'CH-SIRENIS-185',
   dev.device_id, dev.organization_id,
-  'Cámara 1', 4, 3, NULL, 1,
+  'Cámara 1', 4, 3, NULL, NULL,
   false, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -3348,7 +3261,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002185, 'CH-SIRENIS-186',
   dev.device_id, dev.organization_id,
-  'Cámara 2', 5, 3, NULL, 1,
+  'Cámara 2', 5, 3, NULL, NULL,
   false, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -3362,7 +3275,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002186, 'CH-SIRENIS-187',
   dev.device_id, dev.organization_id,
-  'Totalizador Cocotal', 6, 3, NULL, 1,
+  'Totalizador Cocotal', 6, 3, NULL, NULL,
   false, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -3376,7 +3289,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002187, 'CH-SIRENIS-188',
   dev.device_id, dev.organization_id,
-  'sirenis1', 1, 3, NULL, 1,
+  'sirenis1', 1, 3, NULL, NULL,
   false, 'inactive', false,
   NOW(), NOW()
 FROM dev
@@ -3390,7 +3303,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002188, 'CH-SIRENIS-189',
   dev.device_id, dev.organization_id,
-  'Otras Cargas-Edificios (01), Comedor Ejecutivo y SSGG(Virtual)', 900, 3, NULL, 1,
+  'Otras Cargas-Edificios (01), Comedor Ejecutivo y SSGG(Virtual)', 900, 3, NULL, NULL,
   false, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -3404,7 +3317,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002189, 'CH-SIRENIS-190',
   dev.device_id, dev.organization_id,
-  'Teatro', 1, 3, NULL, 1,
+  'Teatro', 1, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -3418,7 +3331,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002190, 'CH-SIRENIS-191',
   dev.device_id, dev.organization_id,
-  'Equipos Buffet 1 Macao', 2, 3, NULL, 1,
+  'Equipos Buffet 1 Macao', 2, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -3432,7 +3345,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002191, 'CH-SIRENIS-192',
   dev.device_id, dev.organization_id,
-  'Equipos Buffet 2 Macao', 3, 3, NULL, 1,
+  'Equipos Buffet 2 Macao', 3, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -3446,7 +3359,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002192, 'CH-SIRENIS-193',
   dev.device_id, dev.organization_id,
-  'Oficinas Administrativa', 4, 3, NULL, 1,
+  'Oficinas Administrativa', 4, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -3460,7 +3373,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002193, 'CH-SIRENIS-194',
   dev.device_id, dev.organization_id,
-  'Cámara 3 Principal Hotel', 5, 3, NULL, 1,
+  'Cámara 3 Principal Hotel', 5, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -3474,7 +3387,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002194, 'CH-SIRENIS-195',
   dev.device_id, dev.organization_id,
-  'Cámara Economato, Bar lobby', 6, 3, NULL, 1,
+  'Cámara Economato, Bar lobby', 6, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -3488,7 +3401,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002195, 'CH-SIRENIS-196',
   dev.device_id, dev.organization_id,
-  'sirenis1', 1, 3, NULL, 1,
+  'sirenis1', 1, 3, NULL, NULL,
   false, 'inactive', false,
   NOW(), NOW()
 FROM dev
@@ -3502,7 +3415,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002196, 'CH-SIRENIS-197',
   dev.device_id, dev.organization_id,
-  'Cocina Saona 1', 1, 3, NULL, 1,
+  'Cocina Saona 1', 1, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -3516,7 +3429,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002197, 'CH-SIRENIS-198',
   dev.device_id, dev.organization_id,
-  'Lobby', 2, 3, NULL, 1,
+  'Lobby', 2, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -3530,7 +3443,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002198, 'CH-SIRENIS-199',
   dev.device_id, dev.organization_id,
-  'Manejadora Saona', 3, 3, NULL, 1,
+  'Manejadora Saona', 3, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -3544,7 +3457,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002199, 'CH-SIRENIS-200',
   dev.device_id, dev.organization_id,
-  'Cocina Saona 2', 4, 3, NULL, 1,
+  'Cocina Saona 2', 4, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -3558,7 +3471,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002200, 'CH-SIRENIS-201',
   dev.device_id, dev.organization_id,
-  'Cocina 2', 5, 3, NULL, 1,
+  'Cocina 2', 5, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -3572,7 +3485,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002201, 'CH-SIRENIS-202',
   dev.device_id, dev.organization_id,
-  'Totalizador Tropical', 6, 3, NULL, 1,
+  'Totalizador Tropical', 6, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -3586,7 +3499,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002202, 'CH-SIRENIS-203',
   dev.device_id, dev.organization_id,
-  'Otras Cargas-Edificio 30 (Virtual)', 900, 3, NULL, 1,
+  'Otras Cargas-Edificio 30 (Virtual)', 900, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -3600,7 +3513,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002203, 'CH-SIRENIS-204',
   dev.device_id, dev.organization_id,
-  'sirenis1', 1, 3, NULL, 1,
+  'sirenis1', 1, 3, NULL, NULL,
   false, 'inactive', false,
   NOW(), NOW()
 FROM dev
@@ -3614,7 +3527,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002204, 'CH-SIRENIS-205',
   dev.device_id, dev.organization_id,
-  'Cocina 3', 1, 3, NULL, 1,
+  'Cocina 3', 1, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -3628,7 +3541,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002205, 'CH-SIRENIS-206',
   dev.device_id, dev.organization_id,
-  'Restaurante Rodizio', 2, 3, NULL, 1,
+  'Restaurante Rodizio', 2, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -3642,7 +3555,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002206, 'CH-SIRENIS-207',
   dev.device_id, dev.organization_id,
-  'Bufet Saona', 3, 3, NULL, 1,
+  'Bufet Saona', 3, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -3656,7 +3569,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002207, 'CH-SIRENIS-208',
   dev.device_id, dev.organization_id,
-  'Cámara de frio (Sótano)', 4, 3, NULL, 1,
+  'Cámara de frio (Sótano)', 4, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -3670,7 +3583,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002208, 'CH-SIRENIS-209',
   dev.device_id, dev.organization_id,
-  'Alimentación Saona', 5, 3, NULL, 1,
+  'Alimentación Saona', 5, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -3684,7 +3597,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002209, 'CH-SIRENIS-210',
   dev.device_id, dev.organization_id,
-  'Alimentación Exterior', 6, 3, NULL, 1,
+  'Alimentación Exterior', 6, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -3698,7 +3611,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002210, 'CH-SIRENIS-211',
   dev.device_id, dev.organization_id,
-  'sirenis1', 1, 3, NULL, 1,
+  'sirenis1', 1, 3, NULL, NULL,
   false, 'inactive', false,
   NOW(), NOW()
 FROM dev
@@ -3712,7 +3625,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002211, 'CH-SIRENIS-212',
   dev.device_id, dev.organization_id,
-  'Manejadora 1  y 2 Restaurante Macao', 1, 3, NULL, 1,
+  'Manejadora 1  y 2 Restaurante Macao', 1, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -3726,7 +3639,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002212, 'CH-SIRENIS-213',
   dev.device_id, dev.organization_id,
-  'Bar lobby', 2, 3, NULL, 1,
+  'Bar lobby', 2, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -3740,7 +3653,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002213, 'CH-SIRENIS-214',
   dev.device_id, dev.organization_id,
-  'Cámara de frio Economato', 3, 3, NULL, 1,
+  'Cámara de frio Economato', 3, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -3754,7 +3667,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002214, 'CH-SIRENIS-215',
   dev.device_id, dev.organization_id,
-  'Manejadora 4 y 5 Buffet Macao', 4, 3, NULL, 1,
+  'Manejadora 4 y 5 Buffet Macao', 4, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -3768,7 +3681,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002215, 'CH-SIRENIS-216',
   dev.device_id, dev.organization_id,
-  'Bomba de Recirculación Chillers', 5, 3, NULL, 1,
+  'Bomba de Recirculación Chillers', 5, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -3782,7 +3695,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002216, 'CH-SIRENIS-217',
   dev.device_id, dev.organization_id,
-  'Manejadora 3 Restaurante Frances', 6, 3, NULL, 1,
+  'Manejadora 3 Restaurante Frances', 6, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -3796,7 +3709,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002217, 'CH-SIRENIS-218',
   dev.device_id, dev.organization_id,
-  'Totalizador Economato y Bar Lobby', 900, 3, NULL, 1,
+  'Totalizador Economato y Bar Lobby', 900, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -3810,7 +3723,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002218, 'CH-SIRENIS-219',
   dev.device_id, dev.organization_id,
-  'sirenis1', 1, 3, NULL, 1,
+  'sirenis1', 1, 3, NULL, NULL,
   false, 'inactive', false,
   NOW(), NOW()
 FROM dev
@@ -3824,7 +3737,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002219, 'CH-SIRENIS-220',
   dev.device_id, dev.organization_id,
-  'TOTALIZADOR TABLERO 3 CHILLERS (480V)', 1, 3, NULL, 1,
+  'TOTALIZADOR TABLERO 3 CHILLERS (480V)', 1, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -3838,7 +3751,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002220, 'CH-SIRENIS-221',
   dev.device_id, dev.organization_id,
-  'Chiller 1', 2, 3, NULL, 1,
+  'Chiller 1', 2, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -3852,7 +3765,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002221, 'CH-SIRENIS-222',
   dev.device_id, dev.organization_id,
-  'Chiller 3', 3, 3, NULL, 1,
+  'Chiller 3', 3, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -3866,7 +3779,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002222, 'CH-SIRENIS-223',
   dev.device_id, dev.organization_id,
-  'TOTALIZADOR TABLERO 5 CHILLERS (480V)', 4, 3, NULL, 1,
+  'TOTALIZADOR TABLERO 5 CHILLERS (480V)', 4, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -3880,7 +3793,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002223, 'CH-SIRENIS-224',
   dev.device_id, dev.organization_id,
-  'Chiller 4', 5, 3, NULL, 1,
+  'Chiller 4', 5, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -3894,7 +3807,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002224, 'CH-SIRENIS-225',
   dev.device_id, dev.organization_id,
-  'Osmosis y Bombas recirculación agua helada', 6, 3, NULL, 1,
+  'Osmosis y Bombas recirculación agua helada', 6, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -3908,7 +3821,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002225, 'CH-SIRENIS-226',
   dev.device_id, dev.organization_id,
-  'Otras Cargas-Torres de enfriamiento, bombas Chillers (Virtual)', 900, 3, NULL, 1,
+  'Otras Cargas-Torres de enfriamiento, bombas Chillers (Virtual)', 900, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -3922,7 +3835,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002226, 'CH-SIRENIS-227',
   dev.device_id, dev.organization_id,
-  'sirenis1', 1, 3, NULL, 1,
+  'sirenis1', 1, 3, NULL, NULL,
   false, 'inactive', false,
   NOW(), NOW()
 FROM dev
@@ -3936,7 +3849,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002227, 'CH-SIRENIS-228',
   dev.device_id, dev.organization_id,
-  'Otras Cargas Hotel: Edificios, etc. (Virtual)', 900, 3, NULL, 1,
+  'Otras Cargas Hotel: Edificios, etc. (Virtual)', 900, 3, NULL, NULL,
   false, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -3950,7 +3863,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002228, 'CH-SIRENIS-229',
   dev.device_id, dev.organization_id,
-  'Sub Total Cargas en Medición (Virtual)', 901, 3, NULL, 1,
+  'Sub Total Cargas en Medición (Virtual)', 901, 3, NULL, NULL,
   false, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -3964,7 +3877,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002229, 'CH-SIRENIS-230',
   dev.device_id, dev.organization_id,
-  'Totalizador Sirenis Punta Cana', 257, 3, NULL, 1,
+  'Totalizador Sirenis Punta Cana', 257, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -3978,7 +3891,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002230, 'CH-SIRENIS-231',
   dev.device_id, dev.organization_id,
-  'Totalizador MENOS Parque acuático (V)', 902, 3, NULL, 1,
+  'Totalizador MENOS Parque acuático (V)', 902, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -3992,7 +3905,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002231, 'CH-SIRENIS-232',
   dev.device_id, dev.organization_id,
-  'Corriente XAAC1', 1, NULL, NULL, 1,
+  'Corriente XAAC1', 1, NULL, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -4006,7 +3919,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002232, 'CH-SIRENIS-233',
   dev.device_id, dev.organization_id,
-  'VFD XAAC1', 1, NULL, NULL, 4,
+  'VFD XAAC1', 1, NULL, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -4020,7 +3933,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002233, 'CH-SIRENIS-234',
   dev.device_id, dev.organization_id,
-  'PID Setpoint XAAC1', 2, 0, NULL, 4,
+  'PID Setpoint XAAC1', 2, 0, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -4034,7 +3947,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002234, 'CH-SIRENIS-235',
   dev.device_id, dev.organization_id,
-  'Frecuancia - XAAC1', 3, 0, NULL, 4,
+  'Frecuancia - XAAC1', 3, 0, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -4048,7 +3961,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002235, 'CH-SIRENIS-236',
   dev.device_id, dev.organization_id,
-  'Corriente XAAC2', 1, NULL, NULL, 1,
+  'Corriente XAAC2', 1, NULL, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -4062,7 +3975,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002236, 'CH-SIRENIS-237',
   dev.device_id, dev.organization_id,
-  'VFD XAAC2', 1, NULL, NULL, 4,
+  'VFD XAAC2', 1, NULL, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -4076,7 +3989,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002237, 'CH-SIRENIS-238',
   dev.device_id, dev.organization_id,
-  'PID Setpoint XAAC2', 2, 0, NULL, 4,
+  'PID Setpoint XAAC2', 2, 0, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -4090,7 +4003,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002238, 'CH-SIRENIS-239',
   dev.device_id, dev.organization_id,
-  'Frecuencia - XAAC2', 3, 0, NULL, 4,
+  'Frecuencia - XAAC2', 3, 0, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -4104,7 +4017,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002239, 'CH-SIRENIS-240',
   dev.device_id, dev.organization_id,
-  'Corriente LOBBY', 1, NULL, NULL, 1,
+  'Corriente LOBBY', 1, NULL, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -4118,7 +4031,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002240, 'CH-SIRENIS-241',
   dev.device_id, dev.organization_id,
-  'VFD Lobby', 1, NULL, NULL, 4,
+  'VFD Lobby', 1, NULL, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -4132,7 +4045,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002241, 'CH-SIRENIS-242',
   dev.device_id, dev.organization_id,
-  'PID Setpoint LOBBY', 2, 0, NULL, 4,
+  'PID Setpoint LOBBY', 2, 0, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -4146,7 +4059,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002242, 'CH-SIRENIS-243',
   dev.device_id, dev.organization_id,
-  'Frecuencia - Lobby', 3, 0, NULL, 4,
+  'Frecuencia - Lobby', 3, 0, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -4160,7 +4073,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002243, 'CH-SIRENIS-244',
   dev.device_id, dev.organization_id,
-  'xx', 99, NULL, NULL, 4,
+  'xx', 99, NULL, NULL, NULL,
   true, 'inactive', false,
   NOW(), NOW()
 FROM dev
@@ -4174,7 +4087,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002244, 'CH-SIRENIS-245',
   dev.device_id, dev.organization_id,
-  'BTU XACC-1', 1, 0, NULL, 4,
+  'BTU XACC-1', 1, 0, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -4188,7 +4101,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002245, 'CH-SIRENIS-246',
   dev.device_id, dev.organization_id,
-  'BTU XACC-2', 2, 0, NULL, 4,
+  'BTU XACC-2', 2, 0, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -4202,7 +4115,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002246, 'CH-SIRENIS-247',
   dev.device_id, dev.organization_id,
-  'BTU Lobby-1', 3, 0, NULL, 4,
+  'BTU Lobby-1', 3, 0, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -4216,7 +4129,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002247, 'CH-SIRENIS-248',
   dev.device_id, dev.organization_id,
-  'BTU Lobby-2', 4, 0, NULL, 4,
+  'BTU Lobby-2', 4, 0, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -4230,7 +4143,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002248, 'CH-SIRENIS-249',
   dev.device_id, dev.organization_id,
-  'BTU Tematicos', 5, 0, NULL, 4,
+  'BTU Tematicos', 5, 0, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -4244,7 +4157,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002249, 'CH-SIRENIS-250',
   dev.device_id, dev.organization_id,
-  'UMA Lobby', 1, 3, NULL, 1,
+  'UMA Lobby', 1, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -4258,7 +4171,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002250, 'CH-SIRENIS-251',
   dev.device_id, dev.organization_id,
-  'Lobby Bar 1', 2, 3, NULL, 1,
+  'Lobby Bar 1', 2, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -4272,7 +4185,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002251, 'CH-SIRENIS-252',
   dev.device_id, dev.organization_id,
-  'Calentadora de Lavalozas', 3, 3, NULL, 1,
+  'Calentadora de Lavalozas', 3, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -4286,7 +4199,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002252, 'CH-SIRENIS-253',
   dev.device_id, dev.organization_id,
-  'Front Desk 1', 4, 3, NULL, 1,
+  'Front Desk 1', 4, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -4300,7 +4213,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002253, 'CH-SIRENIS-254',
   dev.device_id, dev.organization_id,
-  'Front Desk 2', 5, 3, NULL, 1,
+  'Front Desk 2', 5, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -4314,7 +4227,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002254, 'CH-SIRENIS-255',
   dev.device_id, dev.organization_id,
-  'Luces zona exterior', 6, 3, NULL, 1,
+  'Luces zona exterior', 6, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -4328,7 +4241,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002255, 'CH-SIRENIS-256',
   dev.device_id, dev.organization_id,
-  'Torre de Enfriamiento', 257, 3, NULL, 1,
+  'Torre de Enfriamiento', 257, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -4342,7 +4255,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002256, 'CH-SIRENIS-257',
   dev.device_id, dev.organization_id,
-  'Toma corrientes', 1, 3, NULL, 1,
+  'Toma corrientes', 1, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -4356,7 +4269,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002257, 'CH-SIRENIS-258',
   dev.device_id, dev.organization_id,
-  'Cuarto frio 3', 2, 3, NULL, 1,
+  'Cuarto frio 3', 2, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -4370,7 +4283,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002258, 'CH-SIRENIS-259',
   dev.device_id, dev.organization_id,
-  'Horno', 3, 3, NULL, 1,
+  'Horno', 3, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -4384,7 +4297,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002259, 'CH-SIRENIS-260',
   dev.device_id, dev.organization_id,
-  'Extractor 1', 4, 3, NULL, 1,
+  'Extractor 1', 4, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -4398,7 +4311,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002260, 'CH-SIRENIS-261',
   dev.device_id, dev.organization_id,
-  'Rebanadora', 5, 3, NULL, 1,
+  'Rebanadora', 5, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -4412,7 +4325,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002261, 'CH-SIRENIS-262',
   dev.device_id, dev.organization_id,
-  'Luz Cuarto Frio pescados', 6, 3, NULL, 1,
+  'Luz Cuarto Frio pescados', 6, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -4426,7 +4339,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002262, 'CH-SIRENIS-263',
   dev.device_id, dev.organization_id,
-  'Otras Cargas Cocina 2 (V)', 900, 3, NULL, 1,
+  'Otras Cargas Cocina 2 (V)', 900, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -4440,7 +4353,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002263, 'CH-SIRENIS-264',
   dev.device_id, dev.organization_id,
-  'Otras Cargas (V)', 900, 3, NULL, 1,
+  'Otras Cargas (V)', 900, 3, NULL, NULL,
   false, 'inactive', false,
   NOW(), NOW()
 FROM dev
@@ -4454,7 +4367,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002264, 'CH-SIRENIS-265',
   dev.device_id, dev.organization_id,
-  'IG Casa Alma', 1, 3, NULL, 1,
+  'IG Casa Alma', 1, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -4468,7 +4381,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002265, 'CH-SIRENIS-266',
   dev.device_id, dev.organization_id,
-  'IG Cocina', 2, 3, NULL, 1,
+  'IG Cocina', 2, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -4482,7 +4395,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002266, 'CH-SIRENIS-267',
   dev.device_id, dev.organization_id,
-  'HVAC + Luces y Contactos', 3, 3, NULL, 1,
+  'HVAC + Luces y Contactos', 3, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -4496,7 +4409,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002267, 'CH-SIRENIS-268',
   dev.device_id, dev.organization_id,
-  'Cuarto de Bombas', 4, 3, NULL, 1,
+  'Cuarto de Bombas', 4, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -4510,7 +4423,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002268, 'CH-SIRENIS-269',
   dev.device_id, dev.organization_id,
-  'Bancada 2', 5, 3, NULL, 1,
+  'Bancada 2', 5, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -4524,7 +4437,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002269, 'CH-SIRENIS-270',
   dev.device_id, dev.organization_id,
-  'Iluminacion y Tomacorrientes', 6, 3, NULL, 1,
+  'Iluminacion y Tomacorrientes', 6, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -4538,7 +4451,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002270, 'CH-SIRENIS-271',
   dev.device_id, dev.organization_id,
-  'IG SPA', 1, 3, NULL, 1,
+  'IG SPA', 1, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -4552,7 +4465,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002271, 'CH-SIRENIS-272',
   dev.device_id, dev.organization_id,
-  'Clima 3', 2, 3, NULL, 1,
+  'Clima 3', 2, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -4566,7 +4479,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002272, 'CH-SIRENIS-273',
   dev.device_id, dev.organization_id,
-  'Clima 2', 3, 3, NULL, 1,
+  'Clima 2', 3, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -4580,7 +4493,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002273, 'CH-SIRENIS-274',
   dev.device_id, dev.organization_id,
-  'Clima 1', 4, 3, NULL, 1,
+  'Clima 1', 4, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -4594,7 +4507,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002274, 'CH-SIRENIS-275',
   dev.device_id, dev.organization_id,
-  'Cargas cocina', 5, 3, NULL, 1,
+  'Cargas cocina', 5, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -4608,7 +4521,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002275, 'CH-SIRENIS-276',
   dev.device_id, dev.organization_id,
-  'Gimnasio', 6, 3, NULL, 1,
+  'Gimnasio', 6, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -4622,7 +4535,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002276, 'CH-SIRENIS-277',
   dev.device_id, dev.organization_id,
-  'Otras cargas SPA (Bombas)', 900, 3, NULL, 1,
+  'Otras cargas SPA (Bombas)', 900, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -4636,7 +4549,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002277, 'CH-SIRENIS-278',
   dev.device_id, dev.organization_id,
-  'Cuartos frios cocinas 1 y 2', 1, 3, NULL, 1,
+  'Cuartos frios cocinas 1 y 2', 1, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -4650,7 +4563,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002278, 'CH-SIRENIS-279',
   dev.device_id, dev.organization_id,
-  'Pastelería (Cuarto frío)', 2, 3, NULL, 1,
+  'Pastelería (Cuarto frío)', 2, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -4664,7 +4577,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002279, 'CH-SIRENIS-280',
   dev.device_id, dev.organization_id,
-  'UMA Comedor 1', 3, 3, NULL, 1,
+  'UMA Comedor 1', 3, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -4678,7 +4591,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002280, 'CH-SIRENIS-281',
   dev.device_id, dev.organization_id,
-  'Sala de conferencias', 4, 3, NULL, 1,
+  'Sala de conferencias', 4, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -4692,7 +4605,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002281, 'CH-SIRENIS-282',
   dev.device_id, dev.organization_id,
-  'UMA Comedor 2', 5, 3, NULL, 1,
+  'UMA Comedor 2', 5, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -4706,7 +4619,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002282, 'CH-SIRENIS-283',
   dev.device_id, dev.organization_id,
-  'Subtotalizador Lobby', 6, 3, NULL, 1,
+  'Subtotalizador Lobby', 6, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -4720,7 +4633,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002283, 'CH-SIRENIS-284',
   dev.device_id, dev.organization_id,
-  'Extractor 1', 1, 3, NULL, 1,
+  'Extractor 1', 1, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -4734,7 +4647,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002284, 'CH-SIRENIS-285',
   dev.device_id, dev.organization_id,
-  'Horno cocina 1', 2, 3, NULL, 1,
+  'Horno cocina 1', 2, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -4748,7 +4661,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002285, 'CH-SIRENIS-286',
   dev.device_id, dev.organization_id,
-  'Lavaloza 1', 3, 3, NULL, 1,
+  'Lavaloza 1', 3, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -4762,7 +4675,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002286, 'CH-SIRENIS-287',
   dev.device_id, dev.organization_id,
-  'Lavaloza 2', 4, 3, NULL, 1,
+  'Lavaloza 2', 4, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -4776,7 +4689,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002287, 'CH-SIRENIS-288',
   dev.device_id, dev.organization_id,
-  'Extractor 2', 5, 3, NULL, 1,
+  'Extractor 2', 5, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -4790,7 +4703,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002288, 'CH-SIRENIS-289',
   dev.device_id, dev.organization_id,
-  'Tomaccorientes - máquinas cocinas', 6, 3, NULL, 1,
+  'Tomaccorientes - máquinas cocinas', 6, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -4804,7 +4717,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002289, 'CH-SIRENIS-290',
   dev.device_id, dev.organization_id,
-  'Otras cargas cocina 1 (V)', 900, 3, NULL, 1,
+  'Otras cargas cocina 1 (V)', 900, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -4818,7 +4731,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002290, 'CH-SIRENIS-291',
   dev.device_id, dev.organization_id,
-  'IG Chillers 2-3-4 + Bombas', 1, 3, NULL, 1,
+  'IG Chillers 2-3-4 + Bombas', 1, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -4832,7 +4745,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002291, 'CH-SIRENIS-292',
   dev.device_id, dev.organization_id,
-  'Chiller 2', 2, 3, NULL, 1,
+  'Chiller 2', 2, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -4846,7 +4759,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002292, 'CH-SIRENIS-293',
   dev.device_id, dev.organization_id,
-  'Chiller 3', 3, 3, NULL, 1,
+  'Chiller 3', 3, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -4860,7 +4773,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002293, 'CH-SIRENIS-294',
   dev.device_id, dev.organization_id,
-  'Chiller 4', 4, 3, NULL, 1,
+  'Chiller 4', 4, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -4874,7 +4787,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002294, 'CH-SIRENIS-295',
   dev.device_id, dev.organization_id,
-  'IG Chiller 1 + Bombas', 5, 3, NULL, 1,
+  'IG Chiller 1 + Bombas', 5, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -4888,7 +4801,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002295, 'CH-SIRENIS-296',
   dev.device_id, dev.organization_id,
-  'IG Bombas 3', 6, 3, NULL, 1,
+  'IG Bombas 3', 6, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -4902,7 +4815,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002296, 'CH-SIRENIS-297',
   dev.device_id, dev.organization_id,
-  'Bombas Chillers (V)', 900, 3, NULL, 1,
+  'Bombas Chillers (V)', 900, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -4916,7 +4829,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002297, 'CH-SIRENIS-298',
   dev.device_id, dev.organization_id,
-  'Totalizador Chillers Cuarto de Máquinas', 901, 3, NULL, 1,
+  'Totalizador Chillers Cuarto de Máquinas', 901, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -4930,7 +4843,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002298, 'CH-SIRENIS-299',
   dev.device_id, dev.organization_id,
-  'IG Cocina 2', 1, 3, NULL, 1,
+  'IG Cocina 2', 1, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -4944,7 +4857,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002299, 'CH-SIRENIS-300',
   dev.device_id, dev.organization_id,
-  'IG Cocina 1', 2, 3, NULL, 1,
+  'IG Cocina 1', 2, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -4958,7 +4871,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002300, 'CH-SIRENIS-301',
   dev.device_id, dev.organization_id,
-  'Comedor 2', 3, 3, NULL, 1,
+  'Comedor 2', 3, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -4972,7 +4885,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002301, 'CH-SIRENIS-302',
   dev.device_id, dev.organization_id,
-  'Comedor 1', 4, 3, NULL, 1,
+  'Comedor 1', 4, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -4986,7 +4899,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002302, 'CH-SIRENIS-303',
   dev.device_id, dev.organization_id,
-  'Luces Lobby + Comedor personal', 5, 3, NULL, 1,
+  'Luces Lobby + Comedor personal', 5, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -5000,7 +4913,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002303, 'CH-SIRENIS-304',
   dev.device_id, dev.organization_id,
-  'Carmaras Frio Sotano', 6, 3, NULL, 1,
+  'Carmaras Frio Sotano', 6, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -5014,7 +4927,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002304, 'CH-SIRENIS-305',
   dev.device_id, dev.organization_id,
-  'Otras cargas Lobby (V)', 900, 3, NULL, 1,
+  'Otras cargas Lobby (V)', 900, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -5028,7 +4941,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002305, 'CH-SIRENIS-306',
   dev.device_id, dev.organization_id,
-  'Totalizador Lobby (V)', 901, 3, NULL, 1,
+  'Totalizador Lobby (V)', 901, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -5042,7 +4955,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002306, 'CH-SIRENIS-307',
   dev.device_id, dev.organization_id,
-  'Totalizador Sirenis Riviera Maya - legacy', 1, 3, NULL, 1,
+  'Totalizador Sirenis Riviera Maya - legacy', 1, 3, NULL, NULL,
   false, 'inactive', false,
   NOW(), NOW()
 FROM dev
@@ -5056,7 +4969,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002307, 'CH-SIRENIS-308',
   dev.device_id, dev.organization_id,
-  'Totalizador', 257, 3, NULL, 1,
+  'Totalizador', 257, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -5070,7 +4983,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002308, 'CH-SIRENIS-309',
   dev.device_id, dev.organization_id,
-  'Totalizador MENOS SPA (V)', 900, 3, NULL, 1,
+  'Totalizador MENOS SPA (V)', 900, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -5084,7 +4997,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002309, 'CH-SIRENIS-310',
   dev.device_id, dev.organization_id,
-  'sirenis1', 1, 3, NULL, 1,
+  'sirenis1', 1, 3, NULL, NULL,
   false, 'inactive', false,
   NOW(), NOW()
 FROM dev
@@ -5098,7 +5011,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002310, 'CH-SIRENIS-311',
   dev.device_id, dev.organization_id,
-  'Roof Top 1 Restaurante', 1, 3, NULL, 1,
+  'Roof Top 1 Restaurante', 1, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -5112,7 +5025,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002311, 'CH-SIRENIS-312',
   dev.device_id, dev.organization_id,
-  'Roof Top 2 Restaurante', 2, 3, NULL, 1,
+  'Roof Top 2 Restaurante', 2, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -5126,7 +5039,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002312, 'CH-SIRENIS-313',
   dev.device_id, dev.organization_id,
-  'Club Vacaciones ', 3, 3, NULL, 1,
+  'Club Vacaciones ', 3, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -5140,7 +5053,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002313, 'CH-SIRENIS-314',
   dev.device_id, dev.organization_id,
-  'Cámara Frio', 5, 3, NULL, 1,
+  'Cámara Frio', 5, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -5154,7 +5067,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002314, 'CH-SIRENIS-315',
   dev.device_id, dev.organization_id,
-  'Cocina, Restaurante y Bar', 4, 3, NULL, 1,
+  'Cocina, Restaurante y Bar', 4, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -5168,7 +5081,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002315, 'CH-SIRENIS-316',
   dev.device_id, dev.organization_id,
-  'Roof Top 3 Salom Premium y Oficinas ', 6, 3, NULL, 1,
+  'Roof Top 3 Salom Premium y Oficinas ', 6, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -5182,7 +5095,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002316, 'CH-SIRENIS-317',
   dev.device_id, dev.organization_id,
-  'Totalizador Premium', 900, 3, NULL, 1,
+  'Totalizador Premium', 900, 3, NULL, NULL,
   true, 'active', true,
   NOW(), NOW()
 FROM dev
@@ -5196,7 +5109,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002317, 'CH-SIRENIS-318',
   dev.device_id, dev.organization_id,
-  'Sirena', 1, 0, NULL, 3,
+  'Sirena', 1, 0, NULL, NULL,
   true, 'inactive', false,
   NOW(), NOW()
 FROM dev
@@ -5210,7 +5123,7 @@ INSERT INTO channels
 SELECT
   gen_random_uuid(), 9002318, 'CH-SIRENIS-319',
   dev.device_id, dev.organization_id,
-  'Temperatura', 3, NULL, NULL, 6,
+  'Temperatura', 3, NULL, NULL, NULL,
   true, 'inactive', false,
   NOW(), NOW()
 FROM dev
