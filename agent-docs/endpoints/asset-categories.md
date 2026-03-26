@@ -2,6 +2,7 @@
 
 > **Módulo**: `src/modules/asset-categories/`
 > **Base URL**: `/api/v1/asset-categories`
+> **Última actualización**: 2026-03-26
 
 ## Descripción
 

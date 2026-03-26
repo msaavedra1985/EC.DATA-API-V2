@@ -6,7 +6,8 @@
  *   2. Países
  *   3. Telemetría (measurement_types + variables)
  *   4. Device metadata (types, brands, models, networks, servers, licenses, validity_periods)
- *   5. Usuario admin
+ *   5. Unit scales
+ *   6. Usuario admin
  *
  * Comportamiento:
  *   - Fail-fast: si cualquier seeder falla, el proceso aborta con error (no continúa en estado parcial)
@@ -23,6 +24,7 @@ import { seedRoles } from './roles.seeder.js';
 import { seedCountries } from './countries.seeder.js';
 import seedTelemetry from './telemetry.seeder.js';
 import { seedDeviceMetadata } from './device-metadata.seeder.js';
+import { seedUnitScales } from './unit-scales.seeder.js';
 import { seedAdminUser } from './admin-user.seeder.js';
 import Role from '../../modules/auth/models/Role.js';
 import Country from '../../modules/countries/models/Country.js';
@@ -78,7 +80,10 @@ export const runCoreSeed = async () => {
     // 4. Device metadata
     const deviceMetadata = await seedDeviceMetadata();
 
-    // 5. Usuario admin
+    // 5. Unit scales
+    await seedUnitScales(sequelize);
+
+    // 6. Usuario admin
     const adminUser = await seedAdminUser();
 
     // Validación post-seed: verifica que la data crítica está realmente en la DB

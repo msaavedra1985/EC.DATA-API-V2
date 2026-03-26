@@ -15,9 +15,13 @@ const chartTypeEnum = z.enum(['column', 'spline', 'line', 'area', 'bar', 'pie', 
 const aggregationTypeEnum = z.enum(['sum', 'avg', 'min', 'max', 'count', 'last', 'first', 'none']);
 
 /**
- * Esquema para crear variable
+ * Esquema para crear variable — todos los campos configurables
  */
 const createVariableSchema = z.object({
+    code: z.string()
+        .min(1, 'code es requerido')
+        .max(50)
+        .regex(/^[a-z0-9_]+$/, 'code debe ser snake_case (solo letras minúsculas, números y guiones bajos)'),
     measurementTypeId: z.number().int().positive('measurementTypeId debe ser un entero positivo'),
     columnName: z.string().min(1, 'columnName es requerido').max(50),
     unit: z.string().max(20).optional().nullable(),
@@ -32,6 +36,9 @@ const createVariableSchema = z.object({
     showInAnalysis: z.boolean().optional().default(true),
     isRealtime: z.boolean().optional().default(false),
     isDefault: z.boolean().optional().default(false),
+    decimalPlaces: z.number().int().min(0).max(10).optional().default(2),
+    icon: z.string().max(50).optional().nullable(),
+    color: z.string().max(7).regex(/^#[0-9A-Fa-f]{6}$/, 'color debe ser un hex válido (ej: #3B82F6)').optional().nullable(),
     isActive: z.boolean().optional().default(true),
     translations: z.record(z.string(), z.object({
         name: z.string().min(1, 'name es requerido').max(100),
@@ -40,7 +47,7 @@ const createVariableSchema = z.object({
 });
 
 /**
- * Esquema para actualizar variable
+ * Esquema para actualizar variable — todos los campos son opcionales
  */
 const updateVariableSchema = z.object({
     measurementTypeId: z.number().int().positive().optional(),
@@ -58,6 +65,9 @@ const updateVariableSchema = z.object({
     isRealtime: z.boolean().optional(),
     isDefault: z.boolean().optional(),
     isActive: z.boolean().optional(),
+    decimalPlaces: z.number().int().min(0).max(10).optional().nullable(),
+    icon: z.string().max(50).optional().nullable(),
+    color: z.string().max(7).regex(/^#[0-9A-Fa-f]{6}$/, 'color debe ser un hex válido (ej: #3B82F6)').optional().nullable(),
     translations: z.record(z.string(), z.object({
         name: z.string().min(1).max(100),
         description: z.string().max(255).optional().nullable()
@@ -66,20 +76,23 @@ const updateVariableSchema = z.object({
 
 /**
  * Esquema para filtros de listado
+ * 
+ * includeInactive: cuando es true, devuelve activas e inactivas (útil para admin)
  */
 const listFiltersSchema = z.object({
     lang: z.string().max(5).optional().default('es'),
     search: z.string().max(100).optional(),
     measurementTypeId: z.coerce.number().int().positive().optional(),
+    includeInactive: z.coerce.boolean().optional().default(false),
+    withTranslations: z.coerce.boolean().optional().default(false),
     isRealtime: z.coerce.boolean().optional(),
     isDefault: z.coerce.boolean().optional(),
-    isActive: z.coerce.boolean().optional(),
     showInBilling: z.coerce.boolean().optional(),
     showInAnalysis: z.coerce.boolean().optional(),
     chartType: chartTypeEnum.optional(),
     aggregationType: aggregationTypeEnum.optional(),
     page: z.coerce.number().int().min(1).optional(),
-    limit: z.coerce.number().int().min(1).max(100).optional().default(50),
+    limit: z.coerce.number().int().min(1).max(200).optional().default(100),
     offset: z.coerce.number().int().min(0).optional().default(0),
     sortBy: z.enum(['id', 'displayOrder', 'columnName', 'name', 'measurementTypeId', 'createdAt', 'updatedAt']).optional().default('displayOrder'),
     sortOrder: z.enum(['ASC', 'DESC', 'asc', 'desc']).optional().default('ASC')
@@ -88,11 +101,12 @@ const listFiltersSchema = z.object({
 /**
  * Lista variables con filtros y paginación
  * 
+ * Por defecto devuelve solo las activas. Con includeInactive=true devuelve todas.
+ * 
  * @param {Object} filters - Filtros de búsqueda
  * @returns {Promise<Object>} { items, total, page, limit }
  */
 export const listVariables = async (filters = {}) => {
-    // Validar filtros
     const validation = listFiltersSchema.safeParse(filters);
     
     if (!validation.success) {
@@ -102,7 +116,16 @@ export const listVariables = async (filters = {}) => {
         throw error;
     }
 
-    const validatedData = { ...validation.data };
+    const { includeInactive, ...restData } = validation.data;
+
+    const validatedData = { ...restData };
+
+    // Solo filtrar por isActive si no se pidió incluir inactivas
+    if (!includeInactive) {
+        validatedData.isActive = true;
+    }
+    // Si includeInactive=true, no se agrega filtro de isActive → devuelve todas
+
     if (validatedData.page !== undefined && validatedData.page >= 1) {
         validatedData.offset = (validatedData.page - 1) * validatedData.limit;
     }
@@ -118,10 +141,10 @@ export const listVariables = async (filters = {}) => {
 };
 
 /**
- * Obtiene una variable por ID
+ * Obtiene una variable por ID con todas las traducciones
  * 
  * @param {number} id - ID de la variable
- * @param {string} lang - Código de idioma
+ * @param {string} lang - Código de idioma para la traducción principal
  * @returns {Promise<Object>} Variable con traducciones
  */
 export const getVariable = async (id, lang = 'es') => {
@@ -150,10 +173,9 @@ export const getVariable = async (id, lang = 'es') => {
  * 
  * @param {Object} data - Datos de la variable
  * @param {Object} context - Contexto de la operación (userId, ip, userAgent)
- * @returns {Promise<Object>} Variable creada
+ * @returns {Promise<Object>} Variable creada con traducciones
  */
 export const createVariable = async (data, context = {}) => {
-    // Validar datos
     const validation = createVariableSchema.safeParse(data);
     
     if (!validation.success) {
@@ -166,14 +188,10 @@ export const createVariable = async (data, context = {}) => {
     const validData = validation.data;
     const { translations, ...variableData } = validData;
 
-    // Verificar que no exista duplicado de column_name en el measurement_type
-    const duplicateExists = await variablesRepository.existsDuplicate(
-        variableData.measurementTypeId,
-        variableData.columnName
-    );
-
-    if (duplicateExists) {
-        const error = new Error(`Ya existe una variable con column_name '${variableData.columnName}' para este tipo de medición`);
+    // Verificar que el code no exista (es único global)
+    const codeExists = await variablesRepository.existsCode(variableData.code);
+    if (codeExists) {
+        const error = new Error(`Ya existe una variable con el code '${variableData.code}'`);
         error.code = 'DUPLICATE_ERROR';
         throw error;
     }
@@ -196,11 +214,14 @@ export const createVariable = async (data, context = {}) => {
         performedBy: context.userId || null,
         changes: { 
             new: { 
-                ...variableData, 
+                code: variableData.code,
+                columnName: variableData.columnName,
+                measurementTypeId: variableData.measurementTypeId,
                 translations: Object.keys(translations) 
             } 
         },
         metadata: {
+            code: variableData.code,
             columnName: variableData.columnName,
             measurementTypeId: variableData.measurementTypeId
         },
@@ -215,13 +236,14 @@ export const createVariable = async (data, context = {}) => {
 /**
  * Actualiza una variable existente
  * 
+ * El campo `code` no es editable — es inmutable una vez creado.
+ * 
  * @param {number} id - ID de la variable
  * @param {Object} data - Datos a actualizar
  * @param {Object} context - Contexto de la operación
- * @returns {Promise<Object>} Variable actualizada
+ * @returns {Promise<Object>} Variable actualizada con traducciones
  */
 export const updateVariable = async (id, data, context = {}) => {
-    // Validar datos
     const validation = updateVariableSchema.safeParse(data);
     
     if (!validation.success) {
@@ -264,6 +286,7 @@ export const updateVariable = async (id, data, context = {}) => {
     // Actualizar variable
     const updatedVariable = await variablesRepository.update(id, updateData, translations || {});
 
+    // Calcular cambios para audit log
     const changes = {};
     for (const [key, value] of Object.entries(updateData)) {
         if (currentVariable[key] !== value) {
@@ -282,6 +305,7 @@ export const updateVariable = async (id, data, context = {}) => {
         performedBy: context.userId || null,
         changes,
         metadata: {
+            code: currentVariable.code,
             columnName: currentVariable.columnName
         },
         ipAddress: context.ip,
@@ -292,14 +316,13 @@ export const updateVariable = async (id, data, context = {}) => {
 };
 
 /**
- * Elimina una variable (soft delete)
+ * Elimina una variable (soft delete — setea is_active = false)
  * 
  * @param {number} id - ID de la variable
  * @param {Object} context - Contexto de la operación
  * @returns {Promise<boolean>} True si se eliminó
  */
 export const deleteVariable = async (id, context = {}) => {
-    // Verificar que existe
     const variable = await variablesRepository.findById(id);
     
     if (!variable) {
@@ -319,6 +342,7 @@ export const deleteVariable = async (id, context = {}) => {
         performedBy: context.userId || null,
         changes: {
             old: { 
+                code: variable.code,
                 columnName: variable.columnName,
                 name: variable.name,
                 isActive: true 
@@ -326,6 +350,7 @@ export const deleteVariable = async (id, context = {}) => {
             new: { isActive: false }
         },
         metadata: {
+            code: variable.code,
             columnName: variable.columnName
         },
         ipAddress: context.ip,

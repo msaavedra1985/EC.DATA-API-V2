@@ -1,10 +1,14 @@
 /**
  * Rutas de Variables de Telemetría
  * 
- * CRUD completo para gestión de variables con filtros,
- * paginación y traducciones multi-idioma.
+ * CRUD completo para gestión del diccionario de variables.
+ * 
+ * Permisos:
+ *   - GET: cualquier usuario autenticado
+ *   - POST / PUT / DELETE: solo system-admin
  */
 import { Router } from 'express';
+import { authenticate, requireRole } from '../../../middleware/auth.js';
 import {
     listVariables,
     getVariable,
@@ -15,276 +19,95 @@ import {
 
 const router = Router();
 
-/**
- * @swagger
- * components:
- *   schemas:
- *     Variable:
- *       type: object
- *       properties:
- *         id:
- *           type: integer
- *           description: ID único de la variable
- *         measurement_type_id:
- *           type: integer
- *           description: ID del tipo de medición
- *         column_name:
- *           type: string
- *           description: Nombre de columna en Cassandra
- *         unit:
- *           type: string
- *           description: Unidad de medida
- *         chart_type:
- *           type: string
- *           enum: [column, spline, line, area, bar, pie, scatter, gauge, none]
- *         axis_name:
- *           type: string
- *         axis_id:
- *           type: string
- *         axis_min:
- *           type: number
- *         axis_function:
- *           type: string
- *         aggregation_type:
- *           type: string
- *           enum: [sum, avg, min, max, count, last, first, none]
- *         display_order:
- *           type: integer
- *         show_in_billing:
- *           type: boolean
- *         show_in_analysis:
- *           type: boolean
- *         is_realtime:
- *           type: boolean
- *         is_default:
- *           type: boolean
- *         is_active:
- *           type: boolean
- *         name:
- *           type: string
- *           description: Nombre traducido
- *         description:
- *           type: string
- *           description: Descripción traducida
- *         measurement_type_name:
- *           type: string
- *           description: Nombre del tipo de medición
- *         translations:
- *           type: object
- *           additionalProperties:
- *             type: object
- *             properties:
- *               name:
- *                 type: string
- *               description:
- *                 type: string
- *     VariableInput:
- *       type: object
- *       required:
- *         - measurementTypeId
- *         - columnName
- *         - translations
- *       properties:
- *         measurementTypeId:
- *           type: integer
- *           description: ID del tipo de medición
- *         columnName:
- *           type: string
- *           maxLength: 50
- *           description: Nombre de columna en Cassandra
- *         unit:
- *           type: string
- *           maxLength: 20
- *         chartType:
- *           type: string
- *           enum: [column, spline, line, area, bar, pie, scatter, gauge, none]
- *           default: spline
- *         axisName:
- *           type: string
- *           maxLength: 50
- *         axisId:
- *           type: string
- *           maxLength: 30
- *         axisMin:
- *           type: number
- *         axisFunction:
- *           type: string
- *           maxLength: 20
- *         aggregationType:
- *           type: string
- *           enum: [sum, avg, min, max, count, last, first, none]
- *           default: none
- *         displayOrder:
- *           type: integer
- *         showInBilling:
- *           type: boolean
- *           default: false
- *         showInAnalysis:
- *           type: boolean
- *           default: true
- *         isRealtime:
- *           type: boolean
- *           default: false
- *         isDefault:
- *           type: boolean
- *           default: false
- *         isActive:
- *           type: boolean
- *           default: true
- *         translations:
- *           type: object
- *           description: Traducciones por idioma (es requerido)
- *           additionalProperties:
- *             type: object
- *             required:
- *               - name
- *             properties:
- *               name:
- *                 type: string
- *                 maxLength: 100
- *               description:
- *                 type: string
- *                 maxLength: 255
- *           example:
- *             es:
- *               name: Energía Activa
- *               description: Energía activa consumida en kWh
- *             en:
- *               name: Active Energy
- *               description: Active energy consumed in kWh
- */
+// ─── Helpers ───────────────────────────────────────────────────────────────
 
 /**
- * @swagger
- * /api/v1/telemetry/variables:
- *   get:
- *     summary: Lista variables con filtros y paginación
- *     description: |
- *       Obtiene la lista de variables de telemetría con soporte para:
- *       - Búsqueda por texto (nombre, descripción, column_name)
- *       - Filtros por tipo de medición, realtime, default, etc.
- *       - Paginación offset-based
- *       - Ordenamiento configurable
- *       
- *       Las traducciones se devuelven según el parámetro `lang`.
- *     tags:
- *       - Telemetry Variables
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: query
- *         name: lang
- *         schema:
- *           type: string
- *           default: es
- *         description: Código de idioma para traducciones
- *       - in: query
- *         name: search
- *         schema:
- *           type: string
- *         description: Búsqueda por nombre, descripción o column_name
- *       - in: query
- *         name: measurementTypeId
- *         schema:
- *           type: integer
- *         description: Filtrar por tipo de medición
- *       - in: query
- *         name: isRealtime
- *         schema:
- *           type: boolean
- *         description: Filtrar variables con soporte realtime
- *       - in: query
- *         name: isDefault
- *         schema:
- *           type: boolean
- *         description: Filtrar variables por defecto
- *       - in: query
- *         name: isActive
- *         schema:
- *           type: boolean
- *           default: true
- *         description: Filtrar por estado activo
- *       - in: query
- *         name: showInBilling
- *         schema:
- *           type: boolean
- *         description: Filtrar por visibilidad en facturación
- *       - in: query
- *         name: showInAnalysis
- *         schema:
- *           type: boolean
- *         description: Filtrar por visibilidad en análisis
- *       - in: query
- *         name: chartType
- *         schema:
- *           type: string
- *           enum: [column, spline, line, area, bar, pie, scatter, gauge, none]
- *         description: Filtrar por tipo de gráfico
- *       - in: query
- *         name: aggregationType
- *         schema:
- *           type: string
- *           enum: [sum, avg, min, max, count, last, first, none]
- *         description: Filtrar por tipo de agregación
- *       - in: query
- *         name: limit
- *         schema:
- *           type: integer
- *           minimum: 1
- *           maximum: 100
- *           default: 50
- *         description: Límite de resultados
- *       - in: query
- *         name: offset
- *         schema:
- *           type: integer
- *           minimum: 0
- *           default: 0
- *         description: Desplazamiento para paginación
- *       - in: query
- *         name: sortBy
- *         schema:
- *           type: string
- *           enum: [id, display_order, column_name, name, measurement_type_id, created_at, updated_at]
- *           default: display_order
- *         description: Campo de ordenamiento
- *       - in: query
- *         name: sortOrder
- *         schema:
- *           type: string
- *           enum: [ASC, DESC]
- *           default: ASC
- *         description: Dirección de ordenamiento
- *     responses:
- *       200:
- *         description: Lista de variables
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 ok:
- *                   type: boolean
- *                   example: true
- *                 data:
- *                   type: array
- *                   items:
- *                     $ref: '#/components/schemas/Variable'
- *                 meta:
- *                   type: object
- *                   properties:
- *                     total:
- *                       type: integer
- *                     page:
- *                       type: integer
- *                     limit:
- *                       type: integer
- *       400:
- *         description: Parámetros de filtrado inválidos
+ * Extrae el contexto de auditoría del request para logAuditAction
  */
-router.get('/', async (req, res) => {
+const getAuditContext = (req) => ({
+    userId: req.user?.id,
+    ip: req.ip || req.connection?.remoteAddress,
+    userAgent: req.headers['user-agent']
+});
+
+/**
+ * Maneja errores de servicio y responde con el código HTTP correspondiente
+ */
+const handleError = (res, error, defaultMessage) => {
+    if (error.code === 'NOT_FOUND') {
+        return res.status(404).json({
+            ok: false,
+            error: { code: 'NOT_FOUND', message: error.message }
+        });
+    }
+    if (error.code === 'VALIDATION_ERROR') {
+        return res.status(400).json({
+            ok: false,
+            error: { code: 'VALIDATION_ERROR', message: error.message, details: error.details }
+        });
+    }
+    if (error.code === 'DUPLICATE_ERROR') {
+        return res.status(409).json({
+            ok: false,
+            error: { code: 'DUPLICATE_ERROR', message: error.message }
+        });
+    }
+    return res.status(500).json({
+        ok: false,
+        error: {
+            code: 'INTERNAL_ERROR',
+            message: defaultMessage,
+            details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        }
+    });
+};
+
+// ─── Endpoints ─────────────────────────────────────────────────────────────
+
+/**
+ * GET /api/v1/telemetry/variables
+ * 
+ * Lista variables con filtros opcionales y paginación.
+ * 
+ * Query params:
+ *   lang             — idioma de traducción (default: 'es')
+ *   include_inactive — incluir inactivas (default: false)
+ *   with_translations — incluir objeto completo de traducciones por idioma (default: false)
+ *   search           — búsqueda por nombre, descripción o column_name
+ *   measurement_type_id — filtrar por tipo de medición
+ *   is_realtime      — filtrar por soporte realtime
+ *   is_default       — filtrar por variable por defecto
+ *   show_in_billing  — filtrar por visibilidad en facturación
+ *   show_in_analysis — filtrar por visibilidad en análisis
+ *   chart_type       — filtrar por tipo de gráfico
+ *   aggregation_type — filtrar por tipo de agregación
+ *   page / limit / offset / sort_by / sort_order
+ */
+router.get('/', authenticate, async (req, res) => {
     try {
-        const result = await listVariables(req.query);
+        const filters = {
+            lang: req.query.lang,
+            includeInactive: req.query.include_inactive,
+            withTranslations: req.query.with_translations,
+            search: req.query.search,
+            measurementTypeId: req.query.measurement_type_id,
+            isRealtime: req.query.is_realtime,
+            isDefault: req.query.is_default,
+            showInBilling: req.query.show_in_billing,
+            showInAnalysis: req.query.show_in_analysis,
+            chartType: req.query.chart_type,
+            aggregationType: req.query.aggregation_type,
+            page: req.query.page,
+            limit: req.query.limit,
+            offset: req.query.offset,
+            sortBy: req.query.sort_by,
+            sortOrder: req.query.sort_order
+        };
+
+        // Eliminar claves undefined para no interferir con defaults de Zod
+        Object.keys(filters).forEach(k => filters[k] === undefined && delete filters[k]);
+
+        const result = await listVariables(filters);
 
         return res.json({
             ok: true,
@@ -297,400 +120,130 @@ router.get('/', async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Variables list error:', error);
-
-        if (error.code === 'VALIDATION_ERROR') {
-            return res.status(400).json({
-                ok: false,
-                error: {
-                    code: 'VALIDATION_ERROR',
-                    message: error.message,
-                    details: error.details
-                }
-            });
-        }
-
-        return res.status(500).json({
-            ok: false,
-            error: {
-                code: 'INTERNAL_ERROR',
-                message: 'Error al listar variables',
-                details: process.env.NODE_ENV === 'development' ? error.message : undefined
-            }
-        });
+        return handleError(res, error, 'Error al listar variables');
     }
 });
 
 /**
- * @swagger
- * /api/v1/telemetry/variables/{id}:
- *   get:
- *     summary: Obtiene una variable por ID
- *     description: Retorna la variable con todas sus traducciones disponibles
- *     tags:
- *       - Telemetry Variables
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: integer
- *         description: ID de la variable
- *       - in: query
- *         name: lang
- *         schema:
- *           type: string
- *           default: es
- *         description: Idioma principal para los campos name y description
- *     responses:
- *       200:
- *         description: Variable encontrada
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 ok:
- *                   type: boolean
- *                 data:
- *                   $ref: '#/components/schemas/Variable'
- *       404:
- *         description: Variable no encontrada
+ * GET /api/v1/telemetry/variables/:id
+ * 
+ * Detalle de una variable con todas las traducciones disponibles.
  */
-router.get('/:id', async (req, res) => {
+router.get('/:id', authenticate, async (req, res) => {
     try {
-        const { id } = req.params;
-        const { lang = 'es' } = req.query;
+        const id = parseInt(req.params.id, 10);
+        const lang = req.query.lang || 'es';
 
-        const variable = await getVariable(parseInt(id, 10), lang);
+        if (isNaN(id)) {
+            return res.status(400).json({
+                ok: false,
+                error: { code: 'VALIDATION_ERROR', message: 'El ID debe ser un número entero' }
+            });
+        }
+
+        const variable = await getVariable(id, lang);
+
+        return res.json({ ok: true, data: variable });
+
+    } catch (error) {
+        return handleError(res, error, 'Error al obtener variable');
+    }
+});
+
+/**
+ * POST /api/v1/telemetry/variables
+ * 
+ * Crea una nueva variable. Requiere rol system-admin.
+ * 
+ * Body (JSON):
+ *   code            — string snake_case único (requerido, inmutable)
+ *   measurementTypeId — integer (requerido)
+ *   columnName      — string (requerido) — columna en Cassandra
+ *   unit            — string
+ *   chartType       — enum: column | spline | line | area | bar | pie | scatter | gauge | none
+ *   axisName        — string
+ *   axisId          — string
+ *   axisMin         — number
+ *   axisFunction    — string
+ *   aggregationType — enum: sum | avg | min | max | count | last | first | none
+ *   displayOrder    — integer
+ *   showInBilling   — boolean (default: false)
+ *   showInAnalysis  — boolean (default: true)
+ *   isRealtime      — boolean (default: false)
+ *   isDefault       — boolean (default: false)
+ *   decimalPlaces   — integer (default: 2)
+ *   icon            — string (nombre de ícono lucide/heroicons)
+ *   color           — string hex (ej: #3B82F6)
+ *   isActive        — boolean (default: true)
+ *   translations    — objeto { es: { name, description }, en: { name, description } }
+ *                     Requiere al menos traducción 'es'
+ */
+router.post('/', authenticate, requireRole(['system-admin']), async (req, res) => {
+    try {
+        const variable = await createVariable(req.body, getAuditContext(req));
+
+        return res.status(201).json({ ok: true, data: variable });
+
+    } catch (error) {
+        return handleError(res, error, 'Error al crear variable');
+    }
+});
+
+/**
+ * PUT /api/v1/telemetry/variables/:id
+ * 
+ * Actualiza una variable existente. Requiere rol system-admin.
+ * 
+ * El campo `code` es inmutable — no se puede editar una vez creado.
+ * Todos los demás campos son opcionales (patch parcial).
+ */
+router.put('/:id', authenticate, requireRole(['system-admin']), async (req, res) => {
+    try {
+        const id = parseInt(req.params.id, 10);
+
+        if (isNaN(id)) {
+            return res.status(400).json({
+                ok: false,
+                error: { code: 'VALIDATION_ERROR', message: 'El ID debe ser un número entero' }
+            });
+        }
+
+        const variable = await updateVariable(id, req.body, getAuditContext(req));
+
+        return res.json({ ok: true, data: variable });
+
+    } catch (error) {
+        return handleError(res, error, 'Error al actualizar variable');
+    }
+});
+
+/**
+ * DELETE /api/v1/telemetry/variables/:id
+ * 
+ * Soft-delete: setea is_active = false. Requiere rol system-admin.
+ * 
+ * Para reactivar una variable usar PUT /:id con { isActive: true }.
+ */
+router.delete('/:id', authenticate, requireRole(['system-admin']), async (req, res) => {
+    try {
+        const id = parseInt(req.params.id, 10);
+
+        if (isNaN(id)) {
+            return res.status(400).json({
+                ok: false,
+                error: { code: 'VALIDATION_ERROR', message: 'El ID debe ser un número entero' }
+            });
+        }
+
+        await deleteVariable(id, getAuditContext(req));
 
         return res.json({
             ok: true,
-            data: variable
+            data: { deleted: true, id }
         });
 
     } catch (error) {
-        console.error('Variable get error:', error);
-
-        if (error.code === 'NOT_FOUND') {
-            return res.status(404).json({
-                ok: false,
-                error: {
-                    code: 'NOT_FOUND',
-                    message: error.message
-                }
-            });
-        }
-
-        return res.status(500).json({
-            ok: false,
-            error: {
-                code: 'INTERNAL_ERROR',
-                message: 'Error al obtener variable',
-                details: process.env.NODE_ENV === 'development' ? error.message : undefined
-            }
-        });
-    }
-});
-
-/**
- * @swagger
- * /api/v1/telemetry/variables:
- *   post:
- *     summary: Crea una nueva variable
- *     description: |
- *       Crea una nueva variable de telemetría con traducciones.
- *       Se requiere al menos la traducción en español (es).
- *     tags:
- *       - Telemetry Variables
- *     security:
- *       - bearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             $ref: '#/components/schemas/VariableInput'
- *           example:
- *             measurementTypeId: 1
- *             columnName: "e"
- *             unit: "kWh"
- *             chartType: "column"
- *             aggregationType: "sum"
- *             isRealtime: true
- *             isDefault: true
- *             displayOrder: 1
- *             translations:
- *               es:
- *                 name: "Energía Activa"
- *                 description: "Energía activa consumida"
- *               en:
- *                 name: "Active Energy"
- *                 description: "Active energy consumed"
- *     responses:
- *       201:
- *         description: Variable creada exitosamente
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 ok:
- *                   type: boolean
- *                 data:
- *                   $ref: '#/components/schemas/Variable'
- *       400:
- *         description: Datos inválidos o duplicado
- *       409:
- *         description: Ya existe una variable con el mismo column_name
- */
-router.post('/', async (req, res) => {
-    try {
-        // Extraer contexto de auditoría del request
-        const context = {
-            userId: req.user?.id || req.user?.uuid,
-            ip: req.ip || req.connection?.remoteAddress,
-            userAgent: req.headers['user-agent']
-        };
-
-        const variable = await createVariable(req.body, context);
-
-        return res.status(201).json({
-            ok: true,
-            data: variable
-        });
-
-    } catch (error) {
-        console.error('Variable create error:', error);
-
-        if (error.code === 'VALIDATION_ERROR') {
-            return res.status(400).json({
-                ok: false,
-                error: {
-                    code: 'VALIDATION_ERROR',
-                    message: error.message,
-                    details: error.details
-                }
-            });
-        }
-
-        if (error.code === 'DUPLICATE_ERROR') {
-            return res.status(409).json({
-                ok: false,
-                error: {
-                    code: 'DUPLICATE_ERROR',
-                    message: error.message
-                }
-            });
-        }
-
-        return res.status(500).json({
-            ok: false,
-            error: {
-                code: 'INTERNAL_ERROR',
-                message: 'Error al crear variable',
-                details: process.env.NODE_ENV === 'development' ? error.message : undefined
-            }
-        });
-    }
-});
-
-/**
- * @swagger
- * /api/v1/telemetry/variables/{id}:
- *   put:
- *     summary: Actualiza una variable existente
- *     description: |
- *       Actualiza los campos de una variable y/o sus traducciones.
- *       Solo se actualizan los campos enviados en el body.
- *     tags:
- *       - Telemetry Variables
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: integer
- *         description: ID de la variable
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             $ref: '#/components/schemas/VariableInput'
- *           example:
- *             unit: "MWh"
- *             isRealtime: false
- *             translations:
- *               es:
- *                 name: "Energía Activa Total"
- *     responses:
- *       200:
- *         description: Variable actualizada
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 ok:
- *                   type: boolean
- *                 data:
- *                   $ref: '#/components/schemas/Variable'
- *       400:
- *         description: Datos inválidos
- *       404:
- *         description: Variable no encontrada
- *       409:
- *         description: Conflicto por duplicado de column_name
- */
-router.put('/:id', async (req, res) => {
-    try {
-        const { id } = req.params;
-        
-        // Extraer contexto de auditoría del request
-        const context = {
-            userId: req.user?.id || req.user?.uuid,
-            ip: req.ip || req.connection?.remoteAddress,
-            userAgent: req.headers['user-agent']
-        };
-
-        const variable = await updateVariable(parseInt(id, 10), req.body, context);
-
-        return res.json({
-            ok: true,
-            data: variable
-        });
-
-    } catch (error) {
-        console.error('Variable update error:', error);
-
-        if (error.code === 'VALIDATION_ERROR') {
-            return res.status(400).json({
-                ok: false,
-                error: {
-                    code: 'VALIDATION_ERROR',
-                    message: error.message,
-                    details: error.details
-                }
-            });
-        }
-
-        if (error.code === 'NOT_FOUND') {
-            return res.status(404).json({
-                ok: false,
-                error: {
-                    code: 'NOT_FOUND',
-                    message: error.message
-                }
-            });
-        }
-
-        if (error.code === 'DUPLICATE_ERROR') {
-            return res.status(409).json({
-                ok: false,
-                error: {
-                    code: 'DUPLICATE_ERROR',
-                    message: error.message
-                }
-            });
-        }
-
-        return res.status(500).json({
-            ok: false,
-            error: {
-                code: 'INTERNAL_ERROR',
-                message: 'Error al actualizar variable',
-                details: process.env.NODE_ENV === 'development' ? error.message : undefined
-            }
-        });
-    }
-});
-
-/**
- * @swagger
- * /api/v1/telemetry/variables/{id}:
- *   delete:
- *     summary: Elimina una variable (soft delete)
- *     description: |
- *       Marca la variable como inactiva (is_active = false).
- *       La variable no se elimina físicamente de la base de datos.
- *     tags:
- *       - Telemetry Variables
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: integer
- *         description: ID de la variable
- *     responses:
- *       200:
- *         description: Variable eliminada
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 ok:
- *                   type: boolean
- *                 data:
- *                   type: object
- *                   properties:
- *                     deleted:
- *                       type: boolean
- *                     id:
- *                       type: integer
- *       404:
- *         description: Variable no encontrada
- */
-router.delete('/:id', async (req, res) => {
-    try {
-        const { id } = req.params;
-        
-        // Extraer contexto de auditoría del request
-        const context = {
-            userId: req.user?.id || req.user?.uuid,
-            ip: req.ip || req.connection?.remoteAddress,
-            userAgent: req.headers['user-agent']
-        };
-
-        await deleteVariable(parseInt(id, 10), context);
-
-        return res.json({
-            ok: true,
-            data: {
-                deleted: true,
-                id: parseInt(id, 10)
-            }
-        });
-
-    } catch (error) {
-        console.error('Variable delete error:', error);
-
-        if (error.code === 'NOT_FOUND') {
-            return res.status(404).json({
-                ok: false,
-                error: {
-                    code: 'NOT_FOUND',
-                    message: error.message
-                }
-            });
-        }
-
-        return res.status(500).json({
-            ok: false,
-            error: {
-                code: 'INTERNAL_ERROR',
-                message: 'Error al eliminar variable',
-                details: process.env.NODE_ENV === 'development' ? error.message : undefined
-            }
-        });
+        return handleError(res, error, 'Error al eliminar variable');
     }
 });
 

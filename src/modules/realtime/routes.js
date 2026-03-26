@@ -13,65 +13,8 @@ import logger from '../../utils/logger.js';
 
 const router = Router();
 
-/**
- * @swagger
- * /api/v1/realtime/token:
- *   post:
- *     summary: Generar token efímero para conexión WebSocket
- *     description: |
- *       Genera un token efímero de un solo uso (TTL 5 min) que el BFF usa para
- *       establecer la conexión WebSocket con el backend. El token incluye datos
- *       del usuario y permisos para validación sin consultar DB.
- *     tags: [Realtime]
- *     security:
- *       - bearerAuth: []
- *     requestBody:
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               services:
- *                 type: array
- *                 items:
- *                   type: string
- *                   enum: [DASHBOARD, NOTIFY, IOT, CHATBOT]
- *                 description: Servicios solicitados (opcional, todos si no se envía)
- *     responses:
- *       200:
- *         description: Token efímero generado
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 ok:
- *                   type: boolean
- *                   example: true
- *                 data:
- *                   type: object
- *                   properties:
- *                     token:
- *                       type: string
- *                       example: "eph_abc123..."
- *                     wsUrl:
- *                       type: string
- *                       example: "wss://ws.ecdata-backend.com/ws"
- *                     expiresIn:
- *                       type: integer
- *                       example: 300
- *                     expiresAt:
- *                       type: string
- *                       format: date-time
- *                     allowedServices:
- *                       type: array
- *                       items:
- *                         type: string
- *       401:
- *         description: Token JWT inválido o expirado
- *       429:
- *         description: Rate limit excedido
- */
+
+// 📄 Swagger: src/docs/swagger/realtime.yaml -> POST /token
 router.post('/token', authenticate, enforceActiveOrganization, async (req, res) => {
     try {
         const { userId, role, email } = req.user;
@@ -158,18 +101,8 @@ router.post('/token', authenticate, enforceActiveOrganization, async (req, res) 
     }
 });
 
-/**
- * @swagger
- * /api/v1/realtime/status:
- *   get:
- *     summary: Estado del sistema realtime (MQTT + WebSocket)
- *     tags: [Realtime]
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: Estado actual del sistema realtime
- */
+
+// 📄 Swagger: src/docs/swagger/realtime.yaml -> GET /status
 router.get('/status', authenticate, async (req, res) => {
     try {
         if (req.user.role !== 'system-admin') {

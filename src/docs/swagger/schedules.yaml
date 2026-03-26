@@ -1,0 +1,562 @@
+paths:
+  /api/v1/schedules:
+    post:
+      summary: Crear un schedule completo
+      tags: [Schedules]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateScheduleRequest'
+            example:
+              name: "Horario Comercial"
+              description: "Base para facturación"
+              validities:
+                - validFrom: null
+                  validTo: null
+                  timeProfiles:
+                    - name: "Turno Mañana"
+                      grid:
+                        "1":
+                          - { from: "08:00", to: "12:00" }
+                          - { from: "13:00", to: "18:00" }
+                        "7":
+                          - { from: "00:00", to: "24:00" }
+              exceptions:
+                - date: "2000-01-01"
+                  name: "Año Nuevo"
+                  type: "closed"
+                  repeatYearly: true
+      responses:
+        201:
+          description: Schedule creado exitosamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean, example: true }
+                  data:
+                    $ref: '#/components/schemas/ScheduleResponse'
+        400:
+          description: Error de validación de schema
+        422:
+          description: Error de reglas de negocio (solapamiento de vigencias o rangos)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean, example: false }
+                  error:
+                    type: object
+                    properties:
+                      code: { type: string, example: SCHEDULE_VALIDATION_ERROR }
+                      message: { type: string }
+                      details: { type: array, items: { type: string } }
+        401:
+          description: No autenticado
+        403:
+          description: Rol insuficiente (requiere org-admin o system-admin)
+
+    get:
+      summary: Listar schedules de la organización activa
+      tags: [Schedules]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          schema: { type: integer, default: 20, minimum: 1, maximum: 100 }
+        - name: offset
+          in: query
+          schema: { type: integer, default: 0, minimum: 0 }
+        - name: include
+          in: query
+          description: Incluir validities completas (use 'validities')
+          schema: 
+            type: string
+            enum: [validities]
+      responses:
+        200:
+          description: Lista de schedules (básico o con validities según parámetro include)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean, example: true }
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ScheduleResponse'
+                  meta:
+                    type: object
+                    properties:
+                      total: { type: integer }
+                      limit: { type: integer }
+                      offset: { type: integer }
+        401:
+          description: No autenticado
+
+  /api/v1/schedules/{id}:
+    get:
+      summary: Obtener un schedule por publicCode
+      tags: [Schedules]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+          description: Public code del schedule (ej. SCH-4X9-R2T)
+      responses:
+        200:
+          description: Schedule encontrado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean, example: true }
+                  data:
+                    $ref: '#/components/schemas/ScheduleResponse'
+        404:
+          description: Schedule no encontrado
+        401:
+          description: No autenticado
+
+    delete:
+      summary: Eliminar un schedule (soft delete)
+      tags: [Schedules]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+          description: Public code del schedule
+      responses:
+        200:
+          description: Schedule eliminado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean, example: true }
+                  data:
+                    type: object
+                    properties:
+                      deleted: { type: boolean, example: true }
+        404:
+          description: Schedule no encontrado
+        401:
+          description: No autenticado
+        403:
+          description: Rol insuficiente
+
+  /api/v1/schedules/{id}/validities:
+    get:
+      summary: Listar validities de un schedule con métricas
+      tags: [Schedules]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+          description: Public code del schedule
+      responses:
+        200:
+          description: Lista de validities con métricas
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean, example: true }
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ValidityWithMetrics'
+        404:
+          description: Schedule no encontrado
+        401:
+          description: No autenticado
+
+  /api/v1/schedules/{id}/validities/{validityId}/ranges:
+    get:
+      summary: Obtener rangos completos de una validity
+      tags: [Schedules]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+          description: Public code del schedule
+        - name: validityId
+          in: path
+          required: true
+          schema: { type: integer }
+          description: ID de la validity
+      responses:
+        200:
+          description: Rangos de la validity con métricas
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean, example: true }
+                  data:
+                    $ref: '#/components/schemas/ValidityRangesResponse'
+        404:
+          description: Schedule o validity no encontrada
+        401:
+          description: No autenticado
+
+    put:
+      summary: Actualizar rangos de una validity (batch con detección de cambios)
+      tags: [Schedules]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+          description: Public code del schedule
+        - name: validityId
+          in: path
+          required: true
+          schema: { type: integer }
+          description: ID de la validity
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [timeProfiles]
+              properties:
+                timeProfiles:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/TimeProfileInput'
+            example:
+              timeProfiles:
+                - name: "Turno Mañana"
+                  grid:
+                    "1": [{ from: "08:00", to: "13:00" }]
+                    "2": [{ from: "08:00", to: "13:00" }]
+      responses:
+        200:
+          description: Rangos actualizados con métricas y estadísticas de cambios
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean, example: true }
+                  data:
+                    type: object
+                    properties:
+                      validityId: { type: integer }
+                      rangesCount: { type: integer }
+                      weekCoveragePercent: { type: number, format: float }
+                      changes:
+                        type: object
+                        properties:
+                          created: { type: integer }
+                          updated: { type: integer }
+                          deleted: { type: integer }
+        404:
+          description: Schedule o validity no encontrada
+        422:
+          description: Solapamiento de rangos (Regla B)
+        401:
+          description: No autenticado
+        403:
+          description: Rol insuficiente
+
+  /api/v1/schedules/{id}/validities/{validityId}:
+    patch:
+      summary: Actualizar fechas de una validity
+      tags: [Schedules]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+          description: Public code del schedule
+        - name: validityId
+          in: path
+          required: true
+          schema: { type: integer }
+          description: ID de la validity
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                validFrom:
+                  type: string
+                  format: date
+                  nullable: true
+                  example: "2026-02-01"
+                validTo:
+                  type: string
+                  format: date
+                  nullable: true
+                  example: "2026-12-31"
+            example:
+              validFrom: "2026-02-01"
+              validTo: "2026-12-31"
+      responses:
+        200:
+          description: Validity actualizada con métricas
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean, example: true }
+                  data:
+                    type: object
+                    properties:
+                      id: { type: integer }
+                      validFrom: { type: string, format: date, nullable: true }
+                      validTo: { type: string, format: date, nullable: true }
+                      rangesCount: { type: integer }
+                      weekCoveragePercent: { type: number, format: float }
+        404:
+          description: Schedule o validity no encontrada
+        422:
+          description: Solapamiento con otras validities (Regla A)
+        401:
+          description: No autenticado
+        403:
+          description: Rol insuficiente
+
+components:
+  schemas:
+    TimeRangeInput:
+      type: object
+      required: [from, to]
+      properties:
+        from:
+          type: string
+          pattern: '^([01]\d|2[0-4]):[0-5]\d$'
+          example: "08:00"
+          description: Hora de inicio HH:mm
+        to:
+          type: string
+          pattern: '^([01]\d|2[0-4]):[0-5]\d$'
+          example: "12:00"
+          description: Hora de fin HH:mm (24:00 es válido)
+
+    TimeProfileInput:
+      type: object
+      required: [name, grid]
+      properties:
+        name:
+          type: string
+          example: "Turno Mañana"
+        grid:
+          type: object
+          description: "Keys = día ISO 8601 (1=Lunes...7=Domingo), values = array de rangos"
+          additionalProperties:
+            type: array
+            items:
+              $ref: '#/components/schemas/TimeRangeInput'
+
+    ValidityInput:
+      type: object
+      required: [timeProfiles]
+      properties:
+        validFrom:
+          type: string
+          format: date
+          nullable: true
+          example: null
+          description: "Inicio de vigencia YYYY-MM-DD. null = desde siempre"
+        validTo:
+          type: string
+          format: date
+          nullable: true
+          example: null
+          description: "Fin de vigencia YYYY-MM-DD. null = sin vencimiento"
+        timeProfiles:
+          type: array
+          items:
+            $ref: '#/components/schemas/TimeProfileInput'
+          minItems: 1
+
+    ExceptionInput:
+      type: object
+      required: [date, name]
+      properties:
+        date:
+          type: string
+          format: date
+          example: "2000-01-01"
+        name:
+          type: string
+          example: "Año Nuevo"
+        type:
+          type: string
+          enum: [closed, special]
+          default: closed
+        repeatYearly:
+          type: boolean
+          default: false
+
+    CreateScheduleRequest:
+      type: object
+      required: [name, validities]
+      properties:
+        name:
+          type: string
+          example: "Horario Comercial"
+        description:
+          type: string
+          nullable: true
+          example: "Base para facturación"
+        validities:
+          type: array
+          items:
+            $ref: '#/components/schemas/ValidityInput'
+          minItems: 1
+        exceptions:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExceptionInput'
+          default: []
+
+    ScheduleResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "SCH-4X9-R2T"
+          description: Public code del schedule (nunca el UUID interno)
+        name:
+          type: string
+          example: "Horario Comercial"
+        description:
+          type: string
+          nullable: true
+        validitiesCount:
+          type: integer
+          example: 3
+          description: Contador total de vigencias
+        exceptionsCount:
+          type: integer
+          example: 5
+          description: Contador total de excepciones
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        validities:
+          type: array
+          items:
+            $ref: '#/components/schemas/ValidityWithMetrics'
+          description: Solo incluido si se usa ?include=validities
+        exceptions:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExceptionInput'
+          description: Solo incluido si se usa ?include=validities
+
+    ValidityWithMetrics:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        validFrom:
+          type: string
+          format: date
+          nullable: true
+          example: "2026-01-01"
+        validTo:
+          type: string
+          format: date
+          nullable: true
+          example: null
+        rangesCount:
+          type: integer
+          example: 10
+          description: Contador total de rangos horarios
+        weekCoveragePercent:
+          type: number
+          format: float
+          example: 45.83
+          description: Porcentaje de cobertura semanal (0.00-100.00)
+        exceptionsCount:
+          type: integer
+          example: 2
+          description: Contador total de excepciones de esta vigencia
+        exceptions:
+          type: array
+          description: Excepciones asociadas a esta vigencia
+          items:
+            $ref: '#/components/schemas/ExceptionInput'
+        timeProfiles:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+              name:
+                type: string
+              grid:
+                type: object
+                description: Solo incluido en endpoints de ranges
+                additionalProperties:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/TimeRangeInput'
+
+    ValidityRangesResponse:
+      type: object
+      properties:
+        validityId:
+          type: integer
+          example: 1
+        validFrom:
+          type: string
+          format: date
+          nullable: true
+        validTo:
+          type: string
+          format: date
+          nullable: true
+        rangesCount:
+          type: integer
+          example: 10
+        weekCoveragePercent:
+          type: number
+          format: float
+          example: 45.83
+        timeProfiles:
+          type: array
+          items:
+            $ref: '#/components/schemas/TimeProfileInput'

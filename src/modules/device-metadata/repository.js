@@ -18,7 +18,8 @@ import {
     DeviceLicense,
     DeviceLicenseTranslation,
     DeviceValidityPeriod,
-    DeviceValidityPeriodTranslation
+    DeviceValidityPeriodTranslation,
+    UnitScale
 } from './models/index.js';
 import { MeasurementType, MeasurementTypeTranslation, Variable, VariableTranslation } from '../telemetry/models/index.js';
 
@@ -26,18 +27,15 @@ import { MeasurementType, MeasurementTypeTranslation, Variable, VariableTranslat
 // DEVICE TYPES
 // ============================================
 
-export const getDeviceTypes = async (lang = 'es', includeInactive = false) => {
-    const where = includeInactive ? {} : { is_active: true };
-    return DeviceType.findAll({
-        where,
-        include: [{
-            model: DeviceTypeTranslation,
-            as: 'translations',
-            where: { lang },
-            required: false
-        }],
-        order: [[{ model: DeviceTypeTranslation, as: 'translations' }, 'name', 'ASC']]
-    });
+export const getDeviceTypes = async (lang = 'es', includeInactive = false, withTranslations = false) => {
+    const where = includeInactive ? {} : { isActive: true };
+    const translationInclude = withTranslations
+        ? { model: DeviceTypeTranslation, as: 'translations', required: false }
+        : { model: DeviceTypeTranslation, as: 'translations', where: { lang }, required: false };
+    const order = withTranslations
+        ? [['displayOrder', 'ASC'], ['id', 'ASC']]
+        : [[{ model: DeviceTypeTranslation, as: 'translations' }, 'name', 'ASC']];
+    return DeviceType.findAll({ where, include: [translationInclude], order });
 };
 
 export const findDeviceTypeById = async (id) => {
@@ -60,7 +58,7 @@ export const createDeviceType = async (data, translations = []) => {
         if (translations.length > 0) {
             const translationsData = translations.map(tr => ({
                 ...tr,
-                device_type_id: type.id
+                deviceTypeId: type.id
             }));
             await DeviceTypeTranslation.bulkCreate(translationsData, { transaction: t });
         }
@@ -89,7 +87,7 @@ export const updateDeviceType = async (id, data, translations = []) => {
             for (const tr of translations) {
                 await DeviceTypeTranslation.upsert({
                     ...tr,
-                    device_type_id: id
+                    deviceTypeId: id
                 }, { transaction: t });
             }
         }
@@ -111,7 +109,7 @@ export const deleteDeviceType = async (id, hard = false) => {
     if (hard) {
         await DeviceType.destroy({ where: { id } });
     } else {
-        await DeviceType.update({ is_active: false }, { where: { id } });
+        await DeviceType.update({ isActive: false }, { where: { id } });
     }
     return true;
 };
@@ -120,18 +118,15 @@ export const deleteDeviceType = async (id, hard = false) => {
 // DEVICE BRANDS
 // ============================================
 
-export const getDeviceBrands = async (lang = 'es', includeInactive = false) => {
-    const where = includeInactive ? {} : { is_active: true };
-    return DeviceBrand.findAll({
-        where,
-        include: [{
-            model: DeviceBrandTranslation,
-            as: 'translations',
-            where: { lang },
-            required: false
-        }],
-        order: [[{ model: DeviceBrandTranslation, as: 'translations' }, 'name', 'ASC']]
-    });
+export const getDeviceBrands = async (lang = 'es', includeInactive = false, withTranslations = false) => {
+    const where = includeInactive ? {} : { isActive: true };
+    const translationInclude = withTranslations
+        ? { model: DeviceBrandTranslation, as: 'translations', required: false }
+        : { model: DeviceBrandTranslation, as: 'translations', where: { lang }, required: false };
+    const order = withTranslations
+        ? [['displayOrder', 'ASC'], ['id', 'ASC']]
+        : [[{ model: DeviceBrandTranslation, as: 'translations' }, 'name', 'ASC']];
+    return DeviceBrand.findAll({ where, include: [translationInclude], order });
 };
 
 export const findDeviceBrandById = async (id) => {
@@ -154,7 +149,7 @@ export const createDeviceBrand = async (data, translations = []) => {
         if (translations.length > 0) {
             const translationsData = translations.map(tr => ({
                 ...tr,
-                device_brand_id: brand.id
+                deviceBrandId: brand.id
             }));
             await DeviceBrandTranslation.bulkCreate(translationsData, { transaction: t });
         }
@@ -183,7 +178,7 @@ export const updateDeviceBrand = async (id, data, translations = []) => {
             for (const tr of translations) {
                 await DeviceBrandTranslation.upsert({
                     ...tr,
-                    device_brand_id: id
+                    deviceBrandId: id
                 }, { transaction: t });
             }
         }
@@ -205,7 +200,7 @@ export const deleteDeviceBrand = async (id, hard = false) => {
     if (hard) {
         await DeviceBrand.destroy({ where: { id } });
     } else {
-        await DeviceBrand.update({ is_active: false }, { where: { id } });
+        await DeviceBrand.update({ isActive: false }, { where: { id } });
     }
     return true;
 };
@@ -214,26 +209,19 @@ export const deleteDeviceBrand = async (id, hard = false) => {
 // DEVICE MODELS
 // ============================================
 
-export const getDeviceModels = async (lang = 'es', includeInactive = false, brandId = null) => {
-    const where = includeInactive ? {} : { is_active: true };
-    if (brandId) where.device_brand_id = brandId;
-    
+export const getDeviceModels = async (lang = 'es', includeInactive = false, brandId = null, withTranslations = false) => {
+    const where = includeInactive ? {} : { isActive: true };
+    if (brandId) where.deviceBrandId = brandId;
+    const translationInclude = withTranslations
+        ? { model: DeviceModelTranslation, as: 'translations', required: false }
+        : { model: DeviceModelTranslation, as: 'translations', where: { lang }, required: false };
+    const order = withTranslations
+        ? [['displayOrder', 'ASC'], ['id', 'ASC']]
+        : [[{ model: DeviceModelTranslation, as: 'translations' }, 'name', 'ASC']];
     return DeviceModel.findAll({
         where,
-        include: [
-            {
-                model: DeviceModelTranslation,
-                as: 'translations',
-                where: { lang },
-                required: false
-            },
-            {
-                model: DeviceBrand,
-                as: 'brand',
-                attributes: ['id', 'code']
-            }
-        ],
-        order: [[{ model: DeviceModelTranslation, as: 'translations' }, 'name', 'ASC']]
+        include: [translationInclude, { model: DeviceBrand, as: 'brand', attributes: ['id', 'code'] }],
+        order
     });
 };
 
@@ -253,7 +241,7 @@ export const createDeviceModel = async (data, translations = []) => {
         if (translations.length > 0) {
             const translationsData = translations.map(tr => ({
                 ...tr,
-                device_model_id: model.id
+                deviceModelId: model.id
             }));
             await DeviceModelTranslation.bulkCreate(translationsData, { transaction: t });
         }
@@ -285,7 +273,7 @@ export const updateDeviceModel = async (id, data, translations = []) => {
             for (const tr of translations) {
                 await DeviceModelTranslation.upsert({
                     ...tr,
-                    device_model_id: id
+                    deviceModelId: id
                 }, { transaction: t });
             }
         }
@@ -310,7 +298,7 @@ export const deleteDeviceModel = async (id, hard = false) => {
     if (hard) {
         await DeviceModel.destroy({ where: { id } });
     } else {
-        await DeviceModel.update({ is_active: false }, { where: { id } });
+        await DeviceModel.update({ isActive: false }, { where: { id } });
     }
     return true;
 };
@@ -319,18 +307,15 @@ export const deleteDeviceModel = async (id, hard = false) => {
 // DEVICE SERVERS
 // ============================================
 
-export const getDeviceServers = async (lang = 'es', includeInactive = false) => {
-    const where = includeInactive ? {} : { is_active: true };
-    return DeviceServer.findAll({
-        where,
-        include: [{
-            model: DeviceServerTranslation,
-            as: 'translations',
-            where: { lang },
-            required: false
-        }],
-        order: [[{ model: DeviceServerTranslation, as: 'translations' }, 'name', 'ASC']]
-    });
+export const getDeviceServers = async (lang = 'es', includeInactive = false, withTranslations = false) => {
+    const where = includeInactive ? {} : { isActive: true };
+    const translationInclude = withTranslations
+        ? { model: DeviceServerTranslation, as: 'translations', required: false }
+        : { model: DeviceServerTranslation, as: 'translations', where: { lang }, required: false };
+    const order = withTranslations
+        ? [['displayOrder', 'ASC'], ['id', 'ASC']]
+        : [[{ model: DeviceServerTranslation, as: 'translations' }, 'name', 'ASC']];
+    return DeviceServer.findAll({ where, include: [translationInclude], order });
 };
 
 export const findDeviceServerById = async (id) => {
@@ -346,7 +331,7 @@ export const createDeviceServer = async (data, translations = []) => {
         if (translations.length > 0) {
             const translationsData = translations.map(tr => ({
                 ...tr,
-                device_server_id: server.id
+                deviceServerId: server.id
             }));
             await DeviceServerTranslation.bulkCreate(translationsData, { transaction: t });
         }
@@ -375,7 +360,7 @@ export const updateDeviceServer = async (id, data, translations = []) => {
             for (const tr of translations) {
                 await DeviceServerTranslation.upsert({
                     ...tr,
-                    device_server_id: id
+                    deviceServerId: id
                 }, { transaction: t });
             }
         }
@@ -397,7 +382,7 @@ export const deleteDeviceServer = async (id, hard = false) => {
     if (hard) {
         await DeviceServer.destroy({ where: { id } });
     } else {
-        await DeviceServer.update({ is_active: false }, { where: { id } });
+        await DeviceServer.update({ isActive: false }, { where: { id } });
     }
     return true;
 };
@@ -406,18 +391,15 @@ export const deleteDeviceServer = async (id, hard = false) => {
 // DEVICE NETWORKS
 // ============================================
 
-export const getDeviceNetworks = async (lang = 'es', includeInactive = false) => {
-    const where = includeInactive ? {} : { is_active: true };
-    return DeviceNetwork.findAll({
-        where,
-        include: [{
-            model: DeviceNetworkTranslation,
-            as: 'translations',
-            where: { lang },
-            required: false
-        }],
-        order: [[{ model: DeviceNetworkTranslation, as: 'translations' }, 'name', 'ASC']]
-    });
+export const getDeviceNetworks = async (lang = 'es', includeInactive = false, withTranslations = false) => {
+    const where = includeInactive ? {} : { isActive: true };
+    const translationInclude = withTranslations
+        ? { model: DeviceNetworkTranslation, as: 'translations', required: false }
+        : { model: DeviceNetworkTranslation, as: 'translations', where: { lang }, required: false };
+    const order = withTranslations
+        ? [['displayOrder', 'ASC'], ['id', 'ASC']]
+        : [[{ model: DeviceNetworkTranslation, as: 'translations' }, 'name', 'ASC']];
+    return DeviceNetwork.findAll({ where, include: [translationInclude], order });
 };
 
 export const findDeviceNetworkById = async (id) => {
@@ -433,7 +415,7 @@ export const createDeviceNetwork = async (data, translations = []) => {
         if (translations.length > 0) {
             const translationsData = translations.map(tr => ({
                 ...tr,
-                device_network_id: network.id
+                deviceNetworkId: network.id
             }));
             await DeviceNetworkTranslation.bulkCreate(translationsData, { transaction: t });
         }
@@ -462,7 +444,7 @@ export const updateDeviceNetwork = async (id, data, translations = []) => {
             for (const tr of translations) {
                 await DeviceNetworkTranslation.upsert({
                     ...tr,
-                    device_network_id: id
+                    deviceNetworkId: id
                 }, { transaction: t });
             }
         }
@@ -484,7 +466,7 @@ export const deleteDeviceNetwork = async (id, hard = false) => {
     if (hard) {
         await DeviceNetwork.destroy({ where: { id } });
     } else {
-        await DeviceNetwork.update({ is_active: false }, { where: { id } });
+        await DeviceNetwork.update({ isActive: false }, { where: { id } });
     }
     return true;
 };
@@ -493,18 +475,15 @@ export const deleteDeviceNetwork = async (id, hard = false) => {
 // DEVICE LICENSES
 // ============================================
 
-export const getDeviceLicenses = async (lang = 'es', includeInactive = false) => {
-    const where = includeInactive ? {} : { is_active: true };
-    return DeviceLicense.findAll({
-        where,
-        include: [{
-            model: DeviceLicenseTranslation,
-            as: 'translations',
-            where: { lang },
-            required: false
-        }],
-        order: [[{ model: DeviceLicenseTranslation, as: 'translations' }, 'name', 'ASC']]
-    });
+export const getDeviceLicenses = async (lang = 'es', includeInactive = false, withTranslations = false) => {
+    const where = includeInactive ? {} : { isActive: true };
+    const translationInclude = withTranslations
+        ? { model: DeviceLicenseTranslation, as: 'translations', required: false }
+        : { model: DeviceLicenseTranslation, as: 'translations', where: { lang }, required: false };
+    const order = withTranslations
+        ? [['displayOrder', 'ASC'], ['id', 'ASC']]
+        : [[{ model: DeviceLicenseTranslation, as: 'translations' }, 'name', 'ASC']];
+    return DeviceLicense.findAll({ where, include: [translationInclude], order });
 };
 
 export const findDeviceLicenseById = async (id) => {
@@ -520,7 +499,7 @@ export const createDeviceLicense = async (data, translations = []) => {
         if (translations.length > 0) {
             const translationsData = translations.map(tr => ({
                 ...tr,
-                device_license_id: license.id
+                deviceLicenseId: license.id
             }));
             await DeviceLicenseTranslation.bulkCreate(translationsData, { transaction: t });
         }
@@ -549,7 +528,7 @@ export const updateDeviceLicense = async (id, data, translations = []) => {
             for (const tr of translations) {
                 await DeviceLicenseTranslation.upsert({
                     ...tr,
-                    device_license_id: id
+                    deviceLicenseId: id
                 }, { transaction: t });
             }
         }
@@ -571,7 +550,7 @@ export const deleteDeviceLicense = async (id, hard = false) => {
     if (hard) {
         await DeviceLicense.destroy({ where: { id } });
     } else {
-        await DeviceLicense.update({ is_active: false }, { where: { id } });
+        await DeviceLicense.update({ isActive: false }, { where: { id } });
     }
     return true;
 };
@@ -580,18 +559,15 @@ export const deleteDeviceLicense = async (id, hard = false) => {
 // DEVICE VALIDITY PERIODS
 // ============================================
 
-export const getDeviceValidityPeriods = async (lang = 'es', includeInactive = false) => {
-    const where = includeInactive ? {} : { is_active: true };
-    return DeviceValidityPeriod.findAll({
-        where,
-        include: [{
-            model: DeviceValidityPeriodTranslation,
-            as: 'translations',
-            where: { lang },
-            required: false
-        }],
-        order: [[{ model: DeviceValidityPeriodTranslation, as: 'translations' }, 'name', 'ASC']]
-    });
+export const getDeviceValidityPeriods = async (lang = 'es', includeInactive = false, withTranslations = false) => {
+    const where = includeInactive ? {} : { isActive: true };
+    const translationInclude = withTranslations
+        ? { model: DeviceValidityPeriodTranslation, as: 'translations', required: false }
+        : { model: DeviceValidityPeriodTranslation, as: 'translations', where: { lang }, required: false };
+    const order = withTranslations
+        ? [['displayOrder', 'ASC'], ['id', 'ASC']]
+        : [[{ model: DeviceValidityPeriodTranslation, as: 'translations' }, 'name', 'ASC']];
+    return DeviceValidityPeriod.findAll({ where, include: [translationInclude], order });
 };
 
 export const findDeviceValidityPeriodById = async (id) => {
@@ -607,7 +583,7 @@ export const createDeviceValidityPeriod = async (data, translations = []) => {
         if (translations.length > 0) {
             const translationsData = translations.map(tr => ({
                 ...tr,
-                device_validity_period_id: period.id
+                deviceValidityPeriodId: period.id
             }));
             await DeviceValidityPeriodTranslation.bulkCreate(translationsData, { transaction: t });
         }
@@ -636,7 +612,7 @@ export const updateDeviceValidityPeriod = async (id, data, translations = []) =>
             for (const tr of translations) {
                 await DeviceValidityPeriodTranslation.upsert({
                     ...tr,
-                    device_validity_period_id: id
+                    deviceValidityPeriodId: id
                 }, { transaction: t });
             }
         }
@@ -658,9 +634,100 @@ export const deleteDeviceValidityPeriod = async (id, hard = false) => {
     if (hard) {
         await DeviceValidityPeriod.destroy({ where: { id } });
     } else {
-        await DeviceValidityPeriod.update({ is_active: false }, { where: { id } });
+        await DeviceValidityPeriod.update({ isActive: false }, { where: { id } });
     }
     return true;
+};
+
+// ============================================
+// CATALOG USAGE (auditoría de dependencias)
+// ============================================
+
+// Mapa de dependencias: define qué entidades referencian cada catálogo
+// Para agregar una nueva entidad que referencia un catálogo, solo agregar una entrada aquí
+const CATALOG_DEPENDENCIES = {
+    deviceTypes: {
+        catalogTable: 'device_types',
+        deps: [{ entity: 'devices', table: 'devices', fkColumn: 'device_type_id', label: 'devices' }]
+    },
+    deviceBrands: {
+        catalogTable: 'device_brands',
+        deps: [{ entity: 'devices', table: 'devices', fkColumn: 'brand_id', label: 'devices' }]
+    },
+    deviceModels: {
+        catalogTable: 'device_models',
+        deps: [{ entity: 'devices', table: 'devices', fkColumn: 'model_id', label: 'devices' }]
+    },
+    deviceServers: {
+        catalogTable: 'device_servers',
+        deps: [{ entity: 'devices', table: 'devices', fkColumn: 'server_id', label: 'devices' }]
+    },
+    deviceNetworks: {
+        catalogTable: 'device_networks',
+        deps: [{ entity: 'devices', table: 'devices', fkColumn: 'network_id', label: 'devices' }]
+    },
+    deviceLicenses: {
+        catalogTable: 'device_licenses',
+        deps: [{ entity: 'devices', table: 'devices', fkColumn: 'license_id', label: 'devices' }]
+    },
+    deviceValidityPeriods: {
+        catalogTable: 'device_validity_periods',
+        deps: [{ entity: 'devices', table: 'devices', fkColumn: 'validity_period_id', label: 'devices' }]
+    }
+};
+
+// Consulta genérica de dependencias para una entidad específica
+const queryEntityDependency = async (dep, catalogId, limit = 50) => {
+    // Conteo total
+    const [countResult] = await sequelize.query(
+        `SELECT COUNT(*) as count FROM "${dep.table}" WHERE "${dep.fkColumn}" = :catalogId`,
+        { replacements: { catalogId }, type: sequelize.QueryTypes.SELECT }
+    );
+    const count = parseInt(countResult.count);
+
+    // Items con info de organización (solo si hay resultados)
+    let items = [];
+    if (count > 0) {
+        items = await sequelize.query(
+            `SELECT d.public_code AS "publicCode", d.name, o.name AS "organizationName"
+             FROM "${dep.table}" d
+             LEFT JOIN organizations o ON d.organization_id = o.id
+             WHERE d."${dep.fkColumn}" = :catalogId
+             ORDER BY o.name ASC, d.name ASC
+             LIMIT :limit`,
+            { replacements: { catalogId, limit }, type: sequelize.QueryTypes.SELECT }
+        );
+    }
+
+    return { count, items };
+};
+
+// Obtiene todas las dependencias de un catálogo agrupadas por tipo de entidad
+export const getCatalogUsage = async (catalogKey, catalogId, limit = 50) => {
+    const config = CATALOG_DEPENDENCIES[catalogKey];
+    if (!config) {
+        throw new Error(`Catálogo "${catalogKey}" no tiene dependencias configuradas`);
+    }
+
+    const [catalogItem] = await sequelize.query(
+        `SELECT code FROM "${config.catalogTable}" WHERE id = :catalogId`,
+        { replacements: { catalogId }, type: sequelize.QueryTypes.SELECT }
+    );
+    const code = catalogItem?.code || null;
+
+    let totalCount = 0;
+    const dependencies = {};
+
+    for (const dep of config.deps) {
+        const result = await queryEntityDependency(dep, catalogId, limit);
+        totalCount += result.count;
+        dependencies[dep.label] = {
+            count: result.count,
+            items: result.items
+        };
+    }
+
+    return { code, totalCount, dependencies };
 };
 
 // ============================================
@@ -669,7 +736,7 @@ export const deleteDeviceValidityPeriod = async (id, hard = false) => {
 
 export const getMeasurementTypes = async (lang = 'es') => {
     return MeasurementType.findAll({
-        where: { is_active: true },
+        where: { isActive: true },
         include: [{
             model: MeasurementTypeTranslation,
             as: 'translations',
@@ -695,4 +762,49 @@ export const getVariables = async (lang = 'es') => {
         }],
         order: [['measurement_type_id', 'ASC'], ['display_order', 'ASC NULLS LAST']]
     });
+};
+
+// ============================================
+// UNIT SCALES
+// ============================================
+
+export const getAllUnitScales = async (includeInactive = false) => {
+    const where = includeInactive ? {} : { isActive: true };
+    return UnitScale.findAll({
+        where,
+        order: [['base_unit', 'ASC'], ['display_order', 'ASC']]
+    });
+};
+
+export const getUnitScalesByBaseUnit = async (baseUnit) => {
+    return UnitScale.findAll({
+        where: { baseUnit, isActive: true },
+        order: [['display_order', 'ASC']]
+    });
+};
+
+export const findUnitScaleById = async (id) => {
+    return UnitScale.findByPk(id);
+};
+
+export const createUnitScale = async (data) => {
+    return UnitScale.create(data);
+};
+
+export const updateUnitScale = async (id, data) => {
+    const existing = await UnitScale.findByPk(id);
+    if (!existing) return null;
+    await UnitScale.update(data, { where: { id } });
+    return UnitScale.findByPk(id);
+};
+
+export const deleteUnitScale = async (id, hard = false) => {
+    const existing = await UnitScale.findByPk(id);
+    if (!existing) return null;
+    if (hard) {
+        await UnitScale.destroy({ where: { id } });
+    } else {
+        await UnitScale.update({ isActive: false }, { where: { id } });
+    }
+    return true;
 };

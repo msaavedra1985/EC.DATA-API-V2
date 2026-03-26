@@ -38,40 +38,8 @@ const dashboardLogger = logger.child({ component: 'dashboards' });
 // RUTAS DE DASHBOARDS
 // =============================================
 
-/**
- * @swagger
- * /api/v1/dashboards:
- *   get:
- *     summary: Listar dashboards con paginación y filtros
- *     description: Obtiene lista de dashboards de la organización activa con filtros opcionales
- *     tags: [Dashboards]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: query
- *         name: search
- *         schema:
- *           type: string
- *       - in: query
- *         name: isPublic
- *         schema:
- *           type: string
- *       - in: query
- *         name: limit
- *         schema:
- *           type: integer
- *           default: 20
- *       - in: query
- *         name: offset
- *         schema:
- *           type: integer
- *           default: 0
- *     responses:
- *       200:
- *         description: Lista de dashboards obtenida exitosamente
- *       401:
- *         description: No autenticado
- */
+
+// 📄 Swagger: src/docs/swagger/dashboards.yaml -> GET /widget-types
 router.get('/widget-types', authenticate, enforceActiveOrganization, async (req, res, next) => {
     try {
         const orgId = req.organizationContext.id;
@@ -89,6 +57,7 @@ router.get('/widget-types', authenticate, enforceActiveOrganization, async (req,
     }
 });
 
+// 📄 Swagger: src/docs/swagger/dashboards.yaml -> GET /
 router.get('/', authenticate, enforceActiveOrganization, validate(getDashboardsSchema), async (req, res, next) => {
     try {
         const orgId = req.organizationContext.id;
@@ -113,29 +82,8 @@ router.get('/', authenticate, enforceActiveOrganization, validate(getDashboardsS
     }
 });
 
-/**
- * @swagger
- * /api/v1/dashboards/{id}:
- *   get:
- *     summary: Obtener un dashboard por publicCode
- *     description: Obtiene los detalles de un dashboard específico con todas sus relaciones
- *     tags: [Dashboards]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *     responses:
- *       200:
- *         description: Dashboard obtenido exitosamente
- *       404:
- *         description: Dashboard no encontrado
- *       401:
- *         description: No autenticado
- */
+
+// 📄 Swagger: src/docs/swagger/dashboards.yaml -> GET /:id
 router.get('/:id', authenticate, enforceActiveOrganization, validate(getDashboardByIdSchema), async (req, res, next) => {
     try {
         const dashboard = await dashboardServices.getDashboard(req.params.id, req.user.userId);
@@ -153,42 +101,8 @@ router.get('/:id', authenticate, enforceActiveOrganization, validate(getDashboar
     }
 });
 
-/**
- * @swagger
- * /api/v1/dashboards:
- *   post:
- *     summary: Crear un nuevo dashboard
- *     description: Crea un dashboard perteneciente a la organización activa. Solo system-admin y org-admin pueden crear.
- *     tags: [Dashboards]
- *     security:
- *       - bearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - name
- *             properties:
- *               name:
- *                 type: string
- *               description:
- *                 type: string
- *               icon:
- *                 type: string
- *               isPublic:
- *                 type: boolean
- *     responses:
- *       201:
- *         description: Dashboard creado exitosamente
- *       400:
- *         description: Error de validación
- *       401:
- *         description: No autenticado
- *       403:
- *         description: Sin permisos
- */
+
+// 📄 Swagger: src/docs/swagger/dashboards.yaml -> POST /
 router.post('/', authenticate, enforceActiveOrganization, requireRole(['system-admin', 'org-admin']), validate(createDashboardSchema), async (req, res, next) => {
     try {
         const result = await dashboardServices.createDashboard(
@@ -212,33 +126,8 @@ router.post('/', authenticate, enforceActiveOrganization, requireRole(['system-a
     }
 });
 
-/**
- * @swagger
- * /api/v1/dashboards/{id}:
- *   patch:
- *     summary: Actualizar un dashboard
- *     description: Actualiza los datos de un dashboard existente
- *     tags: [Dashboards]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *     responses:
- *       200:
- *         description: Dashboard actualizado exitosamente
- *       400:
- *         description: Error de validación
- *       401:
- *         description: No autenticado
- *       403:
- *         description: Sin permisos
- *       404:
- *         description: Dashboard no encontrado
- */
+
+// 📄 Swagger: src/docs/swagger/dashboards.yaml -> PATCH /:id
 router.patch('/:id', authenticate, enforceActiveOrganization, validate(updateDashboardSchema), async (req, res, next) => {
     try {
         const result = await dashboardServices.updateDashboard(
@@ -262,32 +151,8 @@ router.patch('/:id', authenticate, enforceActiveOrganization, validate(updateDas
     }
 });
 
-/**
- * @swagger
- * /api/v1/dashboards/{id}/home:
- *   put:
- *     summary: Marcar dashboard como home
- *     description: Marca un dashboard como el "home" del usuario en la organización. Solo puede haber uno por usuario+org.
- *     tags: [Dashboards]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: Public code del dashboard
- *     responses:
- *       200:
- *         description: Dashboard marcado como home exitosamente
- *       401:
- *         description: No autenticado
- *       403:
- *         description: Sin permisos (solo el owner)
- *       404:
- *         description: Dashboard no encontrado
- */
+
+// 📄 Swagger: src/docs/swagger/dashboards.yaml -> PUT /:id/home
 router.put('/:id/home', authenticate, enforceActiveOrganization, async (req, res, next) => {
     try {
         const result = await dashboardServices.setHomeDashboard(
@@ -310,31 +175,8 @@ router.put('/:id/home', authenticate, enforceActiveOrganization, async (req, res
     }
 });
 
-/**
- * @swagger
- * /api/v1/dashboards/{id}:
- *   delete:
- *     summary: Eliminar un dashboard (soft delete)
- *     description: Elimina lógicamente un dashboard. Solo el propietario puede eliminar.
- *     tags: [Dashboards]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *     responses:
- *       200:
- *         description: Dashboard eliminado exitosamente
- *       401:
- *         description: No autenticado
- *       403:
- *         description: Sin permisos
- *       404:
- *         description: Dashboard no encontrado
- */
+
+// 📄 Swagger: src/docs/swagger/dashboards.yaml -> DELETE /:id
 router.delete('/:id', authenticate, enforceActiveOrganization, requireRole(['system-admin', 'org-admin']), validate(deleteDashboardSchema), async (req, res, next) => {
     try {
         await dashboardServices.deleteDashboard(
@@ -362,6 +204,7 @@ router.delete('/:id', authenticate, enforceActiveOrganization, requireRole(['sys
 // =============================================
 
 // Listar páginas de un dashboard
+// 📄 Swagger: src/docs/swagger/dashboards.yaml -> GET /:dashboardId/pages
 router.get('/:dashboardId/pages', authenticate, enforceActiveOrganization, async (req, res, next) => {
     try {
         const pages = await dashboardServices.listPages(req.params.dashboardId, req.user.userId);
@@ -380,6 +223,7 @@ router.get('/:dashboardId/pages', authenticate, enforceActiveOrganization, async
 });
 
 // Crear una página en un dashboard
+// 📄 Swagger: src/docs/swagger/dashboards.yaml -> POST /:dashboardId/pages
 router.post('/:dashboardId/pages', authenticate, enforceActiveOrganization, validate(createPageSchema), async (req, res, next) => {
     try {
         const page = await dashboardServices.createPage(
@@ -404,6 +248,7 @@ router.post('/:dashboardId/pages', authenticate, enforceActiveOrganization, vali
 });
 
 // Actualizar una página
+// 📄 Swagger: src/docs/swagger/dashboards.yaml -> PATCH /:dashboardId/pages/:pageId
 router.patch('/:dashboardId/pages/:pageId', authenticate, enforceActiveOrganization, validate(updatePageSchema), async (req, res, next) => {
     try {
         const page = await dashboardServices.updatePage(
@@ -429,6 +274,7 @@ router.patch('/:dashboardId/pages/:pageId', authenticate, enforceActiveOrganizat
 });
 
 // Eliminar una página
+// 📄 Swagger: src/docs/swagger/dashboards.yaml -> DELETE /:dashboardId/pages/:pageId
 router.delete('/:dashboardId/pages/:pageId', authenticate, enforceActiveOrganization, validate(deletePageSchema), async (req, res, next) => {
     try {
         await dashboardServices.deletePage(
@@ -453,6 +299,7 @@ router.delete('/:dashboardId/pages/:pageId', authenticate, enforceActiveOrganiza
 });
 
 // Actualizar layouts de widgets en batch (posición/tamaño GridStack)
+// 📄 Swagger: src/docs/swagger/dashboards.yaml -> PATCH /:dashboardId/pages/:pageId/layouts
 router.patch('/:dashboardId/pages/:pageId/layouts', authenticate, enforceActiveOrganization, validate(updateLayoutsBatchSchema), async (req, res, next) => {
     try {
         const result = await dashboardServices.updatePageLayouts(
@@ -482,6 +329,7 @@ router.patch('/:dashboardId/pages/:pageId/layouts', authenticate, enforceActiveO
 // =============================================
 
 // Crear un widget en una página
+// 📄 Swagger: src/docs/swagger/dashboards.yaml -> POST /:dashboardId/pages/:pageId/widgets
 router.post('/:dashboardId/pages/:pageId/widgets', authenticate, enforceActiveOrganization, validate(createWidgetSchema), async (req, res, next) => {
     try {
         const widget = await dashboardServices.createWidget(
@@ -507,6 +355,7 @@ router.post('/:dashboardId/pages/:pageId/widgets', authenticate, enforceActiveOr
 });
 
 // Actualizar un widget
+// 📄 Swagger: src/docs/swagger/dashboards.yaml -> PATCH /:dashboardId/pages/:pageId/widgets/:widgetId
 router.patch('/:dashboardId/pages/:pageId/widgets/:widgetId', authenticate, enforceActiveOrganization, validate(updateWidgetSchema), async (req, res, next) => {
     try {
         const widget = await dashboardServices.updateWidget(
@@ -533,6 +382,7 @@ router.patch('/:dashboardId/pages/:pageId/widgets/:widgetId', authenticate, enfo
 });
 
 // Eliminar un widget
+// 📄 Swagger: src/docs/swagger/dashboards.yaml -> DELETE /:dashboardId/pages/:pageId/widgets/:widgetId
 router.delete('/:dashboardId/pages/:pageId/widgets/:widgetId', authenticate, enforceActiveOrganization, validate(deleteWidgetSchema), async (req, res, next) => {
     try {
         await dashboardServices.deleteWidget(
@@ -558,6 +408,7 @@ router.delete('/:dashboardId/pages/:pageId/widgets/:widgetId', authenticate, enf
 });
 
 // Obtener datos de telemetría de un widget
+// 📄 Swagger: src/docs/swagger/dashboards.yaml -> POST /:dashboardId/pages/:pageId/widgets/:widgetId/data
 router.post('/:dashboardId/pages/:pageId/widgets/:widgetId/data', authenticate, enforceActiveOrganization, validate(getWidgetDataSchema), async (req, res, next) => {
     try {
         const result = await dashboardServices.getWidgetData(
@@ -586,6 +437,7 @@ router.post('/:dashboardId/pages/:pageId/widgets/:widgetId/data', authenticate, 
 // =============================================
 
 // Crear una fuente de datos para un widget
+// 📄 Swagger: src/docs/swagger/dashboards.yaml -> POST /widgets/:widgetId/data-sources
 router.post('/widgets/:widgetId/data-sources', authenticate, enforceActiveOrganization, validate(createDataSourceSchema), async (req, res, next) => {
     try {
         const dataSource = await dashboardServices.createDataSource(
@@ -610,6 +462,7 @@ router.post('/widgets/:widgetId/data-sources', authenticate, enforceActiveOrgani
 });
 
 // Actualizar una fuente de datos
+// 📄 Swagger: src/docs/swagger/dashboards.yaml -> PATCH /widgets/:widgetId/data-sources/:dataSourceId
 router.patch('/widgets/:widgetId/data-sources/:dataSourceId', authenticate, enforceActiveOrganization, validate(updateDataSourceSchema), async (req, res, next) => {
     try {
         const dataSource = await dashboardServices.updateDataSource(
@@ -635,6 +488,7 @@ router.patch('/widgets/:widgetId/data-sources/:dataSourceId', authenticate, enfo
 });
 
 // Eliminar una fuente de datos
+// 📄 Swagger: src/docs/swagger/dashboards.yaml -> DELETE /widgets/:widgetId/data-sources/:dataSourceId
 router.delete('/widgets/:widgetId/data-sources/:dataSourceId', authenticate, enforceActiveOrganization, validate(deleteDataSourceSchema), async (req, res, next) => {
     try {
         await dashboardServices.deleteDataSource(
@@ -663,6 +517,7 @@ router.delete('/widgets/:widgetId/data-sources/:dataSourceId', authenticate, enf
 // =============================================
 
 // Listar colaboradores de un dashboard
+// 📄 Swagger: src/docs/swagger/dashboards.yaml -> GET /:id/collaborators
 router.get('/:id/collaborators', authenticate, enforceActiveOrganization, async (req, res, next) => {
     try {
         const dashboard = await dashboardServices.getDashboard(req.params.id, req.user.userId);
@@ -682,6 +537,7 @@ router.get('/:id/collaborators', authenticate, enforceActiveOrganization, async 
 });
 
 // Agregar un colaborador a un dashboard
+// 📄 Swagger: src/docs/swagger/dashboards.yaml -> POST /:id/collaborators
 router.post('/:id/collaborators', authenticate, enforceActiveOrganization, validate(addCollaboratorSchema), async (req, res, next) => {
     try {
         const collaborator = await dashboardServices.addDashboardCollaborator(
@@ -707,6 +563,7 @@ router.post('/:id/collaborators', authenticate, enforceActiveOrganization, valid
 });
 
 // Actualizar el rol de un colaborador
+// 📄 Swagger: src/docs/swagger/dashboards.yaml -> PATCH /:id/collaborators/:collaboratorId
 router.patch('/:id/collaborators/:collaboratorId', authenticate, enforceActiveOrganization, validate(updateCollaboratorSchema), async (req, res, next) => {
     try {
         const collaborator = await dashboardServices.updateDashboardCollaborator(
@@ -732,6 +589,7 @@ router.patch('/:id/collaborators/:collaboratorId', authenticate, enforceActiveOr
 });
 
 // Remover un colaborador de un dashboard
+// 📄 Swagger: src/docs/swagger/dashboards.yaml -> DELETE /:id/collaborators/:collaboratorId
 router.delete('/:id/collaborators/:collaboratorId', authenticate, enforceActiveOrganization, validate(removeCollaboratorSchema), async (req, res, next) => {
     try {
         await dashboardServices.removeDashboardCollaborator(
@@ -760,20 +618,7 @@ router.delete('/:id/collaborators/:collaboratorId', authenticate, enforceActiveO
 // Montado en /api/v1/dashboard-groups
 // =============================================
 
-/**
- * @swagger
- * /api/v1/dashboard-groups:
- *   get:
- *     summary: Listar grupos de dashboards con paginación y filtros
- *     tags: [Dashboard Groups]
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: Lista de grupos obtenida exitosamente
- *       401:
- *         description: No autenticado
- */
+
 groupRouter.get('/', authenticate, enforceActiveOrganization, validate(getGroupsSchema), async (req, res, next) => {
     try {
         const orgId = req.organizationContext.id;
@@ -796,26 +641,7 @@ groupRouter.get('/', authenticate, enforceActiveOrganization, validate(getGroups
     }
 });
 
-/**
- * @swagger
- * /api/v1/dashboard-groups/{id}:
- *   get:
- *     summary: Obtener un grupo de dashboards por publicCode
- *     tags: [Dashboard Groups]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *     responses:
- *       200:
- *         description: Grupo obtenido exitosamente
- *       404:
- *         description: Grupo no encontrado
- */
+
 groupRouter.get('/:id', authenticate, enforceActiveOrganization, validate(getGroupByIdSchema), async (req, res, next) => {
     try {
         const group = await dashboardServices.getGroup(req.params.id, req.user.userId);
@@ -833,22 +659,7 @@ groupRouter.get('/:id', authenticate, enforceActiveOrganization, validate(getGro
     }
 });
 
-/**
- * @swagger
- * /api/v1/dashboard-groups:
- *   post:
- *     summary: Crear un nuevo grupo de dashboards
- *     tags: [Dashboard Groups]
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       201:
- *         description: Grupo creado exitosamente
- *       401:
- *         description: No autenticado
- *       403:
- *         description: Sin permisos
- */
+
 groupRouter.post('/', authenticate, enforceActiveOrganization, requireRole(['system-admin', 'org-admin']), validate(createGroupSchema), async (req, res, next) => {
     try {
         const result = await dashboardServices.createGroup(
@@ -872,20 +683,7 @@ groupRouter.post('/', authenticate, enforceActiveOrganization, requireRole(['sys
     }
 });
 
-/**
- * @swagger
- * /api/v1/dashboard-groups/{id}:
- *   patch:
- *     summary: Actualizar un grupo de dashboards
- *     tags: [Dashboard Groups]
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: Grupo actualizado exitosamente
- *       404:
- *         description: Grupo no encontrado
- */
+
 groupRouter.patch('/:id', authenticate, enforceActiveOrganization, validate(updateGroupSchema), async (req, res, next) => {
     try {
         const result = await dashboardServices.updateGroup(
@@ -909,22 +707,7 @@ groupRouter.patch('/:id', authenticate, enforceActiveOrganization, validate(upda
     }
 });
 
-/**
- * @swagger
- * /api/v1/dashboard-groups/{id}:
- *   delete:
- *     summary: Eliminar un grupo de dashboards (soft delete)
- *     tags: [Dashboard Groups]
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: Grupo eliminado exitosamente
- *       403:
- *         description: Sin permisos
- *       404:
- *         description: Grupo no encontrado
- */
+
 groupRouter.delete('/:id', authenticate, enforceActiveOrganization, requireRole(['system-admin', 'org-admin']), validate(deleteGroupSchema), async (req, res, next) => {
     try {
         await dashboardServices.deleteGroup(

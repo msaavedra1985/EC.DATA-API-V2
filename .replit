@@ -45,6 +45,10 @@ outputType = "webview"
 localPort = 5000
 externalPort = 80
 
+[[ports]]
+localPort = 5904
+externalPort = 3000
+
 [userenv]
 
 [userenv.shared]
@@ -53,3 +57,7 @@ AZURE_STORAGE_CONTAINER_PRIVATE = "ecdatav2-private"
 CASSANDRA_KEYSPACE = "sensores"
 
 [userenv.development]
+
+[postMerge]
+path = "scripts/post-merge.sh"
+timeoutMs = 120000

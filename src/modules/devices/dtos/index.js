@@ -439,20 +439,20 @@ export const getDevicesSchema = z.object({
             .string()
             .optional()
             .describe('Solo admins: si es "true", muestra todos los devices sin filtrar por organización'),
-        siteId: z
+        site_id: z
             .string()
             .optional(),
-        deviceTypeId: z
+        device_type_id: z
             .string()
             .transform((val) => parseInt(val, 10))
             .refine((val) => !isNaN(val) && val > 0, {
-                message: 'deviceTypeId debe ser un entero positivo'
+                message: 'device_type_id debe ser un entero positivo'
             })
             .optional(),
         status: z
             .enum(['active', 'inactive', 'maintenance', 'decommissioned'])
             .optional(),
-        isActive: z
+        is_active: z
             .string()
             .transform((val) => val === 'true')
             .optional(),
@@ -460,7 +460,7 @@ export const getDevicesSchema = z.object({
             .string()
             .max(200, 'search no puede exceder 200 caracteres')
             .optional(),
-        includeChannels: z
+        include_channels: z
             .string()
             .transform((val) => val === 'true')
             .optional(),
@@ -488,11 +488,23 @@ export const getDevicesSchema = z.object({
             .optional()
             .default('0')
     }).transform((data) => {
-        if (data.page !== undefined && data.page >= 1) {
-            const limit = data.limit || 20;
-            return { ...data, offset: (data.page - 1) * limit };
+        const normalized = {
+            ...data,
+            siteId: data.site_id,
+            deviceTypeId: data.device_type_id,
+            isActive: data.is_active,
+            includeChannels: data.include_channels
+        };
+        delete normalized.site_id;
+        delete normalized.device_type_id;
+        delete normalized.is_active;
+        delete normalized.include_channels;
+
+        if (normalized.page !== undefined && normalized.page >= 1) {
+            const limit = normalized.limit || 20;
+            return { ...normalized, offset: (normalized.page - 1) * limit };
         }
-        return data;
+        return normalized;
     })
 });
 

@@ -1,6 +1,6 @@
 # Devices Endpoints
 
-> **Última actualización**: 2026-03-02
+> **Última actualización**: 2026-03-26
 > 
 > **IMPORTANTE**: Este archivo DEBE actualizarse cuando se modifique cualquier endpoint de dispositivos.
 

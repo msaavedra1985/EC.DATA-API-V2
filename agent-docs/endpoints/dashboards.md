@@ -1,6 +1,6 @@
 # Dashboards Endpoints
 
-> **Última actualización**: 2026-02-26
+> **Última actualización**: 2026-03-26
 > 
 > **IMPORTANTE**: Este archivo DEBE actualizarse cuando se modifique cualquier endpoint del módulo.
 
@@ -143,7 +143,9 @@
 | page | number | - | Alternativa a offset (calcula offset automáticamente) |
 | search | string | - | Filtrar por nombre o descripción |
 | isPublic | boolean | - | Filtrar por visibilidad |
-| includeWidgets | boolean | false | Si true, incluye pages/widgets/dataSources anidados |
+| include_widgets | boolean | false | Si `true`, incluye pages/widgets/dataSources anidados |
+
+> **Convención**: Los query params usan snake_case. `include_widgets` se transforma internamente a `includeWidgets` para el servicio.
 
 **Respuesta exitosa** (200):
 ```json
@@ -190,8 +192,8 @@
 ```
 
 **Notas**:
-- Con `includeWidgets=true`, cada dashboard incluye `pages[]` → `widgets[]` → `dataSources[]`
-- Sin `includeWidgets`, usa el serializer ligero (sin pages/widgets, con contadores)
+- Con `include_widgets=true`, cada dashboard incluye `pages[]` → `widgets[]` → `dataSources[]`
+- Sin `include_widgets`, usa el serializer ligero (sin pages/widgets, con contadores)
 
 ---
 

@@ -319,7 +319,56 @@ Paso 5 - Actualizar código:
 
 ## Database
 
-(Agregar problemas de DB aquí)
+### resource_hierarchy: trigger falla con "record new has no field path"
+**Fecha**: 2026-03-20
+**Síntoma**: `POST /api/v1/resource-hierarchy/nodes` falla con error de Postgres `record "new" has no field "path"` en el trigger `update_resource_hierarchy_path`.
+**Causa raíz**: La columna `path` (tipo `ltree`) no existía en la tabla real de Postgres, aunque estaba definida en la migración `20251226150310`. Se sospecha que la migración fue parcialmente aplicada o que la tabla fue recreada manualmente sin la columna. El trigger intentaba asignar `NEW.path := ...` pero `path` no estaba en el schema de la tabla.
+**Diagnóstico**:
+- `\d resource_hierarchy` en psql para verificar si la columna `path` existe
+- `SELECT * FROM pg_trigger WHERE tgname = 'resource_hierarchy_path_trigger'` para verificar el trigger
+- `SELECT * FROM "SequelizeMeta" WHERE name LIKE '%resource%'` para ver qué migraciones están registradas
+**Solución**: Script `scripts/reset-resource-hierarchy.cjs` que resetea completamente el dominio:
+1. Dropea trigger, funciones, tablas dependientes (`user_resource_access`, `organization_resource_counters`), tabla principal y ENUMs
+2. Elimina las 6 entradas de SequelizeMeta relacionadas
+3. Re-ejecuta `db:migrate` para que las migraciones se apliquen desde cero
+4. Si `db:migrate` falla por migraciones NO relacionadas (ej: `20260311000000-create-schedules-tables`), aplica las migraciones de resource_hierarchy individualmente con `--name`
+5. Verifica artefactos de BD y ejecuta INSERTs de prueba
+**Gotchas encontrados durante la solución**:
+- `DROP TRIGGER IF EXISTS trigger_name ON table_name` falla en Postgres si `table_name` NO EXISTE (a pesar del `IF EXISTS`). Hay que verificar que la tabla existe primero con `pg_tables`.
+- `DROP FUNCTION IF EXISTS func_name(resource_access_type)` falla si el tipo ENUM `resource_access_type` no existe. Solución: buscar las funciones por nombre en `pg_proc` y dropear por OID con `DROP FUNCTION IF EXISTS oid_value`.
+- Este proyecto usa `"type": "module"` en package.json, así que scripts Node.js que usan `require()` deben tener extensión `.cjs`.
+- `db:migrate` puede fallar por una migración ajena antes de llegar a las nuestras. Para eso se usa `npx sequelize-cli db:migrate --name nombre-migracion.cjs` como fallback.
+**Archivos afectados**: `scripts/reset-resource-hierarchy.cjs` (nuevo)
+
+### generate_resource_path() no funciona correctamente en BEFORE UPDATE triggers
+**Fecha**: 2026-03-20
+**Síntoma**: Al hacer `UPDATE resource_hierarchy SET parent_id = NULL WHERE id = :childId`, el `path` resultante aún incluye el prefijo del padre anterior (ej: `n...parent.n...child` en vez de solo `n...child`).
+**Causa**: `generate_resource_path(node_id)` es una función PL/pgSQL que hace `SELECT parent_id FROM resource_hierarchy WHERE id = current_id` para recorrer el árbol. Pero el trigger es `BEFORE INSERT OR UPDATE`, así que cuando el trigger ejecuta la función, la fila del nodo en la tabla todavía tiene el `parent_id` ANTERIOR (el UPDATE no se ha aplicado aún). La función lee datos stale.
+**Estado**: Bug preexistente en el diseño del trigger. No fue introducido por el reset. El INSERT funciona correctamente (depth y path se calculan bien). El UPDATE con cambio de `parent_id` produce path incorrecto.
+**Impacto**: Bajo en la práctica — la API crea nodos con INSERT (funciona bien). Reparentar nodos (UPDATE parent_id) es operación rara y podría requerir un fix separado en la función del trigger (ej: usar `NEW.parent_id` directamente en vez de leer de la tabla).
+**Archivos afectados**: Migración `20251226150310-enable-ltree-create-resource-hierarchy.cjs` (definición del trigger/función)
+
+### No crear migraciones durante desarrollo local — solo para producción
+**Fecha**: 2026-03-26
+**Síntoma**: Acumulamos 40+ migraciones durante desarrollo local puro (sin deployment a producción), generando overhead y conflictos en el post-merge (baseline migration que falla porque el schema ya existe).
+**Causa**: Se generaba una migración Sequelize para cada cambio de schema, incluso cuando solo afectaba al entorno local sin datos reales.
+**Solución / Regla de ahora en adelante**:
+- **Durante desarrollo local**: cambiar el schema directamente con `ALTER TABLE` en psql o ajustando el modelo Sequelize. No crear migraciones.
+- **Cuando un feature va a producción (primera vez o incrementalmente)**: recién ahí crear la migración correspondiente.
+- La migración baseline `20260320100000-baseline-schema.cjs` es el "punto cero" limpio. Todo lo que se agregue a partir de aquí va en migraciones incrementales nuevas, solo si hay un deploy a producción pendiente.
+- `scripts/post-merge.sh` ya maneja el caso dev: marca la baseline como ejecutada en SequelizeMeta antes de `db:migrate`, así evita el error de "schema ya existe".
+
+**Estrategia para el primer deploy a producción**:
+1. La DB de producción empieza vacía → `npm run db:migrate` corre la baseline limpiamente, sin errores.
+2. Si entre la baseline y el deploy se agregaron tablas/columnas en dev (sin migración), **ese es el momento de crear la migración incremental** para esos cambios.
+3. Patrón recomendado para migraciones incrementales seguras:
+   - Usar `CREATE TABLE IF NOT EXISTS` o `queryInterface.createTable(name, cols, { ifNotExists: true })`
+   - Usar `CREATE INDEX IF NOT EXISTS` en lugar de `CREATE INDEX`
+   - Para columnas: `ALTER TABLE ... ADD COLUMN IF NOT EXISTS ...`
+   - Para ENUMs: envolver en bloque `DO $$ BEGIN ... EXCEPTION WHEN duplicate_object THEN null; END $$;`
+4. Nunca asumir estado de la DB de producción — escribir siempre migraciones idempotentes.
+
+**Archivos afectados**: `src/db/migrations/20260320100000-baseline-schema.cjs`, `scripts/post-merge.sh`
 
 ---
 

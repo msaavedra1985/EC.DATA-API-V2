@@ -231,12 +231,9 @@ const swaggerOptions = {
             },
         ],
     },
-    // Buscar anotaciones JSDoc en todos los módulos
-    apis: [
-        './src/modules/*/index.js', 
-        './src/modules/*/routes.js',
-        './src/modules/*/dtos/*.js'
-    ],
+    // Cargar documentación desde archivos YAML separados (uno por módulo)
+    // Cada módulo tiene su propio archivo en src/docs/swagger/*.yaml
+    apis: ['./src/docs/swagger/*.yaml'],
 };
 
 // Generar especificación OpenAPI desde anotaciones JSDoc

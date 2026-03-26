@@ -52,7 +52,7 @@ class SqlTransport extends Transport {
                 data = { ...info, ...info.message };
             }
             
-            // Extraer datos del log
+            // Extraer datos del log en snake_case (formato enviado por winstonLogger.logError)
             const {
                 level,
                 message,
@@ -88,23 +88,23 @@ class SqlTransport extends Transport {
             // Mapear niveles de Winston a niveles de error_logs
             const errorLevel = this.mapWinstonLevelToErrorLevel(level);
 
-            // Crear el error log en la base de datos
+            // Crear el error log en la base de datos usando nombres camelCase del modelo Sequelize
             await ErrorLog.create({
                 source,
                 level: errorLevel,
-                error_code,
-                error_message: error_message || message,
-                stack_trace,
+                errorCode: error_code,
+                errorMessage: error_message || message,
+                stackTrace: stack_trace,
                 endpoint,
                 method,
-                status_code,
-                user_id,
-                organization_id,
-                session_id,
-                ip_address,
-                user_agent,
-                request_id: request_id || uuidv7(),
-                correlation_id,
+                statusCode: status_code,
+                userId: user_id,
+                organizationId: organization_id,
+                sessionId: session_id,
+                ipAddress: ip_address,
+                userAgent: user_agent,
+                requestId: request_id || uuidv7(),
+                correlationId: correlation_id,
                 context: {
                     ...context,
                     ...rest // Incluir cualquier campo extra en context

@@ -149,7 +149,7 @@ export const cascadeDelete = async (organizationIds, options = {}) => {
         } else if (reassignOrgId) {
             // Reasignar usuarios a otra organización
             for (const user of usersInOrgs) {
-                user.organization_id = reassignOrgId;
+                user.organizationId = reassignOrgId;
                 await user.save({ transaction });
                 result.reassigned_users++;
             }

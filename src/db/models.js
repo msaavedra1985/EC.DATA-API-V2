@@ -21,6 +21,13 @@ import UserOrganization from '../modules/auth/models/UserOrganization.js';
 // Modelos con dependencia a Users
 import RefreshToken from '../modules/auth/models/RefreshToken.js';
 
+// Modelos del módulo Schedules (dependencias: Organizations)
+import Schedule from '../modules/schedules/models/Schedule.js';
+import ScheduleException from '../modules/schedules/models/ScheduleException.js';
+import Validity from '../modules/schedules/models/Validity.js';
+import TimeProfile from '../modules/schedules/models/TimeProfile.js';
+import TimeRange from '../modules/schedules/models/TimeRange.js';
+
 // Modelos del módulo Dashboards (dependencias: Organizations, Users)
 import Dashboard from '../modules/dashboards/models/Dashboard.js';
 import DashboardPage from '../modules/dashboards/models/DashboardPage.js';
@@ -37,6 +44,28 @@ User.hasMany(UserOrganization, {
     foreignKey: 'userId',
     as: 'UserOrganizations'
 });
+
+// --- Asociaciones del módulo Schedules ---
+
+// Schedule → Organization (N:1)
+Schedule.belongsTo(Organization, { foreignKey: 'organizationId', as: 'organization' });
+Organization.hasMany(Schedule, { foreignKey: 'organizationId', as: 'schedules' });
+
+// Schedule → Validity (1:N)
+Schedule.hasMany(Validity, { foreignKey: 'scheduleId', as: 'validities', onDelete: 'CASCADE' });
+Validity.belongsTo(Schedule, { foreignKey: 'scheduleId', as: 'schedule' });
+
+// Validity → ScheduleException (1:N)
+Validity.hasMany(ScheduleException, { foreignKey: 'validityId', as: 'exceptions', onDelete: 'CASCADE' });
+ScheduleException.belongsTo(Validity, { foreignKey: 'validityId', as: 'validity' });
+
+// Validity → TimeProfile (1:N)
+Validity.hasMany(TimeProfile, { foreignKey: 'validityId', as: 'timeProfiles', onDelete: 'CASCADE' });
+TimeProfile.belongsTo(Validity, { foreignKey: 'validityId', as: 'validity' });
+
+// TimeProfile → TimeRange (1:N)
+TimeProfile.hasMany(TimeRange, { foreignKey: 'timeProfileId', as: 'timeRanges', onDelete: 'CASCADE' });
+TimeRange.belongsTo(TimeProfile, { foreignKey: 'timeProfileId', as: 'timeProfile' });
 
 // --- Asociaciones del módulo Dashboards ---
 
@@ -96,7 +125,12 @@ export const models = [
     DashboardGroup,
     DashboardGroupItem,
     DashboardCollaborator,
-    DashboardGroupCollaborator
+    DashboardGroupCollaborator,
+    Schedule,
+    ScheduleException,
+    Validity,
+    TimeProfile,
+    TimeRange
 ];
 
 export default {
@@ -115,5 +149,10 @@ export default {
     DashboardGroup,
     DashboardGroupItem,
     DashboardCollaborator,
-    DashboardGroupCollaborator
+    DashboardGroupCollaborator,
+    Schedule,
+    ScheduleException,
+    Validity,
+    TimeProfile,
+    TimeRange
 };

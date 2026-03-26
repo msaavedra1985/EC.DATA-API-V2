@@ -1,0 +1,582 @@
+paths:
+  /api/v1/sites:
+    post:
+      summary: Crear un nuevo site (locación física)
+      description: Crea un site perteneciente a una organización. Solo system-admin y
+        org-admin pueden crear sites.
+      tags:
+        - Sites
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - organizationId
+                - name
+                - countryCode
+              properties:
+                organizationId:
+                  type: string
+                  description: Public code de la organización a la que pertenece el sitio
+                  example: ORG-yOM9ewfqOeWa-4
+                name:
+                  type: string
+                  description: Nombre del site (máx 200 caracteres)
+                  example: Sucursal Centro
+                description:
+                  type: string
+                  description: Descripción del site (máx 5000 caracteres)
+                  example: Oficina central en el microcentro
+                latitude:
+                  type: number
+                  description: Latitud GPS (-90 a 90)
+                  example: -34.6037389
+                longitude:
+                  type: number
+                  description: Longitud GPS (-180 a 180)
+                  example: -58.3815704
+                address:
+                  type: string
+                  description: Dirección completa (máx 500 caracteres)
+                  example: Av. Corrientes 1234
+                streetNumber:
+                  type: string
+                  description: Número de calle (máx 20 caracteres)
+                  example: "1234"
+                city:
+                  type: string
+                  description: Ciudad (máx 100 caracteres)
+                  example: Buenos Aires
+                stateProvince:
+                  type: string
+                  description: Provincia/Estado (máx 100 caracteres)
+                  example: Ciudad Autónoma de Buenos Aires
+                postalCode:
+                  type: string
+                  description: Código postal (máx 20 caracteres)
+                  example: C1043
+                countryCode:
+                  type: string
+                  minLength: 2
+                  maxLength: 2
+                  description: Código de país ISO 3166-1 alpha-2
+                  example: AR
+                timezone:
+                  type: string
+                  description: Zona horaria (máx 100 caracteres)
+                  example: America/Argentina/Buenos_Aires
+                buildingType:
+                  type: string
+                  enum:
+                    - office
+                    - warehouse
+                    - factory
+                    - retail
+                    - hospital
+                    - school
+                    - datacenter
+                    - hotel
+                    - restaurant
+                    - residential
+                    - mixed
+                    - other
+                  description: Tipo de edificio
+                  example: office
+                areaM2:
+                  type: number
+                  description: Área en metros cuadrados (positivo)
+                  example: 2500.5
+                floors:
+                  type: integer
+                  description: Número de pisos (entero positivo)
+                  example: 12
+                operatingHours:
+                  type: string
+                  description: Horario de operación (máx 200 caracteres)
+                  example: Lun-Vie 9:00-18:00
+                imageUrl:
+                  type: string
+                  format: uri
+                  description: URL de imagen del site (máx 500 caracteres)
+                  example: https://example.com/site.jpg
+                contactName:
+                  type: string
+                  description: Nombre del contacto (máx 100 caracteres)
+                  example: Juan Pérez
+                contactPhone:
+                  type: string
+                  description: Teléfono del contacto (máx 50 caracteres)
+                  example: +54-11-5555-0300
+                contactEmail:
+                  type: string
+                  format: email
+                  description: Email del contacto (máx 100 caracteres)
+                  example: contacto@site.com
+                isActive:
+                  type: boolean
+                  description: Estado activo del site
+                  default: true
+      responses:
+        "201":
+          description: Site creado exitosamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: "#/components/schemas/Site"
+                  meta:
+                    type: object
+                    properties:
+                      timestamp:
+                        type: string
+                        format: date-time
+                      locale:
+                        type: string
+                        example: es
+        "400":
+          description: Error de validación
+        "401":
+          description: No autenticado
+        "403":
+          description: Sin permisos
+        "404":
+          description: Organización o país no encontrado
+    get:
+      summary: Listar sites con paginación y filtros
+      description: >
+        Obtiene lista de sites filtrados por organización.
+
+
+        **Comportamiento del filtro por organización:**
+
+        - Sin filtro: Usa automáticamente la organización activa del usuario (del JWT)
+
+        - Con `organizationId`: Filtra por esa organización específica (si tiene acceso)
+
+        - Con `all=true`: Solo admins (system-admin, org-admin), muestra todos los sites accesibles
+      tags:
+        - Sites
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: organizationId
+          description: Filtrar por organización específica (public code). Si no se
+            especifica, usa la organización activa del usuario.
+          schema:
+            type: string
+            example: ORG-yOM9ewfqOeWa-4
+        - in: query
+          name: all
+          description: Solo admins - Si es "true", muestra todos los sites sin filtrar por
+            organización
+          schema:
+            type: string
+            enum:
+              - "true"
+              - "false"
+            example: "true"
+        - in: query
+          name: countryCode
+          description: Filtrar por país (ISO 3166-1 alpha-2)
+          schema:
+            type: string
+            minLength: 2
+            maxLength: 2
+            example: AR
+        - in: query
+          name: isActive
+          description: Filtrar por estado activo
+          schema:
+            type: string
+            enum:
+              - "true"
+              - "false"
+            example: "true"
+        - in: query
+          name: city
+          description: Filtrar por ciudad
+          schema:
+            type: string
+            example: Buenos Aires
+        - in: query
+          name: notInHierarchy
+          description: Si es "true", muestra solo sites que NO están en ninguna jerarquía
+            de recursos. Útil para evitar duplicados al agregar a la jerarquía.
+          schema:
+            type: string
+            enum:
+              - "true"
+              - "false"
+            example: "true"
+        - in: query
+          name: page
+          description: Número de página (≥1). Si se usa, calcula el offset automáticamente.
+          schema:
+            type: integer
+            minimum: 1
+            example: 1
+        - in: query
+          name: limit
+          description: Número máximo de resultados
+          schema:
+            type: integer
+            default: 20
+            minimum: 1
+            maximum: 100
+        - in: query
+          name: offset
+          description: Número de registros a saltar
+          schema:
+            type: integer
+            default: 0
+            minimum: 0
+      responses:
+        "200":
+          description: Lista de sites obtenida exitosamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    description: Array de sites
+                    items:
+                      $ref: "#/components/schemas/Site"
+                  meta:
+                    type: object
+                    properties:
+                      total:
+                        type: integer
+                        example: 15
+                      page:
+                        type: integer
+                        example: 1
+                      limit:
+                        type: integer
+                        example: 20
+                      timestamp:
+                        type: string
+                        format: date-time
+                      locale:
+                        type: string
+                        example: es
+                      organizationFilter:
+                        type: object
+        "401":
+          description: No autenticado
+  "/api/v1/sites/{id}":
+    get:
+      summary: Obtener un site por ID
+      description: Obtiene los detalles de un site específico por su public code
+      tags:
+        - Sites
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          description: Public code del site
+          schema:
+            type: string
+            example: SITE-abc123xyz-1
+      responses:
+        "200":
+          description: Site obtenido exitosamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: "#/components/schemas/Site"
+                  meta:
+                    type: object
+                    properties:
+                      timestamp:
+                        type: string
+                        format: date-time
+                      locale:
+                        type: string
+                        example: es
+        "401":
+          description: No autenticado
+        "404":
+          description: Site no encontrado
+    put:
+      summary: Actualizar un site
+      description: Actualiza los datos de un site existente. Solo system-admin y
+        org-admin pueden actualizar.
+      tags:
+        - Sites
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          description: Public code del site
+          schema:
+            type: string
+            example: SITE-abc123xyz-1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  example: Sucursal Centro - Actualizada
+                description:
+                  type: string
+                latitude:
+                  type: number
+                longitude:
+                  type: number
+                address:
+                  type: string
+                streetNumber:
+                  type: string
+                city:
+                  type: string
+                stateProvince:
+                  type: string
+                postalCode:
+                  type: string
+                countryCode:
+                  type: string
+                  minLength: 2
+                  maxLength: 2
+                  description: Código de país ISO 3166-1 alpha-2
+                  example: AR
+                timezone:
+                  type: string
+                buildingType:
+                  type: string
+                  enum:
+                    - office
+                    - warehouse
+                    - factory
+                    - retail
+                    - hospital
+                    - school
+                    - datacenter
+                    - hotel
+                    - restaurant
+                    - residential
+                    - mixed
+                    - other
+                areaM2:
+                  type: number
+                floors:
+                  type: integer
+                operatingHours:
+                  type: string
+                imageUrl:
+                  type: string
+                  format: uri
+                contactName:
+                  type: string
+                contactPhone:
+                  type: string
+                contactEmail:
+                  type: string
+                  format: email
+                isActive:
+                  type: boolean
+      responses:
+        "200":
+          description: Site actualizado exitosamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: "#/components/schemas/Site"
+                  meta:
+                    type: object
+                    properties:
+                      timestamp:
+                        type: string
+                        format: date-time
+                      locale:
+                        type: string
+                        example: es
+        "400":
+          description: Error de validación
+        "401":
+          description: No autenticado
+        "403":
+          description: Sin permisos
+        "404":
+          description: Site no encontrado
+    delete:
+      summary: Eliminar un site (soft delete)
+      description: Elimina lógicamente un site. Solo system-admin puede eliminar.
+      tags:
+        - Sites
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          description: Public code del site
+          schema:
+            type: string
+            example: SITE-abc123xyz-1
+      responses:
+        "200":
+          description: Site eliminado exitosamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      message:
+                        type: string
+                        example: Site eliminado exitosamente
+        "401":
+          description: No autenticado
+        "403":
+          description: Sin permisos
+        "404":
+          description: Site no encontrado
+components:
+  schemas:
+    Site:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Public code del site
+          example: SITE-abc123xyz-1
+        name:
+          type: string
+          example: Sucursal Centro
+        description:
+          type: string
+          example: Oficina central en el microcentro
+        latitude:
+          type: number
+          example: -34.6037389
+        longitude:
+          type: number
+          example: -58.3815704
+        address:
+          type: string
+          example: Av. Corrientes 1234
+        streetNumber:
+          type: string
+          example: "1234"
+        city:
+          type: string
+          example: Buenos Aires
+        stateProvince:
+          type: string
+          example: Ciudad Autónoma de Buenos Aires
+        postalCode:
+          type: string
+          example: C1043
+        timezone:
+          type: string
+          example: America/Argentina/Buenos_Aires
+        buildingType:
+          type: string
+          example: office
+        areaM2:
+          type: number
+          example: 2500.5
+        floors:
+          type: integer
+          example: 12
+        operatingHours:
+          type: string
+          example: Lun-Vie 9:00-18:00
+        imageUrl:
+          type: string
+          format: uri
+          example: https://example.com/site.jpg
+        contactName:
+          type: string
+          example: Juan Pérez
+        contactPhone:
+          type: string
+          example: +54-11-5555-0300
+        contactEmail:
+          type: string
+          format: email
+          example: contacto@site.com
+        isActive:
+          type: boolean
+          example: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        organization:
+          type: object
+          description: Organización a la que pertenece el site (presente cuando se carga la relación)
+          properties:
+            id:
+              type: string
+              description: Public code de la organización
+              example: ORG-yOM9ewfqOeWa-4
+            slug:
+              type: string
+              example: mi-organizacion
+            name:
+              type: string
+              example: Mi Organización
+            logoUrl:
+              type: string
+              format: uri
+              nullable: true
+              example: null
+        country:
+          type: object
+          description: País del site (presente cuando se carga la relación)
+          properties:
+            id:
+              type: integer
+              example: 10
+            isoAlpha2:
+              type: string
+              example: AR
+            isoAlpha3:
+              type: string
+              example: ARG
+            phoneCode:
+              type: string
+              example: "54"

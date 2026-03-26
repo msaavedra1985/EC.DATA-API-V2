@@ -18,7 +18,8 @@ REST API Node.js/Express multi-tenant para plataformas e-commerce. Integra con f
 | **Al trabajar con la base de datos** | `agent-docs/database.dbml.txt` |
 | **Al agregar keys Redis** | `agent-docs/redis-glossary.md` |
 | **Para ver tareas pendientes** | `agent-docs/backlog.md` |
-| **Al migrar datos de plataforma legacy** | `agent-docs/migration-guide.md` |
+| **Al migrar datos de plataforma legacy** | `agent-docs/platform-migration-guide.md` |
+| **Al migrar devices/channels (detalle campos)** | `agent-docs/migration-guide.md` |
 | **Al hacer deploy en Azure** | `agent-docs/deployment-azure.md` |
 
 ## Índice de Documentación
@@ -33,7 +34,8 @@ agent-docs/
 ├── glosario.md           # Términos de dominio (public_code, session_context, etc.)
 ├── learnings.md          # Errores resueltos y gotchas
 ├── backlog.md            # Tareas pendientes por módulo
-├── migration-guide.md    # Guía de migración legacy SQL Server → PostgreSQL
+├── migration-guide.md    # Guía de migración: mapeo de campos devices/channels (Sirenis)
+├── platform-migration-guide.md  # Plan maestro de migración: todas las tablas, patrón canónico, extensible
 ├── deployment-azure.md   # Guía de deployment en Azure (flujos, gotchas, checklist)
 ├── nodejs-best-practices.md  # Mejores prácticas Node.js API
 ├── database.dbml.txt     # Schema de DB en formato DBML (actualizar con npm run db:dbml)
@@ -51,7 +53,8 @@ agent-docs/
     ├── resource-hierarchy.md  # Árbol de recursos
     ├── error-logs.md     # Logging de errores (público)
     ├── asset-categories.md  # Tags jerárquicos para canales
-    └── dashboards.md     # Dashboards multi-página, widgets (con dataSources inline), grupos, colaboradores
+    ├── dashboards.md     # Dashboards multi-página, widgets (con dataSources inline), grupos, colaboradores
+    └── device-metadata.md  # Catálogos core: types, brands, models, servers, networks, licenses, validity-periods
 ```
 
 ## Reglas Críticas (Resumen)
@@ -64,6 +67,7 @@ agent-docs/
 6. **Actualizar docs de endpoints** al modificarlos → `agent-docs/endpoints/{modulo}.md`
 7. **camelCase end-to-end**: Todo el código JS usa camelCase (modelos, DTOs, serializers, services, repos, routes). Sequelize `underscored: true` mapea automáticamente a columnas snake_case en la DB. El middleware caseTransform fue eliminado — el frontend envía/recibe camelCase directo.
 8. **Excepciones snake_case**: Nombres de tabla, valores ENUM, i18n keys, raw SQL queries, y acceso a resultados de `raw: true` queries mantienen snake_case (son columnas DB directas).
+9. **Query params de URL usan snake_case**: Los query params en la URL deben usar snake_case (ej: `device_id`, `not_in_hierarchy`, `include_channels`). Los DTOs (Zod) se encargan de validarlos con los nombres snake_case y transformarlos al nombre camelCase interno antes de que lleguen al servicio/repositorio. Los body params de POST/PUT siguen en camelCase. El módulo organizations ya usaba snake_case correctamente.
 
 ## Exports (mantener actualizados)
 

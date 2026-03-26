@@ -21,126 +21,8 @@ const searchSchema = z.object({
 
 const router = Router();
 
-/**
- * @swagger
- * /api/v1/telemetry/channels/{channelId}/data:
- *   get:
- *     summary: Obtiene datos de telemetría de un canal
- *     description: |
- *       Consulta datos históricos de mediciones de un canal específico.
- *       Los datos se obtienen de Cassandra y se procesan según los filtros indicados.
- *     tags:
- *       - Telemetry
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: channelId
- *         required: true
- *         schema:
- *           type: string
- *         description: ID del canal (UUID o public_code)
- *       - in: query
- *         name: from
- *         required: true
- *         schema:
- *           type: string
- *           format: date-time
- *         description: Fecha inicio (ISO 8601 o YYYY-MM-DD)
- *       - in: query
- *         name: to
- *         required: true
- *         schema:
- *           type: string
- *           format: date-time
- *         description: Fecha fin (ISO 8601 o YYYY-MM-DD)
- *       - in: query
- *         name: resolution
- *         schema:
- *           type: string
- *           enum: [raw, 1m, 15m, 60m, daily, monthly]
- *           default: 1m
- *         description: Resolución temporal de los datos
- *       - in: query
- *         name: tz
- *         schema:
- *           type: string
- *         description: Timezone objetivo (IANA format)
- *       - in: query
- *         name: variables
- *         schema:
- *           type: array
- *           items:
- *             type: integer
- *         description: IDs de variables específicas a consultar
- *       - in: query
- *         name: excludeDays
- *         schema:
- *           type: array
- *           items:
- *             type: integer
- *             minimum: 0
- *             maximum: 6
- *         description: Días de la semana a excluir (0=Domingo, 6=Sábado)
- *     responses:
- *       200:
- *         description: Datos de telemetría
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 ok:
- *                   type: boolean
- *                   example: true
- *                 data:
- *                   type: object
- *                   properties:
- *                     metadata:
- *                       type: object
- *                       properties:
- *                         uuid:
- *                           type: string
- *                         timezone:
- *                           type: string
- *                         deviceName:
- *                           type: string
- *                         channelName:
- *                           type: string
- *                         resolution:
- *                           type: string
- *                         totalRecords:
- *                           type: integer
- *                     variables:
- *                       type: object
- *                       additionalProperties:
- *                         type: object
- *                         properties:
- *                           name:
- *                             type: string
- *                           unit:
- *                             type: string
- *                           column:
- *                             type: string
- *                     data:
- *                       type: array
- *                       items:
- *                         type: object
- *                         properties:
- *                           ts:
- *                             type: string
- *                             format: date-time
- *                           values:
- *                             type: object
- *                             additionalProperties:
- *                               type: number
- *       400:
- *         description: Parámetros inválidos
- *       404:
- *         description: Canal no encontrado
- *       500:
- *         description: Error interno del servidor
- */
+
+// 📄 Swagger: src/docs/swagger/telemetry.yaml -> GET /channels/:channelId/data
 router.get('/channels/:channelId/data', async (req, res) => {
     try {
         const { channelId } = req.params;
@@ -218,68 +100,8 @@ router.get('/channels/:channelId/data', async (req, res) => {
     }
 });
 
-/**
- * @swagger
- * /api/v1/telemetry/channels/{channelId}/latest:
- *   get:
- *     summary: Obtiene el último dato de telemetría de un canal
- *     description: |
- *       Retorna el registro más reciente disponible para pseudo-realtime/polling.
- *       
- *       **Optimización de polling con `since`:**
- *       - Si se proporciona `since` y no hay datos más nuevos → retorna `hasNew: false`
- *       - Si hay datos nuevos → retorna los datos completos con `hasNew: true`
- *       - Reduce transferencia de datos en polling frecuente
- *     tags:
- *       - Telemetry
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: channelId
- *         required: true
- *         schema:
- *           type: string
- *         description: ID del canal (UUID, public_code CHN-XXXXX-X)
- *       - in: query
- *         name: since
- *         required: false
- *         schema:
- *           type: string
- *           format: date-time
- *         description: |
- *           ISO timestamp del último dato que tiene el cliente.
- *           Si el dato más reciente no es más nuevo, retorna hasNew: false.
- *         example: "2024-12-22T14:30:00.000Z"
- *     responses:
- *       200:
- *         description: Último dato de telemetría o indicador de sin cambios
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 ok:
- *                   type: boolean
- *                 data:
- *                   type: object
- *                   properties:
- *                     hasNew:
- *                       type: boolean
- *                       description: Si hay datos nuevos respecto a `since`
- *                     lastChecked:
- *                       type: string
- *                       format: date-time
- *                     metadata:
- *                       type: object
- *                     variables:
- *                       type: object
- *                     data:
- *                       type: object
- *                       nullable: true
- *       404:
- *         description: Canal no encontrado
- */
+
+// 📄 Swagger: src/docs/swagger/telemetry.yaml -> GET /channels/:channelId/latest
 router.get('/channels/:channelId/latest', async (req, res) => {
     try {
         const { channelId } = req.params;
@@ -316,91 +138,8 @@ router.get('/channels/:channelId/latest', async (req, res) => {
     }
 });
 
-/**
- * @swagger
- * /api/v1/telemetry/batch/latest:
- *   post:
- *     summary: Obtiene últimos datos de múltiples canales en paralelo
- *     description: |
- *       Ejecuta consultas en paralelo para máximo rendimiento.
- *       Cada canal consulta todas sus variables en una sola query Cassandra.
- *       Ideal para dashboards con múltiples sensores.
- *       
- *       **Tipos de identificador soportados:**
- *       - `publicCode`: "CHN-5Q775-2" (para frontend)
- *       - `channelUuid`: UUID de PostgreSQL (para cron)
- *       - `deviceChannel`: { deviceCode: "DEV-XXXXX-X", ch: 1 } (para batch)
- *     tags:
- *       - Telemetry
- *     security:
- *       - bearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - channels
- *             properties:
- *               channels:
- *                 type: array
- *                 description: Array de identificadores de canal
- *                 maxItems: 50
- *                 items:
- *                   oneOf:
- *                     - type: string
- *                       description: public_code del canal
- *                     - type: object
- *                       properties:
- *                         publicCode:
- *                           type: string
- *                         channelUuid:
- *                           type: string
- *                         deviceChannel:
- *                           type: object
- *                           properties:
- *                             deviceCode:
- *                               type: string
- *                             ch:
- *                               type: integer
- *                 example: ["CHN-5Q775-2", "CHN-7B3R2-8", "CHN-4K9P1-3"]
- *               since:
- *                 type: string
- *                 format: date-time
- *                 description: ISO timestamp para optimización de polling
- *     responses:
- *       200:
- *         description: Resultados de todos los canales
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 ok:
- *                   type: boolean
- *                 data:
- *                   type: object
- *                   properties:
- *                     batchMeta:
- *                       type: object
- *                       properties:
- *                         totalChannels:
- *                           type: integer
- *                         successCount:
- *                           type: integer
- *                         withNewData:
- *                           type: integer
- *                         elapsedMs:
- *                           type: integer
- *                           description: Tiempo total de ejecución en ms
- *                     results:
- *                       type: array
- *                       items:
- *                         type: object
- *       400:
- *         description: Parámetros inválidos
- */
+
+// 📄 Swagger: src/docs/swagger/telemetry.yaml -> POST /batch/latest
 router.post('/batch/latest', async (req, res) => {
     try {
         const { channels, since } = req.body;
@@ -449,6 +188,7 @@ router.post('/batch/latest', async (req, res) => {
 });
 
 // Montar rutas de variables
+// 📄 Swagger: src/docs/swagger/telemetry.yaml -> USE /variables
 router.use('/variables', variablesRouter);
 
 // Exportar router y servicios

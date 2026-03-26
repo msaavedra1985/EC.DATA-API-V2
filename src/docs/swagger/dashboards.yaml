@@ -1,0 +1,227 @@
+paths:
+  /api/v1/dashboards:
+    get:
+      summary: Listar dashboards con paginación y filtros
+      description: Obtiene lista de dashboards de la organización activa con filtros
+        opcionales
+      tags:
+        - Dashboards
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: search
+          schema:
+            type: string
+        - in: query
+          name: isPublic
+          schema:
+            type: string
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 20
+        - in: query
+          name: offset
+          schema:
+            type: integer
+            default: 0
+      responses:
+        "200":
+          description: Lista de dashboards obtenida exitosamente
+        "401":
+          description: No autenticado
+    post:
+      summary: Crear un nuevo dashboard
+      description: Crea un dashboard perteneciente a la organización activa. Solo
+        system-admin y org-admin pueden crear.
+      tags:
+        - Dashboards
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                icon:
+                  type: string
+                isPublic:
+                  type: boolean
+      responses:
+        "201":
+          description: Dashboard creado exitosamente
+        "400":
+          description: Error de validación
+        "401":
+          description: No autenticado
+        "403":
+          description: Sin permisos
+  "/api/v1/dashboards/{id}":
+    get:
+      summary: Obtener un dashboard por publicCode
+      description: Obtiene los detalles de un dashboard específico con todas sus relaciones
+      tags:
+        - Dashboards
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Dashboard obtenido exitosamente
+        "401":
+          description: No autenticado
+        "404":
+          description: Dashboard no encontrado
+    patch:
+      summary: Actualizar un dashboard
+      description: Actualiza los datos de un dashboard existente
+      tags:
+        - Dashboards
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Dashboard actualizado exitosamente
+        "400":
+          description: Error de validación
+        "401":
+          description: No autenticado
+        "403":
+          description: Sin permisos
+        "404":
+          description: Dashboard no encontrado
+    delete:
+      summary: Eliminar un dashboard (soft delete)
+      description: Elimina lógicamente un dashboard. Solo el propietario puede eliminar.
+      tags:
+        - Dashboards
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Dashboard eliminado exitosamente
+        "401":
+          description: No autenticado
+        "403":
+          description: Sin permisos
+        "404":
+          description: Dashboard no encontrado
+  "/api/v1/dashboards/{id}/home":
+    put:
+      summary: Marcar dashboard como home
+      description: Marca un dashboard como el "home" del usuario en la organización.
+        Solo puede haber uno por usuario+org.
+      tags:
+        - Dashboards
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: Public code del dashboard
+      responses:
+        "200":
+          description: Dashboard marcado como home exitosamente
+        "401":
+          description: No autenticado
+        "403":
+          description: Sin permisos (solo el owner)
+        "404":
+          description: Dashboard no encontrado
+  /api/v1/dashboard-groups:
+    get:
+      summary: Listar grupos de dashboards con paginación y filtros
+      tags:
+        - Dashboard Groups
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Lista de grupos obtenida exitosamente
+        "401":
+          description: No autenticado
+    post:
+      summary: Crear un nuevo grupo de dashboards
+      tags:
+        - Dashboard Groups
+      security:
+        - bearerAuth: []
+      responses:
+        "201":
+          description: Grupo creado exitosamente
+        "401":
+          description: No autenticado
+        "403":
+          description: Sin permisos
+  "/api/v1/dashboard-groups/{id}":
+    get:
+      summary: Obtener un grupo de dashboards por publicCode
+      tags:
+        - Dashboard Groups
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Grupo obtenido exitosamente
+        "404":
+          description: Grupo no encontrado
+    patch:
+      summary: Actualizar un grupo de dashboards
+      tags:
+        - Dashboard Groups
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Grupo actualizado exitosamente
+        "404":
+          description: Grupo no encontrado
+    delete:
+      summary: Eliminar un grupo de dashboards (soft delete)
+      tags:
+        - Dashboard Groups
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Grupo eliminado exitosamente
+        "403":
+          description: Sin permisos
+        "404":
+          description: Grupo no encontrado

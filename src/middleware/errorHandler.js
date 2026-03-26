@@ -19,6 +19,38 @@ export const errorHandler = (err, req, res, next) => {
     // Log del error para debugging en Pino
     logger.error(err, 'Error capturado');
 
+    // Manejar errores de validación de Sequelize
+    if (err.name === 'SequelizeValidationError' || err.name === 'SequelizeUniqueConstraintError') {
+        const fields = err.errors ? err.errors.map(e => `${e.path}: ${e.message}`).join('; ') : err.message;
+        const validationMessage = `Validation failed: ${fields}`;
+        const validationCode = ERROR_CODES.BAD_REQUEST;
+        const validationStatus = 400;
+
+        winstonLogger.logError({
+            source: 'backend',
+            level: 'warning',
+            errorCode: validationCode,
+            errorMessage: validationMessage,
+            stackTrace: err.stack || null,
+            endpoint: req.originalUrl || req.url,
+            method: req.method,
+            statusCode: validationStatus,
+            userId: req.user?.id || null,
+            organizationId: req.user?.activeOrgId || null,
+            ipAddress: req.ip || req.connection?.remoteAddress,
+            userAgent: req.get('user-agent'),
+            context: { url: req.originalUrl || req.url, query: req.query, params: req.params },
+            metadata: {}
+        });
+
+        return errorResponse(res, {
+            message: validationMessage,
+            code: validationCode,
+            status: validationStatus,
+            details: process.env.NODE_ENV === 'development' ? { stack: err.stack } : null
+        });
+    }
+
     // Determinar el código de estado HTTP
     const status = err.status || err.statusCode || 500;
 
@@ -35,13 +67,15 @@ export const errorHandler = (err, req, res, next) => {
     // Mensaje de error (en producción no exponer detalles internos)
     const message = err.message || 'Internal server error';
 
-    // Detalles adicionales (solo en desarrollo)
-    const details =
-        process.env.NODE_ENV === 'development'
-            ? {
-                  stack: err.stack,
-                  ...(err.details && { details: err.details }),
-              }
+    // Detalles de negocio (siempre incluidos si existen)
+    // Detalles de debug (solo en desarrollo)
+    const details = err.details
+        ? {
+              ...err.details,
+              ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
+          }
+        : process.env.NODE_ENV === 'development'
+            ? { stack: err.stack }
             : null;
 
     // ========================================

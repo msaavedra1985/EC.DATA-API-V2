@@ -504,7 +504,7 @@ export const isDescendantOf = async (potentialDescendantId, ancestorId) => {
             FROM resource_hierarchy descendant, resource_hierarchy ancestor
             WHERE descendant.id = $1
               AND ancestor.id = $2
-              AND descendant.path <@ ancestor.path
+              AND descendant.path::ltree <@ ancestor.path::ltree
               AND descendant.id != ancestor.id
               AND descendant.deleted_at IS NULL
               AND ancestor.deleted_at IS NULL
@@ -1037,6 +1037,7 @@ function toNodeDto(node, includeCounts = true) {
         name: data.name,
         description: data.description,
         nodeType: data.nodeType ?? data.node_type,
+        referenceId: data.referenceId ?? data.reference_id ?? null,
         icon: data.icon,
         displayOrder: data.displayOrder ?? data.display_order,
         depth: data.depth,

@@ -18,6 +18,7 @@ import resourceHierarchyRouter from '../modules/resource-hierarchy/index.js';
 import assetCategoriesRouter from '../modules/asset-categories/index.js';
 import { dashboardRouter, groupRouter } from '../modules/dashboards/index.js';
 import { realtimeRouter } from '../modules/realtime/index.js';
+import schedulesRouter from '../modules/schedules/index.js';
 
 const router = express.Router();
 
@@ -79,6 +80,9 @@ router.use('/dashboard-groups', groupRouter);
 
 // Realtime (WebSocket token + status)
 router.use('/realtime', realtimeRouter);
+
+// Schedules (Motor de Horarios para facturación y analítica)
+router.use('/schedules', schedulesRouter);
 
 // Seeding (Testing/Development)
 router.use('/seed', seedRouter);

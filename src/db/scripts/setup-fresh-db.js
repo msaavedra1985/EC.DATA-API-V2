@@ -82,6 +82,8 @@ const HISTORICAL_MIGRATIONS = [
     '20260224120000-make-dashboard-page-name-nullable.cjs',
     '20260226100000-add-mqtt-key-to-variables.cjs',
     '20260226180000-fix-dashboard-order-number-constraints.cjs',
+    '20260306100000-create-unit-scales-table.cjs',
+    '20260311000000-create-schedules-tables.cjs',
 ];
 
 async function setupFreshDatabase() {

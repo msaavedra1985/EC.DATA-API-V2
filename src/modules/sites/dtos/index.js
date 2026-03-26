@@ -10,10 +10,9 @@ import { z } from 'zod';
 export const createSiteSchema = z.object({
     body: z.object({
         organizationId: z
-            .string({
-                required_error: 'organizationId es requerido'
-            })
-            .min(1, 'organizationId no puede estar vacío'),
+            .string()
+            .min(1, 'organizationId no puede estar vacío')
+            .optional(),
         name: z
             .string({
                 required_error: 'name es requerido'
@@ -240,19 +239,19 @@ export const listSitesSchema = z.object({
             .string()
             .optional()
             .describe('Solo admins: si es "true", muestra todos los sites sin filtrar por organización'),
-        countryCode: z
+        country_code: z
             .string()
-            .length(2, 'countryCode debe ser exactamente 2 caracteres')
+            .length(2, 'country_code debe ser exactamente 2 caracteres')
             .toUpperCase()
             .optional(),
-        isActive: z
+        is_active: z
             .string()
             .transform(val => val === 'true')
             .optional(),
         city: z
             .string()
             .optional(),
-        notInHierarchy: z
+        not_in_hierarchy: z
             .string()
             .transform(val => val === 'true')
             .optional()
@@ -275,11 +274,21 @@ export const listSitesSchema = z.object({
             .optional()
             .default('0')
     }).transform((data) => {
-        if (data.page !== undefined && data.page >= 1) {
-            const limit = data.limit || 20;
-            return { ...data, offset: (data.page - 1) * limit };
+        const normalized = {
+            ...data,
+            countryCode: data.country_code,
+            isActive: data.is_active,
+            notInHierarchy: data.not_in_hierarchy
+        };
+        delete normalized.country_code;
+        delete normalized.is_active;
+        delete normalized.not_in_hierarchy;
+
+        if (normalized.page !== undefined && normalized.page >= 1) {
+            const limit = normalized.limit || 20;
+            return { ...normalized, offset: (normalized.page - 1) * limit };
         }
-        return data;
+        return normalized;
     })
 });
 

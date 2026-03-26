@@ -168,3 +168,49 @@ router.post('/', async (req, res) => {
 
 - **Maximum 1000 lines per file** - Split into multiple files if exceeded
 - Large files are harder to maintain and for LLMs to process efficiently
+
+## Swagger / OpenAPI Documentation
+
+- **Toda la documentación Swagger está en archivos YAML separados**, uno por módulo: `src/docs/swagger/{module}.yaml`
+- **NUNCA usar bloques `@swagger` en archivos JS** — viola el límite de líneas y mezcla documentación con código
+- Al **crear un nuevo endpoint**, agregarlo al YAML correspondiente del módulo bajo `paths:`
+- Al **modificar un endpoint** (request body, parámetros, responses), actualizar el YAML correspondiente
+- Cada route handler tiene un comentario `// 📄 Swagger: src/docs/swagger/{module}.yaml -> METHOD /path` para referencia rápida
+- La configuración de `swagger-jsdoc` en `src/docs/openapi.js` usa el glob `./src/docs/swagger/*.yaml`
+
+### Estructura de un archivo YAML:
+
+```yaml
+paths:
+  /api/v1/module/endpoint:
+    get:
+      summary: Descripción corta
+      tags: [ModuleName]
+      security:
+        - BearerAuth: []
+      responses:
+        200:
+          description: Éxito
+```
+
+### Archivos YAML disponibles:
+
+| Módulo | Archivo |
+|--------|---------|
+| auth | `src/docs/swagger/auth.yaml` |
+| organizations | `src/docs/swagger/organizations.yaml` |
+| users | `src/docs/swagger/users.yaml` |
+| sites | `src/docs/swagger/sites.yaml` |
+| devices | `src/docs/swagger/devices.yaml` |
+| channels | `src/docs/swagger/channels.yaml` |
+| files | `src/docs/swagger/files.yaml` |
+| telemetry | `src/docs/swagger/telemetry.yaml` |
+| resource-hierarchy | `src/docs/swagger/resource-hierarchy.yaml` |
+| error-logs | `src/docs/swagger/error-logs.yaml` |
+| dashboards | `src/docs/swagger/dashboards.yaml` |
+| countries | `src/docs/swagger/countries.yaml` |
+| locations | `src/docs/swagger/locations.yaml` |
+| realtime | `src/docs/swagger/realtime.yaml` |
+| asset-categories | `src/docs/swagger/asset-categories.yaml` |
+| seed | `src/docs/swagger/seed.yaml` |
+| schedules | `src/docs/swagger/schedules.yaml` |
