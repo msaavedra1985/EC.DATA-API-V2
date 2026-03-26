@@ -403,8 +403,7 @@ export const verifyToken = async (token) => {
             email: user.email,
             role: decoded.role,
             activeOrgCode: decoded.activeOrgCode || null,
-            primaryOrgCode: decoded.primaryOrgCode || null,
-            canAccessAllOrgs: decoded.canAccessAllOrgs || false,
+            canAccessAllOrgs: decoded.role === 'system-admin',
             firstName: user.firstName,
             lastName: user.lastName,
             ...(isSystemAdmin && { impersonating: decoded.impersonating || false })
@@ -538,7 +537,7 @@ export const refreshAccessToken = async (refreshToken, sessionData = {}) => {
         // El JWT puede ser stale por race conditions del frontend (múltiples refresh tokens válidos)
         // Para otros roles, usar activeOrgCode del JWT (resuelto a UUID) como fallback
         const existingContext = await getSessionContext(userId);
-        const isSystemAdmin = decoded.canAccessAllOrgs || decoded.role === 'system-admin';
+        const isSystemAdmin = decoded.role === 'system-admin';
         
         let effectiveActiveOrgId;
         if (isSystemAdmin && existingContext) {
@@ -576,18 +575,7 @@ export const refreshAccessToken = async (refreshToken, sessionData = {}) => {
         const tokens = await generateTokens(user, refreshSessionData);
         
         const primaryOrg = await organizationService.getPrimaryOrganization(userId);
-        // Resolver decoded.primaryOrgCode → UUID para uso interno en setSessionContext
-        let refreshPrimaryOrgId = null;
-        if (decoded.primaryOrgCode) {
-            const Organization = (await import('../organizations/models/Organization.js')).default;
-            const primByCode = await Organization.findOne({
-                where: { publicCode: decoded.primaryOrgCode },
-                attributes: ['id']
-            });
-            refreshPrimaryOrgId = primByCode ? primByCode.id : (primaryOrg ? primaryOrg.organizationId : null);
-        } else {
-            refreshPrimaryOrgId = primaryOrg ? primaryOrg.organizationId : null;
-        }
+        const refreshPrimaryOrgId = primaryOrg ? primaryOrg.organizationId : null;
         // effectiveActiveOrgId ya es el valor correcto (incluyendo null explícito para modo global)
         // Solo caer a primaryOrgId si effectiveActiveOrgId es undefined
         const refreshActiveOrgId = effectiveActiveOrgId ?? refreshPrimaryOrgId;
@@ -623,7 +611,7 @@ export const refreshAccessToken = async (refreshToken, sessionData = {}) => {
             primaryOrgPublicCode: refreshPrimaryOrgInfo?.publicCode || null,
             primaryOrgName: refreshPrimaryOrgInfo?.name || null,
             primaryOrgLogoUrl: refreshPrimaryOrgInfo?.logoUrl || null,
-            canAccessAllOrgs: decoded.canAccessAllOrgs || false,
+            canAccessAllOrgs: decoded.role === 'system-admin',
             role: decoded.role || (user.role ? user.role.name : null),
             email: user.email,
             firstName: user.firstName,
@@ -731,7 +719,6 @@ const generateTokens = async (user, sessionData = {}) => {
     
     // Determinar si es system-admin (puede acceder a todas las orgs y tener activeOrgId null)
     const isSystemAdmin = user.role && user.role.name === 'system-admin';
-    const canAccessAllOrgs = isSystemAdmin;
     
     // activeOrgId (UUID interno):
     // - Si es system-admin y no se especifica org, puede ser null (panel admin global)
@@ -749,8 +736,6 @@ const generateTokens = async (user, sessionData = {}) => {
     const impersonating = isSystemAdmin && activeOrgId !== null && activeOrgId !== primaryOrgId;
 
     // Resolver UUIDs → publicCodes para el JWT — nunca exponer UUIDs en tokens
-    const primaryOrgCode = primaryOrg ? primaryOrg.publicCode : null;
-
     let activeOrgCode = null;
     if (activeOrgId) {
         const isUuidFormat = /^[0-9a-f]{8}-[0-9a-f]{4}/i.test(String(activeOrgId));
@@ -770,8 +755,6 @@ const generateTokens = async (user, sessionData = {}) => {
         aud: JWT_AUDIENCE,
         sub: user.publicCode,
         activeOrgCode,
-        primaryOrgCode,
-        canAccessAllOrgs,
         sessionVersion,
         role: user.role ? user.role.name : null,
         ...(isSystemAdmin && { impersonating })

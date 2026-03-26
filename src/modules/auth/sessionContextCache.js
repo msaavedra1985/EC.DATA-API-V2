@@ -20,7 +20,7 @@ const DEFAULT_TTL = SESSION_TTL_NORMAL;
  * @param {Object} context - Contexto de sesión
  * @param {string} context.activeOrgId - ID de la organización activa
  * @param {string} context.primaryOrgId - ID de la organización primaria
- * @param {boolean} context.canAccessAllOrgs - Si puede acceder a todas las orgs (system-admin)
+ * @param {boolean} context.canAccessAllOrgs - Si puede acceder a todas las orgs (equivale a role === 'system-admin')
  * @param {string} context.role - Nombre del rol
  * @param {string} context.email - Email del usuario
  * @param {string} context.firstName - Nombre del usuario

@@ -786,9 +786,7 @@ paths:
 
         - primaryOrgId (organización primaria del usuario)
 
-        - canAccessAllOrgs (si el usuario puede acceder a todas las orgs)
-
-        - role (nombre del rol del usuario)
+        - role (nombre del rol del usuario; si es 'system-admin' puede acceder a todas las orgs)
 
         - email, firstName, lastName, userId
       tags:
