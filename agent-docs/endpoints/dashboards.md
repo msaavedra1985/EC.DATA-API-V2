@@ -192,8 +192,8 @@
 ```
 
 **Notas**:
-- Con `includeWidgets=true`, cada dashboard incluye `pages[]` → `widgets[]` → `dataSources[]`
-- Sin `includeWidgets`, usa el serializer ligero (sin pages/widgets, con contadores)
+- Con `include_widgets=true`, cada dashboard incluye `pages[]` → `widgets[]` → `dataSources[]`
+- Sin `include_widgets`, usa el serializer ligero (sin pages/widgets, con contadores)
 
 ---
 

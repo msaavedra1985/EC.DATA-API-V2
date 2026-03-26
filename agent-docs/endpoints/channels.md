@@ -219,7 +219,7 @@ Mismo shape que el detalle del canal (GET /:id).
 
 - **Respuestas en camelCase**: Todos los campos del response usan camelCase (`measurementTypeId`, `phaseSystem`, `isActive`, `lastSyncAt`, etc.)
 - **ID siempre es publicCode**: El campo `id` en las respuestas es siempre el `publicCode` del canal. Nunca se expone el UUID interno.
-- **`device_id` vs `deviceId`**: La API acepta ambos en el GET. Internamente siempre usa `deviceId`. El frontend debe migrar a `deviceId`.
+- **Query params en snake_case**: Los query params del GET usan snake_case (`device_id`, `measurement_type_id`, `not_in_hierarchy`). El DTO los transforma internamente a camelCase antes de pasarlos al servicio.
 - **Caché de lista**: `GET /channels` tiene caché Redis. El caché se invalida automáticamente en cada create/update/delete.
-- **`notInHierarchy`**: Útil para el selector de "agregar canal a jerarquía" — retorna solo los canales que aún no tienen nodo asignado. Usa una query con LEFT JOIN a `resource_hierarchy`.
+- **`not_in_hierarchy`**: Útil para el selector de "agregar canal a jerarquía" — retorna solo los canales que aún no tienen nodo asignado. Usa una query con LEFT JOIN a `resource_hierarchy`.
 - **Ownership check**: El GET y DELETE verifican que el canal pertenezca a una organización accesible por el usuario antes de responder.

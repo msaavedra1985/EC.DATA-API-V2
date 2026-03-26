@@ -33,7 +33,8 @@ Los endpoints de escritura (`POST /nodes`, `POST /nodes/batch-create`) resuelven
 
 | Contexto del usuario | `organizationId` en body | Resultado |
 |----------------------|--------------------------|-----------|
-| Usuario con org activa en contexto (`canAccessAll=false`, org en contexto) | Ignorado | Se usa la org del contexto |
+| Usuario con org activa en contexto (`canAccessAll=false`, con `ctx.id`) | Ignorado | Se usa la org del contexto |
+| Usuario con acceso a múltiples orgs (`canAccessAll=false`, sin `ctx.id`) | **Requerido** | Se usa la org del body; si falta → **Error 400** `ORGANIZATION_ID_REQUIRED_FOR_SCOPED_ADMIN` |
 | `system-admin` en modo global (`canAccessAll=true`) | **Requerido** | Se usa la org del body |
 | `system-admin` en modo global (`canAccessAll=true`) | Ausente | **Error 400** `ORGANIZATION_ID_REQUIRED_FOR_GLOBAL_ADMIN` |
 
