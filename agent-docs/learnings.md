@@ -348,6 +348,28 @@ Paso 5 - Actualizar código:
 **Impacto**: Bajo en la práctica — la API crea nodos con INSERT (funciona bien). Reparentar nodos (UPDATE parent_id) es operación rara y podría requerir un fix separado en la función del trigger (ej: usar `NEW.parent_id` directamente en vez de leer de la tabla).
 **Archivos afectados**: Migración `20251226150310-enable-ltree-create-resource-hierarchy.cjs` (definición del trigger/función)
 
+### No crear migraciones durante desarrollo local — solo para producción
+**Fecha**: 2026-03-26
+**Síntoma**: Acumulamos 40+ migraciones durante desarrollo local puro (sin deployment a producción), generando overhead y conflictos en el post-merge (baseline migration que falla porque el schema ya existe).
+**Causa**: Se generaba una migración Sequelize para cada cambio de schema, incluso cuando solo afectaba al entorno local sin datos reales.
+**Solución / Regla de ahora en adelante**:
+- **Durante desarrollo local**: cambiar el schema directamente con `ALTER TABLE` en psql o ajustando el modelo Sequelize. No crear migraciones.
+- **Cuando un feature va a producción (primera vez o incrementalmente)**: recién ahí crear la migración correspondiente.
+- La migración baseline `20260320100000-baseline-schema.cjs` es el "punto cero" limpio. Todo lo que se agregue a partir de aquí va en migraciones incrementales nuevas, solo si hay un deploy a producción pendiente.
+- `scripts/post-merge.sh` ya maneja el caso dev: marca la baseline como ejecutada en SequelizeMeta antes de `db:migrate`, así evita el error de "schema ya existe".
+
+**Estrategia para el primer deploy a producción**:
+1. La DB de producción empieza vacía → `npm run db:migrate` corre la baseline limpiamente, sin errores.
+2. Si entre la baseline y el deploy se agregaron tablas/columnas en dev (sin migración), **ese es el momento de crear la migración incremental** para esos cambios.
+3. Patrón recomendado para migraciones incrementales seguras:
+   - Usar `CREATE TABLE IF NOT EXISTS` o `queryInterface.createTable(name, cols, { ifNotExists: true })`
+   - Usar `CREATE INDEX IF NOT EXISTS` en lugar de `CREATE INDEX`
+   - Para columnas: `ALTER TABLE ... ADD COLUMN IF NOT EXISTS ...`
+   - Para ENUMs: envolver en bloque `DO $$ BEGIN ... EXCEPTION WHEN duplicate_object THEN null; END $$;`
+4. Nunca asumir estado de la DB de producción — escribir siempre migraciones idempotentes.
+
+**Archivos afectados**: `src/db/migrations/20260320100000-baseline-schema.cjs`, `scripts/post-merge.sh`
+
 ---
 
 ## Seeders
