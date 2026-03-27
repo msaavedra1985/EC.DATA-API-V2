@@ -293,9 +293,9 @@ export const getDescendants = async (nodeId, options = {}) => {
         SELECT rh.*, 
                (SELECT COUNT(*) FROM resource_hierarchy c 
                 WHERE c.parent_id = rh.id AND c.deleted_at IS NULL AND c.is_active = true) as children_count,
-               nlevel(rh.path) - nlevel($1::ltree) as relative_depth
+               nlevel(rh.path::ltree) - nlevel($1::ltree) as relative_depth
         FROM resource_hierarchy rh
-        WHERE rh.path <@ $1::ltree
+        WHERE rh.path::ltree <@ $1::ltree
           AND rh.id != $2
           AND rh.deleted_at IS NULL
           AND rh.is_active = true
@@ -311,7 +311,7 @@ export const getDescendants = async (nodeId, options = {}) => {
     }
     
     if (maxDepth !== null) {
-        query += ` AND (nlevel(rh.path) - nlevel($1::ltree)) <= $${paramIndex}`;
+        query += ` AND (nlevel(rh.path::ltree) - nlevel($1::ltree)) <= $${paramIndex}`;
         replacements.push(maxDepth);
         paramIndex++;
     }
@@ -361,10 +361,10 @@ export const getAncestors = async (nodeId) => {
                (SELECT COUNT(*) FROM resource_hierarchy c 
                 WHERE c.parent_id = rh.id AND c.deleted_at IS NULL AND c.is_active = true) as children_count
         FROM resource_hierarchy rh
-        WHERE rh.path @> $1::ltree
+        WHERE rh.path::ltree @> $1::ltree
           AND rh.id != $2
           AND rh.deleted_at IS NULL
-        ORDER BY nlevel(rh.path) ASC
+        ORDER BY nlevel(rh.path::ltree) ASC
     `;
     
     const ancestors = await sequelize.query(query, {
@@ -458,9 +458,9 @@ const getDescendantsWithChildCount = async (nodeId, options = {}) => {
         SELECT rh.*,
                (SELECT COUNT(*) FROM resource_hierarchy c 
                 WHERE c.parent_id = rh.id AND c.deleted_at IS NULL AND c.is_active = true) as children_count,
-               nlevel(rh.path) - nlevel($1::ltree) as relative_depth
+               nlevel(rh.path::ltree) - nlevel($1::ltree) as relative_depth
         FROM resource_hierarchy rh
-        WHERE rh.path <@ $1::ltree
+        WHERE rh.path::ltree <@ $1::ltree
           AND rh.id != $2
           AND rh.deleted_at IS NULL
           AND rh.is_active = true
@@ -470,7 +470,7 @@ const getDescendantsWithChildCount = async (nodeId, options = {}) => {
     let paramIndex = 3;
     
     if (maxDepth !== null) {
-        query += ` AND (nlevel(rh.path) - nlevel($1::ltree)) <= $${paramIndex}`;
+        query += ` AND (nlevel(rh.path::ltree) - nlevel($1::ltree)) <= $${paramIndex}`;
         replacements.push(maxDepth);
         paramIndex++;
     }
@@ -615,7 +615,7 @@ export const getDescendantsForDeletion = async (nodeId) => {
     const query = `
         SELECT public_code, name, node_type
         FROM resource_hierarchy
-        WHERE path <@ $1::ltree
+        WHERE path::ltree <@ $1::ltree
           AND deleted_at IS NULL
         ORDER BY path ASC
     `;
@@ -692,7 +692,7 @@ export const deleteNode = async (nodeId, cascade = false) => {
         const query = `
             UPDATE resource_hierarchy
             SET deleted_at = CURRENT_TIMESTAMP
-            WHERE path <@ $1::ltree
+            WHERE path::ltree <@ $1::ltree
               AND deleted_at IS NULL
         `;
         
@@ -1235,7 +1235,7 @@ export const getFilteredTree = async (organizationId, categoryId, options = {}) 
             -- m.path @> rh.path = m es ancestro de rh (incluir el nodo mismo)
             SELECT DISTINCT rh.id
             FROM resource_hierarchy rh, matching m
-            WHERE (m.path <@ rh.path OR rh.id = m.id)
+            WHERE (m.path::ltree <@ rh.path::ltree OR rh.id = m.id)
               AND rh.organization_id = $2
               AND rh.deleted_at IS NULL
               AND rh.is_active = true
@@ -1248,7 +1248,7 @@ export const getFilteredTree = async (organizationId, categoryId, options = {}) 
                   AND (c.asset_category_id = ANY($3::int[]) 
                        OR EXISTS (
                            SELECT 1 FROM resource_hierarchy d
-                           WHERE d.path <@ c.path
+                           WHERE d.path::ltree <@ c.path::ltree
                              AND d.asset_category_id = ANY($3::int[])
                              AND d.deleted_at IS NULL
                              AND d.is_active = true
@@ -1324,7 +1324,7 @@ export const hasDescendantsWithCategory = async (nodeId, categoryId, includeSubc
         SELECT EXISTS (
             SELECT 1 
             FROM resource_hierarchy
-            WHERE path <@ $1::ltree
+            WHERE path::ltree <@ $1::ltree
               AND id != $2
               AND asset_category_id = ANY($3::int[])
               AND deleted_at IS NULL
