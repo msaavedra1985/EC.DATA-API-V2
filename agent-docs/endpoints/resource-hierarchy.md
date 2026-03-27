@@ -1,6 +1,6 @@
 # Resource Hierarchy Endpoints
 
-> **Última actualización**: 2026-03-26
+> **Última actualización**: 2026-03-27
 > 
 > **IMPORTANTE**: Este archivo DEBE actualizarse cuando se modifique cualquier endpoint de jerarquía.
 
@@ -1173,7 +1173,7 @@ Obtener el árbol completo de la organización en formato anidado (cada nodo tie
 |-------|------|---------|-------------|
 | `organizationId` | string | org activa | Public code de la organización |
 | `root_id` | string | — | Retornar subárbol desde este nodo |
-| `max_depth` | integer | sin límite | Profundidad máxima (1-50) |
+| `max_depth` | integer | `3` | Profundidad máxima (1-50). Por defecto el repositorio limita a 3 niveles para evitar cargas masivas. Enviar un valor mayor o usar paginación de hijos para árboles profundos. |
 | `include_counts` | boolean | `true` | Incluir `childrenCount` |
 
 ### Ejemplo 1: Árbol completo

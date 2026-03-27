@@ -10,7 +10,7 @@
  *   1. Importa todos los modelos Sequelize para registrarlos
  *   2. Llama sequelize.sync({ alter: false }) → crea todas las tablas desde los modelos
  *   3. Crea la tabla SequelizeMeta (registro interno de sequelize-cli)
- *   4. Inserta las 41 migraciones históricas como "ya ejecutadas"
+ *   4. Inserta las 51 migraciones históricas como "ya ejecutadas"
  *      → Esto evita que db:migrate las intente correr sobre tablas recién creadas
  *
  * Uso:
@@ -84,7 +84,15 @@ const HISTORICAL_MIGRATIONS = [
     '20260226100000-add-mqtt-key-to-variables.cjs',
     '20260226180000-fix-dashboard-order-number-constraints.cjs',
     '20260306100000-create-unit-scales-table.cjs',
+    '20260304000001-add-unique-indexes-to-device-translations.cjs',
+    '20260306200000-add-display-fields-to-variables.cjs',
     '20260311000000-create-schedules-tables.cjs',
+    '20260312000000-add-metrics-to-schedules.cjs',
+    '20260313000000-move-exceptions-to-validity.cjs',
+    '20260320100000-baseline-schema.cjs',
+    '20260321000000-create-organization-resource-counters.cjs',
+    '20260327000000-ensure-path-ltree-type.cjs',
+    '20260327010000-fix-trigger-ltree-explicit-casts.cjs',
 ];
 
 async function setupFreshDatabase() {
@@ -151,22 +159,29 @@ async function setupFreshDatabase() {
             DECLARE
                 old_path ltree;
                 new_path ltree;
+                parent_path ltree;
+                node_label text;
             BEGIN
-                NEW.path := generate_resource_path(NEW.id);
-                IF NEW.parent_id IS NULL THEN
-                    NEW.depth := 0;
-                ELSE
-                    SELECT depth + 1 INTO NEW.depth
-                    FROM resource_hierarchy
-                    WHERE id = NEW.parent_id;
-                END IF;
-                IF TG_OP = 'UPDATE' AND OLD.parent_id IS DISTINCT FROM NEW.parent_id THEN
-                    old_path := OLD.path;
-                    new_path := NEW.path;
-                    UPDATE resource_hierarchy
-                    SET path = new_path || subpath(path, nlevel(old_path)),
-                        depth = nlevel(new_path || subpath(path, nlevel(old_path))) - 1
-                    WHERE path <@ old_path AND id != NEW.id;
+                IF TG_OP = 'INSERT' OR OLD.parent_id IS DISTINCT FROM NEW.parent_id THEN
+                    node_label := 'n' || replace(NEW.id::text, '-', '');
+                    IF NEW.parent_id IS NULL THEN
+                        new_path := node_label::ltree;
+                        NEW.depth := 0;
+                    ELSE
+                        SELECT path::ltree, depth + 1 INTO parent_path, NEW.depth
+                        FROM resource_hierarchy
+                        WHERE id = NEW.parent_id;
+                        new_path := parent_path || node_label::ltree;
+                    END IF;
+                    NEW.path := new_path::text;
+
+                    IF TG_OP = 'UPDATE' THEN
+                        old_path := OLD.path::ltree;
+                        UPDATE resource_hierarchy
+                        SET path = (new_path || subpath(path::ltree, nlevel(old_path)))::text,
+                            depth = nlevel(new_path || subpath(path::ltree, nlevel(old_path))) - 1
+                        WHERE path::ltree <@ old_path AND id != NEW.id;
+                    END IF;
                 END IF;
                 RETURN NEW;
             END;

@@ -1155,7 +1155,9 @@ paths:
                 newParentId:
                   type: string
                   nullable: true
-                  description: Public code del nuevo nodo padre. Usar `null` para mover el nodo a nivel raíz.
+                  description: >
+                    Public code del nuevo nodo padre (formato `RES-XXX-XXX`). Debe ser el public code
+                    del nodo destino, **no** su UUID interno. Usar `null` para mover el nodo a nivel raíz.
                   example: RES-newparent-2
                 displayOrder:
                   type: integer
@@ -2111,7 +2113,9 @@ components:
         parentId:
           type: string
           nullable: true
-          description: Public code del nodo padre. Null si es nodo raíz.
+          description: >
+            Public code del nodo padre (formato `RES-XXX-XXX`). Nunca expone UUIDs internos.
+            Null si el nodo es raíz (no tiene padre).
           example: RES-def456ghi-2
         hasChildren:
           type: boolean

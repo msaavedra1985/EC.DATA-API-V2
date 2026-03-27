@@ -1056,7 +1056,7 @@ const enrichChannelNode = async (nodeData, organizationUuid) => {
 const sanitizeNode = (node) => {
     if (!node) return null;
     
-    const { _uuid, _organizationId, ...publicData } = node;
+    const { _uuid, _parentId, _organizationId, ...publicData } = node;
     return publicData;
 };
 
