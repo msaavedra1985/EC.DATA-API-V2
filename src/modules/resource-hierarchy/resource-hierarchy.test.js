@@ -41,14 +41,14 @@ let siblingFolder = null;
  */
 const createTestNode = async (data) => {
     const nodeData = {
-        organization_id: testOrganization.id,
-        node_type: data.node_type || 'folder',
+        organizationId: testOrganization.id,
+        nodeType: data.node_type || 'folder',
         name: data.name || 'Test Node'
     };
     
-    // Si hay parent_public_code, pasarlo como parent_id (el servicio lo resuelve)
+    // Si hay parent_public_code, pasarlo como parentId (el servicio lo resuelve)
     if (data.parent_public_code) {
-        nodeData.parent_id = data.parent_public_code;
+        nodeData.parentId = data.parent_public_code;
     }
     
     const node = await hierarchyServices.createNode(nodeData, testUser.id, '127.0.0.1', 'vitest');
@@ -473,21 +473,121 @@ describe('moveNode Guards', () => {
             // La validación de permisos existe en el servicio
         });
         
-        it.skip('debe permitir mover a admins sin verificar permisos (skipPermissionCheck)', async () => {
-            // SKIP: Problemas de limpieza entre tests causan conflictos de datos
-            // La lógica está implementada y funciona en producción
+        it('debe permitir mover a admins sin verificar permisos (skipPermissionCheck)', async () => {
+            rootFolder = await createTestNode({ name: 'Root Folder' });
+            siblingFolder = await createTestNode({ name: 'Sibling Folder' });
+            childFolder = await createTestNode({
+                name: 'Child Folder',
+                parent_public_code: rootFolder.public_code
+            });
+
+            const result = await hierarchyServices.moveNode(
+                childFolder.public_code,
+                siblingFolder.public_code,
+                testUser.id,
+                '127.0.0.1',
+                'vitest',
+                true
+            );
+
+            expect(result).toBeDefined();
+            expect(result.depth).toBe(1);
         });
     });
     
     describe('Movimiento exitoso', () => {
-        it.skip('debe mover un nodo a otro padre correctamente', async () => {
-            // SKIP: Problemas con limpieza entre tests causan conflictos ltree
-            // La funcionalidad está implementada y probada via API
+        it('debe mover un nodo a otro padre correctamente', async () => {
+            rootFolder = await createTestNode({ name: 'Root Folder' });
+            const targetParent = await createTestNode({ name: 'Sibling Folder' });
+            childFolder = await createTestNode({
+                name: 'Child Folder',
+                parent_public_code: rootFolder.public_code
+            });
+
+            const result = await hierarchyServices.moveNode(
+                childFolder.public_code,
+                targetParent.public_code,
+                testUser.id,
+                '127.0.0.1',
+                'vitest',
+                true
+            );
+
+            expect(result.depth).toBe(1);
+            expect(result.parentId).not.toBeNull();
+
+            const moved = await hierarchyRepository.findNodeByPublicCode(childFolder.public_code);
+            expect(moved).not.toBeNull();
+            expect(moved.depth).toBe(1);
+            const [parentRow] = await sequelize.query(
+                `SELECT parent_id FROM resource_hierarchy WHERE public_code = :code AND deleted_at IS NULL`,
+                { replacements: { code: childFolder.public_code }, type: sequelize.Sequelize.QueryTypes.SELECT }
+            );
+            const [targetRow] = await sequelize.query(
+                `SELECT id FROM resource_hierarchy WHERE public_code = :code AND deleted_at IS NULL`,
+                { replacements: { code: targetParent.public_code }, type: sequelize.Sequelize.QueryTypes.SELECT }
+            );
+            expect(parentRow.parent_id).toBe(targetRow.id);
         });
-        
-        it.skip('debe mover un nodo a raíz correctamente', async () => {
-            // SKIP: El trigger ltree tiene problemas cuando hay nodos residuales
-            // La funcionalidad está implementada y probada via API
+
+        it('debe mover un nodo con hijos y actualizar paths de descendientes', async () => {
+            rootFolder = await createTestNode({ name: 'Root Folder' });
+            childFolder = await createTestNode({
+                name: 'Child Folder',
+                parent_public_code: rootFolder.public_code
+            });
+            grandchildFolder = await createTestNode({
+                name: 'Grandchild Folder',
+                parent_public_code: childFolder.public_code
+            });
+            siblingFolder = await createTestNode({ name: 'Sibling Folder' });
+
+            await hierarchyServices.moveNode(
+                childFolder.public_code,
+                siblingFolder.public_code,
+                testUser.id,
+                '127.0.0.1',
+                'vitest',
+                true
+            );
+
+            const [grandchildRows] = await sequelize.query(
+                `SELECT path FROM resource_hierarchy WHERE public_code = :code AND deleted_at IS NULL`,
+                { replacements: { code: grandchildFolder.public_code }, type: sequelize.Sequelize.QueryTypes.SELECT }
+            );
+            const [childRows] = await sequelize.query(
+                `SELECT path FROM resource_hierarchy WHERE public_code = :code AND deleted_at IS NULL`,
+                { replacements: { code: childFolder.public_code }, type: sequelize.Sequelize.QueryTypes.SELECT }
+            );
+
+            expect(grandchildRows).toBeDefined();
+            expect(childRows).toBeDefined();
+            expect(grandchildRows.path).toContain(childRows.path);
+        });
+
+        it('debe mover un nodo a raíz correctamente', async () => {
+            rootFolder = await createTestNode({ name: 'Root Folder' });
+            childFolder = await createTestNode({
+                name: 'Child Folder',
+                parent_public_code: rootFolder.public_code
+            });
+
+            const result = await hierarchyServices.moveNode(
+                childFolder.public_code,
+                null,
+                testUser.id,
+                '127.0.0.1',
+                'vitest',
+                true
+            );
+
+            expect(result.depth).toBe(0);
+            expect(result.parentId).toBeNull();
+
+            const moved = await hierarchyRepository.findNodeByPublicCode(childFolder.public_code);
+            expect(moved).not.toBeNull();
+            expect(moved.depth).toBe(0);
+            expect(moved.parentId).toBeNull();
         });
     });
 });

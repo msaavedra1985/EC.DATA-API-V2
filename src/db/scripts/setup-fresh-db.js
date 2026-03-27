@@ -151,22 +151,29 @@ async function setupFreshDatabase() {
             DECLARE
                 old_path ltree;
                 new_path ltree;
+                parent_path ltree;
+                node_label text;
             BEGIN
-                NEW.path := generate_resource_path(NEW.id);
-                IF NEW.parent_id IS NULL THEN
-                    NEW.depth := 0;
-                ELSE
-                    SELECT depth + 1 INTO NEW.depth
-                    FROM resource_hierarchy
-                    WHERE id = NEW.parent_id;
-                END IF;
-                IF TG_OP = 'UPDATE' AND OLD.parent_id IS DISTINCT FROM NEW.parent_id THEN
-                    old_path := OLD.path;
-                    new_path := NEW.path;
-                    UPDATE resource_hierarchy
-                    SET path = new_path || subpath(path, nlevel(old_path)),
-                        depth = nlevel(new_path || subpath(path, nlevel(old_path))) - 1
-                    WHERE path <@ old_path AND id != NEW.id;
+                IF TG_OP = 'INSERT' OR OLD.parent_id IS DISTINCT FROM NEW.parent_id THEN
+                    node_label := 'n' || replace(NEW.id::text, '-', '');
+                    IF NEW.parent_id IS NULL THEN
+                        new_path := node_label::ltree;
+                        NEW.depth := 0;
+                    ELSE
+                        SELECT path::ltree, depth + 1 INTO parent_path, NEW.depth
+                        FROM resource_hierarchy
+                        WHERE id = NEW.parent_id;
+                        new_path := parent_path || node_label::ltree;
+                    END IF;
+                    NEW.path := new_path::text;
+
+                    IF TG_OP = 'UPDATE' THEN
+                        old_path := OLD.path::ltree;
+                        UPDATE resource_hierarchy
+                        SET path = (new_path || subpath(path::ltree, nlevel(old_path)))::text,
+                            depth = nlevel(new_path || subpath(path::ltree, nlevel(old_path))) - 1
+                        WHERE path::ltree <@ old_path AND id != NEW.id;
+                    END IF;
                 END IF;
                 RETURN NEW;
             END;
