@@ -161,6 +161,118 @@ beforeEach(async () => {
     siblingFolder = null;
 });
 
+// ============ TESTS DE parentId FORMAT (debe ser public code, nunca UUID) ============
+
+describe('parentId format - nunca expone UUID interno', () => {
+
+    it('getChildren: nodo raíz tiene parentId=null', async () => {
+        rootFolder = await createTestNode({ name: 'Root Folder' });
+        
+        const result = await hierarchyRepository.getChildren(null, testOrganization.id);
+        
+        const root = result.data.find(n => n.id === rootFolder.public_code);
+        expect(root).toBeDefined();
+        expect(root.parentId).toBeNull();
+    });
+    
+    it('getChildren: nodo hijo tiene parentId como public code (RES-XXX-XXX)', async () => {
+        rootFolder = await createTestNode({ name: 'Root Folder' });
+        childFolder = await createTestNode({ 
+            name: 'Child Folder',
+            parent_public_code: rootFolder.public_code
+        });
+        
+        const rootDto = await hierarchyRepository.findNodeByPublicCode(rootFolder.public_code);
+        const result = await hierarchyRepository.getChildren(rootDto._uuid, testOrganization.id);
+        
+        expect(result.data).toHaveLength(1);
+        const child = result.data[0];
+        expect(child.parentId).toBeDefined();
+        expect(child.parentId).not.toBeNull();
+        expect(child.parentId).toMatch(/^RES-/);
+        expect(child.parentId).toBe(rootFolder.public_code);
+        expect(child.parentId).not.toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-/i);
+    });
+    
+    it('getDescendants: nodo descendiente tiene parentId como public code, nunca UUID', async () => {
+        rootFolder = await createTestNode({ name: 'Root Folder' });
+        childFolder = await createTestNode({ 
+            name: 'Child Folder',
+            parent_public_code: rootFolder.public_code
+        });
+        grandchildFolder = await createTestNode({ 
+            name: 'Grandchild Folder',
+            parent_public_code: childFolder.public_code
+        });
+        
+        const rootDto = await hierarchyRepository.findNodeByPublicCode(rootFolder.public_code);
+        const result = await hierarchyRepository.getDescendants(rootDto._uuid);
+        
+        expect(result.data.length).toBeGreaterThanOrEqual(2);
+        
+        for (const node of result.data) {
+            if (node.parentId !== null) {
+                expect(node.parentId).toMatch(/^RES-/);
+                expect(node.parentId).not.toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-/i);
+            }
+        }
+        
+        const child = result.data.find(n => n.id === childFolder.public_code);
+        expect(child.parentId).toBe(rootFolder.public_code);
+        
+        const grandchild = result.data.find(n => n.id === grandchildFolder.public_code);
+        expect(grandchild.parentId).toBe(childFolder.public_code);
+    });
+    
+    it('getTree: árbol con parentId como public code en todos los nodos con padre', async () => {
+        rootFolder = await createTestNode({ name: 'Root Folder' });
+        childFolder = await createTestNode({ 
+            name: 'Child Folder',
+            parent_public_code: rootFolder.public_code
+        });
+        
+        const tree = await hierarchyRepository.getTree(testOrganization.id);
+        
+        const flatNodes = [];
+        const flatten = (nodes) => {
+            for (const node of nodes) {
+                flatNodes.push(node);
+                if (node.children?.length > 0) flatten(node.children);
+            }
+        };
+        flatten(tree);
+        
+        for (const node of flatNodes) {
+            if (node.parentId !== null && node.parentId !== undefined) {
+                expect(node.parentId).toMatch(/^RES-/);
+                expect(node.parentId).not.toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-/i);
+            }
+        }
+        
+        const rootInTree = flatNodes.find(n => n.id === rootFolder.public_code);
+        expect(rootInTree).toBeDefined();
+        expect(rootInTree.parentId).toBeNull();
+        
+        const childInTree = flatNodes.find(n => n.id === childFolder.public_code);
+        expect(childInTree).toBeDefined();
+        expect(childInTree.parentId).toBe(rootFolder.public_code);
+    });
+    
+    it('campos internos _uuid, _parentId, _organizationId no aparecen en responses sanitizadas', async () => {
+        rootFolder = await createTestNode({ name: 'Root Folder' });
+        
+        const node = await hierarchyRepository.findNodeByPublicCode(rootFolder.public_code);
+        expect(node._uuid).toBeDefined();
+        expect(node._parentId).toBeNull();
+        expect(node._organizationId).toBeDefined();
+        
+        const { _uuid, _parentId, _organizationId, ...publicData } = node;
+        expect(publicData._uuid).toBeUndefined();
+        expect(publicData._parentId).toBeUndefined();
+        expect(publicData._organizationId).toBeUndefined();
+    });
+});
+
 // ============ TESTS DE CASCADE DELETE ============
 
 describe('Cascade Delete - deleteNode', () => {

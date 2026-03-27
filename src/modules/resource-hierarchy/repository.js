@@ -45,8 +45,10 @@ const getNodeByIdWithChildrenCount = async (nodeId) => {
     const query = `
         SELECT rh.*,
                (SELECT COUNT(*) FROM resource_hierarchy c 
-                WHERE c.parent_id = rh.id AND c.deleted_at IS NULL AND c.is_active = true) as children_count
+                WHERE c.parent_id = rh.id AND c.deleted_at IS NULL AND c.is_active = true) as children_count,
+               parent.public_code as parent_public_code
         FROM resource_hierarchy rh
+        LEFT JOIN resource_hierarchy parent ON parent.id = rh.parent_id
         WHERE rh.id = $1
           AND rh.deleted_at IS NULL
     `;
@@ -90,11 +92,18 @@ export const createNode = async (data) => {
         return node;
     });
     
-    // Para nodos nuevos, children_count siempre es 0
-    // Usamos el modelo Sequelize y agregamos children_count manualmente
+    // Re-fetch via raw SQL to include parent_public_code from JOIN
+    // so parentId in the DTO resolves to a public code, never a UUID
+    const fetched = await findNodeByPublicCode(publicCode);
+    if (fetched) {
+        fetched.childrenCount = 0;
+        fetched.hasChildren = false;
+        return fetched;
+    }
+    
+    // Fallback: use Sequelize model data (parent_public_code not available here)
     const nodeData = result.toJSON();
     nodeData.childrenCount = 0;
-    
     return toNodeDto(nodeData);
 };
 
@@ -109,8 +118,10 @@ export const findNodeByPublicCode = async (publicCode) => {
     const query = `
         SELECT rh.*,
                (SELECT COUNT(*) FROM resource_hierarchy c 
-                WHERE c.parent_id = rh.id AND c.deleted_at IS NULL AND c.is_active = true) as children_count
+                WHERE c.parent_id = rh.id AND c.deleted_at IS NULL AND c.is_active = true) as children_count,
+               parent.public_code as parent_public_code
         FROM resource_hierarchy rh
+        LEFT JOIN resource_hierarchy parent ON parent.id = rh.parent_id
         WHERE rh.public_code = $1
           AND rh.deleted_at IS NULL
     `;
@@ -188,13 +199,15 @@ export const getChildren = async (parentId, organizationId, options = {}) => {
     // Seleccionar columnas: incluir conteo de hijos solo si se solicita
     const selectColumns = includeCounts
         ? `rh.*, (SELECT COUNT(*) FROM resource_hierarchy c 
-            WHERE c.parent_id = rh.id AND c.deleted_at IS NULL AND c.is_active = true) as children_count`
-        : 'rh.*';
+            WHERE c.parent_id = rh.id AND c.deleted_at IS NULL AND c.is_active = true) as children_count,
+            parent.public_code as parent_public_code`
+        : 'rh.*, parent.public_code as parent_public_code';
     
     // Si showAll=true, no filtramos por organización (God View)
     let query = `
         SELECT ${selectColumns}
         FROM resource_hierarchy rh
+        LEFT JOIN resource_hierarchy parent ON parent.id = rh.parent_id
         WHERE rh.deleted_at IS NULL
           AND rh.is_active = true
     `;
@@ -293,8 +306,10 @@ export const getDescendants = async (nodeId, options = {}) => {
         SELECT rh.*, 
                (SELECT COUNT(*) FROM resource_hierarchy c 
                 WHERE c.parent_id = rh.id AND c.deleted_at IS NULL AND c.is_active = true) as children_count,
-               nlevel(rh.path::ltree) - nlevel($1::ltree) as relative_depth
+               nlevel(rh.path::ltree) - nlevel($1::ltree) as relative_depth,
+               parent.public_code as parent_public_code
         FROM resource_hierarchy rh
+        LEFT JOIN resource_hierarchy parent ON parent.id = rh.parent_id
         WHERE rh.path::ltree <@ $1::ltree
           AND rh.id != $2
           AND rh.deleted_at IS NULL
@@ -359,8 +374,10 @@ export const getAncestors = async (nodeId) => {
     const query = `
         SELECT rh.*,
                (SELECT COUNT(*) FROM resource_hierarchy c 
-                WHERE c.parent_id = rh.id AND c.deleted_at IS NULL AND c.is_active = true) as children_count
+                WHERE c.parent_id = rh.id AND c.deleted_at IS NULL AND c.is_active = true) as children_count,
+               parent.public_code as parent_public_code
         FROM resource_hierarchy rh
+        LEFT JOIN resource_hierarchy parent ON parent.id = rh.parent_id
         WHERE rh.path::ltree @> $1::ltree
           AND rh.id != $2
           AND rh.deleted_at IS NULL
@@ -401,8 +418,10 @@ export const getTree = async (organizationId, options = {}) => {
         let query = `
             SELECT rh.*,
                    (SELECT COUNT(*) FROM resource_hierarchy c 
-                    WHERE c.parent_id = rh.id AND c.deleted_at IS NULL AND c.is_active = true) as children_count
+                    WHERE c.parent_id = rh.id AND c.deleted_at IS NULL AND c.is_active = true) as children_count,
+                   parent.public_code as parent_public_code
             FROM resource_hierarchy rh
+            LEFT JOIN resource_hierarchy parent ON parent.id = rh.parent_id
             WHERE rh.deleted_at IS NULL
               AND rh.is_active = true
         `;
@@ -458,8 +477,10 @@ const getDescendantsWithChildCount = async (nodeId, options = {}) => {
         SELECT rh.*,
                (SELECT COUNT(*) FROM resource_hierarchy c 
                 WHERE c.parent_id = rh.id AND c.deleted_at IS NULL AND c.is_active = true) as children_count,
-               nlevel(rh.path::ltree) - nlevel($1::ltree) as relative_depth
+               nlevel(rh.path::ltree) - nlevel($1::ltree) as relative_depth,
+               parent.public_code as parent_public_code
         FROM resource_hierarchy rh
+        LEFT JOIN resource_hierarchy parent ON parent.id = rh.parent_id
         WHERE rh.path::ltree <@ $1::ltree
           AND rh.id != $2
           AND rh.deleted_at IS NULL
@@ -740,8 +761,10 @@ export const listNodes = async (organizationId, options = {}) => {
     let query = `
         SELECT rh.*,
                (SELECT COUNT(*) FROM resource_hierarchy c 
-                WHERE c.parent_id = rh.id AND c.deleted_at IS NULL AND c.is_active = true) as children_count
+                WHERE c.parent_id = rh.id AND c.deleted_at IS NULL AND c.is_active = true) as children_count,
+               parent.public_code as parent_public_code
         FROM resource_hierarchy rh
+        LEFT JOIN resource_hierarchy parent ON parent.id = rh.parent_id
         WHERE rh.deleted_at IS NULL
     `;
     
@@ -818,8 +841,10 @@ export const findNodesByReferenceId = async (referenceId, organizationId = null)
     let query = `
         SELECT rh.*,
                (SELECT COUNT(*) FROM resource_hierarchy c 
-                WHERE c.parent_id = rh.id AND c.deleted_at IS NULL AND c.is_active = true) as children_count
+                WHERE c.parent_id = rh.id AND c.deleted_at IS NULL AND c.is_active = true) as children_count,
+               parent.public_code as parent_public_code
         FROM resource_hierarchy rh
+        LEFT JOIN resource_hierarchy parent ON parent.id = rh.parent_id
         WHERE rh.reference_id = $1
           AND rh.deleted_at IS NULL
     `;
@@ -988,8 +1013,9 @@ export const batchFindByPublicCodes = async (publicCodes, options = {}) => {
     
     const selectColumns = includeCounts
         ? `rh.*, (SELECT COUNT(*) FROM resource_hierarchy c 
-            WHERE c.parent_id = rh.id AND c.deleted_at IS NULL AND c.is_active = true) as children_count`
-        : 'rh.*';
+            WHERE c.parent_id = rh.id AND c.deleted_at IS NULL AND c.is_active = true) as children_count,
+            parent.public_code as parent_public_code`
+        : 'rh.*, parent.public_code as parent_public_code';
     
     // Filtrar por organización si se especifica (seguridad multi-tenant)
     let orgFilter = '';
@@ -1002,6 +1028,7 @@ export const batchFindByPublicCodes = async (publicCodes, options = {}) => {
     const query = `
         SELECT ${selectColumns}
         FROM resource_hierarchy rh
+        LEFT JOIN resource_hierarchy parent ON parent.id = rh.parent_id
         WHERE rh.public_code IN (${placeholders})
           AND rh.deleted_at IS NULL${orgFilter}
     `;
@@ -1029,8 +1056,12 @@ function toNodeDto(node, includeCounts = true) {
     
     const data = node.toJSON ? node.toJSON() : node;
     
-    const parentId = data.parentId ?? data.parent_id;
-    const parentPublicCode = data.parent?.publicCode ?? data.parent?.public_code;
+    const parentUuid = data.parentId ?? data.parent_id ?? null;
+    const parentPublicCode =
+        data.parent_public_code ??
+        data.parent?.publicCode ??
+        data.parent?.public_code ??
+        null;
     
     const dto = {
         id: data.publicCode ?? data.public_code,
@@ -1041,12 +1072,13 @@ function toNodeDto(node, includeCounts = true) {
         icon: data.icon,
         displayOrder: data.displayOrder ?? data.display_order,
         depth: data.depth,
-        parentId: parentId ? (parentPublicCode ?? parentId) : null,
+        parentId: parentUuid ? (parentPublicCode ?? null) : null,
         metadata: data.metadata,
         isActive: data.isActive ?? data.is_active,
         createdAt: data.createdAt ?? data.created_at,
         updatedAt: data.updatedAt ?? data.updated_at,
         _uuid: data.id,
+        _parentId: parentUuid,
         _organizationId: data.organizationId ?? data.organization_id
     };
     
@@ -1074,8 +1106,8 @@ const buildTree = (nodes, rootId = null) => {
     for (const node of nodes) {
         const currentNode = nodeMap.get(node._uuid);
         
-        if (node.parentId && node.parentId !== rootId) {
-            const parent = nodeMap.get(node.parentId);
+        if (node._parentId && node._uuid !== rootId) {
+            const parent = nodeMap.get(node._parentId);
             if (parent) {
                 parent.children.push(currentNode);
             } else {
@@ -1137,10 +1169,18 @@ export const batchCreateNodes = async (nodesData, options = {}) => {
         
         await node.reload({ transaction });
         
-        const nodeData = node.toJSON();
-        nodeData.childrenCount = 0;
-        
-        createdNodes.push(toNodeDto(nodeData));
+        // Re-fetch via raw SQL to include parent_public_code from JOIN
+        // so parentId in the DTO resolves to a public code, never a UUID
+        const fetched = await findNodeByPublicCode(publicCode);
+        if (fetched) {
+            fetched.childrenCount = 0;
+            fetched.hasChildren = false;
+            createdNodes.push(fetched);
+        } else {
+            const nodeData = node.toJSON();
+            nodeData.childrenCount = 0;
+            createdNodes.push(toNodeDto(nodeData));
+        }
     }
     
     return createdNodes;
@@ -1254,8 +1294,10 @@ export const getFilteredTree = async (organizationId, categoryId, options = {}) 
                              AND d.is_active = true
                        ))
                ) as children_count,
-               CASE WHEN rh.asset_category_id = ANY($3::int[]) THEN true ELSE false END as matches_filter
+               CASE WHEN rh.asset_category_id = ANY($3::int[]) THEN true ELSE false END as matches_filter,
+               parent.public_code as parent_public_code
         FROM resource_hierarchy rh
+        LEFT JOIN resource_hierarchy parent ON parent.id = rh.parent_id
         WHERE rh.id IN (SELECT id FROM all_ancestor_ids)
         ORDER BY rh.depth ASC, rh.display_order ASC, rh.name ASC
         LIMIT $4
