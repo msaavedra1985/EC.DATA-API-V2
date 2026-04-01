@@ -37,6 +37,7 @@ const createVariableSchema = z.object({
     isRealtime: z.boolean().optional().default(false),
     isDefault: z.boolean().optional().default(false),
     decimalPlaces: z.number().int().min(0).max(10).optional().default(2),
+    unitScaling: z.record(z.string(), z.unknown()).optional().nullable(),
     icon: z.string().max(50).optional().nullable(),
     color: z.string().max(7).regex(/^#[0-9A-Fa-f]{6}$/, 'color debe ser un hex válido (ej: #3B82F6)').optional().nullable(),
     isActive: z.boolean().optional().default(true),
@@ -66,6 +67,7 @@ const updateVariableSchema = z.object({
     isDefault: z.boolean().optional(),
     isActive: z.boolean().optional(),
     decimalPlaces: z.number().int().min(0).max(10).optional().nullable(),
+    unitScaling: z.record(z.string(), z.unknown()).optional().nullable(),
     icon: z.string().max(50).optional().nullable(),
     color: z.string().max(7).regex(/^#[0-9A-Fa-f]{6}$/, 'color debe ser un hex válido (ej: #3B82F6)').optional().nullable(),
     translations: z.record(z.string(), z.object({

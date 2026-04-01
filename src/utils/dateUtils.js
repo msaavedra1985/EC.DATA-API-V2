@@ -195,6 +195,39 @@ export const resolveDateRange = (dateRange, opts = {}) => {
 };
 
 /**
+ * Reasigna los timestamps de un array de data points desplazando cada punto
+ * por un offset en milisegundos. Preserva el formato ISO 8601.
+ *
+ * Se usa para alinear el período de comparación con el período principal
+ * en el eje X del gráfico.
+ *
+ * @param {Array<{ts: string, values: Object}>} dataPoints - Puntos del período de comparación
+ * @param {number} offsetMs - Offset en milisegundos (mainStart - comparisonStart)
+ * @returns {Array<{ts: string, values: Object}>} Puntos con timestamps remapeados
+ */
+export const remapTimestamps = (dataPoints, offsetMs) => {
+    return dataPoints.map(point => ({
+        ...point,
+        ts: new Date(new Date(point.ts).getTime() + offsetMs).toISOString()
+    }));
+};
+
+/**
+ * Genera un label legible para el período de comparación.
+ *
+ * @param {string} from - Fecha inicio del período de comparación (YYYY-MM-DD)
+ * @param {string} to - Fecha fin del período de comparación (YYYY-MM-DD)
+ * @returns {string} Label en formato "DD/MM/YYYY al DD/MM/YYYY"
+ */
+export const buildComparisonLabel = (from, to) => {
+    const formatDate = (dateStr) => {
+        const [year, month, day] = dateStr.split('-');
+        return `${day}/${month}/${year}`;
+    };
+    return `${formatDate(from)} al ${formatDate(to)}`;
+};
+
+/**
  * Exporta dayjs configurado para uso directo si se necesita
  */
 export { dayjs };
@@ -207,5 +240,7 @@ export default {
     nowInTimezone,
     isDateInRange,
     resolveDateRange,
+    remapTimestamps,
+    buildComparisonLabel,
     dayjs
 };

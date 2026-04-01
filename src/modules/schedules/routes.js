@@ -461,4 +461,35 @@ router.put(
     }
 );
 
+// E6 — Schedule para el Analyzer (contrato Data Analyzer v1.1)
+// GET /api/v1/schedules/:id/analyzer
+router.get(
+    '/:id/analyzer',
+    authenticate,
+    enforceActiveOrganization,
+    async (req, res, next) => {
+        try {
+            const orgCtx = req.organizationContext;
+            const organizationId = orgCtx?.canAccessAll ? null : orgCtx?.id ?? null;
+            const analyzerData = await services.getScheduleForAnalyzer(req.params.id, { organizationId });
+
+            return res.json({
+                ok: true,
+                data: analyzerData
+            });
+        } catch (error) {
+            if (error.status === 404) {
+                return res.status(404).json({
+                    ok: false,
+                    error: {
+                        code: error.code || 'NOT_FOUND',
+                        message: error.message
+                    }
+                });
+            }
+            next(error);
+        }
+    }
+);
+
 export default router;
