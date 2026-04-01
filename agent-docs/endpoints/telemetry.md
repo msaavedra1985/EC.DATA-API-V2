@@ -1,6 +1,6 @@
 # Telemetry Endpoints
 
-> **Última actualización**: 2026-01-21
+> **Última actualización**: 2026-04-01
 > 
 > **IMPORTANTE**: Este archivo DEBE actualizarse cuando se modifique cualquier endpoint de telemetría.
 
@@ -11,6 +11,10 @@
 | GET | `/api/v1/telemetry/variables` | Listar variables de medición | Sí |
 | GET | `/api/v1/telemetry/data` | Obtener datos de series temporales | Sí |
 | POST | `/api/v1/telemetry/data` | Insertar mediciones | Sí / API Key |
+| GET | `/api/v1/telemetry/channels/:channelId/annotations` | Listar anotaciones del canal en un período | Sí |
+| POST | `/api/v1/telemetry/channels/:channelId/annotations` | Crear anotación en el canal | Sí |
+| PUT | `/api/v1/telemetry/channels/:channelId/annotations/:annotationId` | Actualizar una anotación | Sí (autor o admin) |
+| DELETE | `/api/v1/telemetry/channels/:channelId/annotations/:annotationId` | Eliminar una anotación | Sí (autor o admin) |
 
 ---
 
@@ -179,3 +183,194 @@
 - Soporta batch de múltiples mediciones
 - Timestamp opcional (usa server time si no se envía)
 - Rate limit más alto para dispositivos (100 req/min)
+
+---
+
+## GET /api/v1/telemetry/channels/:channelId/annotations
+
+**Propósito**: Obtener anotaciones del canal en un período de tiempo.
+
+**Autenticación**: Bearer JWT
+
+**Path Parameters**:
+| Param | Tipo | Descripción |
+|-------|------|-------------|
+| channelId | UUID | ID del canal |
+
+**Query Parameters**:
+| Param | Tipo | Requerido | Descripción |
+|-------|------|-----------|-------------|
+| from | string | Sí | Fecha inicio (YYYY-MM-DD o Unix ms) |
+| to | string | Sí | Fecha fin (YYYY-MM-DD o Unix ms) |
+
+**Visibilidad**:
+- Las anotaciones `public` son visibles para todos los usuarios autenticados.
+- Las anotaciones `private` solo son visibles al autor que las creó.
+
+**Respuesta exitosa** (200):
+```json
+{
+  "ok": true,
+  "data": [
+    {
+      "id": "uuid-annotation-1",
+      "channelId": "uuid-channel-1",
+      "from": 1700000000000,
+      "to": 1700003600000,
+      "text": "Mantenimiento preventivo realizado",
+      "category": "maintenance",
+      "visibility": "public",
+      "author": {
+        "id": "uuid-user-1",
+        "name": "Juan Pérez"
+      },
+      "attachments": [],
+      "createdAt": "2025-01-21T10:00:00.000Z",
+      "updatedAt": "2025-01-21T10:00:00.000Z"
+    }
+  ]
+}
+```
+
+**Notas**:
+- Las anotaciones son point-in-time cuando `from === to`, o range cuando `from < to`.
+- El campo `attachments` siempre retorna `[]` (sin adjuntos implementados aún).
+- Los timestamps `from` y `to` en la respuesta son Unix ms (número).
+
+---
+
+## POST /api/v1/telemetry/channels/:channelId/annotations
+
+**Propósito**: Crear una nueva anotación en el canal.
+
+**Autenticación**: Bearer JWT
+
+**Path Parameters**:
+| Param | Tipo | Descripción |
+|-------|------|-------------|
+| channelId | UUID | ID del canal |
+
+**Body**:
+```json
+{
+  "from": 1700000000000,
+  "to": 1700003600000,
+  "text": "Mantenimiento preventivo realizado",
+  "category": "maintenance",
+  "visibility": "public"
+}
+```
+
+**Campos**:
+| Campo | Tipo | Requerido | Default | Descripción |
+|-------|------|-----------|---------|-------------|
+| from | number | Sí | - | Timestamp Unix ms inicio |
+| to | number | Sí | - | Timestamp Unix ms fin (igual a from para point-in-time) |
+| text | string | Sí | - | Contenido de la anotación |
+| category | string | No | `observation` | `observation` \| `incident` \| `maintenance` \| `alert_auto` |
+| visibility | string | No | `public` | `public` \| `private` |
+
+**Respuesta exitosa** (201):
+```json
+{
+  "ok": true,
+  "data": {
+    "id": "uuid-annotation-1",
+    "channelId": "uuid-channel-1",
+    "from": 1700000000000,
+    "to": 1700003600000,
+    "text": "Mantenimiento preventivo realizado",
+    "category": "maintenance",
+    "visibility": "public",
+    "author": {
+      "id": "uuid-user-1",
+      "name": "Juan Pérez"
+    },
+    "attachments": [],
+    "createdAt": "2025-01-21T10:00:00.000Z",
+    "updatedAt": "2025-01-21T10:00:00.000Z"
+  }
+}
+```
+
+**Notas**:
+- El campo `authorId` se asigna automáticamente desde el JWT del usuario autenticado.
+- `from` debe ser menor o igual a `to`.
+
+---
+
+## PUT /api/v1/telemetry/channels/:channelId/annotations/:annotationId
+
+**Propósito**: Actualizar una anotación existente (patch parcial).
+
+**Autenticación**: Bearer JWT — Solo el autor o un admin (`system-admin` / `org-admin`) puede editar.
+
+**Path Parameters**:
+| Param | Tipo | Descripción |
+|-------|------|-------------|
+| channelId | UUID | ID del canal |
+| annotationId | UUID | ID de la anotación |
+
+**Body** (todos los campos son opcionales):
+```json
+{
+  "text": "Texto actualizado",
+  "category": "incident",
+  "visibility": "private"
+}
+```
+
+**Campos editables**:
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| from | number | Timestamp Unix ms inicio |
+| to | number | Timestamp Unix ms fin |
+| text | string | Contenido de la anotación |
+| category | string | `observation` \| `incident` \| `maintenance` \| `alert_auto` |
+| visibility | string | `public` \| `private` |
+
+**Respuesta exitosa** (200):
+```json
+{
+  "ok": true,
+  "data": { ... }
+}
+```
+
+**Errores**:
+| Status | Código | Descripción |
+|--------|--------|-------------|
+| 400 | VALIDATION_ERROR | Campos inválidos o sin campos para actualizar |
+| 403 | FORBIDDEN | El usuario no es el autor ni tiene rol admin |
+| 404 | NOT_FOUND | Anotación no encontrada o no pertenece al canal |
+
+---
+
+## DELETE /api/v1/telemetry/channels/:channelId/annotations/:annotationId
+
+**Propósito**: Eliminar una anotación.
+
+**Autenticación**: Bearer JWT — Solo el autor o un admin (`system-admin` / `org-admin`) puede eliminar.
+
+**Path Parameters**:
+| Param | Tipo | Descripción |
+|-------|------|-------------|
+| channelId | UUID | ID del canal |
+| annotationId | UUID | ID de la anotación |
+
+**Respuesta exitosa** (200):
+```json
+{
+  "ok": true,
+  "data": {
+    "deleted": true,
+    "id": "uuid-annotation-1"
+  }
+}
+```
+
+**Errores**:
+| Status | Código | Descripción |
+|--------|--------|-------------|
+| 403 | FORBIDDEN | El usuario no es el autor ni tiene rol admin |
+| 404 | NOT_FOUND | Anotación no encontrada o no pertenece al canal |

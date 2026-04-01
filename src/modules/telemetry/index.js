@@ -6,6 +6,7 @@
 import { Router } from 'express';
 import { search, getLatest, getLatestBatch } from './services/telemetryService.js';
 import { variablesRouter } from './routes/variablesRoutes.js';
+import { annotationsRouter } from './routes/annotationsRoutes.js';
 import { z } from 'zod';
 
 // Esquema de validación para búsqueda de telemetría
@@ -190,6 +191,9 @@ router.post('/batch/latest', async (req, res) => {
 // Montar rutas de variables
 // 📄 Swagger: src/docs/swagger/telemetry.yaml -> USE /variables
 router.use('/variables', variablesRouter);
+
+// Montar rutas de annotations por canal
+router.use('/channels/:channelId/annotations', annotationsRouter);
 
 // Exportar router y servicios
 export { router as telemetryRouter };

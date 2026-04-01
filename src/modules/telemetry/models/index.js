@@ -9,6 +9,8 @@ import MeasurementTypeTranslation from './MeasurementTypeTranslation.js';
 import Variable from './Variable.js';
 import VariableTranslation from './VariableTranslation.js';
 import ChannelVariable from './ChannelVariable.js';
+import Annotation from './Annotation.js';
+import User from '../../auth/models/User.js';
 
 MeasurementType.hasMany(MeasurementTypeTranslation, {
     foreignKey: 'measurementTypeId',
@@ -43,12 +45,23 @@ VariableTranslation.belongsTo(Variable, {
     as: 'variable'
 });
 
+Annotation.belongsTo(User, {
+    foreignKey: 'authorId',
+    as: 'author'
+});
+
+User.hasMany(Annotation, {
+    foreignKey: 'authorId',
+    as: 'annotations'
+});
+
 export {
     MeasurementType,
     MeasurementTypeTranslation,
     Variable,
     VariableTranslation,
-    ChannelVariable
+    ChannelVariable,
+    Annotation
 };
 
 export default {
@@ -56,5 +69,6 @@ export default {
     MeasurementTypeTranslation,
     Variable,
     VariableTranslation,
-    ChannelVariable
+    ChannelVariable,
+    Annotation
 };
