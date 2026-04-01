@@ -8,17 +8,23 @@
 
 | Método | Endpoint | Descripción | Auth |
 |--------|----------|-------------|------|
-| GET | `/api/v1/telemetry/variables` | Listar variables de medición | Sí |
-| GET | `/api/v1/telemetry/data` | Obtener datos de series temporales | Sí |
+| GET | `/api/v1/telemetry/variables` | ~~Listar variables de medición~~ **DEPRECATED** | Sí |
+| GET | `/api/v1/telemetry/data` | ~~Obtener datos de series temporales~~ **DEPRECATED** | Sí |
 | POST | `/api/v1/telemetry/data` | Insertar mediciones | Sí / API Key |
-| GET | `/api/v1/telemetry/channels/:channelId/annotations` | Listar anotaciones del canal en un período | Sí |
-| POST | `/api/v1/telemetry/channels/:channelId/annotations` | Crear anotación en el canal | Sí |
-| PUT | `/api/v1/telemetry/channels/:channelId/annotations/:annotationId` | Actualizar una anotación | Sí (autor o admin) |
-| DELETE | `/api/v1/telemetry/channels/:channelId/annotations/:annotationId` | Eliminar una anotación | Sí (autor o admin) |
+| GET | `/api/v1/telemetry/channels/:channelId/data` | Obtener datos del canal para el analyzer (E1) | Sí |
+| GET | `/api/v1/telemetry/channels/:channelId/variables` | Catálogo de variables del canal (E2) | Sí |
+| GET | `/api/v1/telemetry/channels/:channelId/annotations` | Listar anotaciones del canal en un período (E3) | Sí |
+| POST | `/api/v1/telemetry/channels/:channelId/annotations` | Crear anotación en el canal (E3) | Sí |
+| PUT | `/api/v1/telemetry/channels/:channelId/annotations/:annotationId` | Actualizar una anotación (E3) | Sí (autor o admin) |
+| DELETE | `/api/v1/telemetry/channels/:channelId/annotations/:annotationId` | Eliminar una anotación (E3) | Sí (autor o admin) |
+
+> **Nota**: Los endpoints del Data Analyzer (E1–E4, E6) están documentados en [`data-analyzer.md`](./data-analyzer.md).
 
 ---
 
-## GET /api/v1/telemetry/variables
+## ~~GET /api/v1/telemetry/variables~~ (DEPRECATED)
+
+> **DEPRECATED**: Este endpoint usa el formato antiguo con `device_public_code` y `variable_id` como strings. Para el catálogo de variables del analyzer, usar `GET /api/v1/telemetry/channels/:channelId/variables` documentado en [`data-analyzer.md`](./data-analyzer.md) (E2).
 
 **Propósito**: Listar variables de medición disponibles
 
@@ -60,7 +66,9 @@
 
 ---
 
-## GET /api/v1/telemetry/data
+## ~~GET /api/v1/telemetry/data~~ (DEPRECATED)
+
+> **DEPRECATED**: Este endpoint usa el formato antiguo con `device_public_code` y `variable_id` como strings. Para datos del analyzer, usar `GET /api/v1/telemetry/channels/:channelId/data` documentado en [`data-analyzer.md`](./data-analyzer.md) (E1), que soporta comparación mediante `comparisonFrom` / `comparisonTo`.
 
 **Propósito**: Obtener datos de series temporales desde Cassandra
 

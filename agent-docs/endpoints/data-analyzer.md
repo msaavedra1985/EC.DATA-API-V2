@@ -1,12 +1,12 @@
-# Data Analyzer API Contract v1.1
+# Data Analyzer API Contract v1.2
 
-> **Version**: 1.1  
+> **Version**: 1.2  
 > **Last Updated**: 2026-04-01  
 > **Status**: Active
 
 ## Overview
 
-The Data Analyzer API provides endpoints for the frontend analyzer component to retrieve telemetry data by channel, variable catalogs, and schedule plot-bands.
+The Data Analyzer API provides endpoints for the frontend analyzer component to retrieve telemetry data by channel, variable catalogs, annotations, comparison data, and schedule plot-bands.
 
 ---
 
@@ -14,7 +14,7 @@ The Data Analyzer API provides endpoints for the frontend analyzer component to 
 
 ### `GET /api/v1/telemetry/channels/:channelId/data`
 
-Retrieves historical telemetry data for a channel in the analyzer format.
+Retrieves historical telemetry data for a channel in the analyzer format. Supports optional comparison period via query params.
 
 **Auth**: Bearer JWT (authenticated user)
 
@@ -33,8 +33,10 @@ Retrieves historical telemetry data for a channel in the analyzer format.
 | `variables[]` | number[] | No | Filter specific variable IDs |
 | `excludeDays[]` | number[] | No | Days of week to exclude (0=Sun, 6=Sat) |
 | `timeRanges[]` | string[] | No | Hour ranges to include, format `HH:mm-HH:mm` (e.g. `08:00-18:00`) |
+| `comparisonFrom` | string (YYYY-MM-DD) | No | Start date of the comparison period (E4) |
+| `comparisonTo` | string (YYYY-MM-DD) | No | End date of the comparison period (E4) |
 
-**Response 200**:
+**Response 200** (without comparison):
 ```json
 {
   "ok": true,
@@ -97,6 +99,58 @@ Retrieves historical telemetry data for a channel in the analyzer format.
 }
 ```
 
+**Response 200** (with `comparisonFrom` / `comparisonTo` — E4):
+```json
+{
+  "ok": true,
+  "data": {
+    "metadata": {
+      "uuid": "device-cassandra-uuid",
+      "channelId": "CHN-XXX-XXX",
+      "channelName": "Canal Principal",
+      "deviceName": "Medidor Principal",
+      "timezone": "America/Lima",
+      "resolution": "60m",
+      "totalRecords": 720,
+      "period": {
+        "from": "2026-03-01",
+        "to": "2026-03-31"
+      }
+    },
+    "variables": {
+      "1": {
+        "id": 1,
+        "name": "Energía Activa",
+        "unit": "Wh",
+        "column": "e",
+        "chartType": "column",
+        "aggregationType": "sum",
+        "decimalPlaces": 2
+      }
+    },
+    "data": [
+      {
+        "ts": "2026-03-01T00:00:00-05:00",
+        "values": { "1": 1234.56 }
+      }
+    ],
+    "comparison": {
+      "period": {
+        "from": "2026-02-01",
+        "to": "2026-02-28"
+      },
+      "totalRecords": 672,
+      "data": [
+        {
+          "ts": "2026-02-01T00:00:00-05:00",
+          "values": { "1": 1100.0 }
+        }
+      ]
+    }
+  }
+}
+```
+
 **Notes**:
 - `metadata.channelId` is the `publicCode` of the channel (e.g. `CHN-XXX-XXX`)
 - `metadata.period.from/to` are `YYYY-MM-DD` strings, not ISO timestamps
@@ -105,6 +159,8 @@ Retrieves historical telemetry data for a channel in the analyzer format.
 - If a value is `null`, the field is **absent** from the `values` object (not explicit `null`)
 - `unitScaling` is optional — only present if configured on the variable
 - `nullFillPolicy` and `thresholds` are handled by the frontend
+- When `comparisonFrom` / `comparisonTo` are provided, the response includes a `comparison` block with its own `period` and `data` array; the `variables` schema is shared with the main period
+- Both `comparisonFrom` and `comparisonTo` must be provided together (or neither)
 
 **Errors**:
 | Status | Code | Description |
@@ -174,6 +230,39 @@ Lists active variables for a channel with all configuration fields.
 |--------|------|-------------|
 | 404 | NOT_FOUND | Channel not found |
 | 500 | INTERNAL_ERROR | Server error |
+
+---
+
+## E3 — Annotations
+
+The following annotation endpoints belong to the telemetry module but are fully integrated into the Data Analyzer. They allow users to create, read, update, and delete time-based annotations on a channel directly from the analyzer UI.
+
+**Status**: Functional — implemented and merged.
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/v1/telemetry/channels/:channelId/annotations` | List channel annotations for a period |
+| POST | `/api/v1/telemetry/channels/:channelId/annotations` | Create an annotation |
+| PUT | `/api/v1/telemetry/channels/:channelId/annotations/:annotationId` | Update an annotation |
+| DELETE | `/api/v1/telemetry/channels/:channelId/annotations/:annotationId` | Delete an annotation |
+
+For full request/response schemas, auth rules, and field-level documentation see [`telemetry.md`](./telemetry.md).
+
+**Key points for the analyzer**:
+- `GET` requires `from` and `to` query params (YYYY-MM-DD or Unix ms)
+- `private` annotations are only visible to their author; `public` annotations are visible to all authenticated users
+- Timestamps (`from` / `to`) in responses are Unix ms (numbers)
+- `attachments` always returns `[]` (no blob storage)
+
+---
+
+## E4 — Comparison
+
+Comparison data is retrieved via E1 (`GET /api/v1/telemetry/channels/:channelId/data`) by adding the `comparisonFrom` and `comparisonTo` query params.
+
+**Status**: Functional — implemented and merged.
+
+See the E1 section above for the full query param table and the response example that includes the `comparison` block.
 
 ---
 
@@ -253,10 +342,8 @@ Stored as JSONB in `variables.unit_scaling` column.
 
 ---
 
-## Out of Scope (v1.1)
+## Out of Scope (v1.2)
 
-- Comparison endpoint (separate task)
-- Annotations endpoint (separate task)
 - Weather/climate data (pending architecture)
 - `sistema` parameter (logic TBD)
 - `nullFillPolicy` and `thresholds` (handled by frontend)
