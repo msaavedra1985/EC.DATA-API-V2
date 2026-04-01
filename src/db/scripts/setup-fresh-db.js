@@ -93,6 +93,7 @@ const HISTORICAL_MIGRATIONS = [
     '20260321000000-create-organization-resource-counters.cjs',
     '20260327000000-ensure-path-ltree-type.cjs',
     '20260327010000-fix-trigger-ltree-explicit-casts.cjs',
+    '20260401000000-add-unit-scaling-to-variables.cjs',
 ];
 
 async function setupFreshDatabase() {

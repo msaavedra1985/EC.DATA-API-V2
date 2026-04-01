@@ -159,18 +159,21 @@ export const search = async (req) => {
     if (!metadata.device.timezone) {
         throw new Error(`Dispositivo ${metadata.device.name} no tiene timezone configurado. Configure timezone en la tabla devices.`);
     }
-    
-    // 4. Parsear fechas locales a UTC considerando timezone del dispositivo
-    // Esto resuelve el problema de fin de año: 31 dic Lima = 31 dic 05:00 UTC a 1 ene 04:59:59 UTC
-    const fromDate = parseLocalDateToUTC(from, metadata.device.timezone, false);
-    const toDate = parseLocalDateToUTC(to, metadata.device.timezone, true);
+
+    // 4. Parsear fechas locales a UTC considerando timezone efectivo
+    // tz param (override del cliente) tiene prioridad sobre el timezone del dispositivo
+    // Esto permite que el analyzer solicite datos en su propia zona horaria
+    const effectiveTimezone = tz || metadata.device.timezone;
+    const fromDate = parseLocalDateToUTC(from, effectiveTimezone, false);
+    const toDate = parseLocalDateToUTC(to, effectiveTimezone, true);
 
     // 5. Verificar cache para resoluciones agregadas (daily, monthly)
     // Solo cachear sin filtros adicionales para mantener simplicidad
     const shouldCache = !skipCache && 
                         ['daily', 'monthly'].includes(resolution) && 
                         !filters.excludeDays?.length && 
-                        !filters.hourRanges?.length;
+                        !filters.hourRanges?.length &&
+                        !tz;  // No cachear cuando hay tz override — las fechas UTC varían según zona
     
     if (shouldCache) {
         const cached = await getCachedHistoricalData(

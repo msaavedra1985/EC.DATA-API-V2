@@ -771,3 +771,43 @@ export const syncTimeRanges = async (validityId, timeProfilesPayload, transactio
 
     return changes;
 };
+
+/**
+ * Buscar schedule por publicCode con todas las validities y timeRanges para el analyzer
+ * Carga el árbol completo (validities → timeProfiles → timeRanges) sin aplicar filtros de fecha
+ * El filtrado de vigencia activa se hace en la capa de servicio
+ * 
+ * @param {string} publicCode - Código público del schedule
+ * @param {Object} options - Opciones de filtrado
+ * @param {string|null} options.organizationId - UUID interno de org para scoping (null = system-admin)
+ * @returns {Promise<Schedule|null>} Instancia Sequelize o null
+ */
+export const findScheduleForAnalyzer = async (publicCode, { organizationId = null } = {}) => {
+    const where = { publicCode };
+    if (organizationId) where.organizationId = organizationId;
+
+    return Schedule.findOne({
+        where,
+        include: [
+            {
+                model: Validity,
+                as: 'validities',
+                attributes: ['id', 'validFrom', 'validTo'],
+                include: [
+                    {
+                        model: TimeProfile,
+                        as: 'timeProfiles',
+                        attributes: ['id', 'name'],
+                        include: [
+                            {
+                                model: TimeRange,
+                                as: 'timeRanges',
+                                attributes: ['id', 'dayOfWeek', 'startTime', 'endTime']
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    });
+};

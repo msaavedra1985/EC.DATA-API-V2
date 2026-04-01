@@ -101,6 +101,8 @@ export const getChannelVariables = async (channelId, lang = 'es', variableIds = 
             v.aggregation_type,
             v.is_realtime,
             v.is_default,
+            v.decimal_places,
+            v.unit_scaling,
             COALESCE(cv.display_order, v.display_order) AS display_order,
             COALESCE(vt.name, vt_default.name, 'Unknown') AS variable_name,
             COALESCE(vt.description, vt_default.description) AS variable_description
@@ -156,6 +158,8 @@ export const getVariablesByMeasurementType = async (measurementTypeId, lang = 'e
             v.aggregation_type,
             v.is_realtime,
             v.is_default,
+            v.decimal_places,
+            v.unit_scaling,
             v.display_order,
             COALESCE(vt.name, vt_default.name, 'Unknown') AS variable_name,
             COALESCE(vt.description, vt_default.description) AS variable_description
@@ -249,7 +253,7 @@ export const getTelemetryMetadata = async (channelId, lang = 'es', variableIds =
     const columns = [];
     
     for (const v of variables) {
-        variablesMap[v.variable_id] = {
+        const varEntry = {
             name: v.variable_name,
             unit: v.unit,
             column: v.column_name,
@@ -257,8 +261,15 @@ export const getTelemetryMetadata = async (channelId, lang = 'es', variableIds =
             axisName: v.axis_name,
             axisId: v.axis_id,
             aggregationType: v.aggregation_type,
-            isRealtime: v.is_realtime
+            isRealtime: v.is_realtime,
+            decimalPlaces: v.decimal_places ?? 2
         };
+
+        if (v.unit_scaling) {
+            varEntry.unitScaling = v.unit_scaling;
+        }
+
+        variablesMap[v.variable_id] = varEntry;
         
         // Agregar columna si no está duplicada
         if (!columns.includes(v.column_name)) {

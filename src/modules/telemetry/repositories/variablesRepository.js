@@ -182,6 +182,7 @@ export const findAll = async (options = {}) => {
             v.is_realtime AS "isRealtime",
             v.is_default AS "isDefault",
             v.decimal_places AS "decimalPlaces",
+            v.unit_scaling AS "unitScaling",
             v.icon,
             v.color,
             v.is_active AS "isActive",
@@ -270,6 +271,7 @@ export const findById = async (id, lang = 'es') => {
             v.is_realtime AS "isRealtime",
             v.is_default AS "isDefault",
             v.decimal_places AS "decimalPlaces",
+            v.unit_scaling AS "unitScaling",
             v.icon,
             v.color,
             v.is_active AS "isActive",
@@ -330,6 +332,7 @@ export const create = async (data, translations = {}, transaction = null) => {
             isRealtime: data.isRealtime ?? false,
             isDefault: data.isDefault ?? false,
             decimalPlaces: data.decimalPlaces ?? 2,
+            unitScaling: data.unitScaling ?? null,
             icon: data.icon ?? null,
             color: data.color ?? null,
             isActive: data.isActive ?? true
@@ -403,6 +406,7 @@ export const update = async (id, data, translations = {}, transaction = null) =>
         if (data.isDefault !== undefined) updateFields.isDefault = data.isDefault;
         if (data.isActive !== undefined) updateFields.isActive = data.isActive;
         if (data.decimalPlaces !== undefined) updateFields.decimalPlaces = data.decimalPlaces;
+        if (data.unitScaling !== undefined) updateFields.unitScaling = data.unitScaling;
         if (data.icon !== undefined) updateFields.icon = data.icon;
         if (data.color !== undefined) updateFields.color = data.color;
 

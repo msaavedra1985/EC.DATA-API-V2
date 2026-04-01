@@ -135,6 +135,12 @@ const Variable = sequelize.define('Variable', {
         allowNull: false,
         defaultValue: true,
         comment: 'Indica si la variable está activa'
+    },
+    unitScaling: {
+        type: DataTypes.JSONB,
+        allowNull: true,
+        defaultValue: null,
+        comment: 'Configuración de escalado de unidad: { threshold, scaledUnit, factor, scaledDecimalPlaces }'
     }
 }, {
     tableName: 'variables',

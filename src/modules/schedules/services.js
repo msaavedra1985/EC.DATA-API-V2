@@ -2,6 +2,7 @@
 // Lógica de negocio para Schedules
 
 import { v7 as uuidv7 } from 'uuid';
+import dayjs from 'dayjs';
 import sequelize from '../../db/sql/sequelize.js';
 import * as repository from './repository.js';
 import { validateSchedulePayload, validateValidityUpdate, validateRangesUpdate, validateSingleValidity } from './helpers/validator.js';
@@ -664,4 +665,83 @@ export const updateValidityFull = async (publicCode, validityId, payload, userId
     };
 
     return result;
+};
+
+/**
+ * Obtiene un schedule en formato simplificado para el Analyzer (contrato v1.1).
+ * 
+ * - Busca la vigencia activa en la fecha actual (validFrom <= today <= validTo)
+ * - Aplana todos los TimeRanges de todos los TimeProfiles de la vigencia activa
+ * - Agrupa por perfil y por from/to para construir la lista de ranges con days[]
+ * 
+ * @param {string} publicCode - Código público del schedule (SCH-XXX-XXX)
+ * @returns {Promise<Object>} DTO simplificado para el analyzer
+ */
+export const getScheduleForAnalyzer = async (publicCode, { organizationId = null } = {}) => {
+    const schedule = await repository.findScheduleForAnalyzer(publicCode, { organizationId });
+
+    if (!schedule) {
+        const err = new Error('Schedule no encontrado');
+        err.status = 404;
+        err.code   = 'SCHEDULE_NOT_FOUND';
+        throw err;
+    }
+
+    const today = dayjs().format('YYYY-MM-DD');
+
+    // Encontrar la vigencia activa para hoy
+    // Regla: validFrom <= today AND (validTo IS NULL OR validTo >= today)
+    // Si hay múltiples, elegir la de validFrom más reciente
+    const activeValidity = (schedule.validities || [])
+        .filter(v => {
+            const from = v.validFrom;
+            const to   = v.validTo;
+            const afterStart = !from || from <= today;
+            const beforeEnd  = !to   || to   >= today;
+            return afterStart && beforeEnd;
+        })
+        .sort((a, b) => {
+            // null validFrom = desde siempre → menor prioridad
+            const aFrom = a.validFrom || '0000-00-00';
+            const bFrom = b.validFrom || '0000-00-00';
+            return bFrom.localeCompare(aFrom); // desc → más reciente primero
+        })[0];
+
+    const isActive = !!activeValidity;
+
+    // Construir lista de ranges aplanada
+    const ranges = [];
+    if (activeValidity) {
+        for (const profile of (activeValidity.timeProfiles || [])) {
+            // Agrupar ranges por "startTime-endTime" para acumular días
+            const rangesBySlot = {};
+            for (const tr of (profile.timeRanges || [])) {
+                const slot = `${tr.startTime}|${tr.endTime}`;
+                if (!rangesBySlot[slot]) {
+                    rangesBySlot[slot] = {
+                        id: tr.id,
+                        name: profile.name,
+                        color: null,
+                        days: [],
+                        from: tr.startTime,
+                        to: tr.endTime
+                    };
+                }
+                rangesBySlot[slot].days.push(tr.dayOfWeek);
+            }
+
+            for (const rangeEntry of Object.values(rangesBySlot)) {
+                rangeEntry.days.sort((a, b) => a - b);
+                ranges.push(rangeEntry);
+            }
+        }
+    }
+
+    return {
+        id: schedule.publicCode,
+        name: schedule.name,
+        description: schedule.description ?? null,
+        isActive,
+        ranges
+    };
 };
