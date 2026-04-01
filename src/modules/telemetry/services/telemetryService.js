@@ -22,7 +22,7 @@ import {
     queryTelemetryData, 
     getLatestData 
 } from '../repositories/cassandraRepository.js';
-import { parseLocalDateToUTC, dayjs } from '../../../utils/dateUtils.js';
+import { parseLocalDateToUTC, remapTimestamps, buildComparisonLabel, dayjs } from '../../../utils/dateUtils.js';
 import {
     cacheLatestData,
     getCachedLatestData,
@@ -111,7 +111,9 @@ export const search = async (req) => {
         identifier,
         channelId,  // Legacy: mantener compatibilidad con código existente
         from, 
-        to, 
+        to,
+        comparisonFrom = null,
+        comparisonTo = null,
         tz, 
         resolution = '1m', 
         variables = null,
@@ -252,6 +254,70 @@ export const search = async (req) => {
             result
         );
     }
+
+    // 10. Período de comparación (opcional)
+    // Cuando se proveen comparisonFrom/comparisonTo, ejecutar una segunda consulta
+    // con los mismos filtros y variables, luego reasignar los timestamps para alinearlos
+    // con el período principal en el eje X del gráfico.
+    let comparison = null;
+
+    if (comparisonFrom && comparisonTo) {
+        // Convertir fechas del período principal a ms para calcular el offset
+        const mainStartMs = parseLocalDateToUTC(from, metadata.device.timezone, false).getTime();
+        const compStartMs = parseLocalDateToUTC(comparisonFrom, metadata.device.timezone, false).getTime();
+        const offsetMs = mainStartMs - compStartMs;
+
+        // Parsear fechas del período de comparación a UTC
+        const compFromDate = parseLocalDateToUTC(comparisonFrom, metadata.device.timezone, false);
+        const compToDate = parseLocalDateToUTC(comparisonTo, metadata.device.timezone, true);
+
+        // Ejecutar query para el período de comparación
+        const compRawData = await queryTelemetryData({
+            uuid: metadata.device.id,
+            ch: metadata.channel.ch,
+            tableName,
+            partitionType,
+            columns: metadata.columns,
+            from: compFromDate,
+            to: compToDate
+        });
+
+        // Aplicar los mismos filtros al período de comparación
+        let compProcessedData = compRawData;
+
+        if (filters.excludeDays && filters.excludeDays.length > 0) {
+            compProcessedData = filterByExcludeDays(compProcessedData, filters.excludeDays, tz || metadata.device.timezone);
+        }
+
+        if (filters.hourRanges && filters.hourRanges.length > 0) {
+            compProcessedData = filterByHourRanges(compProcessedData, filters.hourRanges, tz || metadata.device.timezone);
+        }
+
+        // Mapear a formato de respuesta
+        const compData = compProcessedData.map(row => {
+            const values = {};
+            for (const [varId, varInfo] of Object.entries(metadata.variables)) {
+                const value = row[varInfo.column];
+                values[varId] = value !== undefined && value !== null ? Number(value) : null;
+            }
+            return { ts: row.timestamp, values };
+        });
+
+        // Reasignar timestamps al período principal
+        const remappedData = remapTimestamps(compData, offsetMs);
+
+        comparison = {
+            period: {
+                from: comparisonFrom,
+                to: comparisonTo
+            },
+            label: buildComparisonLabel(comparisonFrom, comparisonTo),
+            totalRecords: remappedData.length,
+            data: remappedData
+        };
+    }
+
+    result.comparison = comparison;
 
     return result;
 };

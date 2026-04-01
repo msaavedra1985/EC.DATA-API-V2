@@ -12,10 +12,14 @@ import { authenticate } from '../../middleware/auth.js';
 import { z } from 'zod';
 import { dayjs } from '../../utils/dateUtils.js';
 
+const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
+
 // Esquema de validación para búsqueda de telemetría
 const searchSchema = z.object({
     from: z.string().min(1, 'from es requerido'),
     to: z.string().min(1, 'to es requerido'),
+    comparisonFrom: z.string().regex(DATE_REGEX, 'comparisonFrom debe tener formato YYYY-MM-DD').optional(),
+    comparisonTo: z.string().regex(DATE_REGEX, 'comparisonTo debe tener formato YYYY-MM-DD').optional(),
     resolution: z.enum(['raw', '1m', '15m', '60m', 'daily', 'monthly']).default('1m'),
     tz: z.string().optional(),
     variables: z.array(z.number()).optional(),
@@ -81,7 +85,7 @@ router.get('/channels/:channelId/data', authenticate, async (req, res) => {
     try {
         const { channelId } = req.params;
         const q = req.query;
-        const { from, to, resolution, tz } = q;
+        const { from, to, comparisonFrom, comparisonTo, resolution, tz } = q;
 
         // Parsear arrays de query params — soporte para forma bracket (?variables[]=1) y plain (?variables=1)
         const rawVariables = q['variables[]'] ?? q.variables;
@@ -102,6 +106,8 @@ router.get('/channels/:channelId/data', authenticate, async (req, res) => {
         const validation = searchSchema.safeParse({
             from,
             to,
+            comparisonFrom: comparisonFrom || undefined,
+            comparisonTo: comparisonTo || undefined,
             resolution: resolution || '1m',
             tz,
             variables: parsedVariables,
@@ -124,6 +130,8 @@ router.get('/channels/:channelId/data', authenticate, async (req, res) => {
             identifier: { publicCode: channelId },
             from: validation.data.from,
             to: validation.data.to,
+            comparisonFrom: validation.data.comparisonFrom || null,
+            comparisonTo: validation.data.comparisonTo || null,
             resolution: validation.data.resolution,
             tz: validation.data.tz,
             variables: validation.data.variables,
@@ -139,8 +147,8 @@ router.get('/channels/:channelId/data', authenticate, async (req, res) => {
         // Construir respuesta v1.1
         const variablesV1 = buildVariablesV1(result.variables);
 
-        // Transformar datos: omitir valores null y usar timestamps con offset
-        const dataV1 = result.data.map(row => {
+        // Helper para transformar filas: omitir valores null y usar timestamps con offset
+        const transformRows = (rows) => rows.map(row => {
             const values = {};
             for (const [varId, value] of Object.entries(row.values)) {
                 if (value !== null && value !== undefined) {
@@ -152,6 +160,19 @@ router.get('/channels/:channelId/data', authenticate, async (req, res) => {
                 values
             };
         });
+
+        const dataV1 = transformRows(result.data);
+
+        // Transformar bloque comparison si existe
+        let comparisonV1 = null;
+        if (result.comparison) {
+            comparisonV1 = {
+                period: result.comparison.period,
+                label: result.comparison.label,
+                totalRecords: result.comparison.totalRecords,
+                data: transformRows(result.comparison.data)
+            };
+        }
 
         return res.json({
             ok: true,
@@ -170,7 +191,8 @@ router.get('/channels/:channelId/data', authenticate, async (req, res) => {
                     }
                 },
                 variables: variablesV1,
-                data: dataV1
+                data: dataV1,
+                comparison: comparisonV1
             }
         });
 
